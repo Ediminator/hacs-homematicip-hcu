@@ -1,7 +1,7 @@
 {
   "domain": "hcu_integration",
   "name": "Homematic IP Local (HCU)",
-  "documentation": "https://github.com/homematicip/connect-api",
+  "documentation": "https://github.com/Ediminator/hacs-homematicip-hcu",
   "codeowners": ["@Ediminator"],
   "requirements": ["aiohttp>=3.0.0"],
   "version": "1.0.0",

@@ -28,13 +28,13 @@ The recommended way to install this integration is through the [Home Assistant C
 
 1.  Go to HACS in your Home Assistant sidebar.
 2.  Click on **Integrations**, then click the three-dots menu in the top right and select **Custom repositories**.
-3.  Add the URL to your GitHub repository and select the `Integration` category.
+3.  Add the URL to this GitHub repository and select the `Integration` category.
 4.  The integration will now appear in the HACS list. Click **Install**.
 5.  Restart Home Assistant.
 
 ### Manual Installation
 
-1.  Download the latest release from the [Releases](https://github.com/YOUR_USERNAME/YOUR_REPOSITORY/releases) page of this repository.
+1.  Download the latest release from the [Releases](https://github.com/Ediminator/hacs-homematicip-hcu/releases) page of this repository.
 2.  Unzip the file and copy the `hcu_integration` folder into the `custom_components` directory of your Home Assistant configuration.
 3.  Restart Home Assistant.
 

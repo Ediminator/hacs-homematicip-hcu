@@ -29,7 +29,7 @@ async def async_setup_entry(
         async_add_entities(new_covers)
 
 class HcuCover(HcuBaseEntity, CoverEntity):
-    """Representation of an HCU Cover."""
+    """Representation of an HCU Cover (shutter or blind)."""
     _attr_device_class = CoverDeviceClass.SHUTTER
 
     def __init__(self, client: HcuApiClient, device_data: dict, channel_index: str):
@@ -38,22 +38,32 @@ class HcuCover(HcuBaseEntity, CoverEntity):
         self._attr_name = self._device.get("label") or "Unknown Cover"
         self._attr_unique_id = f"{self._device_id}_{self._channel_index}_cover"
 
+        # Base features for all covers
         self._attr_supported_features = (
             CoverEntityFeature.OPEN | CoverEntityFeature.CLOSE |
             CoverEntityFeature.STOP | CoverEntityFeature.SET_POSITION
         )
+        # Add tilt support only if the device has a 'slatsLevel' feature (i.e., it's a blind)
         if "slatsLevel" in self._channel:
             self._attr_supported_features |= CoverEntityFeature.SET_TILT_POSITION
 
     @property
     def current_cover_position(self) -> int | None:
-        """Return current position of cover. 0 is closed, 100 is open."""
+        """
+        Return current position of cover.
+        Homematic: 0.0 is open, 1.0 is closed.
+        Home Assistant: 0 is closed, 100 is open.
+        We invert the value to match HA's standard.
+        """
         level = self._channel.get("shutterLevel")
         return int((1 - level) * 100) if level is not None else None
 
     @property
     def current_cover_tilt_position(self) -> int | None:
-        """Return current position of cover tilt. 0 is closed, 100 is open."""
+        """
+        Return current position of cover tilt.
+        Inverts the value to match HA's standard (0=closed, 100=open).
+        """
         if "slatsLevel" not in self._channel:
             return None
         level = self._channel.get("slatsLevel")
@@ -66,19 +76,25 @@ class HcuCover(HcuBaseEntity, CoverEntity):
         return pos == 0 if pos is not None else None
 
     async def async_open_cover(self, **kwargs) -> None:
+        """Open the cover by setting shutterLevel to 0.0."""
         await self._client.async_set_shutter_level(self._device_id, self._channel_index, 0.0)
 
     async def async_close_cover(self, **kwargs) -> None:
+        """Close the cover by setting shutterLevel to 1.0."""
         await self._client.async_set_shutter_level(self._device_id, self._channel_index, 1.0)
 
     async def async_stop_cover(self, **kwargs) -> None:
+        """Stop the cover's movement."""
         await self._client.async_stop_cover(self._device_id, self._channel_index)
 
     async def async_set_cover_position(self, **kwargs) -> None:
+        """Set a new cover position."""
         position = kwargs[ATTR_POSITION]
+        # Invert from HA's percentage to HCU's level
         await self._client.async_set_shutter_level(self._device_id, self._channel_index, (100 - position) / 100.0)
 
     async def async_set_cover_tilt_position(self, **kwargs) -> None:
         """Set new tilt position."""
         position = kwargs[ATTR_TILT_POSITION]
+        # Invert from HA's percentage to HCU's level
         await self._client.async_set_slats_level(self._device_id, self._channel_index, (100 - position) / 100.0)

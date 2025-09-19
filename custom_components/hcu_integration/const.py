@@ -13,10 +13,11 @@ from homeassistant.const import (
 DOMAIN = "hcu_integration"
 PLATFORMS = ["binary_sensor", "climate", "cover", "light", "lock", "sensor", "switch"]
 
-# Dispatcher signal for entity updates
+# Dispatcher signal used to notify entities that their underlying data has been updated.
 SIGNAL_UPDATE_ENTITY = f"{DOMAIN}_update"
 
-# Maps HCU device archetypes from the documentation to HA platforms
+# Maps HCU device archetypes from the API documentation to Home Assistant platforms.
+# This provides a quick lookup to know which platforms should look at which devices.
 HMIP_DEVICE_PLATFORM_MAP = {
     # Switch
     "SWITCH": "switch",
@@ -32,7 +33,7 @@ HMIP_DEVICE_PLATFORM_MAP = {
     # Lock
     "DOOR_LOCK": "lock",
     
-    # Sensor / Binary Sensor
+    # Sensor / Binary Sensor (can be on multiple platforms)
     "TEMPERATURE_HUMIDITY_SENSOR": "sensor",
     "TEMPERATURE_HUMIDITY_SENSOR_OUTDOOR": "sensor",
     "CONTACT_SENSOR": "binary_sensor",
@@ -55,14 +56,15 @@ HMIP_DEVICE_PLATFORM_MAP = {
     "HVAC": "climate",
 }
 
-# --- NEW MAPPING FOR DEVICE ICONS ---
+# Maps specific HCU device types to a more specific Home Assistant device class for better icon representation.
 HMIP_DEVICE_TO_DEVICE_CLASS = {
     "PLUGABLE_SWITCH": SwitchDeviceClass.OUTLET,
     "SWITCH": SwitchDeviceClass.SWITCH,
     "WINDOW_COVERING": CoverDeviceClass.SHUTTER,
 }
 
-# Maps individual data points ("features") to their specific entity configuration
+# Maps individual data points ("features") from the HCU API to their specific entity configuration.
+# This is the central registry for how to create an entity from a piece of data.
 HMIP_FEATURE_MAP = {
     # === SENSOR ===
     "actualTemperature": {"platform": "sensor", "name": "Temperature", "unit": UnitOfTemperature.CELSIUS, "device_class": SensorDeviceClass.TEMPERATURE, "state_class": SensorStateClass.MEASUREMENT},
@@ -79,6 +81,7 @@ HMIP_FEATURE_MAP = {
 
     # === BINARY_SENSOR ===
     "lowBat": {"platform": "binary_sensor", "name": "Battery", "device_class": BinarySensorDeviceClass.BATTERY},
+    "unreach": {"platform": "binary_sensor", "name": "Unreachable", "device_class": BinarySensorDeviceClass.CONNECTIVITY, "invert_state": True},
     "presenceDetected": {"platform": "binary_sensor", "name": "Presence", "device_class": BinarySensorDeviceClass.MOTION},
     "windowState": {"platform": "binary_sensor", "name": "Window", "on_state": "OPEN", "device_class": BinarySensorDeviceClass.WINDOW},
     "smokeAlarm": {"platform": "binary_sensor", "name": "Smoke Alarm", "on_state": "SMOKE_DETECTED", "device_class": BinarySensorDeviceClass.SMOKE},
@@ -87,10 +90,4 @@ HMIP_FEATURE_MAP = {
     "raining": {"platform": "binary_sensor", "name": "Raining", "device_class": BinarySensorDeviceClass.MOISTURE},
     "sunshine": {"platform": "binary_sensor", "name": "Sunshine", "device_class": BinarySensorDeviceClass.LIGHT},
     "storm": {"platform": "binary_sensor", "name": "Storm", "device_class": BinarySensorDeviceClass.PROBLEM},
-
-    # === Primary feature check for discovery in platform files ===
-    "on": {"platform": "switch"},
-    "dimLevel": {"platform": "light"},
-    "shutterLevel": {"platform": "cover"},
-    "lockState": {"platform": "lock"},
 }

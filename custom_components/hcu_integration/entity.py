@@ -8,9 +8,9 @@ from .const import DOMAIN, SIGNAL_UPDATE_ENTITY
 from .api import HcuApiClient
 
 class HcuBaseEntity(Entity):
-    """Base class for device-channel-based HCU entities."""
+    """Base class for HCU entities that are tied to a specific device channel."""
 
-    _attr_should_poll = False  # This is a push-based integration
+    _attr_should_poll = False
 
     def __init__(self, client: HcuApiClient, device_data: dict, channel_index: str):
         """Initialize the base entity."""
@@ -21,16 +21,12 @@ class HcuBaseEntity(Entity):
 
     @property
     def _device(self) -> dict:
-        """Return the latest device data from the client's cache."""
+        """Return the latest parent device data from the client's cache."""
         return self._client.get_device_by_address(self._device_id) or {}
 
     @property
     def _channel(self) -> dict:
-        """
-        Return the latest channel data from the client's cache.
-        This is the corrected logic.
-        """
-        # A channel's data is nested inside its parent device's 'functionalChannels'.
+        """Return the latest channel data from within the parent device's data structure."""
         return self._device.get("functionalChannels", {}).get(self._channel_index_str, {})
 
     @property
@@ -48,17 +44,15 @@ class HcuBaseEntity(Entity):
     
     @property
     def available(self) -> bool:
-        """Return if entity is available."""
-        # The 'unreach' property is on the maintenance channel (channel 0).
+        """Return if entity is available based on the device's maintenance channel."""
         maintenance_channel_address = f"{self._device_id}:0"
         maintenance_channel = self._client.get_device_by_address(maintenance_channel_address)
         if maintenance_channel:
             return not maintenance_channel.get("unreach", False)
-        # If a device has no maintenance channel (like the HCU itself), assume it's available.
         return True
 
     async def async_added_to_hass(self) -> None:
-        """Register callbacks when entity is added."""
+        """Register a listener for state updates."""
         self.async_on_remove(
             async_dispatcher_connect(
                 self.hass, SIGNAL_UPDATE_ENTITY, self._handle_update
@@ -67,16 +61,15 @@ class HcuBaseEntity(Entity):
 
     @callback
     def _handle_update(self, updated_ids: set) -> None:
-        """Handle dispatched update."""
+        """Handle a state update signal from the client."""
         channel_address = f"{self._device_id}:{self._channel_index}"
-        # Update if either the parent device or the specific channel address is in the update signal
         if self._device_id in updated_ids or channel_address in updated_ids:
             self.async_write_ha_state()
 
 class HcuGroupBaseEntity(Entity):
-    """Base class for group-based HCU entities (like Climate)."""
+    """Base class for HCU entities that are tied to a group (e.g., Climate)."""
 
-    _attr_should_poll = False # This is a push-based integration
+    _attr_should_poll = False
 
     def __init__(self, client: HcuApiClient, group_data: dict):
         """Initialize the group base entity."""
@@ -102,11 +95,11 @@ class HcuGroupBaseEntity(Entity):
 
     @property
     def available(self) -> bool:
-        """Return True if the entity is available."""
+        """Return True if the entity's group exists in the state cache."""
         return self._group_id in self._client._state.get("groups", {})
 
     async def async_added_to_hass(self) -> None:
-        """Register callbacks when entity is added."""
+        """Register a listener for state updates."""
         self.async_on_remove(
             async_dispatcher_connect(
                 self.hass, SIGNAL_UPDATE_ENTITY, self._handle_update
@@ -115,6 +108,6 @@ class HcuGroupBaseEntity(Entity):
 
     @callback
     def _handle_update(self, updated_ids: set) -> None:
-        """Handle dispatched update."""
+        """Handle a state update signal from the client."""
         if self._group_id in updated_ids:
             self.async_write_ha_state()

@@ -19,12 +19,12 @@ async def async_setup_entry(
     
     new_switches = []
     for device_data in devices.values():
-        if not device_data.get("PARENT"):  # This is a main device
+        if not device_data.get("PARENT"):
             for channel_index, channel_data in device_data.get("functionalChannels", {}).items():
-                # Create standard switches
+                # Create standard switches for channels that can be turned on/off.
                 if channel_data.get("functionalChannelType") == "SWITCH_CHANNEL":
                     new_switches.append(HcuSwitch(client, device_data, channel_index))
-                # Create switches for the sound channels of the MP3P doorbell/siren
+                # Create special "sound" switches for siren/doorbell channels.
                 elif channel_data.get("functionalChannelType") == "ACOUSTIC_SIGNAL_VIRTUAL_RECEIVER":
                     new_switches.append(HcuSoundSwitch(client, device_data, channel_index))
 
@@ -32,7 +32,7 @@ async def async_setup_entry(
         async_add_entities(new_switches)
 
 class HcuSwitch(HcuBaseEntity, SwitchEntity):
-    """Representation of a standard HCU Switch."""
+    """Representation of a standard Homematic IP HCU switch."""
     def __init__(self, client: HcuApiClient, device_data: dict, channel_index: str):
         """Initialize the switch."""
         super().__init__(client, device_data, channel_index)
@@ -57,7 +57,11 @@ class HcuSwitch(HcuBaseEntity, SwitchEntity):
 
 
 class HcuSoundSwitch(HcuBaseEntity, SwitchEntity):
-    """Representation of an HCU sound switch (like on the MP3P)."""
+    """
+    Representation of an HCU sound switch (e.g., for an MP3 doorbell).
+    This switch is "write-only"; turning it on plays a sound, but it immediately
+    returns to an 'off' state in Home Assistant.
+    """
     _attr_icon = "mdi:volume-high"
 
     def __init__(self, client: HcuApiClient, device_data: dict, channel_index: str):
@@ -68,22 +72,22 @@ class HcuSoundSwitch(HcuBaseEntity, SwitchEntity):
 
     @property
     def is_on(self) -> bool:
-        """This entity is 'write-only' to trigger a sound, it doesn't have a persistent on-state."""
+        """This entity is stateless and will always appear as 'off'."""
         return False
 
     async def async_turn_on(self, **kwargs) -> None:
-        """Turn the switch on, which plays a sound."""
+        """Turn the switch on, which triggers the sound to play for a fixed duration."""
         await self._client.async_send_hmip_request(
             path="/hmip/device/control/setSoundFileVolumeLevelWithTime",
             body={
                 "deviceId": self._device_id,
                 "channelIndex": self._channel_index,
-                "onTime": 5,  # Play sound for 5 seconds
-                "soundFile": "SOUNDFILE_001",  # Example sound, can be configured later
+                "onTime": 5,
+                "soundFile": "SOUNDFILE_001",
                 "volumeLevel": 1.0,
             },
         )
 
     async def async_turn_off(self, **kwargs) -> None:
-        """Turn the switch off (does nothing)."""
+        """This action does nothing as the sound plays for a fixed duration."""
         pass

@@ -1,0 +1,39 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to Homematic IP HCU",
+        "description": "Please enter the IP address of your Home Control Unit (HCU).",
+        "data": {
+          "host": "HCU IP Address"
+        }
+      },
+      "auth": {
+        "title": "Authorize Integration",
+        "description": "Please follow these steps on your HCU's web interface at `https://{hcu_ip}`:\n\n1. Navigate to **Developer Mode**.\n2. Press the **Generate activation key** button.\n3. Enter the temporary key below.\n\n![HCU Activation Key Location](https://raw.githubusercontent.com/Ediminator/hacs-homematicip-hcu/main/images/hcu_activation_key.png)",
+        "data": {
+          "activation_key": "Activation Key"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to the HCU. Please check the IP address and your network connection.",
+      "invalid_key": "Invalid or expired activation key. Please generate a new one and try again.",
+      "unknown": "An unknown error occurred."
+    },
+    "abort": {
+      "already_configured": "This Homematic IP HCU is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Configure HCU Options",
+        "description": "Set options for your Homematic IP HCU integration.",
+        "data": {
+          "pin": "Lock Authorization PIN"
+        }
+      }
+    }
+  }
+}

@@ -11,6 +11,7 @@ from .entity import HcuBaseEntity
 from .api import HcuApiClient
 
 _LOGGER = logging.getLogger(__name__)
+CONF_PIN = "pin"
 
 async def async_setup_entry(
     hass: HomeAssistant, config_entry: ConfigEntry, async_add_entities: AddEntitiesCallback,
@@ -25,37 +26,40 @@ async def async_setup_entry(
         if not device_data.get("PARENT"):
             for channel_index, channel_data in device_data.get("functionalChannels", {}).items():
                 if channel_data.get("functionalChannelType") == "DOOR_LOCK_CHANNEL":
-                    new_locks.append(HcuLock(client, device_data, channel_index))
+                    new_locks.append(HcuLock(client, device_data, channel_index, config_entry))
     if new_locks:
         async_add_entities(new_locks)
 
 class HcuLock(HcuBaseEntity, LockEntity):
-    """Representation of an HCU Lock."""
+    """Representation of a Homematic IP HCU door lock."""
     _attr_supported_features = LockEntityFeature.OPEN
 
-    def __init__(self, client: HcuApiClient, device_data: dict, channel_index: str):
-        """Initialize the lock."""
+    def __init__(self, client: HcuApiClient, device_data: dict, channel_index: str, config_entry: ConfigEntry):
+        """Initialize the lock entity."""
         super().__init__(client, device_data, channel_index)
         self._attr_name = self._device.get("label") or "Unknown Lock"
         self._attr_unique_id = f"{self._device_id}_{self._channel_index}_lock"
-        # 
-        # IMPORTANT: The authorization PIN should be configured by the user via an Options Flow.
-        # This is a placeholder and will prevent the lock from working until configured.
-        #
-        self._pin = None # Or get from config entry options
+        
+        # The authorization PIN is required for all lock operations.
+        # It is configured by the user in the integration's options flow.
+        self._pin = config_entry.options.get(CONF_PIN)
 
     @property
     def is_locked(self) -> bool:
-        """Return true if the lock is locked."""
+        """Return true if the lock is in the 'LOCKED' state."""
         return self._channel.get("lockState") == "LOCKED"
 
     async def _set_lock_state(self, state: str) -> None:
-        """Helper to set the lock state."""
+        """Helper function to send a lock command to the HCU."""
         if not self._pin:
-            _LOGGER.error("Cannot operate lock '%s': Authorization PIN is not configured.", self.name)
+            _LOGGER.error(
+                "Cannot operate lock '%s': Please set the Authorization PIN in the integration options.", self.name
+            )
             return
         
-        await self._client.async_set_lock_state(self._device_id, self._channel_index, state, self._pin)
+        await self._client.async_set_lock_state(
+            self._device_id, self._channel_index, state, self._pin
+        )
 
     async def async_lock(self, **kwargs) -> None:
         """Lock the door."""

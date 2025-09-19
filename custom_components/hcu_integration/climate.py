@@ -32,9 +32,13 @@ async def async_setup_entry(
         async_add_entities(new_climates)
 
 class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
-    """Representation of an HCU Climate entity that sources its state from a group."""
+    """
+    Representation of an HCU Climate entity.
+    
+    In Homematic IP, climate control is managed through HEATING groups, which
+    aggregate one or more thermostats and sensors. This entity represents such a group.
+    """
     _attr_temperature_unit = UnitOfTemperature.CELSIUS
-    # --- CHANGE 1: Removed HVACMode.OFF from the list of modes ---
     _attr_hvac_modes = [HVACMode.AUTO, HVACMode.HEAT]
     _attr_preset_modes = ["none", "boost"]
     _attr_supported_features = (
@@ -54,58 +58,57 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
 
     @property
     def hvac_mode(self) -> HVACMode:
-        """Return the current HVAC mode from the group's state."""
-        group_state = self._group
-        
-        # --- CHANGE 2: Simplified the logic to only return AUTO or HEAT ---
-        if group_state.get("controlMode") == "AUTOMATIC":
+        """
+        Return the current HVAC mode.
+        Maps the HCU's 'controlMode' to Home Assistant's HVAC modes.
+        - AUTOMATIC -> AUTO (following the schedule)
+        - MANUAL -> HEAT (manual temperature override)
+        """
+        if self._group.get("controlMode") == "AUTOMATIC":
             return HVACMode.AUTO
-        # Any other state (like MANUAL) is considered HEAT
         return HVACMode.HEAT
         
     @property
     def preset_mode(self) -> str | None:
-        """Return the current preset mode from the group's state."""
+        """Return the current preset mode."""
         if self._group.get("boostMode", False):
             return "boost"
         return "none"
 
     @property
     def current_temperature(self) -> float | None:
-        """Return the current temperature from the group's state."""
+        """Return the current temperature reported by the group."""
         return self._group.get("actualTemperature")
 
     @property
     def target_temperature(self) -> float | None:
-        """Return the target temperature from the group's state."""
+        """Return the target temperature."""
         return self._group.get("setPointTemperature")
 
     async def async_set_temperature(self, **kwargs) -> None:
-        """Set new target temperature by sending a command to the group."""
+        """Set a new target temperature, which implies switching to manual mode."""
         temperature = kwargs.get(ATTR_TEMPERATURE)
         if temperature is None:
             return
 
         if self.preset_mode == "boost":
             await self._client.async_set_boost(self._group_id, False)
+        
         await self._client.async_set_control_mode(self._group_id, "MANUAL")
         await self._client.async_set_setpoint_temperature(self._group_id, temperature)
 
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
-        """Set new HVAC mode by sending a command to the group."""
+        """Set a new HVAC mode."""
         if self.preset_mode == "boost":
             await self._client.async_set_boost(self._group_id, False)
         
         if hvac_mode == HVACMode.AUTO:
             await self._client.async_set_control_mode(self._group_id, "AUTOMATIC")
         elif hvac_mode == HVACMode.HEAT:
-            # When switching to HEAT, we ensure it's in MANUAL.
-            # If it was already in HEAT (MANUAL), this command does nothing.
             await self._client.async_set_control_mode(self._group_id, "MANUAL")
-        # --- CHANGE 3: The entire 'elif hvac_mode == HVACMode.OFF:' block is removed ---
             
     async def async_set_preset_mode(self, preset_mode: str) -> None:
-        """Set new preset mode."""
+        """Set a new preset mode."""
         if preset_mode == "boost":
             await self._client.async_set_boost(self._group_id, True)
         elif preset_mode == "none":

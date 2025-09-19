@@ -19,12 +19,12 @@ async def async_setup_entry(
     
     new_entities = []
     for device_data in devices.values():
-        if not device_data.get("PARENT"):  # This is a main device
+        if not device_data.get("PARENT"):  # Process only main devices
             for channel_index, channel_data in device_data.get("functionalChannels", {}).items():
-                # Iterate through all possible sensor features for each channel
+                # Create a sensor entity for any feature found on a channel that is defined as a sensor in our map.
                 for feature, mapping in HMIP_FEATURE_MAP.items():
                     if mapping.get("platform") == "sensor" and feature in channel_data:
-                        # Exclude the RSSI sensor for the HCU itself
+                        # Special case: Exclude the RSSI sensor for the HCU itself to avoid clutter.
                         if feature == "rssiDeviceValue" and device_data.get("type") == "ACCESS_POINT":
                             continue
                         
@@ -34,16 +34,17 @@ async def async_setup_entry(
         async_add_entities(new_entities)
 
 class HcuSensor(HcuBaseEntity, SensorEntity):
-    """Representation of an HCU sensor."""
+    """Representation of a generic HCU sensor."""
     def __init__(self, client: HcuApiClient, device_data: dict, channel_index: str, feature: str, mapping: dict):
         """Initialize the sensor."""
         super().__init__(client, device_data, channel_index)
         self._feature = feature
+        
         device_label = self._device.get("label", "Unknown Device")
         self._attr_name = f"{device_label} {mapping.get('name')}"
         self._attr_unique_id = f"{self._device_id}_{self._channel_index}_{feature}"
         
-        # Set attributes from the mapping in const.py
+        # Set Home Assistant specific attributes from our constant map.
         self._attr_device_class = mapping.get("device_class")
         self._attr_native_unit_of_measurement = mapping.get("unit")
         self._attr_state_class = mapping.get("state_class")
@@ -57,7 +58,7 @@ class HcuSensor(HcuBaseEntity, SensorEntity):
         if value is None:
             return None
 
-        # Apply transformations if needed
+        # Apply specific transformations if necessary (e.g., valve position is a percentage).
         if self._feature == "valvePosition":
             return round(value * 100.0, 1)
             

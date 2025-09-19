@@ -2,98 +2,98 @@
 """The Homematic IP Local (HCU) integration."""
 import logging
 import asyncio
-from copy import deepcopy
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_TOKEN
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers.dispatcher import async_dispatcher_send
 
 from .api import HcuApiClient
-from .const import DOMAIN, PLATFORMS
+from .const import DOMAIN, PLATFORMS, SIGNAL_UPDATE_ENTITY
 
 _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Homematic IP Local (HCU) from a config entry."""
-    host = entry.data[CONF_HOST]
-    auth_token = entry.data[CONF_TOKEN]
-    session = async_get_clientsession(hass)
-    client = HcuApiClient(host, auth_token, session)
+    client = HcuApiClient(entry.data[CONF_HOST], entry.data[CONF_TOKEN], async_get_clientsession(hass))
+    
+    hass.data.setdefault(DOMAIN, {})
+    hass.data[DOMAIN][entry.entry_id] = { "client": client }
+
+    @callback
+    def _handle_event_message(message: dict):
+        """Handle incoming push event messages from the client."""
+        if message.get("type") != "HMIP_SYSTEM_EVENT":
+            return
+        
+        _LOGGER.debug("Received HCU WebSocket Event: %s", message)
+        
+        events = message.get("body", {}).get("eventTransaction", {}).get("events", {})
+        updated_ids = client.process_events(events)
+        
+        if updated_ids:
+            async_dispatcher_send(hass, SIGNAL_UPDATE_ENTITY, updated_ids)
+
+    async def listen_for_events():
+        """Listen for WebSocket events and handle reconnection."""
+        while True:
+            try:
+                if not client.is_connected:
+                    _LOGGER.info("WebSocket disconnected. Reconnecting...")
+                    await client.connect()
+                
+                client.register_event_callback(_handle_event_message)
+                await client.listen()
+
+            except Exception as e:
+                _LOGGER.error("Error in WebSocket listener: %s. Reconnecting in 30 seconds.", e)
+                if client.is_connected:
+                    await client.disconnect()
+                await asyncio.sleep(30)
+
+    # 1. Start the listener task in the background
+    listener_task = asyncio.create_task(listen_for_events())
+    entry.async_on_unload(listener_task.cancel)
+
+    # Give the connection a moment to establish before sending the first command
+    await asyncio.sleep(1)
 
     try:
-        await client.connect()
+        # 2. NOW fetch the initial state. The listener is ready for the response.
+        initial_state = await client.get_system_state()
+        if not initial_state or "devices" not in initial_state:
+            _LOGGER.error("HCU connected, but failed to get a valid initial state.")
+            listener_task.cancel()
+            await client.disconnect()
+            return False
+            
     except Exception as e:
-        _LOGGER.error(f"Failed to connect to HCU: {e}")
+        _LOGGER.error(f"Failed to get initial state from HCU after connecting: {e}")
+        listener_task.cancel()
+        await client.disconnect()
         return False
 
-    async def async_initial_data_fetch():
-        """Fetch initial data from the API."""
-        try:
-            return await client.get_system_state()
-        except Exception as e:
-            raise UpdateFailed(f"Error communicating with API for initial fetch: {e}")
+    hass.data[DOMAIN][entry.entry_id]["initial_state"] = initial_state
 
-    coordinator = DataUpdateCoordinator(
-        hass, _LOGGER, name="hcu_system_state",
-        update_method=async_initial_data_fetch
-    )
-    await coordinator.async_config_entry_first_refresh()
-
-    hass.data.setdefault(DOMAIN, {})
-    hass.data[DOMAIN][entry.entry_id] = {
-        "client": client,
-        "coordinator": coordinator
-    }
-
+    # Register the main HCU device
     device_registry = dr.async_get(hass)
-    home_data = coordinator.data.get("devices", {}).get(coordinator.data.get("home", {}).get("id"), {})
+    home_id = initial_state.get("home", {}).get("id")
+    home_data = initial_state.get("devices", {}).get(home_id, {})
     device_registry.async_get_or_create(
         config_entry_id=entry.entry_id,
-        identifiers={(DOMAIN, coordinator.data.get("home", {}).get("id"))},
+        identifiers={(DOMAIN, home_id)},
         name=home_data.get("label") or "Homematic IP HCU",
         manufacturer="eQ-3",
         model=home_data.get("modelType") or "HCU",
-        sw_version=home_data.get("firmwareVersion"),
+        sw_version=initial_state.get("home", {}).get("currentAPVersion"),
     )
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
-    async def _handle_ws_message(message: dict):
-        """Handle incoming WebSocket messages and update coordinator data."""
-        msg_type = message.get("type")
-        if msg_type != "HMIP_SYSTEM_EVENT":
-            return
-
-        new_data = deepcopy(coordinator.data)
-        events = message.get("body", {}).get("eventTransaction", {}).get("events", {})
-
-        for event in events.values():
-            event_type = event.get("pushEventType")
-            if event_type == "DEVICE_CHANGED":
-                device = event.get("device", {})
-                if device and "id" in device:
-                    new_data["devices"][device["id"]] = device
-            elif event_type == "GROUP_CHANGED":
-                group = event.get("group", {})
-                if group and "id" in group:
-                    new_data["groups"][group["id"]] = group
-            elif event_type == "DEVICE_REMOVED":
-                new_data["devices"].pop(event.get("id"), None)
-            elif event_type == "GROUP_REMOVED":
-                new_data["groups"].pop(event.get("id"), None)
-        
-        coordinator.async_set_updated_data(new_data)
-
-    entry.async_on_unload(
-        hass.async_create_background_task(
-            client.listen(_handle_ws_message), name="hcu_websocket_listener"
-        )
-    )
-
     return True
+
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""

@@ -13,6 +13,9 @@ from homeassistant.const import (
 DOMAIN = "hcu_integration"
 PLATFORMS = ["binary_sensor", "climate", "cover", "light", "lock", "sensor", "switch"]
 
+# Dispatcher signal for entity updates
+SIGNAL_UPDATE_ENTITY = f"{DOMAIN}_update"
+
 # Maps HCU device archetypes from the documentation to HA platforms
 HMIP_DEVICE_PLATFORM_MAP = {
     # Switch

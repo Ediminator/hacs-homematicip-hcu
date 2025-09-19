@@ -7,44 +7,49 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN, HMIP_FEATURE_MAP
 from .entity import HcuBaseEntity
+from .api import HcuApiClient
 
 async def async_setup_entry(
     hass: HomeAssistant, config_entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     """Set up the binary_sensor platform from a config entry."""
-    coordinator = hass.data[DOMAIN][config_entry.entry_id]["coordinator"]
-    devices = coordinator.data.get("devices", {})
+    data = hass.data[DOMAIN][config_entry.entry_id]
+    client: HcuApiClient = data["client"]
+    devices = data["initial_state"].get("devices", {})
     
     new_entities = []
     for device_data in devices.values():
-        for channel_index, channel_data in device_data.get("functionalChannels", {}).items():
-            for feature, mapping in HMIP_FEATURE_MAP.items():
-                if mapping.get("platform") == "binary_sensor" and feature in channel_data:
-                    # Only create a lowBat sensor if the value is not None.
-                    if feature == "lowBat" and channel_data.get(feature) is None:
-                        continue
-                    
-                    new_entities.append(HcuBinarySensor(coordinator, device_data, channel_index, feature, mapping))
+        if not device_data.get("PARENT"): # This is a main device
+            for channel_index, channel_data in device_data.get("functionalChannels", {}).items():
+                # Iterate through all possible binary_sensor features for each channel
+                for feature, mapping in HMIP_FEATURE_MAP.items():
+                    if mapping.get("platform") == "binary_sensor" and feature in channel_data:
+                        # Only create a lowBat sensor if the value is not None.
+                        if feature == "lowBat" and channel_data.get(feature) is None:
+                            continue
+                        
+                        new_entities.append(HcuBinarySensor(client, device_data, channel_index, feature, mapping))
     
-    if new_entities: async_add_entities(new_entities)
+    if new_entities:
+        async_add_entities(new_entities)
 
 class HcuBinarySensor(HcuBaseEntity, BinarySensorEntity):
     """Representation of an HCU binary sensor."""
-    def __init__(self, coordinator, device_data, channel_index, feature, mapping):
+    def __init__(self, client: HcuApiClient, device_data: dict, channel_index: str, feature: str, mapping: dict):
         """Initialize the binary sensor."""
-        super().__init__(coordinator, device_data, channel_index)
+        super().__init__(client, device_data, channel_index)
         self._feature = feature
         self._on_state = mapping.get("on_state", True)
         self._invert_state = mapping.get("invert_state", False)
         device_label = self._device.get("label", "Unknown Device")
         self._attr_name = f"{device_label} {mapping.get('name')}"
-        self._attr_unique_id = f"{self._device.get('id')}_{self._channel_index}_{feature}"
+        self._attr_unique_id = f"{self._device_id}_{self._channel_index}_{feature}"
         self._attr_device_class = mapping.get("device_class")
 
     @property
     def is_on(self) -> bool | None:
         """Return the state of the binary sensor."""
-        value = self._updated_channel.get(self._feature)
+        value = self._channel.get(self._feature)
         if value is None:
             return None
             

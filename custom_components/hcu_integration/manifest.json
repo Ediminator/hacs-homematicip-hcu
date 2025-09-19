@@ -1,10 +1,20 @@
 {
   "domain": "hcu_integration",
   "name": "Homematic IP Local (HCU)",
+  "config_flow": true,
   "documentation": "https://github.com/Ediminator/hacs-homematicip-hcu",
+  "iot_class": "local_push",
   "codeowners": ["@Ediminator"],
   "requirements": ["aiohttp>=3.0.0"],
   "version": "1.0.0",
-  "config_flow": true,
-  "iot_class": "local_push"
+  "dependencies": [],
+  "platforms": [
+    "binary_sensor",
+    "climate",
+    "cover",
+    "light",
+    "lock",
+    "sensor",
+    "switch"
+  ]
 }

@@ -19,34 +19,27 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Homematic IP Local (HCU) from a config entry."""
     client = HcuApiClient(entry.data[CONF_HOST], entry.data[CONF_TOKEN], async_get_clientsession(hass))
     
-    # Register an update listener for the options flow (e.g., for lock PIN)
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))
     
+    # Store the client instance immediately
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = { "client": client }
 
     @callback
     def _handle_event_message(message: dict):
-        """Handle incoming push event messages from the client's listener."""
+        """Handle incoming push event messages from the client."""
         if message.get("type") != "HMIP_SYSTEM_EVENT":
             return
         
         _LOGGER.debug("Received HCU WebSocket Event: %s", message)
-        
         events = message.get("body", {}).get("eventTransaction", {}).get("events", {})
         updated_ids = client.process_events(events)
         
         if updated_ids:
-            # Broadcast a signal to entities that their data has been updated.
             async_dispatcher_send(hass, SIGNAL_UPDATE_ENTITY, updated_ids)
 
     async def listen_for_events():
-        """
-        Maintains a persistent WebSocket connection.
-
-        This background task is responsible for listening to events from the HCU
-        and handling automatic reconnections if the connection is lost.
-        """
+        """Maintains a persistent WebSocket connection and handles reconnections."""
         while True:
             try:
                 if not client.is_connected:
@@ -55,22 +48,24 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 
                 client.register_event_callback(_handle_event_message)
                 await client.listen()
-
+            except asyncio.CancelledError:
+                # This is expected when the task is cancelled on unload.
+                _LOGGER.debug("Listener task was cancelled.")
+                break
             except Exception as e:
                 _LOGGER.error("Error in WebSocket listener: %s. Reconnecting in 30 seconds.", e)
                 if client.is_connected:
                     await client.disconnect()
                 await asyncio.sleep(30)
 
-    # Start the listener task in the background.
+    # Start the listener task and store it for later cleanup.
     listener_task = asyncio.create_task(listen_for_events())
-    entry.async_on_unload(listener_task.cancel)
+    # --- CHANGE 1: Store the listener_task for explicit cancellation on unload ---
+    hass.data[DOMAIN][entry.entry_id]["listener_task"] = listener_task
 
-    # Give the connection a moment to establish before sending the first command.
     await asyncio.sleep(1)
 
     try:
-        # Now fetch the initial state. The listener is ready for the response.
         initial_state = await client.get_system_state()
         if not initial_state or "devices" not in initial_state:
             _LOGGER.error("HCU connected, but failed to get a valid initial state.")
@@ -86,7 +81,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     hass.data[DOMAIN][entry.entry_id]["initial_state"] = initial_state
 
-    # Register the main HCU device itself in the Home Assistant device registry.
     device_registry = dr.async_get(hass)
     home_id = initial_state.get("home", {}).get("id")
     home_data = initial_state.get("devices", {}).get(home_id, {})
@@ -104,13 +98,26 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return True
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Unload a config entry and disconnect the client."""
-    client: HcuApiClient = hass.data[DOMAIN][entry.entry_id]["client"]
-    await client.disconnect()
+    """Unload a config entry."""
+    # --- CHANGE 2: Add explicit task cancellation logic ---
+    data = hass.data[DOMAIN].get(entry.entry_id)
+    if data:
+        listener_task = data.get("listener_task")
+        if listener_task:
+            listener_task.cancel()
+            try:
+                # Wait for the task to fully cancel
+                await listener_task
+            except asyncio.CancelledError:
+                pass # This is expected
+
+        client: HcuApiClient = data.get("client")
+        if client:
+            await client.disconnect()
 
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
-        hass.data[DOMAIN].pop(entry.entry_id)
+        hass.data[DOMAIN].pop(entry.entry_id, None)
 
     return unload_ok
 

@@ -32,7 +32,12 @@ async def async_setup_entry(
         async_add_entities(new_climates)
 
 class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
-    """Representation of an HCU Climate entity that sources its state from a group."""
+    """
+    Representation of an HCU Climate entity.
+    
+    In Homematic IP, climate control is managed through HEATING groups, which
+    aggregate one or more thermostats and sensors. This entity represents such a group.
+    """
     _attr_temperature_unit = UnitOfTemperature.CELSIUS
     _attr_hvac_modes = [HVACMode.AUTO, HVACMode.HEAT]
     _attr_preset_modes = ["none", "boost"]
@@ -53,8 +58,12 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
 
     @property
     def hvac_mode(self) -> HVACMode:
-        """Return the current HVAC mode from the group's state."""
-        # This is now a direct and simple mapping from the HCU's state.
+        """
+        Return the current HVAC mode.
+        Maps the HCU's 'controlMode' to Home Assistant's HVAC modes.
+        - AUTOMATIC -> AUTO (following the schedule)
+        - MANUAL -> HEAT (manual temperature override)
+        """
         if self._group.get("controlMode") == "AUTOMATIC":
             return HVACMode.AUTO
         return HVACMode.HEAT
@@ -77,7 +86,7 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
         return self._group.get("setPointTemperature")
 
     async def async_set_temperature(self, **kwargs) -> None:
-        """Set a new target temperature, which always implies switching to MANUAL mode."""
+        """Set a new target temperature, which implies switching to manual mode."""
         temperature = kwargs.get(ATTR_TEMPERATURE)
         if temperature is None:
             return

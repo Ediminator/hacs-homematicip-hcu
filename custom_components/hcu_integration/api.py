@@ -10,7 +10,7 @@ _LOGGER = logging.getLogger(__name__)
 
 class HcuApiClient:
     """
-    A client to manage the WebSocket connection and state for a Homematic IP HCU.
+    Manages the WebSocket connection and state for a Homematic IP HCU.
     
     This class is the single point of contact for all communication with the HCU.
     It maintains a persistent WebSocket connection, holds a cache of the system state,
@@ -70,10 +70,7 @@ class HcuApiClient:
             self._event_callback(msg)
 
     async def listen(self) -> None:
-        """
-        The single, authoritative listener for all WebSocket messages.
-        This loop runs continuously and routes all incoming messages.
-        """
+        """The single, authoritative listener for all WebSocket messages."""
         if not self.is_connected:
             raise ConnectionAbortedError("WebSocket is not connected.")
         

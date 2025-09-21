@@ -16,46 +16,6 @@ PLATFORMS = ["binary_sensor", "climate", "cover", "light", "lock", "sensor", "sw
 # Dispatcher signal used to notify entities that their underlying data has been updated.
 SIGNAL_UPDATE_ENTITY = f"{DOMAIN}_update"
 
-# Maps HCU device archetypes from the API documentation to Home Assistant platforms.
-# This provides a quick lookup to know which platforms should look at which devices.
-HMIP_DEVICE_PLATFORM_MAP = {
-    # Switch
-    "SWITCH": "switch",
-    "PLUGABLE_SWITCH": "switch",
-    
-    # Light
-    "LIGHT": "light",
-    "DIMMER": "light",
-    
-    # Cover
-    "WINDOW_COVERING": "cover",
-    
-    # Lock
-    "DOOR_LOCK": "lock",
-    
-    # Sensor / Binary Sensor (can be on multiple platforms)
-    "TEMPERATURE_HUMIDITY_SENSOR": "sensor",
-    "TEMPERATURE_HUMIDITY_SENSOR_OUTDOOR": "sensor",
-    "CONTACT_SENSOR": "binary_sensor",
-    "SMOKE_ALARM": "binary_sensor",
-    "OCCUPANCY_SENSOR": "binary_sensor",
-    "WATER_SENSOR": ["sensor", "binary_sensor"],
-    "CLIMATE_SENSOR": ["sensor", "binary_sensor"],
-    "ENERGY_METER": "sensor",
-    "PARTICULATE_MATTER_SENSOR": "sensor",
-    "BATTERY": "sensor",
-    "INVERTER": "sensor",
-    "GRID_CONNECTION_POINT": "sensor",
-    "VEHICLE": ["sensor"],
-    "EV_CHARGER": "sensor",
-
-    # Climate
-    "WALL_MOUNTED_THERMOSTAT_PRO": ["sensor", "climate"],
-    "THERMOSTAT": ["sensor", "climate"],
-    "HEAT_PUMP": "climate",
-    "HVAC": "climate",
-}
-
 # Maps specific HCU device types to a more specific Home Assistant device class for better icon representation.
 HMIP_DEVICE_TO_DEVICE_CLASS = {
     "PLUGABLE_SWITCH": SwitchDeviceClass.OUTLET,
@@ -90,4 +50,17 @@ HMIP_FEATURE_MAP = {
     "raining": {"platform": "binary_sensor", "name": "Raining", "device_class": BinarySensorDeviceClass.MOISTURE},
     "sunshine": {"platform": "binary_sensor", "name": "Sunshine", "device_class": BinarySensorDeviceClass.LIGHT},
     "storm": {"platform": "binary_sensor", "name": "Storm", "device_class": BinarySensorDeviceClass.PROBLEM},
+
+    # === SWITCH (for discovery) ===
+    "on": {"platform": "switch"},
+    "wateringActive": {"platform": "switch"},
+
+    # === LIGHT (for discovery) ===
+    "dimLevel": {"platform": "light"},
+
+    # === COVER (for discovery) ===
+    "shutterLevel": {"platform": "cover"},
+
+    # === LOCK (for discovery) ===
+    "lockState": {"platform": "lock"},
 }

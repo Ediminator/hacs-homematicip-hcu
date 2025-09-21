@@ -21,12 +21,14 @@ async def async_setup_entry(
     for device_data in devices.values():
         if not device_data.get("PARENT"):
             for channel_index, channel_data in device_data.get("functionalChannels", {}).items():
-                # Create standard switches for channels that can be turned on/off.
-                if channel_data.get("functionalChannelType") == "SWITCH_CHANNEL":
+                channel_type = channel_data.get("functionalChannelType")
+                
+                if channel_type == "SWITCH_CHANNEL":
                     new_switches.append(HcuSwitch(client, device_data, channel_index))
-                # Create special "sound" switches for siren/doorbell channels.
-                elif channel_data.get("functionalChannelType") == "ACOUSTIC_SIGNAL_VIRTUAL_RECEIVER":
+                elif channel_type == "ACOUSTIC_SIGNAL_VIRTUAL_RECEIVER":
                     new_switches.append(HcuSoundSwitch(client, device_data, channel_index))
+                elif channel_type == "WATERING_SYSTEM_CHANNEL":
+                    new_switches.append(HcuWateringSwitch(client, device_data, channel_index))
 
     if new_switches:
         async_add_entities(new_switches)
@@ -54,7 +56,6 @@ class HcuSwitch(HcuBaseEntity, SwitchEntity):
     async def async_turn_off(self, **kwargs) -> None:
         """Turn the switch off."""
         await self._client.async_set_switch_state(self._device_id, self._channel_index, False)
-
 
 class HcuSoundSwitch(HcuBaseEntity, SwitchEntity):
     """
@@ -91,3 +92,32 @@ class HcuSoundSwitch(HcuBaseEntity, SwitchEntity):
     async def async_turn_off(self, **kwargs) -> None:
         """This action does nothing as the sound plays for a fixed duration."""
         pass
+
+class HcuWateringSwitch(HcuBaseEntity, SwitchEntity):
+    """Representation of a Homematic IP HCU watering controller."""
+    _attr_icon = "mdi:water"
+
+    def __init__(self, client: HcuApiClient, device_data: dict, channel_index: str):
+        """Initialize the watering switch."""
+        super().__init__(client, device_data, channel_index)
+        self._attr_name = self._device.get("label") or "Watering"
+        self._attr_unique_id = f"{self._device_id}_{self._channel_index}_watering_switch"
+
+    @property
+    def is_on(self) -> bool:
+        """Return true if the watering is active."""
+        return self._channel.get("wateringActive", False)
+
+    async def async_turn_on(self, **kwargs) -> None:
+        """Turn the watering on."""
+        await self._client.async_send_hmip_request(
+            path="/hmip/device/control/setWateringSwitchState",
+            body={ "deviceId": self._device_id, "channelIndex": self._channel_index, "wateringActive": True, },
+        )
+
+    async def async_turn_off(self, **kwargs) -> None:
+        """Turn the watering off."""
+        await self._client.async_send_hmip_request(
+            path="/hmip/device/control/setWateringSwitchState",
+            body={ "deviceId": self._device_id, "channelIndex": self._channel_index, "wateringActive": False, },
+        )

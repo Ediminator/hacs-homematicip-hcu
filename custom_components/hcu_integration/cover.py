@@ -97,4 +97,6 @@ class HcuCover(HcuBaseEntity, CoverEntity):
         """Set new tilt position."""
         position = kwargs[ATTR_TILT_POSITION]
         # Invert from HA's percentage to HCU's level
-        await self._client.async_set_slats_level(self._device_id, self._channel_index, (100 - position) / 100.0)
+        shutter_level = (100 - (self.current_cover_position or 0)) / 100.0
+        slats_level = (100 - position) / 100.0
+        await self._client.async_set_slats_level(self._device_id, self._channel_index, shutter_level, slats_level)

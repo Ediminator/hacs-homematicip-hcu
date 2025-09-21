@@ -43,6 +43,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     async def listen_for_events():
         """
         Maintains a persistent WebSocket connection.
+
         This background task is responsible for listening to events from the HCU
         and handling automatic reconnections if the connection is lost.
         """
@@ -103,7 +104,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return True
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Unload a config entry."""
+    """Unload a config entry and disconnect the client."""
     client: HcuApiClient = hass.data[DOMAIN][entry.entry_id]["client"]
     await client.disconnect()
 

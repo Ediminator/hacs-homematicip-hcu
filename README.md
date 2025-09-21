@@ -7,57 +7,92 @@ This is a custom integration for Home Assistant that connects directly to your *
 ## Features
 
 * **Local Control:** All communication happens on your local network for speed and privacy.
-* **Real-Time Updates:** Uses a WebSocket connection to receive instant state changes from your devices.
-* **User-Friendly Setup:** A simple, step-by-step configuration flow guides you through the setup process.
-* **Broad Device Support:** Includes support for a wide range of devices.
-
-## Prerequisites
-
-Before you can install the integration, you must activate **Developer Mode** on your Home Control Unit.
-
-1.  Open the HCUweb interface in your browser (e.g., `https://hcu1-XXXX.local`).
-2.  Navigate to the "Developer Mode" page.
-3.  Press the button to **activate developer mode**.
-4.  Activate the switch to **expose the Connect API WebSocket**.
+* **Real-Time Updates:** Uses a persistent WebSocket connection for instant "local push" state changes.
+* **Broad Device Support:** Includes support for a wide range of devices, including multi-function devices (`HmIP-MP3P`), stateless buttons (`SWITCH_INPUT`), and watering controllers.
+* **Secure Lock Control:** A secure, UI-based options flow allows you to configure the PIN for your door lock.
+* **User-Friendly Setup:** A simple, step-by-step configuration flow with instructional images guides you through the setup process.
 
 ## Installation
 
-The recommended way to install this integration is through the [Home Assistant Community Store (HACS)](https://hacs.xyz/).
+### Prerequisites
 
-### HACS Installation (Recommended)
+1.  A running Home Assistant instance.
+2.  [HACS](https://hacs.xyz/) (Home Assistant Community Store) installed.
+3.  A Homematic IP Home Control Unit (HCU) connected to your local network.
 
-1.  Go to HACS in your Home Assistant sidebar.
-2.  Click on **Integrations**, then click the three-dots menu in the top right and select **Custom repositories**.
-3.  Add the URL to this GitHub repository and select the `Integration` category.
-4.  The integration will now appear in the HACS list. Click **Install**.
-5.  Restart Home Assistant.
+### 1. Installation via HACS (Required First Step)
 
-### Manual Installation
+You must install the integration via HACS before you can configure it in Home Assistant.
 
-1.  Download the latest release from the [Releases](https://github.com/Ediminator/hacs-homematicip-hcu/releases) page of this repository.
-2.  Unzip the file and copy the `hcu_integration` folder into the `custom_components` directory of your Home Assistant configuration.
-3.  Restart Home Assistant.
+1.  In HACS, go to **Integrations** and click the three dots in the top right corner.
+2.  Select **Custom repositories**.
+3.  In the "Repository" field, paste this URL: `https://github.com/Ediminator/hacs-homematicip-hcu/`
+4.  For "Category", select **Integration**.
+5.  Click **ADD**, then close the custom repositories window.
+6.  You should now see the "Homematic IP Local (HCU)" integration. Click **INSTALL** and proceed with the installation.
+7.  **Restart Home Assistant** when prompted.
 
 ## Configuration
 
-Once installed, you can add the integration to Home Assistant.
+### 2. Prepare Your HCU
 
-1.  Go to **Settings** > **Devices & Services**.
-2.  Click **Add Integration** and search for **"Homematic IP Home Control Unit"**.
-3.  Enter the **IP Address** of your HCU.
-4.  The next screen will ask for an **Activation Key**. Follow the on-screen instructions to generate a new, temporary key from your HCU's developer mode page and paste it in.
-5.  The integration will automatically perform the security handshake and set itself up. Your devices will be discovered and added to Home Assistant.
+After installing via HACS and restarting, you must enable the local API on your HCU before adding the integration in Home Assistant.
 
-## Supported Devices
+1.  Access your HCU's web interface, known as **HCUweb**. According to the official documentation, you can reach it in your local network at `https://hcu1-XXXX.local`, where `XXXX` are the last four digits of the SGTIN found on the underside of your device.
+2.  Navigate to the **Developer Mode** page.
+3.  Activate the **Developer Mode** switch.
+4.  Activate the switch to **Expose the Connect API WebSocket**.
 
-This integration provides entities across the following platforms:
+### 3. Add the Integration in Home Assistant
 
-* **Climate:** For thermostats and heating groups, including temperature/humidity readings and boost mode.
-* **Cover:** For shutters and blinds, including tilt control.
-* **Light:** For dimmers and light switches.
-* **Lock:** For door locks.
-* **Switch:** For pluggable outlets and other switches.
-* **Sensor:** Automatically creates sensors for battery levels, signal strength, valve positions, and more.
-* **Binary Sensor:** For door/window contacts, motion detectors, and other binary state devices.
+1.  In Home Assistant, go to **Settings > Devices & Services**.
+2.  Click **ADD INTEGRATION** and search for `Homematic IP Local (HCU)`.
+3.  In the first dialog, enter the **IP address** of your HCU. While you can access the web interface via the hostname, the integration still requires the direct IP address to connect.
+4.  The next dialog will ask for an **Activation Key**.
+    * Go back to your HCU's web interface.
+    * Click the **Generate activation key** button. This key is temporary.
+    * Copy the generated key and paste it into the Home Assistant dialog.
+5.  The integration will complete the setup and automatically discover your devices.
 
-> **Note:** The `Lock` entity requires an authorization PIN. This feature is not yet implemented in the configuration flow, so lock control is currently disabled.
+### 4. Configure Your Door Lock (Optional)
+
+If you have a Homematic IP door lock, you must provide its PIN for the integration to be able to control it.
+
+1.  After the integration is added, find its card in **Settings > Devices & Services**.
+2.  Click the **CONFIGURE** button on the card.
+3.  Enter your door lock's **Authorization PIN** and click **SUBMIT**.
+
+## Enabling Debug Logging
+
+If you need to report an issue, you can enable debug logging to get more detailed information.
+
+### Method 1: Via the User Interface (Recommended)
+
+This is the easiest and quickest way to get logs for a specific issue.
+
+#### Enabling the Log
+
+1.  Navigate to **Settings > Devices & Services**.
+2.  Find the "Homematic IP Local (HCU)" integration in your list.
+3.  Click the three-dot menu on the integration card.
+4.  Click **Enable debug logging**.
+
+#### Downloading the Log File
+
+After enabling logging, you need to reproduce the issue and then download the generated log file.
+
+1.  Perform the action in Home Assistant that is causing the issue (e.g., turn on a switch, change the temperature).
+2.  Once you have reproduced the problem, go back to the three-dot menu on the integration card.
+3.  Click **Disable debug logging**.
+4.  Your browser will immediately prompt you to save the log file. Save it to your computer so you can attach it to your issue report.
+
+### Method 2: Via `configuration.yaml` (Permanent)
+
+To make debug logging permanent so it remains active after a restart, add the following to your `configuration.yaml` file:
+
+```yaml
+logger:
+  default: info
+  logs:
+    custom_components.hcu_integration: debug
+```

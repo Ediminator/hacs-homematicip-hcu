@@ -25,7 +25,8 @@ async def async_setup_entry(
     for device_data in devices.values():
         if not device_data.get("PARENT"):
             for channel_index, channel_data in device_data.get("functionalChannels", {}).items():
-                if channel_data.get("functionalChannelType") == "DOOR_LOCK_CHANNEL":
+                # Discover a lock if its channel has the 'lockState' feature.
+                if "lockState" in channel_data:
                     new_locks.append(HcuLock(client, device_data, channel_index, config_entry))
     if new_locks:
         async_add_entities(new_locks)

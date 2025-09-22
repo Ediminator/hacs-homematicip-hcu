@@ -23,7 +23,8 @@ async def async_setup_entry(
     for device_data in devices.values():
         if not device_data.get("PARENT"):
             for channel_index, channel_data in device_data.get("functionalChannels", {}).items():
-                if channel_data.get("functionalChannelType") in ("SHUTTER_CHANNEL", "BLIND_CHANNEL"):
+                # Discover a cover if its channel has the 'shutterLevel' feature.
+                if "shutterLevel" in channel_data:
                     new_covers.append(HcuCover(client, device_data, channel_index))
     if new_covers:
         async_add_entities(new_covers)
@@ -43,7 +44,7 @@ class HcuCover(HcuBaseEntity, CoverEntity):
             CoverEntityFeature.OPEN | CoverEntityFeature.CLOSE |
             CoverEntityFeature.STOP | CoverEntityFeature.SET_POSITION
         )
-        # Add tilt support only if the device has a 'slatsLevel' feature (i.e., it's a blind)
+        # Add tilt support only if the device has a 'slatsLevel' feature (i.e., it's a blind).
         if "slatsLevel" in self._channel:
             self._attr_supported_features |= CoverEntityFeature.SET_TILT_POSITION
 
@@ -51,7 +52,7 @@ class HcuCover(HcuBaseEntity, CoverEntity):
     def current_cover_position(self) -> int | None:
         """
         Return current position of cover.
-        Homematic: 0.0 is open, 1.0 is closed.
+        Homematic IP: 0.0 is open, 1.0 is closed.
         Home Assistant: 0 is closed, 100 is open.
         We invert the value to match HA's standard.
         """
@@ -90,13 +91,13 @@ class HcuCover(HcuBaseEntity, CoverEntity):
     async def async_set_cover_position(self, **kwargs) -> None:
         """Set a new cover position."""
         position = kwargs[ATTR_POSITION]
-        # Invert from HA's percentage to HCU's level
+        # Invert from HA's percentage (100=open) to HCU's level (1.0=closed).
         await self._client.async_set_shutter_level(self._device_id, self._channel_index, (100 - position) / 100.0)
 
     async def async_set_cover_tilt_position(self, **kwargs) -> None:
         """Set new tilt position."""
         position = kwargs[ATTR_TILT_POSITION]
-        # Invert from HA's percentage to HCU's level
+        # Invert from HA's percentage to HCU's level for both shutter and slats.
         shutter_level = (100 - (self.current_cover_position or 0)) / 100.0
         slats_level = (100 - position) / 100.0
         await self._client.async_set_slats_level(self._device_id, self._channel_index, shutter_level, slats_level)

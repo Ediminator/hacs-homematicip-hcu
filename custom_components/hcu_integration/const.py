@@ -13,22 +13,20 @@ from homeassistant.const import (
 DOMAIN = "hcu_integration"
 PLATFORMS = ["binary_sensor", "climate", "cover", "light", "lock", "sensor", "switch"]
 
-# Dispatcher signal used to notify entities that their underlying data has been updated.
 SIGNAL_UPDATE_ENTITY = f"{DOMAIN}_update"
 
-# Maps specific HCU device types to a more specific Home Assistant device class for better icon representation.
 HMIP_DEVICE_TO_DEVICE_CLASS = {
     "PLUGABLE_SWITCH": SwitchDeviceClass.OUTLET,
     "SWITCH": SwitchDeviceClass.SWITCH,
     "WINDOW_COVERING": CoverDeviceClass.SHUTTER,
 }
 
-# Maps individual data points ("features") from the HCU API to their specific entity configuration.
-# This is the central registry for how to create an entity from a piece of data.
 HMIP_FEATURE_MAP = {
     # === SENSOR ===
     "actualTemperature": {"platform": "sensor", "name": "Temperature", "unit": UnitOfTemperature.CELSIUS, "device_class": SensorDeviceClass.TEMPERATURE, "state_class": SensorStateClass.MEASUREMENT},
+    "valveActualTemperature": {"platform": "sensor", "name": "Temperature", "unit": UnitOfTemperature.CELSIUS, "device_class": SensorDeviceClass.TEMPERATURE, "state_class": SensorStateClass.MEASUREMENT},
     "humidity": {"platform": "sensor", "name": "Humidity", "unit": PERCENTAGE, "device_class": SensorDeviceClass.HUMIDITY, "state_class": SensorStateClass.MEASUREMENT},
+    "vaporAmount": {"platform": "sensor", "name": "Absolute Humidity", "unit": "g/m³", "device_class": SensorDeviceClass.HUMIDITY, "state_class": SensorStateClass.MEASUREMENT},
     "illumination": {"platform": "sensor", "name": "Illuminance", "unit": LIGHT_LUX, "device_class": SensorDeviceClass.ILLUMINANCE, "state_class": SensorStateClass.MEASUREMENT},
     "currentPower": {"platform": "sensor", "name": "Power", "unit": UnitOfPower.WATT, "device_class": SensorDeviceClass.POWER, "state_class": SensorStateClass.MEASUREMENT},
     "energyCounter": {"platform": "sensor", "name": "Energy", "unit": UnitOfEnergy.KILO_WATT_HOUR, "device_class": SensorDeviceClass.ENERGY, "state_class": SensorStateClass.TOTAL_INCREASING},
@@ -37,11 +35,12 @@ HMIP_FEATURE_MAP = {
     "batteryLevel": {"platform": "sensor", "name": "Battery Level", "unit": PERCENTAGE, "device_class": SensorDeviceClass.BATTERY, "state_class": SensorStateClass.MEASUREMENT},
     "sunshineDuration": {"platform": "sensor", "name": "Sunshine Duration", "unit": "h", "icon": "mdi:timer-sand", "state_class": SensorStateClass.TOTAL_INCREASING},
     "valvePosition": {"platform": "sensor", "name": "Valve Position", "unit": PERCENTAGE, "icon": "mdi:valve", "state_class": SensorStateClass.MEASUREMENT},
-    "rssiDeviceValue": {"platform": "sensor", "name": "Signal Strength", "unit": "dBm", "device_class": SensorDeviceClass.SIGNAL_STRENGTH, "state_class": SensorStateClass.MEASUREMENT},
-
+    "rssiDeviceValue": {"platform": "sensor", "name": "Signal Strength", "unit": "dBm", "device_class": SensorDeviceClass.SIGNAL_STRENGTH, "state_class": SensorStateClass.MEASUREMENT, "entity_registry_enabled_default": False},
+    "mountingOrientation": {"platform": "sensor", "name": "Mounting Orientation", "icon": "mdi:axis-arrow", "entity_registry_enabled_default": False},
+    
     # === BINARY_SENSOR ===
-    "lowBat": {"platform": "binary_sensor", "name": "Battery", "device_class": BinarySensorDeviceClass.BATTERY},
-    "unreach": {"platform": "binary_sensor", "name": "Unreachable", "device_class": BinarySensorDeviceClass.CONNECTIVITY, "invert_state": True},
+    "lowBat": {"platform": "binary_sensor", "name": "Battery", "device_class": BinarySensorDeviceClass.BATTERY, "entity_registry_enabled_default": False},
+    "unreach": {"platform": "binary_sensor", "name": "Unreachable", "device_class": BinarySensorDeviceClass.PROBLEM, "entity_registry_enabled_default": False},
     "presenceDetected": {"platform": "binary_sensor", "name": "Presence", "device_class": BinarySensorDeviceClass.MOTION},
     "windowState": {"platform": "binary_sensor", "name": "Window", "on_state": "OPEN", "device_class": BinarySensorDeviceClass.WINDOW},
     "smokeAlarm": {"platform": "binary_sensor", "name": "Smoke Alarm", "on_state": "SMOKE_DETECTED", "device_class": BinarySensorDeviceClass.SMOKE},
@@ -50,17 +49,14 @@ HMIP_FEATURE_MAP = {
     "raining": {"platform": "binary_sensor", "name": "Raining", "device_class": BinarySensorDeviceClass.MOISTURE},
     "sunshine": {"platform": "binary_sensor", "name": "Sunshine", "device_class": BinarySensorDeviceClass.LIGHT},
     "storm": {"platform": "binary_sensor", "name": "Storm", "device_class": BinarySensorDeviceClass.PROBLEM},
+    "operationLockActive": {"platform": "binary_sensor", "name": "Controls Locked", "device_class": BinarySensorDeviceClass.LOCK, "invert_state": True},
+    "frostProtectionActive": {"platform": "binary_sensor", "name": "Frost Protection", "device_class": BinarySensorDeviceClass.SAFETY},
+    "dewPointAlarmActive": {"platform": "binary_sensor", "name": "Dew Point Alarm", "device_class": BinarySensorDeviceClass.MOISTURE},
 
-    # === SWITCH (for discovery) ===
+    # === FOR DISCOVERY ONLY ===
     "on": {"platform": "switch"},
     "wateringActive": {"platform": "switch"},
-
-    # === LIGHT (for discovery) ===
     "dimLevel": {"platform": "light"},
-
-    # === COVER (for discovery) ===
     "shutterLevel": {"platform": "cover"},
-
-    # === LOCK (for discovery) ===
     "lockState": {"platform": "lock"},
 }

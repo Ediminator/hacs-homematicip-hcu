@@ -32,12 +32,7 @@ async def async_setup_entry(
         async_add_entities(new_climates)
 
 class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
-    """
-    Representation of an HCU Climate entity.
-    
-    In Homematic IP, climate control is managed through HEATING groups, which
-    aggregate one or more thermostats and sensors. This entity represents such a group.
-    """
+    """Representation of an HCU Climate entity."""
     _attr_temperature_unit = UnitOfTemperature.CELSIUS
     _attr_hvac_modes = [HVACMode.AUTO, HVACMode.HEAT]
     _attr_preset_modes = ["none", "boost"]
@@ -58,12 +53,7 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
 
     @property
     def hvac_mode(self) -> HVACMode:
-        """
-        Return the current HVAC mode.
-        Maps the HCU's 'controlMode' to Home Assistant's HVAC modes.
-        - AUTOMATIC -> AUTO (following the schedule)
-        - MANUAL -> HEAT (manual temperature override)
-        """
+        """Return the current HVAC mode."""
         if self._group.get("controlMode") == "AUTOMATIC":
             return HVACMode.AUTO
         return HVACMode.HEAT
@@ -77,8 +67,26 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
 
     @property
     def current_temperature(self) -> float | None:
-        """Return the current temperature reported by the group."""
-        return self._group.get("actualTemperature")
+        """
+        Return the current temperature for the group.
+
+        It first checks for a temperature value on the group itself (from a wall thermostat).
+        If not found, it searches member devices (like radiator thermostats) for a reported
+        temperature, checking for 'actualTemperature' and 'valveActualTemperature'.
+        """
+        # 1. Check for temperature directly on the group object.
+        group_temp = self._group.get("actualTemperature")
+        if group_temp is not None:
+            return group_temp
+
+        # 2. Fallback: Search member devices for a temperature reading.
+        for channel_ref in self._group.get("channels", []):
+            if device := self._client.get_device_by_address(channel_ref.get("deviceId")):
+                for channel in device.get("functionalChannels", {}).values():
+                    if temp := (channel.get("actualTemperature") or channel.get("valveActualTemperature")):
+                        return temp
+        
+        return None
 
     @property
     def target_temperature(self) -> float | None:
@@ -86,7 +94,7 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
         return self._group.get("setPointTemperature")
 
     async def async_set_temperature(self, **kwargs) -> None:
-        """Set a new target temperature, which implies switching to manual mode."""
+        """Set a new target temperature."""
         temperature = kwargs.get(ATTR_TEMPERATURE)
         if temperature is None:
             return

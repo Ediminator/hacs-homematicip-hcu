@@ -44,12 +44,9 @@ class HcuBaseEntity(Entity):
     
     @property
     def available(self) -> bool:
-        """Return if entity is available based on the device's maintenance channel."""
-        maintenance_channel_address = f"{self._device_id}:0"
-        maintenance_channel = self._client.get_device_by_address(maintenance_channel_address)
-        if maintenance_channel:
-            return not maintenance_channel.get("unreach", False)
-        return True
+        """Return if entity is available based on the device's unreach property."""
+        maintenance_channel = self._device.get("functionalChannels", {}).get("0", {})
+        return not maintenance_channel.get("unreach", False)
 
     async def async_added_to_hass(self) -> None:
         """Register a listener for state updates."""
@@ -62,8 +59,7 @@ class HcuBaseEntity(Entity):
     @callback
     def _handle_update(self, updated_ids: set) -> None:
         """Handle a state update signal from the client."""
-        channel_address = f"{self._device_id}:{self._channel_index}"
-        if self._device_id in updated_ids or channel_address in updated_ids:
+        if self._device_id in updated_ids:
             self.async_write_ha_state()
 
 class HcuGroupBaseEntity(Entity):
@@ -87,7 +83,7 @@ class HcuGroupBaseEntity(Entity):
         home_id = self._client._state.get("home", {}).get("id")
         return DeviceInfo(
             identifiers={(DOMAIN, self._group_id)},
-            name=self.name,
+            name=self._group.get("label") or "Unknown Group",
             manufacturer="Homematic IP",
             model="Heating Group",
             via_device=(DOMAIN, home_id),

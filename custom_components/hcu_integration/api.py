@@ -9,20 +9,17 @@ from uuid import uuid4
 _LOGGER = logging.getLogger(__name__)
 
 class HcuApiClient:
-    """
-    Manages the WebSocket connection and state for a Homematic IP HCU.
-    
-    This class is the single point of contact for all communication with the HCU.
-    It maintains a persistent WebSocket connection, holds a cache of the system state,
-    and handles the logic for sending commands and routing incoming messages.
-    """
+    """A client to manage the WebSocket connection and state for a Homematic IP HCU."""
     def __init__(self, host: str, auth_token: str, session: aiohttp.ClientSession):
         """Initialize the API client."""
         self._host = host
         self._auth_token = auth_token
         self._session = session
         self._websocket = None
-        self._state = {}
+        # --- FIX IS HERE ---
+        # Initialize the state cache with empty dictionaries to prevent race conditions during startup.
+        self._state = {"devices": {}, "groups": {}}
+        # --- END OF FIX ---
         self._pending_requests: dict[str, asyncio.Future] = {}
         self._event_callback: Callable | None = None
 
@@ -39,7 +36,6 @@ class HcuApiClient:
             "plugin-id": "de.homeassistant.hcu.integration",
             "hmip-system-events": "true"
         }
-        # ssl=False is used to accept the self-signed certificate from the HCU.
         self._websocket = await self._session.ws_connect(url, headers=headers, ssl=False)
 
     def register_event_callback(self, callback: Callable) -> None:
@@ -47,13 +43,7 @@ class HcuApiClient:
         self._event_callback = callback
 
     def _handle_incoming_message(self, msg: dict) -> None:
-        """
-        Route incoming WebSocket messages.
-
-        If the message is a response to a command we sent, it resolves the
-        corresponding Future. Otherwise, it passes the message to the event
-        callback for general state updates.
-        """
+        """Route incoming WebSocket messages."""
         msg_type = msg.get("type")
         msg_id = msg.get("id")
 
@@ -82,19 +72,12 @@ class HcuApiClient:
                     _LOGGER.warning("WebSocket connection closed or error: %s", msg.data)
                     raise ConnectionAbortedError("WebSocket connection lost.")
         finally:
-            # Clean up any pending requests if the listener loop breaks to prevent deadlocks.
             for future in self._pending_requests.values():
                 if not future.done():
                     future.set_exception(ConnectionAbortedError("Listener stopped."))
 
     async def async_send_hmip_request(self, path: str, body: dict = None) -> dict | None:
-        """
-        Send a command and wait for its specific response.
-
-        This method is concurrent-safe. It sends a request with a unique ID,
-        creates a Future, and waits for the main listener loop to receive the
-        matching response and resolve the Future.
-        """
+        """Send a command and wait for its specific response."""
         if not self.is_connected:
             raise ConnectionError("Not connected to HCU WebSocket.")
         
@@ -153,43 +136,33 @@ class HcuApiClient:
 
     # --- Control Methods ---
     async def async_set_switch_state(self, device_id: str, channel_index: int, on: bool) -> None:
-        """Set the switch state of a device channel."""
         await self.async_send_hmip_request("/hmip/device/control/setSwitchState", {"deviceId": device_id, "channelIndex": channel_index, "on": on})
     
     async def async_set_dim_level(self, device_id: str, channel_index: int, dim_level: float) -> None:
-        """Set the dim level of a device channel."""
         await self.async_send_hmip_request("/hmip/device/control/setDimLevel", {"deviceId": device_id, "channelIndex": channel_index, "dimLevel": dim_level})
 
     async def async_set_shutter_level(self, device_id: str, channel_index: int, shutter_level: float) -> None:
-        """Set the shutter level of a device channel."""
         await self.async_send_hmip_request("/hmip/device/control/setShutterLevel", {"deviceId": device_id, "channelIndex": channel_index, "shutterLevel": shutter_level})
         
     async def async_set_slats_level(self, device_id: str, channel_index: int, shutter_level: float, slats_level: float) -> None:
-        """Set the slats level of a device channel."""
         await self.async_send_hmip_request("/hmip/device/control/setSlatsLevel", {"deviceId": device_id, "channelIndex": channel_index, "shutterLevel": shutter_level, "slatsLevel": slats_level})
 
     async def async_stop_cover(self, device_id: str, channel_index: int) -> None:
-        """Stop a moving cover."""
         await self.async_send_hmip_request("/hmip/device/control/stop", {"deviceId": device_id, "channelIndex": channel_index})
 
     async def async_set_lock_state(self, device_id: str, channel_index: int, state: str, pin: str) -> None:
-        """Set the lock state of a door lock."""
         await self.async_send_hmip_request("/hmip/device/control/setLockState", {"deviceId": device_id, "channelIndex": channel_index, "targetLockState": state, "authorizationPin": pin})
         
     async def async_set_color_temperature_dim_level(self, device_id: str, channel_index: int, color_temp: int, dim_level: float) -> None:
-        """Set the color temperature and dim level of a light."""
         await self.async_send_hmip_request("/hmip/device/control/setColorTemperatureDimLevel", {"deviceId": device_id, "channelIndex": channel_index, "colorTemperature": color_temp, "dimLevel": dim_level})
 
     async def async_set_setpoint_temperature(self, group_id: str, temperature: float) -> None:
-        """Set the target temperature for a heating group."""
         await self.async_send_hmip_request("/hmip/group/heating/setSetPointTemperature", {"groupId": group_id, "setPointTemperature": temperature})
     
     async def async_set_control_mode(self, group_id: str, mode: str) -> None:
-        """Set the control mode for a heating group."""
         await self.async_send_hmip_request("/hmip/group/heating/setControlMode", {"groupId": group_id, "controlMode": mode})
     
     async def async_set_boost(self, group_id: str, boost: bool) -> None:
-        """Set the boost mode for a heating group."""
         await self.async_send_hmip_request("/hmip/group/heating/setBoost", {"groupId": group_id, "boost": boost})
 
     async def disconnect(self) -> None:

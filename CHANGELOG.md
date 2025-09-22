@@ -5,7 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.1.0] - 2025-09-23
+
+### 🚀 Features
+
+* **Added Standalone Temperature Sensor for Radiator Thermostats**: The integration now correctly creates a dedicated temperature sensor for radiator thermostats (like `HmIP-eTRV-E`) by reading the `valveActualTemperature` property. This resolves the issue where rooms without a separate wall-mounted thermostat would not show a temperature reading.
+* **Added New Sensor Entities**: Based on a deeper analysis of the API data, the following new sensors are now created where available:
+    * **Absolute Humidity** (`vaporAmount`): For thermostats that report this value.
+    * **Controls Locked** (`operationLockActive`): Binary sensor for thermostats.
+    * **Frost Protection** (`frostProtectionActive`): Binary sensor for floor heating systems.
+    * **Dew Point Alarm** (`dewPointAlarmActive`): Binary sensor for floor heating systems.
+
+### 🐛 Bug Fixes
+
+* **Corrected Inverted 'Controls Locked' State**: The "Controls Locked" binary sensor now correctly shows its state. The logic was inverted to match Home Assistant's standards for the `LOCK` device class.
+* **Fixed Extraneous Battery Entities**: The integration no longer creates "Battery" or "Battery Level" entities for mains-powered devices that reported a `null` battery state.
+
+### ⬆️ Improvements
+
+* **Improved 'Unreachable' Sensor**: The binary sensor for device reachability (`unreach`) now uses the `PROBLEM` device class, resulting in more intuitive states of "OK" and "Problem" in the Home Assistant UI.
+* **Rounded Humidity Value**: The "Absolute Humidity" sensor value is now rounded to two decimal places for a cleaner presentation.
+* **More Robust Entity Discovery**: The logic for discovering most entities (sensors, binary sensors, covers, lights, and locks) has been updated to rely on the presence of specific API features (e.g., `shutterLevel`, `dimLevel`) instead of undocumented `functionalChannelType` names. This makes the integration more resilient to future HCU firmware updates.
 
 ## [1.0.0] - 2025-09-21
 
@@ -47,4 +67,5 @@ This is the initial stable release of the Homematic IP Local (HCU) integration, 
 * Fixed the discovery logic for `binary_sensor` entities to correctly identify and create motion detectors.
 
 [Unreleased]: https://github.com/Ediminator/hacs-homematicip-hcu/compare/v1.0.0...HEAD
+
 [1.0.0]: https://github.com/Ediminator/hacs-homematicip-hcu/releases/tag/v1.0.0

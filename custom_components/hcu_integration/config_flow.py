@@ -1,5 +1,5 @@
 # custom_components/hcu_integration/config_flow.py
-"""Config flow for Homematic IP Local (HCU) integration."""
+"""Config flow for the Homematic IP Local (HCU) integration."""
 import logging
 import aiohttp
 import asyncio
@@ -23,17 +23,19 @@ class HcuConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """
     Handle a config flow for the Homematic IP HCU Integration.
 
-    This flow guides the user through a two-step process:
+    This flow guides the user through a multi-step process:
     1.  `async_step_user`: Gathers the HCU's IP address.
-    2.  `async_step_auth`: Gathers a temporary activation key from the user
-        and performs the two-part authentication handshake with the HCU to
-        obtain a permanent authorization token.
+    2.  `async_step_auth`: Gathers a temporary activation key and performs the
+        authentication handshake to get a permanent token.
+    3.  `async_step_finish`: Informs the user of success and recommends a restart
+        to ensure stability, especially when re-configuring.
     """
     VERSION = 1
 
     def __init__(self):
         """Initialize the config flow."""
         self.host = None
+        self.auth_token = None
 
     @staticmethod
     @callback
@@ -55,14 +57,14 @@ class HcuConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         )
 
     async def async_step_auth(self, user_input: dict | None = None) -> FlowResult:
-        """Handle the authentication step where the user provides the activation key."""
+        """Handle the authentication handshake with the HCU."""
         errors = {}
         if user_input is not None:
             activation_key = user_input["activation_key"]
             session = aiohttp_client.async_get_clientsession(self.hass)
             
             try:
-                # Step 1 of Handshake: Request the preliminary auth token from the HCU.
+                # Step 1: Request the preliminary auth token.
                 request_url = f"https://{self.host}:{AUTH_PORT}/hmip/auth/requestConnectApiAuthToken"
                 headers = {"VERSION": "12"}
                 body = {
@@ -73,22 +75,19 @@ class HcuConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 async with session.post(request_url, headers=headers, json=body, ssl=False) as response:
                     response.raise_for_status()
                     data = await response.json()
-                    auth_token = data.get("authToken")
+                    self.auth_token = data.get("authToken")
 
-                # Step 2 of Handshake: Confirm the auth token to make it permanent.
+                # Step 2: Confirm the auth token to make it permanent.
                 confirm_url = f"https://{self.host}:{AUTH_PORT}/hmip/auth/confirmConnectApiAuthToken"
-                confirm_body = {"activationKey": activation_key, "authToken": auth_token}
+                confirm_body = {"activationKey": activation_key, "authToken": self.auth_token}
                 
                 async with session.post(confirm_url, headers=headers, json=confirm_body, ssl=False) as response:
                     response.raise_for_status()
                     if not (await response.json()).get("clientId"):
                         raise ValueError("HCU did not confirm the authToken.")
-
+                
                 _LOGGER.info("Successfully received and confirmed auth token from HCU")
-                return self.async_create_entry(
-                    title="Homematic IP HCU",
-                    data={CONF_HOST: self.host, CONF_TOKEN: auth_token}
-                )
+                return await self.async_step_finish()
 
             except (aiohttp.ClientError, asyncio.TimeoutError):
                 errors["base"] = "cannot_connect"
@@ -104,8 +103,16 @@ class HcuConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             errors=errors,
         )
 
+    async def async_step_finish(self, user_input: dict | None = None) -> FlowResult:
+        """Final step to create the entry and inform the user."""
+        return self.async_create_entry(
+            title="Homematic IP HCU",
+            data={CONF_HOST: self.host, CONF_TOKEN: self.auth_token},
+            description="Your Homematic IP HCU has been successfully added. **A restart of Home Assistant is recommended to ensure stability.**"
+        )
+
 class HcuOptionsFlowHandler(config_entries.OptionsFlow):
-    """Handle an options flow for the HCU integration to configure things like the lock PIN."""
+    """Handle an options flow for the HCU integration to configure the lock PIN."""
 
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         """Initialize options flow."""
@@ -116,7 +123,6 @@ class HcuOptionsFlowHandler(config_entries.OptionsFlow):
         if user_input is not None:
             return self.async_create_entry(title="", data=user_input)
 
-        # Show the form to the user to enter the PIN.
         return self.async_show_form(
             step_id="init",
             data_schema=vol.Schema({

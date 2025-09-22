@@ -10,10 +10,11 @@ from .const import DOMAIN, HMIP_FEATURE_MAP
 from .entity import HcuBaseEntity
 from .api import HcuApiClient
 
-# Maps specific functional channel types to the feature that represents their primary state.
+# Map specific functional channel types to the feature that represents their primary state.
 CHANNEL_TYPE_TO_FEATURE = {
     "MOTION_DETECTION_CHANNEL": "presenceDetected",
     "SHUTTER_CONTACT_CHANNEL": "windowState",
+    "ROTARY_HANDLE_CHANNEL": "rotaryHandleState",
     "SMOKE_DETECTOR_CHANNEL": "smokeAlarm",
     "WATER_SENSOR_CHANNEL": "waterlevelDetected",
     "TILT_VIBRATION_SENSOR_CHANNEL": "presenceDetected",
@@ -28,38 +29,48 @@ async def async_setup_entry(
     devices = data["initial_state"].get("devices", {})
     
     new_entities = []
-    for device_data in devices.values():
-        if not device_data.get("PARENT"):  # Process only main devices
-            
-            # Create stateless button sensors for SWITCH_INPUT devices.
-            if device_data.get("type") == "SWITCH_INPUT":
-                for channel_index in device_data.get("functionalChannels", {}):
-                    if int(channel_index) > 0: # Skip the maintenance channel 0
-                        new_entities.append(HcuButtonSensor(client, device_data, channel_index))
-                continue # Move to the next device
+    created_entity_ids = set()
 
-            # Create stateful binary sensors for all other devices.
+    for device_id, device_data in devices.items():
+        if not device_data.get("PARENT"):  # Process only main physical devices
+            # --- NEW ROBUST DISCOVERY LOGIC ---
+
+            # 1. Create entities based on the primary function of each channel
             for channel_index, channel_data in device_data.get("functionalChannels", {}).items():
                 channel_type = channel_data.get("functionalChannelType")
-                
-                # Create entities based on the primary function of the channel.
                 if feature := CHANNEL_TYPE_TO_FEATURE.get(channel_type):
                     if feature in channel_data:
-                        mapping = HMIP_FEATURE_MAP[feature]
-                        new_entities.append(HcuBinarySensor(client, device_data, channel_index, feature, mapping))
+                        unique_id = f"{device_id}_{channel_index}_{feature}"
+                        if unique_id not in created_entity_ids:
+                            mapping = HMIP_FEATURE_MAP[feature]
+                            new_entities.append(HcuBinarySensor(client, device_data, channel_index, feature, mapping))
+                            created_entity_ids.add(unique_id)
 
-                # Create generic diagnostic entities (low battery, unreachable) from the maintenance channel.
-                if channel_index == "0":
-                    for feature in ("lowBat", "unreach"):
-                        if feature in channel_data and channel_data.get(feature) is not None:
+            # 2. Create stateless button sensors for SWITCH_INPUT devices
+            if device_data.get("type") == "SWITCH_INPUT":
+                for channel_index in device_data.get("functionalChannels", {}):
+                    if int(channel_index) > 0:  # Skip maintenance channel 0
+                        unique_id = f"{device_id}_{channel_index}_button"
+                        if unique_id not in created_entity_ids:
+                            new_entities.append(HcuButtonSensor(client, device_data, channel_index))
+                            created_entity_ids.add(unique_id)
+
+            # 3. Create generic diagnostic entities from the maintenance channel (channel 0)
+            if "0" in device_data.get("functionalChannels", {}):
+                maintenance_channel = device_data["functionalChannels"]["0"]
+                for feature in ("lowBat", "unreach"):
+                    if feature in maintenance_channel and maintenance_channel.get(feature) is not None:
+                        unique_id = f"{device_id}_0_{feature}"
+                        if unique_id not in created_entity_ids:
                             if mapping := HMIP_FEATURE_MAP.get(feature):
-                                new_entities.append(HcuBinarySensor(client, device_data, channel_index, feature, mapping))
-    
+                                new_entities.append(HcuBinarySensor(client, device_data, "0", feature, mapping))
+                                created_entity_ids.add(unique_id)
+
     if new_entities:
         async_add_entities(new_entities)
 
 class HcuBinarySensor(HcuBaseEntity, BinarySensorEntity):
-    """Representation of an HCU binary sensor with a persistent state (e.g., window open/closed)."""
+    """Representation of an HCU binary sensor with a persistent state."""
     def __init__(self, client: HcuApiClient, device_data: dict, channel_index: str, feature: str, mapping: dict):
         """Initialize the binary sensor."""
         super().__init__(client, device_data, channel_index)
@@ -82,16 +93,16 @@ class HcuBinarySensor(HcuBaseEntity, BinarySensorEntity):
         value = self._channel.get(self._feature)
         if value is None:
             return None
+        
+        # Special handling for rotary handle sensors, which have multiple "on" states.
+        if self._feature == "rotaryHandleState":
+            return value in ("TILTED", "OPEN")
             
         is_on_state = (value == self._on_state)
         return not is_on_state if self._invert_state else is_on_state
 
 class HcuButtonSensor(HcuBaseEntity, BinarySensorEntity):
-    """
-    Representation of a stateless button (SWITCH_INPUT).
-    This sensor turns 'on' for a brief moment when a button press is detected
-    by listening for any update event on its channel.
-    """
+    """Representation of a stateless button (SWITCH_INPUT)."""
     _attr_should_poll = False
 
     def __init__(self, client: HcuApiClient, device_data: dict, channel_index: str):
@@ -112,8 +123,7 @@ class HcuButtonSensor(HcuBaseEntity, BinarySensorEntity):
         """Handle a state update signal to detect a button press."""
         channel_address = f"{self._device_id}:{self._channel_index}"
         if channel_address in updated_ids:
-            # A button press is often just a timestamp update.
-            # If the timestamp changes, we fire the event.
+            # A button press is often just a timestamp update. If the timestamp changes, we fire the event.
             new_ts = self._channel.get("lastStatusUpdate")
             if new_ts and new_ts != self._last_update_ts:
                 self._last_update_ts = new_ts

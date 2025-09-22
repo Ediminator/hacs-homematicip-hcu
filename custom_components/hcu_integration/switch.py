@@ -18,17 +18,33 @@ async def async_setup_entry(
     devices = data["initial_state"].get("devices", {})
     
     new_switches = []
+    created_entity_ids = set()
+
     for device_data in devices.values():
         if not device_data.get("PARENT"):
             for channel_index, channel_data in device_data.get("functionalChannels", {}).items():
                 channel_type = channel_data.get("functionalChannelType")
-                
-                if channel_type == "SWITCH_CHANNEL":
-                    new_switches.append(HcuSwitch(client, device_data, channel_index))
+                unique_id = f"{device_data['id']}_{channel_index}"
+
+                # --- NEW ROBUST DISCOVERY LOGIC ---
+                # A channel is a switch if it's a dedicated SWITCH_CHANNEL 
+                # OR if it's any other channel type that has an "on" property (like a metering plug).
+                if channel_type == "SWITCH_CHANNEL" or "on" in channel_data:
+                    if unique_id not in created_entity_ids:
+                        new_switches.append(HcuSwitch(client, device_data, channel_index))
+                        created_entity_ids.add(unique_id)
+
+                # Create special "sound" switches for siren/doorbell channels.
                 elif channel_type == "ACOUSTIC_SIGNAL_VIRTUAL_RECEIVER":
-                    new_switches.append(HcuSoundSwitch(client, device_data, channel_index))
+                    if unique_id not in created_entity_ids:
+                        new_switches.append(HcuSoundSwitch(client, device_data, channel_index))
+                        created_entity_ids.add(unique_id)
+                
+                # Create watering controller switches
                 elif channel_type == "WATERING_SYSTEM_CHANNEL":
-                    new_switches.append(HcuWateringSwitch(client, device_data, channel_index))
+                    if unique_id not in created_entity_ids:
+                        new_switches.append(HcuWateringSwitch(client, device_data, channel_index))
+                        created_entity_ids.add(unique_id)
 
     if new_switches:
         async_add_entities(new_switches)
@@ -57,12 +73,9 @@ class HcuSwitch(HcuBaseEntity, SwitchEntity):
         """Turn the switch off."""
         await self._client.async_set_switch_state(self._device_id, self._channel_index, False)
 
+
 class HcuSoundSwitch(HcuBaseEntity, SwitchEntity):
-    """
-    Representation of an HCU sound switch (e.g., for an MP3 doorbell).
-    This switch is "write-only"; turning it on plays a sound, but it immediately
-    returns to an 'off' state in Home Assistant.
-    """
+    """Representation of an HCU sound switch (e.g., for an MP3 doorbell)."""
     _attr_icon = "mdi:volume-high"
 
     def __init__(self, client: HcuApiClient, device_data: dict, channel_index: str):
@@ -112,12 +125,20 @@ class HcuWateringSwitch(HcuBaseEntity, SwitchEntity):
         """Turn the watering on."""
         await self._client.async_send_hmip_request(
             path="/hmip/device/control/setWateringSwitchState",
-            body={ "deviceId": self._device_id, "channelIndex": self._channel_index, "wateringActive": True, },
+            body={
+                "deviceId": self._device_id,
+                "channelIndex": self._channel_index,
+                "wateringActive": True,
+            },
         )
 
     async def async_turn_off(self, **kwargs) -> None:
         """Turn the watering off."""
         await self._client.async_send_hmip_request(
             path="/hmip/device/control/setWateringSwitchState",
-            body={ "deviceId": self._device_id, "channelIndex": self._channel_index, "wateringActive": False, },
+            body={
+                "deviceId": self._device_id,
+                "channelIndex": self._channel_index,
+                "wateringActive": False,
+            },
         )

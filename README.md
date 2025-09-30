@@ -12,6 +12,23 @@ This is a custom integration for Home Assistant that connects directly to your *
 * **Broad Device Support:** Includes support for a wide range of devices (see Supported Entities below).
 * **Custom Services:** Provides a flexible `play_sound` service for notification devices.
 
+## Supported Devices
+
+This integration is designed to be broadly compatible with Homematic IP devices connected to a Home Control Unit (HCU). Instead of relying on a fixed list of device models, entities are created based on the *features* reported by the device through the API.
+
+This means that most devices should work out-of-the-box for their primary functions. For example:
+- Any device reporting a `dimLevel` will appear as a `light`.
+- Any device reporting `shutterLevel` will appear as a `cover`.
+- Any device reporting `windowState` or `presenceDetected` will appear as a `binary_sensor`.
+- Any device with a `SWITCH_INPUT` channel will generate events for button presses.
+
+Support has been mostly verified for a wide range of devices, including:
+- Standard Switches and Dimmers (pluggable, flush-mounted, and DIN rail)
+- Shutter and Blind Actuators (including third-party modules like HunterDouglas)
+- Climate Control (Heating Groups, Wall & Radiator Thermostats)
+- Security Sensors (Window/Door Contacts, Motion/Presence Detectors, Smoke & Water Sensors)
+- Special Devices like Garage Door Modules (`HmIP-MOD-HO`), Door Lock Drives (`HmIP-DLD`), and RGBW Controllers (`HmIP-RGBW`).
+
 ## Installation
 
 ### Prerequisites

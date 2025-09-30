@@ -1,17 +1,21 @@
 # custom_components/hcu_integration/climate.py
-"""Climate platform for the Homematic IP HCU integration."""
+"""
+Climate platform for the Homematic IP HCU integration.
+
+This platform creates climate entities for Homematic IP heating groups.
+"""
 import logging
 from homeassistant.components.climate import (
     ClimateEntity, ClimateEntityFeature, HVACMode
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import UnitOfTemperature, ATTR_TEMPERATURE
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN
+from .const import DOMAIN, CONF_COMFORT_TEMPERATURE, DEFAULT_COMFORT_TEMPERATURE, API_PATHS
 from .entity import HcuGroupBaseEntity
-from .api import HcuApiClient
+from .api import HcuApiClient, HcuApiError
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -19,105 +23,179 @@ async def async_setup_entry(
     hass: HomeAssistant, config_entry: ConfigEntry, async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the climate platform from a config entry."""
-    data = hass.data[DOMAIN][config_entry.entry_id]
-    client: HcuApiClient = data["client"]
-    groups = data["initial_state"].get("groups", {})
+    coordinator = hass.data[DOMAIN][config_entry.entry_id]
+    client: HcuApiClient = coordinator.client
     
-    new_climates = []
-    for group_data in groups.values():
-        if group_data.get("type") == "HEATING":
-            new_climates.append(HcuClimate(client, group_data))
+    new_entities = [
+        HcuClimate(client, group_data, config_entry)
+        for group_data in client.state.get("groups", {}).values()
+        if group_data.get("type") == "HEATING"
+    ]
 
-    if new_climates:
-        async_add_entities(new_climates)
+    if new_entities:
+        async_add_entities(new_entities)
 
 class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
-    """Representation of an HCU Climate entity."""
+    """Representation of an HCU Climate entity based on a Heating Group."""
     _attr_temperature_unit = UnitOfTemperature.CELSIUS
-    _attr_hvac_modes = [HVACMode.AUTO, HVACMode.HEAT]
-    _attr_preset_modes = ["none", "boost"]
+    _attr_hvac_modes = [HVACMode.AUTO, HVACMode.HEAT, HVACMode.OFF]
+    _attr_preset_modes = ["boost", "none"]
     _attr_supported_features = (
         ClimateEntityFeature.TARGET_TEMPERATURE | ClimateEntityFeature.PRESET_MODE
     )
+    # This integration uses the modern HVACMode enum and does not support turning on/off via the switch domain.
     _enable_turn_on_off_backwards_compatibility = False
 
-    def __init__(self, client: HcuApiClient, group_data: dict):
+    def __init__(self, client: HcuApiClient, group_data: dict, config_entry: ConfigEntry):
         """Initialize the climate entity."""
         super().__init__(client, group_data)
+        self._config_entry = config_entry
         self._attr_name = self._group.get("label") or "Unknown Heating Group"
         self._attr_unique_id = self._group_id
         
         self._attr_min_temp = self._group.get("minTemperature", 5.0)
         self._attr_max_temp = self._group.get("maxTemperature", 30.0)
-        self._attr_target_temperature_step = 0.5
+        self._attr_target_temperature_step = self._group.get("temperatureStep", 0.5)
+
+        # Attributes for optimistic state updates
+        self._attr_hvac_mode: HVACMode | None = None
+        self._attr_target_temperature: float | None = None
+
+    @callback
+    def _handle_update(self, updated_ids: set) -> None:
+        """Handle a state update signal from the coordinator."""
+        if self._group_id in updated_ids:
+            # A real state update has arrived. Clear any optimistic values.
+            self._attr_hvac_mode = None
+            self._attr_target_temperature = None
+            self._attr_assumed_state = False
+            self.async_write_ha_state()
 
     @property
     def hvac_mode(self) -> HVACMode:
         """Return the current HVAC mode."""
-        if self._group.get("controlMode") == "AUTOMATIC":
+        if self._attr_hvac_mode is not None:
+            return self._attr_hvac_mode
+        
+        control_mode = self._group.get("controlMode")
+        # In manual mode, a temperature equal to the minimum is considered 'OFF'.
+        if (
+            control_mode == "MANUAL" 
+            and self._group.get("setPointTemperature") == self._attr_min_temp
+        ):
+            return HVACMode.OFF
+        if control_mode == "AUTOMATIC":
             return HVACMode.AUTO
         return HVACMode.HEAT
         
     @property
     def preset_mode(self) -> str | None:
         """Return the current preset mode."""
-        if self._group.get("boostMode", False):
-            return "boost"
-        return "none"
+        return "boost" if self._group.get("boostMode") else "none"
 
     @property
     def current_temperature(self) -> float | None:
-        """
-        Return the current temperature for the group.
+        """Return the current temperature for the group."""
+        # Prioritize the group's own actualTemperature if available.
+        if (temp := self._group.get("actualTemperature")) is not None:
+            return temp
 
-        It first checks for a temperature value on the group itself (from a wall thermostat).
-        If not found, it searches member devices (like radiator thermostats) for a reported
-        temperature, checking for 'actualTemperature' and 'valveActualTemperature'.
-        """
-        # 1. Check for temperature directly on the group object.
-        group_temp = self._group.get("actualTemperature")
-        if group_temp is not None:
-            return group_temp
-
-        # 2. Fallback: Search member devices for a temperature reading.
+        # Fallback to finding the temperature from a member device (e.g., a wall thermostat).
         for channel_ref in self._group.get("channels", []):
             if device := self._client.get_device_by_address(channel_ref.get("deviceId")):
-                for channel in device.get("functionalChannels", {}).values():
-                    if temp := (channel.get("actualTemperature") or channel.get("valveActualTemperature")):
-                        return temp
+                channel_idx_str = str(channel_ref.get("channelIndex"))
+                channel = device.get("functionalChannels", {}).get(channel_idx_str)
+                # Check for both possible temperature keys.
+                if channel and (temp := (channel.get("actualTemperature") or channel.get("valveActualTemperature"))):
+                    return temp
         
         return None
 
     @property
     def target_temperature(self) -> float | None:
         """Return the target temperature."""
+        # Return the optimistic value if it exists, otherwise the real state.
+        if self._attr_target_temperature is not None:
+            return self._attr_target_temperature
         return self._group.get("setPointTemperature")
 
     async def async_set_temperature(self, **kwargs) -> None:
         """Set a new target temperature."""
-        temperature = kwargs.get(ATTR_TEMPERATURE)
-        if temperature is None:
+        if (temperature := kwargs.get(ATTR_TEMPERATURE)) is None:
             return
 
-        if self.preset_mode == "boost":
-            await self._client.async_set_boost(self._group_id, False)
-        
-        await self._client.async_set_control_mode(self._group_id, "MANUAL")
-        await self._client.async_set_setpoint_temperature(self._group_id, temperature)
+        # Set optimistic state for immediate UI feedback.
+        self._attr_target_temperature = temperature
+        self._attr_hvac_mode = HVACMode.HEAT
+        self._attr_assumed_state = True
+        self.async_write_ha_state()
+
+        try:
+            if self.preset_mode == "boost":
+                await self._client.async_group_control(API_PATHS.SET_GROUP_BOOST, self._group_id, {"boost": False})
+            
+            await self._client.async_group_control(
+                API_PATHS.SET_GROUP_SET_POINT_TEMP, self._group_id, {"setPointTemperature": temperature}
+            )
+        except (HcuApiError, ConnectionError) as err:
+            _LOGGER.error("Failed to set temperature for %s: %s", self.name, err)
+            # Revert optimistic state on failure.
+            self._attr_target_temperature = None
+            self._attr_hvac_mode = None
+            self._attr_assumed_state = False
+            self.async_write_ha_state()
 
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
         """Set a new HVAC mode."""
-        if self.preset_mode == "boost":
-            await self._client.async_set_boost(self._group_id, False)
+        self._attr_hvac_mode = hvac_mode
+        self._attr_assumed_state = True
+        self.async_write_ha_state()
         
-        if hvac_mode == HVACMode.AUTO:
-            await self._client.async_set_control_mode(self._group_id, "AUTOMATIC")
-        elif hvac_mode == HVACMode.HEAT:
-            await self._client.async_set_control_mode(self._group_id, "MANUAL")
+        try:
+            if self.preset_mode == "boost":
+                await self._client.async_group_control(API_PATHS.SET_GROUP_BOOST, self._group_id, {"boost": False})
+            
+            if hvac_mode == HVACMode.OFF:
+                self._attr_target_temperature = self._attr_min_temp
+                await self._client.async_group_control(
+                    API_PATHS.SET_GROUP_SET_POINT_TEMP, self._group_id, {"setPointTemperature": self._attr_min_temp}
+                )
+            elif hvac_mode == HVACMode.AUTO:
+                await self._client.async_group_control(
+                    API_PATHS.SET_GROUP_CONTROL_MODE, self._group_id, {"controlMode": "AUTOMATIC"}
+                )
+            elif hvac_mode == HVACMode.HEAT:
+                await self._client.async_group_control(
+                    API_PATHS.SET_GROUP_CONTROL_MODE, self._group_id, {"controlMode": "MANUAL"}
+                )
+                # If turning on from an OFF state, set a default comfort temperature.
+                if self.target_temperature == self._attr_min_temp:
+                    comfort_temp = self._config_entry.options.get(
+                        CONF_COMFORT_TEMPERATURE, DEFAULT_COMFORT_TEMPERATURE
+                    )
+                    self._attr_target_temperature = comfort_temp
+                    self.async_write_ha_state() # Update UI with new temp optimistically
+                    await self._client.async_group_control(
+                        API_PATHS.SET_GROUP_SET_POINT_TEMP, self._group_id, {"setPointTemperature": comfort_temp}
+                    )
+        except (HcuApiError, ConnectionError) as err:
+            _LOGGER.error("Failed to set HVAC mode for %s: %s", self.name, err)
+            # Revert optimistic state on failure.
+            self._attr_hvac_mode = None
+            self._attr_assumed_state = False
+            self.async_write_ha_state()
             
     async def async_set_preset_mode(self, preset_mode: str) -> None:
-        """Set a new preset mode."""
-        if preset_mode == "boost":
-            await self._client.async_set_boost(self._group_id, True)
-        elif preset_mode == "none":
-            await self._client.async_set_boost(self._group_id, False)
+        """Set a new preset mode (e.g., boost)."""
+        self._attr_assumed_state = True
+        self.async_write_ha_state()
+        
+        try:
+            is_boost = (preset_mode == "boost")
+            await self._client.async_group_control(
+                API_PATHS.SET_GROUP_BOOST, self._group_id, {"boost": is_boost}
+            )
+        except (HcuApiError, ConnectionError) as err:
+            _LOGGER.error("Failed to set preset mode for %s: %s", self.name, err)
+            self._attr_assumed_state = False
+            self.async_write_ha_state()

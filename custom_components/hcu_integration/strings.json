@@ -10,7 +10,7 @@
       },
       "auth": {
         "title": "Authorize Integration",
-        "description": "Please follow these steps on your HCU's web interface at `https://{hcu_ip}`:\n\n1. Navigate to **Developer Mode**.\n2. Press the **Generate activation key** button.\n3. Enter the temporary key below.\n\n![HCU Activation Key Location](https://raw.githubusercontent.com/Ediminator/hacs-homematicip-hcu/main/images/hcu_activation_key.png)",
+        "description": "Please follow these steps on your HCU's web interface (likely at `https://192.168.178.53`):\n\n1. Navigate to **Developer Mode**.\n2. Press the **Generate activation key** button.\n3. Enter the temporary key below.\n\n![HCU Activation Key Location](https://raw.githubusercontent.com/Ediminator/hacs-homematicip-hcu/main/images/hcu_activation_key.png)",
         "data": {
           "activation_key": "Activation Key"
         }
@@ -31,7 +31,7 @@
         "title": "Configure HCU Options",
         "description": "Set options for your Homematic IP HCU integration.",
         "data": {
-          "pin": "Lock Authorization PIN"
+          "pin": "Lock Authorization PIN (optional)"
         }
       }
     }

@@ -5,6 +5,42 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Version 1.3.0 - Major Compatibility Update & Bug Fixes
+
+This release significantly expands device support and fixes several key bugs related to optimistic state handling and entity mapping.
+
+### 🎉 New Device Support
+The integration now supports a much wider range of devices thanks to new mappings for their unique features and channel types.
+
+- **Covers:**
+  - Garage Door modules (e.g., `HmIP-MOD-HO`) are now supported as `cover` entities.
+
+- **Lights:**
+  - Full RGB color control (`HS` color mode) is now supported for lights like the `HmIP-RGBW`.
+
+- **Sensors:**
+  - Tilt/Vibration Sensor (`HmIP-STV`)
+  - Mains Failure Sensor (`HmIP-PMFS`)
+  - Multi-probe Temperature Sensors (e.g., `HmIP-STE2-PCB`) now create entities for all temperature readings (sensor 1, sensor 2, and delta).
+  - Soil Sensors (e.g., `HmIP-SMI`) now expose entities for moisture and temperature.
+
+- **Switches:**
+  - Added specific device classes for DIN rail and wired switches (`HmIP-DRSI1`, `HmIPW-DRS8`, `HmIPW-DRS4`).
+
+- **Event-Based Devices:**
+  - Added support for `MULTI_MODE_INPUT_CHANNEL` to generate events for devices like the `HmIP-FCI6`.
+
+### ✨ Improvements
+- Added support for the wired DIN rail access point (`HmIPW-DRAP`) as a recognized hub device.
+- The `play_sound` service is now available for compatible devices like sirens and doorbells.
+
+### 🐛 Bug Fixes
+- **Climate:** Fixed a critical bug where changing the temperature while in "Auto" mode would not switch the thermostat to "Heat" (manual) mode.
+- **Alarm Panel:** Fixed a UI flickering issue that occurred during the arming sequence by correctly implementing the "Arming" state.
+- **Alarm Panel:** Resolved a Home Assistant Core deprecation warning by renaming the internal `state` property to `alarm_state`.
+- **Smart Plugs:** Corrected a feature key (`currentPowerConsumption`) to ensure power and energy sensors are created for smart plugs with metering (e.g., `HmIP-PSM`).
+- **Code Quality:** Removed unused imports flagged by the linter.
+
 ## 1.2.0 - 2025-09-30
 
 ### ✨ Features
@@ -84,5 +120,6 @@ This is the initial stable release of the Homematic IP Local (HCU) integration, 
 [Unreleased]: https://github.com/Ediminator/hacs-homematicip-hcu/compare/v1.0.0...HEAD
 
 [1.0.0]: https://github.com/Ediminator/hacs-homematicip-hcu/releases/tag/v1.0.0
+
 
 

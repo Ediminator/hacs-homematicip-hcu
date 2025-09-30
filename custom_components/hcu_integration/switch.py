@@ -9,7 +9,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN, HMIP_DEVICE_TYPE_TO_DEVICE_CLASS, HMIP_FEATURE_TO_ENTITY
+from .const import DOMAIN, HMIP_DEVICE_TYPE_TO_DEVICE_CLASS, HMIP_FEATURE_TO_ENTITY, API_PATHS
 from .entity import HcuBaseEntity
 from .api import HcuApiClient
 
@@ -37,6 +37,10 @@ async def async_setup_entry(
         for channel_index, channel_data in device_data.get("functionalChannels", {}).items():
             # Do not create controls for the HCU's internal channels.
             if channel_data.get("functionalChannelType") == "ACCESS_CONTROLLER_CHANNEL":
+                continue
+            
+            # Garage door modules are handled by the cover platform.
+            if channel_data.get("functionalChannelType") == "DOOR_CHANNEL":
                 continue
 
             for feature, mapping in HMIP_FEATURE_TO_ENTITY.items():
@@ -79,7 +83,7 @@ class HcuSwitch(HcuBaseEntity, SwitchEntity):
         self._attr_assumed_state = True
         self.async_write_ha_state()
         await self._client.async_device_control(
-            path="/hmip/device/control/setSwitchState",
+            path=API_PATHS.SET_SWITCH_STATE,
             device_id=self._device_id,
             channel_index=self._channel_index,
             body={"on": True}
@@ -90,7 +94,7 @@ class HcuSwitch(HcuBaseEntity, SwitchEntity):
         self._attr_assumed_state = True
         self.async_write_ha_state()
         await self._client.async_device_control(
-            path="/hmip/device/control/setSwitchState",
+            path=API_PATHS.SET_SWITCH_STATE,
             device_id=self._device_id,
             channel_index=self._channel_index,
             body={"on": False}

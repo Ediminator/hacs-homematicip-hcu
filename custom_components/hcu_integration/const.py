@@ -52,6 +52,7 @@ class API_PATHS:
     STOP_COVER = "/hmip/device/control/stop"
     SET_LOCK_STATE = "/hmip/device/control/setLockState"
     SEND_DOOR_COMMAND = "/hmip/device/control/sendDoorCommand"
+    TOGGLE_GARAGE_DOOR_STATE = "/hmip/device/control/toggleGarageDoorState" # Added for HmIP-MOD-TM
     SET_SOUND_FILE = "/hmip/device/control/setSoundFileVolumeLevelWithTime"
     
     # Group Control
@@ -74,6 +75,7 @@ HMIP_DEVICE_TYPE_TO_DEVICE_CLASS = {
     "WIRED_SWITCH_8": SwitchDeviceClass.SWITCH,
     "WIRED_SWITCH_4": SwitchDeviceClass.SWITCH,
     "HOERMANN_DRIVES_MODULE": CoverDeviceClass.GARAGE,
+    "TORMATIC_MODULE": CoverDeviceClass.GARAGE, # Added for HmIP-MOD-TM
     "PLUGABLE_SWITCH_MEASURING": SwitchDeviceClass.OUTLET,
 }
 
@@ -135,4 +137,5 @@ HMIP_CHANNEL_TYPE_TO_ENTITY = {
     "WALL_MOUNTED_REMOTE_CONTROL_CHANNEL": {"class": "HcuButtonPressSensor"},
     "KEY_REMOTE_CONTROL_CHANNEL": {"class": "HcuButtonPressSensor"},
     "MULTI_MODE_INPUT_CHANNEL": {"class": "HcuButtonPressSensor"},
+    "DOOR_CHANNEL": {"class": "HcuGarageDoorCover"}, # Added for HmIP-MOD-TM
 }

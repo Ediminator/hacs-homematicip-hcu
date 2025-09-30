@@ -11,7 +11,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN, HMIP_DEVICE_TYPE_TO_DEVICE_CLASS, HMIP_FEATURE_TO_ENTITY, API_PATHS
+from .const import DOMAIN, HMIP_DEVICE_TYPE_TO_DEVICE_CLASS, HMIP_FEATURE_TO_ENTITY, HMIP_CHANNEL_TYPE_TO_ENTITY, API_PATHS
 from .entity import HcuBaseEntity
 from .api import HcuApiClient
 
@@ -36,23 +36,24 @@ async def async_setup_entry(
                 continue
 
         for channel_index, channel_data in device_data.get("functionalChannels", {}).items():
-            # Check for shutter/blind devices
-            if "shutterLevel" in channel_data:
-                mapping = HMIP_FEATURE_TO_ENTITY.get("shutterLevel", {})
-                if mapping.get("class") == "HcuCover":
-                    unique_id = f"{device_data['id']}_{channel_index}_cover"
-                    if unique_id not in created_entity_ids:
-                        new_entities.append(HcuCover(client, device_data, channel_index))
-                        created_entity_ids.add(unique_id)
+            unique_id = f"{device_data['id']}_{channel_index}_cover"
+            if unique_id in created_entity_ids:
+                continue
+
+            # Discover shutter/blind devices by feature
+            if "shutterLevel" in channel_data and HMIP_FEATURE_TO_ENTITY.get("shutterLevel", {}).get("class") == "HcuCover":
+                new_entities.append(HcuCover(client, device_data, channel_index))
+                created_entity_ids.add(unique_id)
             
-            # Check for garage door devices
-            if "doorState" in channel_data:
-                mapping = HMIP_FEATURE_TO_ENTITY.get("doorState", {})
-                if mapping.get("class") == "HcuGarageDoorCover":
-                    unique_id = f"{device_data['id']}_{channel_index}_cover"
-                    if unique_id not in created_entity_ids:
-                        new_entities.append(HcuGarageDoorCover(client, device_data, channel_index))
-                        created_entity_ids.add(unique_id)
+            # Discover stateful garage doors by feature
+            elif "doorState" in channel_data and HMIP_FEATURE_TO_ENTITY.get("doorState", {}).get("class") == "HcuGarageDoorCover":
+                new_entities.append(HcuGarageDoorCover(client, device_data, channel_index))
+                created_entity_ids.add(unique_id)
+
+            # Discover stateless garage doors by channel type
+            elif (channel_type := channel_data.get("functionalChannelType")) and HMIP_CHANNEL_TYPE_TO_ENTITY.get(channel_type, {}).get("class") == "HcuGarageDoorCover":
+                new_entities.append(HcuGarageDoorCover(client, device_data, channel_index))
+                created_entity_ids.add(unique_id)
 
     if new_entities:
         async_add_entities(new_entities)
@@ -69,12 +70,10 @@ class HcuCover(HcuBaseEntity, CoverEntity):
         device_type = self._device.get("type")
         self._attr_device_class = HMIP_DEVICE_TYPE_TO_DEVICE_CLASS.get(device_type)
 
-        # Base features for all covers.
         self._attr_supported_features = (
             CoverEntityFeature.OPEN | CoverEntityFeature.CLOSE |
             CoverEntityFeature.STOP | CoverEntityFeature.SET_POSITION
         )
-        # Add tilt support only if the device has slats.
         if "slatsLevel" in self._channel:
             self._attr_supported_features |= CoverEntityFeature.SET_TILT_POSITION
 
@@ -82,19 +81,14 @@ class HcuCover(HcuBaseEntity, CoverEntity):
     def current_cover_position(self) -> int | None:
         """
         Return current position of cover.
-        Homematic IP API: 0.0 is open, 1.0 is closed.
-        Home Assistant: 0 is closed, 100 is open.
-        This property inverts and scales the value.
+        Inverts and scales HCU's 0.0(open)-1.0(closed) to HA's 100(open)-0(closed).
         """
         level = self._channel.get("shutterLevel")
         return int((1 - level) * 100) if level is not None else None
 
     @property
     def current_cover_tilt_position(self) -> int | None:
-        """
-        Return current position of cover tilt.
-        Inverts and scales the value to match HA's standard (0=closed, 100=open).
-        """
+        """Return current position of cover tilt."""
         if "slatsLevel" not in self._channel:
             return None
         level = self._channel.get("slatsLevel")
@@ -107,7 +101,7 @@ class HcuCover(HcuBaseEntity, CoverEntity):
         return position == 0 if position is not None else None
 
     async def async_open_cover(self, **kwargs) -> None:
-        """Open the cover by setting shutterLevel to 0.0."""
+        """Open the cover."""
         self._attr_assumed_state = True
         self.async_write_ha_state()
         await self._client.async_device_control(
@@ -115,7 +109,7 @@ class HcuCover(HcuBaseEntity, CoverEntity):
         )
 
     async def async_close_cover(self, **kwargs) -> None:
-        """Close the cover by setting shutterLevel to 1.0."""
+        """Close the cover."""
         self._attr_assumed_state = True
         self.async_write_ha_state()
         await self._client.async_device_control(
@@ -135,7 +129,6 @@ class HcuCover(HcuBaseEntity, CoverEntity):
         position = kwargs[ATTR_POSITION]
         self._attr_assumed_state = True
         self.async_write_ha_state()
-        # Convert HA's 0-100 (open) to HCU's 0.0-1.0 (closed).
         shutter_level = round((100 - position) / 100.0, 2)
         await self._client.async_device_control(
             API_PATHS.SET_SHUTTER_LEVEL, self._device_id, self._channel_index, {"shutterLevel": shutter_level}
@@ -146,7 +139,6 @@ class HcuCover(HcuBaseEntity, CoverEntity):
         position = kwargs[ATTR_TILT_POSITION]
         self._attr_assumed_state = True
         self.async_write_ha_state()
-        # Convert HA's 0-100 (open) to HCU's 0.0-1.0 (closed).
         slats_level = round((100 - position) / 100.0, 2)
         await self._client.async_device_control(
             API_PATHS.SET_SLATS_LEVEL,
@@ -156,10 +148,7 @@ class HcuCover(HcuBaseEntity, CoverEntity):
 
 class HcuGarageDoorCover(HcuBaseEntity, CoverEntity):
     """Representation of an HCU Garage Door Cover."""
-    _attr_supported_features = (
-        CoverEntityFeature.OPEN | CoverEntityFeature.CLOSE | CoverEntityFeature.STOP
-    )
-
+    
     def __init__(self, client: HcuApiClient, device_data: dict, channel_index: str):
         """Initialize the garage door cover entity."""
         super().__init__(client, device_data, channel_index)
@@ -169,42 +158,66 @@ class HcuGarageDoorCover(HcuBaseEntity, CoverEntity):
         device_type = self._device.get("type")
         self._attr_device_class = HMIP_DEVICE_TYPE_TO_DEVICE_CLASS.get(device_type)
 
+        # A stateless (toggle) garage door does not support STOP.
+        self._is_stateful = "doorState" in self._channel
+        if self._is_stateful:
+            self._attr_supported_features = (
+                CoverEntityFeature.OPEN | CoverEntityFeature.CLOSE | CoverEntityFeature.STOP
+            )
+        else:
+            self._attr_supported_features = (CoverEntityFeature.OPEN | CoverEntityFeature.CLOSE)
+
     @property
     def is_closed(self) -> bool | None:
-        """Return true if door is closed."""
-        door_state = self._channel.get("doorState")
-        if door_state is None:
+        """Return true if door is closed (only for stateful doors)."""
+        if not self._is_stateful:
             return None
-        return door_state == "CLOSED"
+        return self._channel.get("doorState") == "CLOSED"
 
     @property
     def is_opening(self) -> bool:
-        """Return true if door is opening."""
+        """Return true if door is opening (only for stateful doors)."""
+        if not self._is_stateful:
+            return False
         return self._channel.get("processing") is True and self._channel.get("doorState") == "OPEN"
 
     @property
     def is_closing(self) -> bool:
-        """Return true if door is closing."""
+        """Return true if door is closing (only for stateful doors)."""
+        if not self._is_stateful:
+            return False
         return self._channel.get("processing") is True and self._channel.get("doorState") == "CLOSED"
 
     async def async_open_cover(self, **kwargs) -> None:
-        """Open the garage door."""
+        """Send command to open the garage door."""
         self._attr_assumed_state = True
         self.async_write_ha_state()
-        await self._client.async_device_control(
-            API_PATHS.SEND_DOOR_COMMAND, self._device_id, self._channel_index, {"doorCommand": "OPEN"}
-        )
+        if self._is_stateful:
+            await self._client.async_device_control(
+                API_PATHS.SEND_DOOR_COMMAND, self._device_id, self._channel_index, {"doorCommand": "OPEN"}
+            )
+        else:
+            await self._client.async_device_control(
+                API_PATHS.TOGGLE_GARAGE_DOOR_STATE, self._device_id, self._channel_index
+            )
 
     async def async_close_cover(self, **kwargs) -> None:
-        """Close the garage door."""
+        """Send command to close the garage door."""
         self._attr_assumed_state = True
         self.async_write_ha_state()
-        await self._client.async_device_control(
-            API_PATHS.SEND_DOOR_COMMAND, self._device_id, self._channel_index, {"doorCommand": "CLOSE"}
-        )
+        if self._is_stateful:
+            await self._client.async_device_control(
+                API_PATHS.SEND_DOOR_COMMAND, self._device_id, self._channel_index, {"doorCommand": "CLOSE"}
+            )
+        else:
+            await self._client.async_device_control(
+                API_PATHS.TOGGLE_GARAGE_DOOR_STATE, self._device_id, self._channel_index
+            )
 
     async def async_stop_cover(self, **kwargs) -> None:
-        """Stop the garage door's movement."""
+        """Send command to stop the garage door's movement (only for stateful doors)."""
+        if not self._is_stateful:
+            return
         self._attr_assumed_state = True
         self.async_write_ha_state()
         await self._client.async_device_control(

@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.2.0 - (Date of Release)
+
+### ✨ Features
+
+* **New `play_sound` Service:** The limited `button` entity has been replaced with a powerful `hcu_integration.play_sound` service. This allows you to play any sound file on compatible devices (like sirens or doorbells) and specify the volume and duration directly in your automations and scripts.
+* **New Vacation Mode Sensor:** A binary sensor is now automatically created for the HCU, which turns `on` when vacation mode is active. This makes it easy to use the system-wide vacation state in your automations.
+* **New Diagnostic Valve State Sensor:** For heating thermostats, a new "Valve State" sensor is now available (disabled by default). This can be enabled to help diagnose valve adaptation and operational states.
+
+### 🔧 Improvements & Fixes
+
+* **Alarm Control Panel Refactor:** The `alarm_control_panel` entity has been updated to use the modern `alarm_state` property, resolving deprecation warnings from Home Assistant Core and ensuring future compatibility. Optimistic state handling is now more robust.
+* **Code Maintainability:** All API request paths have been centralized into a single `API_PATHS` class in `const.py`. This reduces code duplication and makes future API updates much easier.
+* **Improved WebSocket Error Handling:** The WebSocket listener in `__init__.py` now catches more specific network exceptions, providing better log clarity while maintaining its robust reconnection logic.
+* **General Code Cleanup:** Addressed several minor linter warnings and removed unused code for a cleaner, more efficient codebase.
+
 ## [1.1.0] - 2025-09-23
 
 ### 🚀 Features
@@ -69,3 +84,4 @@ This is the initial stable release of the Homematic IP Local (HCU) integration, 
 [Unreleased]: https://github.com/Ediminator/hacs-homematicip-hcu/compare/v1.0.0...HEAD
 
 [1.0.0]: https://github.com/Ediminator/hacs-homematicip-hcu/releases/tag/v1.0.0
+

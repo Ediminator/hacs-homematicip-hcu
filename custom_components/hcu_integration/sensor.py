@@ -9,7 +9,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN, HMIP_FEATURE_TO_ENTITY
+from .const import DOMAIN, HMIP_FEATURE_TO_ENTITY, HCU_DEVICE_TYPES
 from .entity import HcuBaseEntity, HcuHomeBaseEntity
 from .api import HcuApiClient
 
@@ -41,10 +41,13 @@ async def async_setup_entry(
             for feature, mapping in HMIP_FEATURE_TO_ENTITY.items():
                 if feature in channel_data and mapping.get("class", "").endswith("Sensor"):
                     
-                    # Safeguard: Do not create a regular sensor for features that are booleans.
                     if isinstance(channel_data.get(feature), bool):
                         continue
 
+                    # Suppress signal strength sensor for the HCU itself.
+                    if feature == "rssiDeviceValue" and device_data.get("type") in HCU_DEVICE_TYPES:
+                        continue
+                        
                     if feature == "batteryLevel" and is_mains_powered:
                         continue
                     

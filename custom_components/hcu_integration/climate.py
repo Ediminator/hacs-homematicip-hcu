@@ -43,7 +43,6 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
     _attr_supported_features = (
         ClimateEntityFeature.TARGET_TEMPERATURE | ClimateEntityFeature.PRESET_MODE
     )
-    # This integration uses the modern HVACMode enum and does not support turning on/off via the switch domain.
     _enable_turn_on_off_backwards_compatibility = False
 
     def __init__(self, client: HcuApiClient, group_data: dict, config_entry: ConfigEntry):
@@ -57,7 +56,6 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
         self._attr_max_temp = self._group.get("maxTemperature", 30.0)
         self._attr_target_temperature_step = self._group.get("temperatureStep", 0.5)
 
-        # Attributes for optimistic state updates
         self._attr_hvac_mode: HVACMode | None = None
         self._attr_target_temperature: float | None = None
 
@@ -65,7 +63,6 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
     def _handle_update(self, updated_ids: set) -> None:
         """Handle a state update signal from the coordinator."""
         if self._group_id in updated_ids:
-            # A real state update has arrived. Clear any optimistic values.
             self._attr_hvac_mode = None
             self._attr_target_temperature = None
             self._attr_assumed_state = False
@@ -78,7 +75,6 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
             return self._attr_hvac_mode
         
         control_mode = self._group.get("controlMode")
-        # In manual mode, a temperature equal to the minimum is considered 'OFF'.
         if (
             control_mode == "MANUAL" 
             and self._group.get("setPointTemperature") == self._attr_min_temp
@@ -96,16 +92,13 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
     @property
     def current_temperature(self) -> float | None:
         """Return the current temperature for the group."""
-        # Prioritize the group's own actualTemperature if available.
         if (temp := self._group.get("actualTemperature")) is not None:
             return temp
 
-        # Fallback to finding the temperature from a member device (e.g., a wall thermostat).
         for channel_ref in self._group.get("channels", []):
             if device := self._client.get_device_by_address(channel_ref.get("deviceId")):
                 channel_idx_str = str(channel_ref.get("channelIndex"))
                 channel = device.get("functionalChannels", {}).get(channel_idx_str)
-                # Check for both possible temperature keys.
                 if channel and (temp := (channel.get("actualTemperature") or channel.get("valveActualTemperature"))):
                     return temp
         
@@ -114,7 +107,6 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
     @property
     def target_temperature(self) -> float | None:
         """Return the target temperature."""
-        # Return the optimistic value if it exists, otherwise the real state.
         if self._attr_target_temperature is not None:
             return self._attr_target_temperature
         return self._group.get("setPointTemperature")
@@ -124,7 +116,10 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
         if (temperature := kwargs.get(ATTR_TEMPERATURE)) is None:
             return
 
-        # Set optimistic state for immediate UI feedback.
+        # Check the real mode from the cached state before applying optimistic updates.
+        is_in_auto_mode = self._group.get("controlMode") == "AUTOMATIC"
+
+        # Optimistically set the state for a responsive UI.
         self._attr_target_temperature = temperature
         self._attr_hvac_mode = HVACMode.HEAT
         self._attr_assumed_state = True
@@ -134,6 +129,12 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
             if self.preset_mode == "boost":
                 await self._client.async_group_control(API_PATHS.SET_GROUP_BOOST, self._group_id, {"boost": False})
             
+            # If in AUTO mode, we must explicitly switch to MANUAL to override the schedule.
+            if is_in_auto_mode:
+                 await self._client.async_group_control(
+                    API_PATHS.SET_GROUP_CONTROL_MODE, self._group_id, {"controlMode": "MANUAL"}
+                )
+
             await self._client.async_group_control(
                 API_PATHS.SET_GROUP_SET_POINT_TEMP, self._group_id, {"setPointTemperature": temperature}
             )
@@ -168,19 +169,17 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
                 await self._client.async_group_control(
                     API_PATHS.SET_GROUP_CONTROL_MODE, self._group_id, {"controlMode": "MANUAL"}
                 )
-                # If turning on from an OFF state, set a default comfort temperature.
                 if self.target_temperature == self._attr_min_temp:
                     comfort_temp = self._config_entry.options.get(
                         CONF_COMFORT_TEMPERATURE, DEFAULT_COMFORT_TEMPERATURE
                     )
                     self._attr_target_temperature = comfort_temp
-                    self.async_write_ha_state() # Update UI with new temp optimistically
+                    self.async_write_ha_state()
                     await self._client.async_group_control(
                         API_PATHS.SET_GROUP_SET_POINT_TEMP, self._group_id, {"setPointTemperature": comfort_temp}
                     )
         except (HcuApiError, ConnectionError) as err:
             _LOGGER.error("Failed to set HVAC mode for %s: %s", self.name, err)
-            # Revert optimistic state on failure.
             self._attr_hvac_mode = None
             self._attr_assumed_state = False
             self.async_write_ha_state()

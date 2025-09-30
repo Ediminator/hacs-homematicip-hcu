@@ -3,10 +3,10 @@
 Light platform for the Homematic IP HCU integration.
 
 This platform creates light entities for Homematic IP devices that support brightness control.
-It also handles color temperature control for lights that support it.
+It also handles color temperature and HS color control for lights that support it.
 """
 from homeassistant.components.light import (
-    ATTR_BRIGHTNESS, ATTR_COLOR_TEMP_KELVIN, ColorMode, LightEntity
+    ATTR_BRIGHTNESS, ATTR_COLOR_TEMP_KELVIN, ATTR_HS_COLOR, ColorMode, LightEntity
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -28,17 +28,15 @@ async def async_setup_entry(
 
     for device_data in client.state.get("devices", {}).values():
         if device_data.get("PARENT"):
-            continue # Skip child devices as they are handled by their parent.
+            continue
 
         oem = device_data.get("oem")
         if oem and oem != "eQ-3":
-            # Check if importing devices from this third-party manufacturer is enabled.
             option_key = f"import_{oem.lower().replace(' ', '_')}"
             if not config_entry.options.get(option_key, True):
                 continue
 
         for channel_index, channel_data in device_data.get("functionalChannels", {}).items():
-            # Do not create controls for the HCU's internal channels.
             if channel_data.get("functionalChannelType") == "ACCESS_CONTROLLER_CHANNEL":
                 continue
 
@@ -57,37 +55,51 @@ class HcuLight(HcuBaseEntity, LightEntity):
     """Representation of a Homematic IP HCU light."""
     
     def __init__(self, client: HcuApiClient, device_data: dict, channel_index: str):
-        """Initialize the light entity."""
+        """Initialize the light entity and determine its supported color modes."""
         super().__init__(client, device_data, channel_index)
         self._attr_name = self._device.get("label") or "Unknown Light"
         self._attr_unique_id = f"{self._device_id}_{self._channel_index}_light"
         
-        # Start with brightness support, which is guaranteed if this entity is created.
-        self._attr_supported_color_modes = {ColorMode.BRIGHTNESS}
-        # Add color temperature support if the device reports the feature.
-        if "colorTemperature" in self._channel:
-            self._attr_supported_color_modes.add(ColorMode.COLOR_TEMP)
+        supported_modes = set()
+        if "dimLevel" in self._channel:
+            supported_modes.add(ColorMode.BRIGHTNESS)
+        
+        # Check for color support, prioritizing HS over color temperature if both are present.
+        if self._channel.get("hue") is not None:
+            supported_modes.add(ColorMode.HS)
+        elif "colorTemperature" in self._channel:
+            supported_modes.add(ColorMode.COLOR_TEMP)
             self._attr_min_color_temp_kelvin = self._channel.get("minimalColorTemperature", 2000)
             self._attr_max_color_temp_kelvin = self._channel.get("maximumColorTemperature", 6500)
         
+        # If no dimming or color features are found, it's a simple on/off light.
+        if not supported_modes:
+            supported_modes.add(ColorMode.ONOFF)
+             
+        self._attr_supported_color_modes = supported_modes
+        
     @property
-    def color_mode(self) -> ColorMode:
+    def color_mode(self) -> ColorMode | str | None:
         """Return the current color mode of the light."""
-        if "colorTemperature" in self._channel and ColorMode.COLOR_TEMP in self._attr_supported_color_modes:
+        if ColorMode.HS in self.supported_color_modes:
+            return ColorMode.HS
+        if ColorMode.COLOR_TEMP in self.supported_color_modes:
             return ColorMode.COLOR_TEMP
-        return ColorMode.BRIGHTNESS
+        if ColorMode.BRIGHTNESS in self.supported_color_modes:
+            return ColorMode.BRIGHTNESS
+        if ColorMode.ONOFF in self.supported_color_modes:
+            return ColorMode.ONOFF
+        return super().color_mode
 
     @property
     def is_on(self) -> bool:
         """Return true if the light is on."""
-        return self._channel.get("on", False)
+        # A dim level > 0 means the light is on. Fallback to 'on' state if dimLevel is not present.
+        return self._channel.get("dimLevel", 0.0) > 0.0 or self._channel.get("on", False)
 
     @property
     def brightness(self) -> int | None:
-        """
-        Return the brightness of this light.
-        The value is scaled from HCU's 0.0-1.0 to Home Assistant's 0-255.
-        """
+        """Return the brightness, scaled from HCU's 0.0-1.0 to HA's 0-255."""
         dim_level = self._channel.get("dimLevel")
         return int(dim_level * 255) if dim_level is not None else None
 
@@ -96,14 +108,35 @@ class HcuLight(HcuBaseEntity, LightEntity):
         """Return the color temperature in Kelvin."""
         return self._channel.get("colorTemperature")
 
+    @property
+    def hs_color(self) -> tuple[float, float] | None:
+        """Return the hue and saturation color value."""
+        hue = self._channel.get("hue")
+        saturation = self._channel.get("saturationLevel")
+        if hue is None or saturation is None:
+            return None
+        # HCU saturation is 0.0-1.0, HA is 0-100.
+        return (float(hue), float(saturation) * 100)
+
     async def async_turn_on(self, **kwargs) -> None:
-        """Turn the light on and adjust brightness or color temperature."""
+        """Turn the light on and adjust brightness or color."""
         self._attr_assumed_state = True
         self.async_write_ha_state()
 
         dim_level = kwargs.get(ATTR_BRIGHTNESS, self.brightness or 255) / 255.0
         
-        if ATTR_COLOR_TEMP_KELVIN in kwargs and self.color_mode == ColorMode.COLOR_TEMP:
+        if ATTR_HS_COLOR in kwargs and ColorMode.HS in self.supported_color_modes:
+            hs_color = kwargs[ATTR_HS_COLOR]
+            await self._client.async_device_control(
+                API_PATHS.SET_HUE,
+                self._device_id, self._channel_index, 
+                {
+                    "hue": int(hs_color[0]), 
+                    "saturationLevel": hs_color[1] / 100.0,
+                    "dimLevel": dim_level,
+                }
+            )
+        elif ATTR_COLOR_TEMP_KELVIN in kwargs and ColorMode.COLOR_TEMP in self.supported_color_modes:
             color_temp = kwargs[ATTR_COLOR_TEMP_KELVIN]
             await self._client.async_device_control(
                 API_PATHS.SET_COLOR_TEMP,
@@ -111,6 +144,7 @@ class HcuLight(HcuBaseEntity, LightEntity):
                 {"colorTemperature": color_temp, "dimLevel": dim_level}
             )
         else:
+            # Default to setting brightness if no color is specified.
             await self._client.async_device_control(
                 API_PATHS.SET_DIM_LEVEL,
                 self._device_id, self._channel_index, {"dimLevel": dim_level}

@@ -39,7 +39,6 @@ class HcuAlarmControlPanel(HcuHomeBaseEntity, AlarmControlPanelEntity):
         AlarmControlPanelEntityFeature.ARM_HOME | AlarmControlPanelEntityFeature.ARM_AWAY
     )
     _attr_code_arm_required = False
-    # This integration uses the modern state properties and does not support turning on/off via the switch domain.
     _enable_turn_on_off_backwards_compatibility = False
 
     def __init__(self, client: HcuApiClient):
@@ -47,7 +46,6 @@ class HcuAlarmControlPanel(HcuHomeBaseEntity, AlarmControlPanelEntity):
         super().__init__(client)
         self._attr_name = "Homematic IP Alarm"
         self._attr_unique_id = f"{self._hcu_device_id}_security"
-        # HA Core Deprecation: Use _attr_alarm_state instead of _attr_state for optimistic updates.
         self._attr_alarm_state: AlarmControlPanelState | None = None
 
     @property
@@ -60,24 +58,18 @@ class HcuAlarmControlPanel(HcuHomeBaseEntity, AlarmControlPanelEntity):
 
     @callback
     def _handle_update(self, updated_ids: set) -> None:
-        """
-        Handle a state update signal from the coordinator.
-        This is called when the real state has been updated in the client.
-        """
+        """Handle a state update signal from the coordinator."""
         if self._home_uuid in updated_ids:
             # A real state update has arrived from the HCU.
-            # Clear the assumed state flag and let HA re-read the state property.
+            # Clear the assumed state flag and optimistic state value,
+            # then let HA re-read the state from the coordinator.
+            self._attr_alarm_state = None
             self._attr_assumed_state = False
             self.async_write_ha_state()
 
     @property
     def alarm_state(self) -> AlarmControlPanelState | None:
-        """
-        Return the current state of the alarm control panel.
-        
-        HA Core Deprecation: This property replaces the generic 'state' property.
-        """
-        # If an optimistic update is in progress, return the assumed state immediately.
+        """Return the current state of the alarm control panel."""
         if self._attr_assumed_state:
             return self._attr_alarm_state
 
@@ -87,10 +79,13 @@ class HcuAlarmControlPanel(HcuHomeBaseEntity, AlarmControlPanelEntity):
 
         if sec_home.get("intrusionAlarmActive") or sec_home.get("safetyAlarmActive"):
             return AlarmControlPanelState.TRIGGERED
+        
+        # Check if the alarm is in the process of arming.
+        if sec_home.get("activationInProgress"):
+            return AlarmControlPanelState.ARMING
 
         zones = sec_home.get("securityZones", {})
         
-        # Ensure zones data is a dictionary before proceeding.
         if not isinstance(zones, dict):
             _LOGGER.warning("Security zones data is not in the expected format: %s", zones)
             return AlarmControlPanelState.DISARMED
@@ -112,12 +107,15 @@ class HcuAlarmControlPanel(HcuHomeBaseEntity, AlarmControlPanelEntity):
     
     async def _async_set_alarm_state(self, new_state: AlarmControlPanelState, payload: dict) -> None:
         """Helper to set alarm state with optimistic update and error handling."""
-        # 1. Optimistic Update: Immediately set the state in Home Assistant's frontend.
-        self._attr_alarm_state = new_state
+        # When arming, the optimistic state should be 'ARMING', not the final 'ARMED' state.
+        if new_state in (AlarmControlPanelState.ARMED_HOME, AlarmControlPanelState.ARMED_AWAY):
+            self._attr_alarm_state = AlarmControlPanelState.ARMING
+        else:
+            self._attr_alarm_state = new_state
+        
         self._attr_assumed_state = True
         self.async_write_ha_state()
 
-        # 2. API Call: Send the command to the HCU.
         try:
             await self._client.async_home_control(
                 path=API_PATHS.SET_ZONES_ACTIVATION,
@@ -125,7 +123,7 @@ class HcuAlarmControlPanel(HcuHomeBaseEntity, AlarmControlPanelEntity):
             )
         except (HcuApiError, ConnectionError) as err:
             _LOGGER.error("Failed to set alarm state for %s: %s", self.name, err)
-            # 3. Revert Optimistic State on Failure: Clear assumed state and force a state refresh.
+            self._attr_alarm_state = None
             self._attr_assumed_state = False
             self.async_write_ha_state()
 

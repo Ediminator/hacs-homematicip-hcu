@@ -6,11 +6,11 @@ This is a custom integration for Home Assistant that connects directly to your *
 
 ## Features
 
-* **Local Control:** All communication happens on your local network for speed and privacy.
-* **Real-Time Updates:** Uses a persistent WebSocket connection for instant "local push" state changes.
-* **Broad Device Support:** Includes support for a wide range of devices, including multi-function devices (`HmIP-MP3P`), stateless buttons (`SWITCH_INPUT`), and watering controllers.
-* **Secure Lock Control:** A secure, UI-based options flow allows you to configure the PIN for your door lock.
-* **User-Friendly Setup:** A simple, step-by-step configuration flow with instructional images guides you through the setup process.
+* **Local Control:** All communication happens on your local network for maximum speed, reliability, and privacy.
+* **Real-Time Updates:** Uses a persistent WebSocket connection to receive instant state changes from your devices.
+* **User-Friendly Setup:** A simple, step-by-step configuration flow guides you through the setup process.
+* **Broad Device Support:** Includes support for a wide range of devices (see Supported Entities below).
+* **Custom Services:** Provides a flexible `play_sound` service for notification devices.
 
 ## Installation
 

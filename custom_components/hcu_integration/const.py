@@ -9,6 +9,19 @@ from homeassistant.const import (
     PERCENTAGE, CONCENTRATION_PARTS_PER_MILLION, LIGHT_LUX, UnitOfEnergy, UnitOfPower, UnitOfTemperature, UnitOfSpeed
 )
 
+# Backward-compatible import for UnitOfPrecipitation to support multiple Home Assistant versions.
+try:
+    # Modern location for units (preferred)
+    from homeassistant.const import UnitOfPrecipitation
+except ImportError:
+    try:
+        # Older location for units
+        from homeassistant.components.sensor import UnitOfPrecipitation
+    except ImportError:
+        # Fallback for very old Home Assistant versions that do not have the constant
+        UnitOfPrecipitation = "mm"
+
+
 DOMAIN = "hcu_integration"
 PLATFORMS = [
     "alarm_control_panel", "binary_sensor", "button", "climate", "cover",
@@ -172,6 +185,27 @@ HMIP_FEATURE_TO_ENTITY = {
         "device_class": SensorDeviceClass.WIND_SPEED, 
         "state_class": SensorStateClass.MEASUREMENT
     },
+    "rainCounter": {
+        "class": "HcuGenericSensor",
+        "name": "Rain Counter",
+        "unit": UnitOfPrecipitation,
+        "device_class": SensorDeviceClass.PRECIPITATION,
+        "state_class": SensorStateClass.TOTAL_INCREASING,
+    },
+    "todayRainCounter": {
+        "class": "HcuGenericSensor",
+        "name": "Today's Rain",
+        "unit": UnitOfPrecipitation,
+        "device_class": SensorDeviceClass.PRECIPITATION,
+        "state_class": SensorStateClass.TOTAL_INCREASING,
+    },
+    "yesterdayRainCounter": {
+        "class": "HcuGenericSensor",
+        "name": "Yesterday's Rain",
+        "unit": UnitOfPrecipitation,
+        "device_class": SensorDeviceClass.PRECIPITATION,
+        "state_class": SensorStateClass.TOTAL_INCREASING,
+    },
     "co2": {
         "class": "HcuGenericSensor", 
         "name": "CO2", 
@@ -270,7 +304,7 @@ HMIP_FEATURE_TO_ENTITY = {
     "smokeAlarm": {
         "class": "HcuBinarySensor", 
         "name": "Smoke Alarm", 
-        "on_state": "SMOKE_DETECTED", 
+        "on_state": True, 
         "device_class": BinarySensorDeviceClass.SMOKE
     },
     "waterlevelDetected": {

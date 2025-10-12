@@ -5,6 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Version 1.4.0 - Complete Code refactoring for better compatibility
+
+### 🚀 New Features
+- **Switch for Vacation Mode:** The "Vacation Mode" binary sensor has been replaced with a fully functional switch entity. You can now toggle the HCU's vacation mode directly from Home Assistant.
+
+- **Button Entities for Remotes:** Stateless devices like wall switches and remote controls are now represented as proper button entities instead of the previous binary sensor workaround. This provides a more natural user experience and aligns with Home Assistant standards. A new button.py platform has been added.
+
+- **New Service to Control HCU Automations:** A new service, hcu_integration.set_rule_state, has been added. This allows you to enable or disable any simple automation rule on your HCU directly from Home Assistant automations or scripts.
+
+- **Device Action for Energy Sensors:** Energy metering devices now have a "Reset Energy Counter" device action. This allows you to reset the meter directly from the device page or within your automations.
+
+- **Configurable HCU Ports:** Users can now specify custom ports for the HCU's Authentication API and WebSocket during initial setup and through the "Reconfigure" flow. This provides flexibility for advanced network setups.
+
+## ✨ Improvements
+- **🔒 Secure PIN Handling for Door Locks:** The storage and management of the door lock PIN has been completely overhauled. The PIN is now stored securely in the encrypted Home Assistant data store. Changing the PIN is now handled via the secure "Re-authenticate" flow, following Home Assistant's best practices for sensitive credentials.
+
+- **🧹 Cleaner Climate Card UI:** Fixed a UI bug where the room name was being duplicated in all-caps at the top of climate entity cards. The cards are now clean and display the name correctly once.
+
+- **🔧 Enhanced Reconfiguration Flow:** The reconfiguration process for changing the HCU's IP address or ports is now more robust and provides clearer error messages for connection failures.
+
+- **Fully implemented SSL protection:** Accepting the self-signed SSL certificate from the HCU improving security and connectivity for some clients
+
+- **🛡️ Proactive Lock Unavailability:** The lock entity will now report itself as "Unavailable" if the authorization PIN has not been set, providing immediate feedback to the user that configuration is required.
+
+## 🐛 Bug Fixes
+- **Fixed play_sound Service:** Corrected a critical bug that caused the play_sound service to fail due to a missing method and incorrect parameter passing in the API client.
+
+- **Fixed Climate Control Failure:** Resolved an AttributeError caused by a method name typo (async_set_group_setpoint_temperature) that prevented users from setting the temperature on climate entities.
+
 ## Version 1.3.0 - Major Compatibility Update & Bug Fixes
 
 This release significantly expands device support and fixes several key bugs related to optimistic state handling and entity mapping.
@@ -120,6 +149,7 @@ This is the initial stable release of the Homematic IP Local (HCU) integration, 
 [Unreleased]: https://github.com/Ediminator/hacs-homematicip-hcu/compare/v1.0.0...HEAD
 
 [1.0.0]: https://github.com/Ediminator/hacs-homematicip-hcu/releases/tag/v1.0.0
+
 
 
 

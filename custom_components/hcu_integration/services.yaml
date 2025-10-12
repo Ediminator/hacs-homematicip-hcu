@@ -5,6 +5,7 @@ play_sound:
   target:
     entity:
       - integration: hcu_integration
+        domain: light # Or any domain where a compatible entity might appear
   fields:
     sound_file:
       name: Sound File
@@ -34,3 +35,22 @@ play_sound:
           step: 0.1
           mode: box
           unit_of_measurement: "seconds"
+
+set_rule_state:
+  name: Set Rule State
+  description: Enables or disables an automation rule defined on the Homematic IP HCU.
+  fields:
+    rule_id:
+      name: Rule ID
+      description: "The unique identifier of the rule to control."
+      example: "a12c135-e54b-555a-fa45-e3054c894321"
+      required: true
+      selector:
+        text:
+    enabled:
+      name: Enabled
+      description: "Whether to enable or disable the rule."
+      example: true
+      required: true
+      selector:
+        boolean:

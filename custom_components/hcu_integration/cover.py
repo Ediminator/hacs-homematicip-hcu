@@ -1,72 +1,37 @@
-# custom_components/hcu_integration/cover.py
-"""
-Cover platform for the Homematic IP HCU integration.
-
-This platform creates cover entities for shutter, blind, and garage door actuators.
-"""
+from typing import TYPE_CHECKING
 from homeassistant.components.cover import (
     ATTR_POSITION, ATTR_TILT_POSITION, CoverEntity, CoverEntityFeature
 )
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN, HMIP_DEVICE_TYPE_TO_DEVICE_CLASS, HMIP_FEATURE_TO_ENTITY, HMIP_CHANNEL_TYPE_TO_ENTITY, API_PATHS
+from .const import HMIP_DEVICE_TYPE_TO_DEVICE_CLASS
 from .entity import HcuBaseEntity
 from .api import HcuApiClient
+
+if TYPE_CHECKING:
+    from . import HcuCoordinator
 
 async def async_setup_entry(
     hass: HomeAssistant, config_entry: ConfigEntry, async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the cover platform from a config entry."""
-    coordinator = hass.data[DOMAIN][config_entry.entry_id]
-    client: HcuApiClient = coordinator.client
-    
-    new_entities = []
-    created_entity_ids = set()
-
-    for device_data in client.state.get("devices", {}).values():
-        if device_data.get("PARENT"):
-            continue
-
-        oem = device_data.get("oem")
-        if oem and oem != "eQ-3":
-            option_key = f"import_{oem.lower().replace(' ', '_')}"
-            if not config_entry.options.get(option_key, True):
-                continue
-
-        for channel_index, channel_data in device_data.get("functionalChannels", {}).items():
-            unique_id = f"{device_data['id']}_{channel_index}_cover"
-            if unique_id in created_entity_ids:
-                continue
-
-            # Discover shutter/blind devices by feature
-            if "shutterLevel" in channel_data and HMIP_FEATURE_TO_ENTITY.get("shutterLevel", {}).get("class") == "HcuCover":
-                new_entities.append(HcuCover(client, device_data, channel_index))
-                created_entity_ids.add(unique_id)
-            
-            # Discover stateful garage doors by feature
-            elif "doorState" in channel_data and HMIP_FEATURE_TO_ENTITY.get("doorState", {}).get("class") == "HcuGarageDoorCover":
-                new_entities.append(HcuGarageDoorCover(client, device_data, channel_index))
-                created_entity_ids.add(unique_id)
-
-            # Discover stateless garage doors by channel type
-            elif (channel_type := channel_data.get("functionalChannelType")) and HMIP_CHANNEL_TYPE_TO_ENTITY.get(channel_type, {}).get("class") == "HcuGarageDoorCover":
-                new_entities.append(HcuGarageDoorCover(client, device_data, channel_index))
-                created_entity_ids.add(unique_id)
-
-    if new_entities:
-        async_add_entities(new_entities)
+    coordinator: "HcuCoordinator" = hass.data[config_entry.domain][config_entry.entry_id]
+    if entities := coordinator.entities.get(Platform.COVER):
+        async_add_entities(entities)
 
 class HcuCover(HcuBaseEntity, CoverEntity):
     """Representation of an HCU Cover (shutter or blind)."""
+    PLATFORM = Platform.COVER
+    _attr_has_entity_name = False
+    _attr_name = None # Use device name
 
-    def __init__(self, client: HcuApiClient, device_data: dict, channel_index: str):
-        """Initialize the cover entity."""
-        super().__init__(client, device_data, channel_index)
-        self._attr_name = self._device.get("label") or "Unknown Cover"
+    def __init__(self, coordinator: "HcuCoordinator", client: HcuApiClient, device_data: dict, channel_index: str, **kwargs):
+        super().__init__(coordinator, client, device_data, channel_index)
         self._attr_unique_id = f"{self._device_id}_{self._channel_index}_cover"
-        
+
         device_type = self._device.get("type")
         self._attr_device_class = HMIP_DEVICE_TYPE_TO_DEVICE_CLASS.get(device_type)
 
@@ -88,7 +53,6 @@ class HcuCover(HcuBaseEntity, CoverEntity):
 
     @property
     def current_cover_tilt_position(self) -> int | None:
-        """Return current position of cover tilt."""
         if "slatsLevel" not in self._channel:
             return None
         level = self._channel.get("slatsLevel")
@@ -96,69 +60,52 @@ class HcuCover(HcuBaseEntity, CoverEntity):
 
     @property
     def is_closed(self) -> bool | None:
-        """Return if the cover is closed or not."""
         position = self.current_cover_position
         return position == 0 if position is not None else None
 
     async def async_open_cover(self, **kwargs) -> None:
-        """Open the cover."""
         self._attr_assumed_state = True
         self.async_write_ha_state()
-        await self._client.async_device_control(
-            API_PATHS.SET_SHUTTER_LEVEL, self._device_id, self._channel_index, {"shutterLevel": 0.0}
-        )
+        await self._client.async_set_shutter_level(self._device_id, self._channel_index, 0.0)
 
     async def async_close_cover(self, **kwargs) -> None:
-        """Close the cover."""
         self._attr_assumed_state = True
         self.async_write_ha_state()
-        await self._client.async_device_control(
-            API_PATHS.SET_SHUTTER_LEVEL, self._device_id, self._channel_index, {"shutterLevel": 1.0}
-        )
+        await self._client.async_set_shutter_level(self._device_id, self._channel_index, 1.0)
 
     async def async_stop_cover(self, **kwargs) -> None:
-        """Stop the cover's movement."""
         self._attr_assumed_state = True
         self.async_write_ha_state()
-        await self._client.async_device_control(
-            API_PATHS.STOP_COVER, self._device_id, self._channel_index
-        )
+        await self._client.async_stop_cover(self._device_id, self._channel_index)
 
     async def async_set_cover_position(self, **kwargs) -> None:
-        """Set a new cover position."""
         position = kwargs[ATTR_POSITION]
         self._attr_assumed_state = True
         self.async_write_ha_state()
         shutter_level = round((100 - position) / 100.0, 2)
-        await self._client.async_device_control(
-            API_PATHS.SET_SHUTTER_LEVEL, self._device_id, self._channel_index, {"shutterLevel": shutter_level}
-        )
+        await self._client.async_set_shutter_level(self._device_id, self._channel_index, shutter_level)
 
     async def async_set_cover_tilt_position(self, **kwargs) -> None:
-        """Set new tilt position for blinds."""
         position = kwargs[ATTR_TILT_POSITION]
         self._attr_assumed_state = True
         self.async_write_ha_state()
         slats_level = round((100 - position) / 100.0, 2)
-        await self._client.async_device_control(
-            API_PATHS.SET_SLATS_LEVEL,
-            self._device_id, self._channel_index, 
-            {"slatsLevel": slats_level},
-        )
+        await self._client.async_set_slats_level(self._device_id, self._channel_index, slats_level)
+
 
 class HcuGarageDoorCover(HcuBaseEntity, CoverEntity):
     """Representation of an HCU Garage Door Cover."""
-    
-    def __init__(self, client: HcuApiClient, device_data: dict, channel_index: str):
-        """Initialize the garage door cover entity."""
-        super().__init__(client, device_data, channel_index)
-        self._attr_name = self._device.get("label") or "Unknown Garage Door"
+    PLATFORM = Platform.COVER
+    _attr_has_entity_name = False
+    _attr_name = None # Use device name
+
+    def __init__(self, coordinator: "HcuCoordinator", client: HcuApiClient, device_data: dict, channel_index: str, **kwargs):
+        super().__init__(coordinator, client, device_data, channel_index)
         self._attr_unique_id = f"{self._device_id}_{self._channel_index}_cover"
-        
+
         device_type = self._device.get("type")
         self._attr_device_class = HMIP_DEVICE_TYPE_TO_DEVICE_CLASS.get(device_type)
 
-        # A stateless (toggle) garage door does not support STOP.
         self._is_stateful = "doorState" in self._channel
         if self._is_stateful:
             self._attr_supported_features = (
@@ -169,57 +116,41 @@ class HcuGarageDoorCover(HcuBaseEntity, CoverEntity):
 
     @property
     def is_closed(self) -> bool | None:
-        """Return true if door is closed (only for stateful doors)."""
         if not self._is_stateful:
             return None
         return self._channel.get("doorState") == "CLOSED"
 
     @property
     def is_opening(self) -> bool:
-        """Return true if door is opening (only for stateful doors)."""
         if not self._is_stateful:
             return False
         return self._channel.get("processing") is True and self._channel.get("doorState") == "OPEN"
 
     @property
     def is_closing(self) -> bool:
-        """Return true if door is closing (only for stateful doors)."""
         if not self._is_stateful:
             return False
         return self._channel.get("processing") is True and self._channel.get("doorState") == "CLOSED"
 
     async def async_open_cover(self, **kwargs) -> None:
-        """Send command to open the garage door."""
         self._attr_assumed_state = True
         self.async_write_ha_state()
         if self._is_stateful:
-            await self._client.async_device_control(
-                API_PATHS.SEND_DOOR_COMMAND, self._device_id, self._channel_index, {"doorCommand": "OPEN"}
-            )
+            await self._client.async_send_door_command(self._device_id, self._channel_index, "OPEN")
         else:
-            await self._client.async_device_control(
-                API_PATHS.TOGGLE_GARAGE_DOOR_STATE, self._device_id, self._channel_index
-            )
+            await self._client.async_toggle_garage_door_state(self._device_id, self._channel_index)
 
     async def async_close_cover(self, **kwargs) -> None:
-        """Send command to close the garage door."""
         self._attr_assumed_state = True
         self.async_write_ha_state()
         if self._is_stateful:
-            await self._client.async_device_control(
-                API_PATHS.SEND_DOOR_COMMAND, self._device_id, self._channel_index, {"doorCommand": "CLOSE"}
-            )
+            await self._client.async_send_door_command(self._device_id, self._channel_index, "CLOSE")
         else:
-            await self._client.async_device_control(
-                API_PATHS.TOGGLE_GARAGE_DOOR_STATE, self._device_id, self._channel_index
-            )
+            await self._client.async_toggle_garage_door_state(self._device_id, self._channel_index)
 
     async def async_stop_cover(self, **kwargs) -> None:
-        """Send command to stop the garage door's movement (only for stateful doors)."""
         if not self._is_stateful:
             return
         self._attr_assumed_state = True
         self.async_write_ha_state()
-        await self._client.async_device_control(
-            API_PATHS.SEND_DOOR_COMMAND, self._device_id, self._channel_index, {"doorCommand": "STOP"}
-        )
+        await self._client.async_send_door_command(self._device_id, self._channel_index, "STOP")

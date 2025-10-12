@@ -1,86 +1,57 @@
-# custom_components/hcu_integration/sensor.py
-"""
-Sensor platform for the Homematic IP HCU integration.
+from __future__ import annotations
 
-This platform creates sensor entities for various device features and for the home hub.
-"""
+import logging
+from typing import TYPE_CHECKING, Any
+
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN, HMIP_FEATURE_TO_ENTITY, HCU_DEVICE_TYPES
-from .entity import HcuBaseEntity, HcuHomeBaseEntity
 from .api import HcuApiClient
+from .entity import HcuBaseEntity, HcuHomeBaseEntity
+
+if TYPE_CHECKING:
+    from . import HcuCoordinator
+
+_LOGGER = logging.getLogger(__name__)
+
+# Conditionally import DeviceAction for backward compatibility.
+DEVICE_ACTIONS_SUPPORTED = True
+try:
+    from homeassistant.helpers.device_registry import DeviceAction
+except ImportError:
+    DEVICE_ACTIONS_SUPPORTED = False
+
 
 async def async_setup_entry(
-    hass: HomeAssistant, config_entry: ConfigEntry, async_add_entities: AddEntitiesCallback
+    hass: HomeAssistant,
+    config_entry: ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the sensor platform from a config entry."""
-    coordinator = hass.data[DOMAIN][config_entry.entry_id]
-    client: HcuApiClient = coordinator.client
-    
-    new_entities = []
-    created_entity_ids = set()
+    coordinator: "HcuCoordinator" = hass.data[config_entry.domain][
+        config_entry.entry_id
+    ]
+    if entities := coordinator.entities.get(Platform.SENSOR):
+        async_add_entities(entities)
 
-    # Discover device-specific sensors
-    for device_data in client.state.get("devices", {}).values():
-        if device_data.get("PARENT"):
-            continue
-            
-        oem = device_data.get("oem")
-        if oem and oem != "eQ-3":
-            option_key = f"import_{oem.lower().replace(' ', '_')}"
-            if not config_entry.options.get(option_key, True):
-                continue
-        
-        maintenance_channel = device_data.get("functionalChannels", {}).get("0", {})
-        is_mains_powered = maintenance_channel.get("lowBat") is None
-
-        for channel_index, channel_data in device_data.get("functionalChannels", {}).items():
-            for feature, mapping in HMIP_FEATURE_TO_ENTITY.items():
-                if feature in channel_data and mapping.get("class", "").endswith("Sensor"):
-                    
-                    if isinstance(channel_data.get(feature), bool):
-                        continue
-
-                    # Suppress signal strength sensor for the HCU itself.
-                    if feature == "rssiDeviceValue" and device_data.get("type") in HCU_DEVICE_TYPES:
-                        continue
-                        
-                    if feature == "batteryLevel" and is_mains_powered:
-                        continue
-                    
-                    if feature in ("actualTemperature", "valveActualTemperature"):
-                        unique_id = f"{device_data['id']}_{channel_index}_temperature"
-                        entity_class = HcuTemperatureSensor
-                    else:
-                        unique_id = f"{device_data['id']}_{channel_index}_{feature}"
-                        entity_class = HcuGenericSensor
-
-                    if unique_id not in created_entity_ids:
-                        new_entities.append(entity_class(client, device_data, channel_index, feature, mapping))
-                        created_entity_ids.add(unique_id)
-
-    # Discover home-level sensors
-    home_data = client.state.get("home", {})
-    if home_data:
-        for feature, mapping in HMIP_FEATURE_TO_ENTITY.items():
-            if feature in home_data and mapping.get("class") == "HcuHomeSensor":
-                unique_id = f"{client.hcu_device_id}_{feature}"
-                if unique_id not in created_entity_ids:
-                    new_entities.append(HcuHomeSensor(client, feature, mapping))
-                    created_entity_ids.add(unique_id)
-    
-    if new_entities:
-        async_add_entities(new_entities)
 
 class HcuHomeSensor(HcuHomeBaseEntity, SensorEntity):
     """Representation of a sensor tied to the HCU 'home' object."""
 
-    def __init__(self, client: HcuApiClient, feature: str, mapping: dict):
-        """Initialize the home sensor."""
-        super().__init__(client)
+    PLATFORM = Platform.SENSOR
+    _attr_has_entity_name = True
+
+    def __init__(
+        self,
+        coordinator: "HcuCoordinator",
+        client: HcuApiClient,
+        feature: str,
+        mapping: dict,
+    ):
+        super().__init__(coordinator, client)
         self._feature = feature
 
         self._attr_name = f"Homematic IP HCU {mapping['name']}"
@@ -89,65 +60,112 @@ class HcuHomeSensor(HcuHomeBaseEntity, SensorEntity):
         self._attr_native_unit_of_measurement = mapping.get("unit")
         self._attr_state_class = mapping.get("state_class")
         self._attr_icon = mapping.get("icon")
-        
+
         if "entity_registry_enabled_default" in mapping:
-            self._attr_entity_registry_enabled_default = mapping["entity_registry_enabled_default"]
+            self._attr_entity_registry_enabled_default = mapping[
+                "entity_registry_enabled_default"
+            ]
 
     @property
     def native_value(self) -> float | str | None:
-        """Return the state of the sensor."""
         value = self._home.get(self._feature)
         if value is None:
             return None
-        
+
         if self._feature == "carrierSense":
             return round(value * 100.0, 1)
 
         return value
 
+
 class HcuGenericSensor(HcuBaseEntity, SensorEntity):
     """Representation of a generic HCU sensor for a physical device."""
 
-    def __init__(self, client: HcuApiClient, device_data: dict, channel_index: str, feature: str, mapping: dict):
-        """Initialize the sensor."""
-        super().__init__(client, device_data, channel_index)
+    PLATFORM = Platform.SENSOR
+    _attr_has_entity_name = True
+
+    def __init__(
+        self,
+        coordinator: "HcuCoordinator",
+        client: HcuApiClient,
+        device_data: dict,
+        channel_index: str,
+        feature: str,
+        mapping: dict,
+    ):
+        super().__init__(coordinator, client, device_data, channel_index)
         self._feature = feature
-        
-        device_label = self._device.get("label", "Unknown Device")
-        self._attr_name = f"{device_label} {mapping['name']}"
+
+        self._attr_name = mapping["name"]
         self._attr_unique_id = f"{self._device_id}_{self._channel_index}_{self._feature}"
         self._attr_device_class = mapping.get("device_class")
         self._attr_native_unit_of_measurement = mapping.get("unit")
         self._attr_state_class = mapping.get("state_class")
         self._attr_icon = mapping.get("icon")
-        
+
         if "entity_registry_enabled_default" in mapping:
-            self._attr_entity_registry_enabled_default = mapping["entity_registry_enabled_default"]
+            self._attr_entity_registry_enabled_default = mapping[
+                "entity_registry_enabled_default"
+            ]
 
     @property
     def native_value(self) -> float | str | None:
-        """Return the state of the sensor, applying transformations if necessary."""
         value = self._channel.get(self._feature)
         if value is None:
             return None
-        
+
         if self._feature == "valvePosition":
             return round(value * 100.0, 1)
         if self._feature == "vaporAmount":
             return round(value, 2)
-            
+
         return value
+
+    # Conditionally add device actions for backward compatibility
+    if DEVICE_ACTIONS_SUPPORTED:
+
+        async def async_get_entity_actions(self) -> list[DeviceAction]:
+            """Return the available actions for this entity."""
+            # Only energy counter sensors have a reset action.
+            if self._feature == "energyCounter":
+                return [
+                    DeviceAction(
+                        key="reset_energy",
+                        translation_key="reset_energy",
+                    )
+                ]
+            return []
+
+        async def async_run_entity_action(self, key: str, **kwargs: Any) -> None:
+            """Run an action on the entity."""
+            if key == "reset_energy":
+                _LOGGER.info("Resetting energy counter for %s", self.entity_id)
+                await self._client.async_reset_energy_counter(
+                    self._device_id, self._channel_index
+                )
+            else:
+                _LOGGER.warning("Unknown action %s called for %s", key, self.entity_id)
+
 
 class HcuTemperatureSensor(HcuBaseEntity, SensorEntity):
     """A dedicated sensor for temperature to handle multiple temp features per channel."""
 
-    def __init__(self, client: HcuApiClient, device_data: dict, channel_index: str, feature: str, mapping: dict):
-        """Initialize the temperature sensor."""
-        super().__init__(client, device_data, channel_index)
-        device_label = self._device.get("label", "Unknown Device")
-        self._attr_name = f"{device_label} Temperature"
+    PLATFORM = Platform.SENSOR
+    _attr_has_entity_name = True
+
+    def __init__(
+        self,
+        coordinator: "HcuCoordinator",
+        client: HcuApiClient,
+        device_data: dict,
+        channel_index: str,
+        feature: str,
+        mapping: dict,
+    ):
+        super().__init__(coordinator, client, device_data, channel_index)
+
+        self._attr_name = "Temperature"
         self._attr_unique_id = f"{self._device_id}_{self._channel_index}_temperature"
-        
         self._attr_device_class = mapping.get("device_class")
         self._attr_native_unit_of_measurement = mapping.get("unit")
         self._attr_state_class = mapping.get("state_class")
@@ -157,4 +175,6 @@ class HcuTemperatureSensor(HcuBaseEntity, SensorEntity):
         """
         Return the temperature value, prioritizing 'actualTemperature'.
         """
-        return self._channel.get("actualTemperature") or self._channel.get("valveActualTemperature")
+        return self._channel.get("actualTemperature") or self._channel.get(
+            "valveActualTemperature"
+        )

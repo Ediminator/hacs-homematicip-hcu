@@ -1,132 +1,231 @@
 # custom_components/hcu_integration/__init__.py
-"""
-The Homematic IP Local (HCU) integration.
+"""The Homematic IP Local (HCU) integration."""
+from __future__ import annotations
 
-This component connects to a Homematic IP Home Control Unit (HCU) via its local
-WebSocket API, allowing for real-time control and monitoring of Homematic IP devices.
-"""
-import logging
+import aiohttp
 import asyncio
-import aiohttp  # Linter Fix: Import the aiohttp library
-import voluptuous as vol
+import logging
 from typing import cast
+import voluptuous as vol
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, CONF_TOKEN, ATTR_ENTITY_ID
+from homeassistant.const import CONF_HOST, CONF_TOKEN, ATTR_ENTITY_ID, Platform
 from homeassistant.core import HomeAssistant, ServiceCall, callback
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.dispatcher import async_dispatcher_send
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .api import HcuApiClient, HcuApiError
-from .const import DOMAIN, PLATFORMS, API_PATHS
+from .const import (
+    DOMAIN,
+    PLATFORMS,
+    WEBSOCKET_CONNECT_TIMEOUT,
+    WEBSOCKET_RECONNECT_INITIAL_DELAY,
+    WEBSOCKET_RECONNECT_MAX_DELAY,
+    WEBSOCKET_RECONNECT_JITTER_MAX,
+    CONF_AUTH_PORT,
+    CONF_WEBSOCKET_PORT,
+    DEFAULT_HCU_AUTH_PORT,
+    DEFAULT_HCU_WEBSOCKET_PORT,
+)
+from .discovery import async_discover_entities
 
 _LOGGER = logging.getLogger(__name__)
 
-# Define a type hint for the data stored in hass.data[DOMAIN] for better type safety.
 type HcuData = dict[str, "HcuCoordinator"]
 
-# Define service constants and schemas
+# Define service constants
 SERVICE_PLAY_SOUND = "play_sound"
+SERVICE_SET_RULE_STATE = "set_rule_state"
+
+# Define service attribute constants
 ATTR_SOUND_FILE = "sound_file"
 ATTR_DURATION = "duration"
 ATTR_VOLUME = "volume"
+ATTR_RULE_ID = "rule_id"
+ATTR_ENABLED = "enabled"
 
-PLAY_SOUND_SERVICE_SCHEMA = vol.Schema({
-    vol.Required(ATTR_ENTITY_ID): cv.entity_ids,
-    vol.Required(ATTR_SOUND_FILE): cv.string,
-    vol.Optional(ATTR_VOLUME, default=1.0): vol.All(vol.Coerce(float), vol.Range(min=0.0, max=1.0)),
-    vol.Optional(ATTR_DURATION, default=5.0): vol.All(vol.Coerce(float), vol.Range(min=0.1, max=16383)),
-})
+# Service schema for playing a sound on compatible devices
+PLAY_SOUND_SERVICE_SCHEMA = vol.Schema(
+    {
+        vol.Required(ATTR_ENTITY_ID): cv.entity_ids,
+        vol.Required(ATTR_SOUND_FILE): cv.string,
+        vol.Optional(ATTR_VOLUME, default=1.0): vol.All(
+            vol.Coerce(float), vol.Range(min=0.0, max=1.0)
+        ),
+        vol.Optional(ATTR_DURATION, default=5.0): vol.All(
+            vol.Coerce(float), vol.Range(min=0.1, max=16383)
+        ),
+    }
+)
+
+# Service schema for enabling or disabling an HCU automation rule
+SET_RULE_STATE_SERVICE_SCHEMA = vol.Schema(
+    {
+        vol.Required(ATTR_RULE_ID): cv.string,
+        vol.Required(ATTR_ENABLED): cv.boolean,
+    }
+)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Set up Homematic IP Local (HCU) from a config entry."""
+    """
+    Set up Homematic IP Local (HCU) from a config entry.
+
+    This function initializes the API client, creates the data update coordinator,
+    establishes the WebSocket connection, discovers entities, and sets up the
+    necessary platforms and services.
+    """
+    auth_port = entry.data.get(CONF_AUTH_PORT, DEFAULT_HCU_AUTH_PORT)
+    websocket_port = entry.data.get(CONF_WEBSOCKET_PORT, DEFAULT_HCU_WEBSOCKET_PORT)
+
     client = HcuApiClient(
-        entry.data[CONF_HOST], 
+        hass,
+        entry.data[CONF_HOST],
         entry.data[CONF_TOKEN],
-        async_get_clientsession(hass)
+        async_get_clientsession(hass),
+        auth_port,
+        websocket_port,
     )
-    
+
     coordinator = HcuCoordinator(hass, client, entry)
-    
-    # Store the coordinator instance in hass.data.
+
     domain_data = cast(HcuData, hass.data.setdefault(DOMAIN, {}))
     domain_data[entry.entry_id] = coordinator
 
     if not await coordinator.async_setup():
         return False
-        
+
+    coordinator.entities = await async_discover_entities(
+        hass, client, entry, coordinator
+    )
+
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-    
-    # Register the custom 'play_sound' service
+
     async def handle_play_sound(call: ServiceCall) -> None:
         """Handle the play_sound service call."""
         entity_registry_instance = er.async_get(hass)
+
         for entity_id in call.data[ATTR_ENTITY_ID]:
             entity_entry = entity_registry_instance.async_get(entity_id)
-            if entity_entry and entity_entry.platform == DOMAIN:
-                # The unique_id is expected to be in the format: {device_id}_{channel_index}_...
-                unique_id_parts = entity_entry.unique_id.split("_")
-                if len(unique_id_parts) >= 2:
-                    device_id, channel_index_str = unique_id_parts[0], unique_id_parts[1]
-                    try:
-                        await client.async_device_control(
-                            path=API_PATHS.SET_SOUND_FILE,
-                            device_id=device_id,
-                            channel_index=int(channel_index_str),
-                            body={
-                                "onTime": call.data[ATTR_DURATION],
-                                "soundFile": call.data[ATTR_SOUND_FILE],
-                                "volumeLevel": call.data[ATTR_VOLUME],
-                            },
-                        )
-                    except (HcuApiError, ConnectionError) as err:
-                        _LOGGER.error("Error calling play_sound for %s: %s", entity_id, err)
+            if not entity_entry or entity_entry.platform != DOMAIN:
+                _LOGGER.warning(
+                    "Cannot play sound on %s, as it is not a Homematic IP Local (HCU) entity.", entity_id
+                )
+                continue
+            
+            # Extract device_id and channel_index from the entity's unique_id
+            unique_id_parts = entity_entry.unique_id.split("_")
+            if len(unique_id_parts) < 2:
+                _LOGGER.warning("Could not determine device and channel for entity %s", entity_id)
+                continue
 
-    hass.services.async_register(DOMAIN, SERVICE_PLAY_SOUND, handle_play_sound, schema=PLAY_SOUND_SERVICE_SCHEMA)
+            device_id, channel_index_str = unique_id_parts[0], unique_id_parts[1]
+            try:
+                await client.async_set_sound_file(
+                    device_id=device_id,
+                    channel_index=int(channel_index_str),
+                    sound_file=call.data[ATTR_SOUND_FILE],
+                    volume=call.data[ATTR_VOLUME],
+                    duration=call.data[ATTR_DURATION],
+                )
+            except (HcuApiError, ConnectionError) as err:
+                _LOGGER.error("Error calling play_sound for %s: %s", entity_id, err)
+
+    async def handle_set_rule_state(call: ServiceCall) -> None:
+        """Handle the set_rule_state service call."""
+        rule_id = call.data[ATTR_RULE_ID]
+        enabled = call.data[ATTR_ENABLED]
+        try:
+            await client.async_enable_simple_rule(rule_id=rule_id, enabled=enabled)
+            _LOGGER.info("Successfully set state for rule %s to %s", rule_id, enabled)
+        except (HcuApiError, ConnectionError) as err:
+            _LOGGER.error("Error setting state for rule %s: %s", rule_id, err)
+
+    hass.services.async_register(
+        DOMAIN, SERVICE_PLAY_SOUND, handle_play_sound, schema=PLAY_SOUND_SERVICE_SCHEMA
+    )
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_SET_RULE_STATE,
+        handle_set_rule_state,
+        schema=SET_RULE_STATE_SERVICE_SCHEMA,
+    )
 
     entry.add_update_listener(async_reload_entry)
 
     return True
 
-class HcuCoordinator:
-    """Manages the HCU API client, WebSocket connection, and data updates."""
+
+class HcuCoordinator(DataUpdateCoordinator[set[str]]):
+    """
+    Manages the HCU API client, WebSocket connection, and data updates.
+
+    This coordinator is responsible for the central communication with the HCU.
+    It maintains a persistent WebSocket connection, listens for real-time push
+    events, and updates Home Assistant states accordingly. Entities subscribe
+    to this coordinator to receive updates.
+    """
 
     def __init__(self, hass: HomeAssistant, client: HcuApiClient, entry: ConfigEntry):
-        """Initialize the data coordinator."""
-        self.hass = hass
+        """Initialize the coordinator."""
+        super().__init__(
+            hass,
+            _LOGGER,
+            name=DOMAIN,
+            update_interval=None,  # This is a push-based integration
+        )
         self.client = client
         self.entry = entry
+        self.entities: dict[Platform, list] = {}
+        self._connected_event = asyncio.Event()
 
     async def async_setup(self) -> bool:
-        """Set up the coordinator, connect, and fetch initial system state."""
-        # Start a background task to maintain the WebSocket connection.
+        """
+        Initialize the coordinator and establish the initial connection.
+
+        This method starts the background WebSocket listener task and waits for it
+        to establish a connection. It then fetches the full system state to ensure
+        all devices are known before entities are set up.
+        """
         self.entry.async_create_background_task(
             self.hass, self._listen_for_events(), name="HCU WebSocket Listener"
         )
 
-        _LOGGER.debug("Waiting for connection to establish before fetching initial state...")
-        await asyncio.sleep(1) # Brief delay to allow initial connection.
+        _LOGGER.debug("Waiting for WebSocket connection to establish...")
+        try:
+            await asyncio.wait_for(
+                self._connected_event.wait(), timeout=WEBSOCKET_CONNECT_TIMEOUT
+            )
+        except asyncio.TimeoutError:
+            _LOGGER.error(
+                "Failed to establish WebSocket connection within %d seconds",
+                WEBSOCKET_CONNECT_TIMEOUT,
+            )
+            return False
 
         try:
             initial_state = await self.client.get_system_state()
             if not initial_state or "devices" not in initial_state:
-                _LOGGER.error("HCU is connected, but failed to get a valid initial state.")
+                _LOGGER.error(
+                    "HCU is connected, but failed to get a valid initial state."
+                )
                 return False
         except (HcuApiError, ConnectionError, asyncio.TimeoutError) as err:
-            _LOGGER.error("Failed to get initial state from HCU after connecting: %s", err)
+            _LOGGER.error(
+                "Failed to get initial state from HCU after connecting: %s", err
+            )
             return False
 
         self._register_hcu_device()
-        
+
         return True
 
     def _register_hcu_device(self) -> None:
         """Register the HCU itself as a device in Home Assistant."""
         device_registry = dr.async_get(self.hass)
-        
+
         hcu_device_id = self.client.hcu_device_id
         if not hcu_device_id:
             _LOGGER.warning("Could not determine HCU device ID (SGTIN) from state.")
@@ -134,7 +233,7 @@ class HcuCoordinator:
 
         hcu_device_data = self.client.state.get("devices", {}).get(hcu_device_id, {})
         home_data = self.client.state.get("home", {})
-        
+
         device_registry.async_get_or_create(
             config_entry_id=self.entry.entry_id,
             identifiers={(DOMAIN, hcu_device_id)},
@@ -143,69 +242,94 @@ class HcuCoordinator:
             model=hcu_device_data.get("modelType") or "HCU",
             sw_version=home_data.get("currentAPVersion"),
         )
-        
+
     @callback
     def _handle_event_message(self, message: dict) -> None:
-        """Handle incoming push event messages from the WebSocket."""
+        """Process incoming WebSocket event messages from the HCU."""
         if message.get("type") != "HMIP_SYSTEM_EVENT":
             return
-        
+
         events = message.get("body", {}).get("eventTransaction", {}).get("events", {})
-        # The client processes the events and returns a set of changed device/group IDs.
+        if not events:
+            return
+
         updated_ids = self.client.process_events(events)
-        
-        # Dispatch a signal to notify entities that their data may have changed.
+
         if updated_ids:
-            async_dispatcher_send(self.hass, f"{DOMAIN}_update", updated_ids)
+            # Notify all subscribed entities that new data is available.
+            # The 'updated_ids' set contains the IDs of devices/groups that changed.
+            self.async_set_updated_data(updated_ids)
 
     async def _listen_for_events(self) -> None:
-        """Maintain a persistent WebSocket connection and handle reconnections."""
-        reconnect_delay = 1
+        """
+        Maintain a persistent WebSocket connection with automatic reconnection.
+        
+        This loop runs in the background for the lifetime of the integration.
+        It handles connection errors and implements an exponential backoff
+        strategy for reconnection attempts.
+        """
+        import random
+
+        reconnect_delay = WEBSOCKET_RECONNECT_INITIAL_DELAY
+
         while True:
             try:
                 if not self.client.is_connected:
                     _LOGGER.info("Connecting to HCU WebSocket...")
                     await self.client.connect()
                     self.client.register_event_callback(self._handle_event_message)
-                    reconnect_delay = 1
-                
-                # This call will block until the connection is lost.
+
+                    self._connected_event.set()  # Signal that the connection is up
+                    reconnect_delay = WEBSOCKET_RECONNECT_INITIAL_DELAY  # Reset backoff on success
+
+                # This will run until the connection is closed or an error occurs
                 await self.client.listen()
+
             except (aiohttp.ClientError, asyncio.TimeoutError, ConnectionAbortedError) as e:
-                 _LOGGER.error(
-                    "WebSocket listener disconnected: %s. Reconnecting in %d seconds.", 
-                    e, reconnect_delay
+                _LOGGER.warning(
+                    "WebSocket listener disconnected: %s. Reconnecting in %d seconds.",
+                    e,
+                    reconnect_delay,
                 )
             except asyncio.CancelledError:
                 _LOGGER.info("WebSocket listener task cancelled.")
                 break
-            except Exception as _: # Linter Fix: Use '_' for unused exception variable
+            except Exception:
                 _LOGGER.exception(
-                    "Unexpected error in WebSocket listener. Reconnecting in %d seconds.", 
-                    reconnect_delay
+                    "Unexpected error in WebSocket listener. Reconnecting in %d seconds.",
+                    reconnect_delay,
                 )
 
+            # Ensure client is fully disconnected before attempting to reconnect
             if self.client.is_connected:
                 await self.client.disconnect()
-            await asyncio.sleep(reconnect_delay)
-            # Implement exponential backoff for reconnection attempts.
-            reconnect_delay = min(reconnect_delay * 2, 60)
+
+            self._connected_event.clear()
+
+            # Exponential backoff with jitter to prevent overwhelming the HCU
+            jitter = random.uniform(0, WEBSOCKET_RECONNECT_JITTER_MAX)
+            await asyncio.sleep(reconnect_delay + jitter)
+
+            reconnect_delay = min(reconnect_delay * 2, WEBSOCKET_RECONNECT_MAX_DELAY)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     coordinator: HcuCoordinator = hass.data[DOMAIN][entry.entry_id]
-    
-    # Unregister the service when the integration is unloaded.
+
+    # Unregister services to clean up
     hass.services.async_remove(DOMAIN, SERVICE_PLAY_SOUND)
+    hass.services.async_remove(DOMAIN, SERVICE_SET_RULE_STATE)
 
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
-    
+
     if unload_ok:
+        # Disconnect the WebSocket and remove the coordinator from hass.data
         await coordinator.client.disconnect()
         hass.data[DOMAIN].pop(entry.entry_id)
 
     return unload_ok
+
 
 async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Reload config entry when options are updated."""

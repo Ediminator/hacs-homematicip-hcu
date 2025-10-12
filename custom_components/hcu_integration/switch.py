@@ -1,132 +1,130 @@
-# custom_components/hcu_integration/switch.py
-"""
-Switch platform for the Homematic IP HCU integration.
+import datetime
+from typing import TYPE_CHECKING
+import logging
 
-This platform creates switch entities for standard switches, outlets, and watering controllers.
-"""
-from homeassistant.components.switch import SwitchEntity
+from homeassistant.components.switch import SwitchEntity, SwitchDeviceClass
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.util import dt as dt_util
 
-from .const import DOMAIN, HMIP_DEVICE_TYPE_TO_DEVICE_CLASS, HMIP_FEATURE_TO_ENTITY, API_PATHS
-from .entity import HcuBaseEntity
-from .api import HcuApiClient
+from .const import HMIP_DEVICE_TYPE_TO_DEVICE_CLASS
+from .entity import HcuBaseEntity, HcuHomeBaseEntity
+from .api import HcuApiClient, HcuApiError
+
+if TYPE_CHECKING:
+    from . import HcuCoordinator
+
+_LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(
     hass: HomeAssistant, config_entry: ConfigEntry, async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the switch platform from a config entry."""
-    coordinator = hass.data[DOMAIN][config_entry.entry_id]
-    client: HcuApiClient = coordinator.client
-    
-    new_entities = []
-    created_entity_ids = set()
-
-    for device_data in client.state.get("devices", {}).values():
-        if device_data.get("PARENT"):
-            continue
-
-        oem = device_data.get("oem")
-        if oem and oem != "eQ-3":
-            option_key = f"import_{oem.lower().replace(' ', '_')}"
-            if not config_entry.options.get(option_key, True):
-                continue
-
-        for channel_index, channel_data in device_data.get("functionalChannels", {}).items():
-            if channel_data.get("functionalChannelType") == "ACCESS_CONTROLLER_CHANNEL":
-                continue
-            
-            if channel_data.get("functionalChannelType") == "DOOR_CHANNEL":
-                continue
-
-            for feature, mapping in HMIP_FEATURE_TO_ENTITY.items():
-                if feature in channel_data and mapping.get("class", "").endswith("Switch"):
-                    if "dimLevel" in channel_data:
-                        continue
-
-                    unique_id = f"{device_data['id']}_{channel_index}_{feature}"
-                    if unique_id not in created_entity_ids:
-                        entity_class = globals()[mapping["class"]]
-                        new_entities.append(entity_class(client, device_data, channel_index))
-                        created_entity_ids.add(unique_id)
-
-    if new_entities:
-        async_add_entities(new_entities)
+    coordinator: "HcuCoordinator" = hass.data[config_entry.domain][config_entry.entry_id]
+    if entities := coordinator.entities.get(Platform.SWITCH):
+        async_add_entities(entities)
 
 class HcuSwitch(HcuBaseEntity, SwitchEntity):
     """Representation of a standard Homematic IP HCU switch."""
+    PLATFORM = Platform.SWITCH
+    _attr_has_entity_name = False
+    _attr_name = None # Use device name
 
-    def __init__(self, client: HcuApiClient, device_data: dict, channel_index: str):
-        """Initialize the switch entity."""
-        super().__init__(client, device_data, channel_index)
-        device_label = self._device.get("label", "Unknown Switch")
-        self._attr_name = device_label
+    def __init__(self, coordinator: "HcuCoordinator", client: HcuApiClient, device_data: dict, channel_index: str, **kwargs):
+        super().__init__(coordinator, client, device_data, channel_index)
         self._attr_unique_id = f"{self._device_id}_{self._channel_index}_on"
-        
+
         device_type = self._device.get("type")
         self._attr_device_class = HMIP_DEVICE_TYPE_TO_DEVICE_CLASS.get(device_type)
 
     @property
     def is_on(self) -> bool:
-        """Return true if the switch is on."""
         return self._channel.get("on", False)
 
     async def async_turn_on(self, **kwargs) -> None:
-        """Turn the switch on."""
         self._attr_assumed_state = True
         self.async_write_ha_state()
-        await self._client.async_device_control(
-            path=API_PATHS.SET_SWITCH_STATE,
-            device_id=self._device_id,
-            channel_index=self._channel_index,
-            body={"on": True}
-        )
+        await self._client.async_set_switch_state(self._device_id, self._channel_index, True)
+
 
     async def async_turn_off(self, **kwargs) -> None:
-        """Turn the switch off."""
         self._attr_assumed_state = True
         self.async_write_ha_state()
-        await self._client.async_device_control(
-            path=API_PATHS.SET_SWITCH_STATE,
-            device_id=self._device_id,
-            channel_index=self._channel_index,
-            body={"on": False}
-        )
+        await self._client.async_set_switch_state(self._device_id, self._channel_index, False)
+
 
 class HcuWateringSwitch(HcuBaseEntity, SwitchEntity):
     """Representation of a Homematic IP HCU watering controller."""
+    PLATFORM = Platform.SWITCH
     _attr_icon = "mdi:water"
+    _attr_has_entity_name = False
+    _attr_name = None # Use device name
 
-    def __init__(self, client: HcuApiClient, device_data: dict, channel_index: str):
-        """Initialize the watering switch entity."""
-        super().__init__(client, device_data, channel_index)
-        self._attr_name = self._device.get("label") or "Watering"
+    def __init__(self, coordinator: "HcuCoordinator", client: HcuApiClient, device_data: dict, channel_index: str, **kwargs):
+        super().__init__(coordinator, client, device_data, channel_index)
         self._attr_unique_id = f"{self._device_id}_{self._channel_index}_watering"
 
     @property
     def is_on(self) -> bool:
-        """Return true if watering is active."""
         return self._channel.get("wateringActive", False)
 
     async def async_turn_on(self, **kwargs) -> None:
-        """Turn the watering on."""
         self._attr_assumed_state = True
         self.async_write_ha_state()
-        await self._client.async_device_control(
-            path=API_PATHS.SET_WATERING_SWITCH_STATE,
-            device_id=self._device_id,
-            channel_index=self._channel_index,
-            body={"wateringActive": True},
-        )
+        await self._client.async_set_watering_switch_state(self._device_id, self._channel_index, True)
+
 
     async def async_turn_off(self, **kwargs) -> None:
-        """Turn the watering off."""
         self._attr_assumed_state = True
         self.async_write_ha_state()
-        await self._client.async_device_control(
-            path=API_PATHS.SET_WATERING_SWITCH_STATE,
-            device_id=self._device_id,
-            channel_index=self._channel_index,
-            body={"wateringActive": False},
-        )
+        await self._client.async_set_watering_switch_state(self._device_id, self._channel_index, False)
+
+
+class HcuHomeSwitch(HcuHomeBaseEntity, SwitchEntity):
+    """A switch entity tied to the HCU 'home' object, for features like Vacation Mode."""
+    PLATFORM = Platform.SWITCH
+    _attr_has_entity_name = False
+    _attr_name = "Vacation Mode"
+    _attr_icon = "mdi:palm-tree"
+    _attr_device_class = SwitchDeviceClass.SWITCH
+
+    def __init__(self, coordinator: "HcuCoordinator", client: HcuApiClient):
+        super().__init__(coordinator, client)
+        self._attr_unique_id = f"{self._hcu_device_id}_vacation_mode"
+
+    @property
+    def is_on(self) -> bool:
+        """Return true if vacation mode is active."""
+        heating_home = self._home.get("functionalHomes", {}).get("HEATING", {})
+        return heating_home.get("vacationMode", False)
+
+    async def async_turn_on(self, **kwargs) -> None:
+        """Turn on vacation mode."""
+        self._attr_assumed_state = True
+        self.async_write_ha_state()
+        try:
+            # The API requires an end time and temperature to activate vacation mode.
+            # We'll set it for a very long time into the future as a proxy for "indefinite".
+            # Users can turn it off manually.
+            end_time = dt_util.now() + datetime.timedelta(days=365 * 10)
+            await self._client.async_activate_vacation(
+                temperature=5.0, # Use minimum eco temperature
+                end_time=end_time.strftime("%Y_%m_%d %H:%M")
+            )
+        except (HcuApiError, ConnectionError) as err:
+            _LOGGER.error("Failed to turn on vacation mode: %s", err)
+            self._attr_assumed_state = False
+            self.async_write_ha_state()
+
+    async def async_turn_off(self, **kwargs) -> None:
+        """Turn off vacation mode."""
+        self._attr_assumed_state = True
+        self.async_write_ha_state()
+        try:
+            await self._client.async_deactivate_vacation()
+        except (HcuApiError, ConnectionError) as err:
+            _LOGGER.error("Failed to turn off vacation mode: %s", err)
+            self._attr_assumed_state = False
+            self.async_write_ha_state()

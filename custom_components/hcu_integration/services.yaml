@@ -1,23 +1,24 @@
-# custom_components/hcu_integration/services.yaml
+# Describes the services offered by the Homematic IP Local (HCU) integration.
+
 play_sound:
   name: Play Sound
-  description: Plays a specific sound file on a compatible Homematic IP device (e.g., Siren or Doorbell).
+  description: Plays a sound file on a compatible device (e.g., HmIP-MP3P).
   target:
     entity:
       - integration: hcu_integration
-        domain: light # Or any domain where a compatible entity might appear
+        domain: switch
   fields:
     sound_file:
       name: Sound File
-      description: "The name of the sound file to play, as defined in the HCU API documentation (e.g., SOUNDFILE_001, RANDOM_SOUNDFILE)."
-      example: "SOUNDFILE_001"
+      description: The name of the sound file to play (e.g., "SOUND_01", "ALARM_01").
       required: true
       selector:
         text:
     volume:
       name: Volume
-      description: "The playback volume, from 0.0 (silent) to 1.0 (full)."
-      example: 0.8
+      description: The volume level for the sound, from 0.0 to 1.0.
+      required: false
+      default: 1.0
       selector:
         number:
           min: 0.0
@@ -26,31 +27,62 @@ play_sound:
           mode: slider
     duration:
       name: Duration
-      description: "The duration in seconds for which the sound should play."
-      example: 10
+      description: The duration in seconds for which the sound should play.
+      required: false
+      default: 5.0
       selector:
         number:
           min: 0.1
-          max: 16383.0
+          max: 16383
           step: 0.1
-          mode: box
-          unit_of_measurement: "seconds"
+          unit_of_measurement: "s"
 
 set_rule_state:
   name: Set Rule State
-  description: Enables or disables an automation rule defined on the Homematic IP HCU.
+  description: Enables or disables a simple automation rule within the HCU.
   fields:
     rule_id:
       name: Rule ID
-      description: "The unique identifier of the rule to control."
-      example: "a12c135-e54b-555a-fa45-e3054c894321"
+      description: The unique identifier of the rule to be controlled.
       required: true
       selector:
         text:
     enabled:
       name: Enabled
-      description: "Whether to enable or disable the rule."
-      example: true
+      description: Whether to enable or disable the rule.
       required: true
       selector:
         boolean:
+
+set_display_content:
+  name: Set Display Content
+  description: Sets the text and icon on an e-paper display of a compatible device (e.g., HmIP-WRCD).
+  target:
+    entity:
+      - integration: hcu_integration
+        domain: button
+  fields:
+    line_1:
+      name: Line 1
+      description: The text to display on the first line.
+      required: false
+      selector:
+        text:
+    line_2:
+      name: Line 2
+      description: The text to display on the second line.
+      required: false
+      selector:
+        text:
+    line_3:
+      name: Line 3
+      description: The text to display on the third line.
+      required: false
+      selector:
+        text:
+    icon:
+      name: Icon
+      description: The name of the icon to display (e.g., "ICON_SUN", "ICON_MOON"). See API docs for options.
+      required: false
+      selector:
+        text:

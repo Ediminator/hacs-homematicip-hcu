@@ -35,19 +35,11 @@ _LOGGER = logging.getLogger(__name__)
 
 async def async_setup(hass: HomeAssistant, config: dict):
     """Set up the HCU component."""
-    # This is a no-op, but required for the async_will_remove_config_entry hook to work.
     return True
 
 
 async def async_will_remove_config_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> None:
-    """
-    Handle removal of a config entry.
-
-    This function is called by Home Assistant just before an integration entry is
-    removed. It logs a warning to guide the user on how to manually revoke the
-    orphaned API token on their HCU for security purposes, as there is no API
-    endpoint available to do this programmatically.
-    """
+    """Handle removal of a config entry."""
     _LOGGER.warning(
         "The HCU integration has been removed. For security, please manually delete the "
         "'Home Assistant Integration' client from your Homematic IP smartphone app "
@@ -60,8 +52,7 @@ class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
 
     VERSION = 1
     reauth_entry: ConfigEntry | None = None
-    
-    # FIX: Add an instance variable to store config data between steps.
+
     _config_data: dict[str, Any] = {}
 
     @staticmethod
@@ -80,11 +71,9 @@ class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
             host = user_input[CONF_HOST]
             await self.async_set_unique_id(host)
             self._abort_if_unique_id_configured(updates={CONF_HOST: host})
-            
-            # FIX: Store the data from this step in the instance variable.
+
             self._config_data = user_input
-            
-            # FIX: Proceed to the auth step to show the next form.
+
             return await self.async_step_auth()
 
         return self.async_show_form(
@@ -93,7 +82,9 @@ class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
                 {
                     vol.Required(CONF_HOST, default=self.context.get("host", "")): str,
                     vol.Required(CONF_AUTH_PORT, default=DEFAULT_HCU_AUTH_PORT): int,
-                    vol.Required(CONF_WEBSOCKET_PORT, default=DEFAULT_HCU_WEBSOCKET_PORT): int,
+                    vol.Required(
+                        CONF_WEBSOCKET_PORT, default=DEFAULT_HCU_WEBSOCKET_PORT
+                    ): int,
                 }
             ),
         )
@@ -101,12 +92,8 @@ class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
     async def async_step_auth(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """
-        Handle the authentication step where the user provides an activation key.
-        This step communicates with the HCU to acquire a long-lived auth token.
-        """
+        """Handle the authentication step where the user provides an activation key."""
         errors = {}
-        # FIX: Retrieve host and port from the stored config data.
         host = self._config_data[CONF_HOST]
         auth_port = self._config_data[CONF_AUTH_PORT]
 
@@ -127,10 +114,9 @@ class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
                     "Successfully received and confirmed auth token from HCU at %s",
                     host,
                 )
-                
-                # FIX: Merge stored data with the new token for the final config entry.
+
                 final_data = {**self._config_data, CONF_TOKEN: auth_token}
-                
+
                 return self.async_create_entry(
                     title="Homematic IP Local (HCU)",
                     data=final_data,
@@ -150,15 +136,11 @@ class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
             description_placeholders={"hcu_ip": host},
             errors=errors,
         )
-    
+
     async def async_step_reauth(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """
-        Handle a reauthentication flow.
-        This is triggered by Home Assistant when the integration reports that
-        reauthentication is needed (e.g., due to an invalid PIN).
-        """
+        """Handle a reauthentication flow."""
         self.reauth_entry = self.hass.config_entries.async_get_entry(
             self.context["entry_id"]
         )
@@ -167,11 +149,8 @@ class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
     async def async_step_reauth_confirm(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """
-        Handle the PIN reauthentication form.
-        This step securely updates the PIN in the config entry's data.
-        """
-        if user_input is not None:
+        """Handle the PIN reauthentication form."""
+        if user_input is not None and self.reauth_entry:
             new_data = {**self.reauth_entry.data, CONF_PIN: user_input[CONF_PIN]}
             self.hass.config_entries.async_update_entry(self.reauth_entry, data=new_data)
             await self.hass.config_entries.async_reload(self.reauth_entry.entry_id)
@@ -181,7 +160,6 @@ class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
             step_id="reauth_confirm",
             data_schema=vol.Schema({vol.Required(CONF_PIN): str}),
         )
-
 
     async def async_step_reconfigure(
         self, user_input: dict[str, Any] | None = None
@@ -195,45 +173,72 @@ class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
             new_auth_port = user_input[CONF_AUTH_PORT]
             new_websocket_port = user_input[CONF_WEBSOCKET_PORT]
 
+            session = aiohttp_client.async_get_clientsession(self.hass)
+            client = HcuApiClient(
+                self.hass,
+                new_host,
+                entry.data[CONF_TOKEN],
+                session,
+                new_auth_port,
+                new_websocket_port,
+            )
+            listener_task = None
             try:
-                # Test the connection to the new host/ports with the existing token.
-                session = aiohttp_client.async_get_clientsession(self.hass)
-                client = HcuApiClient(
-                    self.hass,
-                    new_host,
-                    entry.data[CONF_TOKEN],
-                    session,
-                    new_auth_port,
-                    new_websocket_port,
-                )
+                await client.connect()
+
+                # Run listener task to process responses.
+                listener_task = self.hass.async_create_task(client.listen())
+
                 await client.get_system_state()
 
-                # If successful, update the config entry's data.
                 self.hass.config_entries.async_update_entry(
-                    entry, data={
+                    entry,
+                    data={
                         **entry.data,
                         CONF_HOST: new_host,
                         CONF_AUTH_PORT: new_auth_port,
                         CONF_WEBSOCKET_PORT: new_websocket_port,
-                    }
+                    },
                 )
                 await self.hass.config_entries.async_reload(entry.entry_id)
                 return self.async_abort(reason="reconfigure_successful")
 
-            except (HcuApiError, ConnectionError, asyncio.TimeoutError, aiohttp.ClientConnectorError):
+            except (
+                HcuApiError,
+                ConnectionError,
+                asyncio.TimeoutError,
+                aiohttp.ClientConnectorError,
+            ):
                 _LOGGER.error("Failed to connect to new HCU host/port combination")
                 errors["base"] = "cannot_connect"
             except Exception:
                 _LOGGER.exception("Unexpected error during reconfiguration.")
                 errors["base"] = "unknown"
+            finally:
+                if listener_task:
+                    listener_task.cancel()
+                    try:
+                        await listener_task
+                    except asyncio.CancelledError:
+                        pass  # This is expected behavior.
+                if client.is_connected:
+                    await client.disconnect()
 
         return self.async_show_form(
             step_id="reconfigure",
             data_schema=vol.Schema(
                 {
                     vol.Required(CONF_HOST, default=entry.data[CONF_HOST]): str,
-                    vol.Required(CONF_AUTH_PORT, default=entry.data.get(CONF_AUTH_PORT, DEFAULT_HCU_AUTH_PORT)): int,
-                    vol.Required(CONF_WEBSOCKET_PORT, default=entry.data.get(CONF_WEBSOCKET_PORT, DEFAULT_HCU_WEBSOCKET_PORT)): int,
+                    vol.Required(
+                        CONF_AUTH_PORT,
+                        default=entry.data.get(CONF_AUTH_PORT, DEFAULT_HCU_AUTH_PORT),
+                    ): int,
+                    vol.Required(
+                        CONF_WEBSOCKET_PORT,
+                        default=entry.data.get(
+                            CONF_WEBSOCKET_PORT, DEFAULT_HCU_WEBSOCKET_PORT
+                        ),
+                    ): int,
                 }
             ),
             errors=errors,
@@ -291,7 +296,6 @@ class HcuOptionsFlowHandler(OptionsFlow):
         """Manage the options for the integration."""
         if user_input is not None:
             await self._handle_device_removal(user_input)
-            # Merge existing options with the new ones provided by the user.
             new_options = {**self.config_entry.options, **user_input}
             return self.async_create_entry(title="", data=new_options)
 
@@ -315,7 +319,6 @@ class HcuOptionsFlowHandler(OptionsFlow):
             ): vol.Coerce(float),
         }
 
-        # Dynamically add boolean toggles for each third-party OEM found.
         for oem in sorted(list(third_party_oems)):
             option_key = f"import_{oem.lower().replace(' ', '_')}"
             schema[
@@ -334,7 +337,6 @@ class HcuOptionsFlowHandler(OptionsFlow):
         disabled_oems = set()
         for key, value in user_input.items():
             if key.startswith("import_") and not value:
-                # Check if the option was previously enabled or non-existent
                 if self.config_entry.options.get(key, True):
                     oem_name = key.replace("import_", "").replace("_", " ").title()
                     disabled_oems.add(oem_name)

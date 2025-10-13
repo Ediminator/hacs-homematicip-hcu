@@ -1,4 +1,3 @@
-import datetime
 from typing import TYPE_CHECKING
 import logging
 
@@ -7,7 +6,6 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.util import dt as dt_util
 
 from .const import HMIP_DEVICE_TYPE_TO_DEVICE_CLASS
 from .entity import HcuBaseEntity, HcuHomeBaseEntity
@@ -108,10 +106,9 @@ class HcuHomeSwitch(HcuHomeBaseEntity, SwitchEntity):
             # The API requires an end time and temperature to activate vacation mode.
             # We'll set it for a very long time into the future as a proxy for "indefinite".
             # Users can turn it off manually.
-            end_time = dt_util.now() + datetime.timedelta(days=365 * 10)
             await self._client.async_activate_vacation(
                 temperature=5.0, # Use minimum eco temperature
-                end_time=end_time.strftime("%Y_%m_%d %H:%M")
+                end_time="2038_01_01 00:00" # A far-future date
             )
         except (HcuApiError, ConnectionError) as err:
             _LOGGER.error("Failed to turn on vacation mode: %s", err)

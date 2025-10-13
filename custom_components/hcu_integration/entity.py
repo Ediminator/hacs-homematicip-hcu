@@ -69,11 +69,9 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], Entity):
     
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
-        # Check if the device this entity belongs to was updated
         if self._device_id in self.coordinator.data:
             self._attr_assumed_state = False
             self.async_write_ha_state()
-        super()._handle_coordinator_update()
 
 
 class HcuGroupBaseEntity(CoordinatorEntity["HcuCoordinator"], Entity):
@@ -123,13 +121,8 @@ class HcuGroupBaseEntity(CoordinatorEntity["HcuCoordinator"], Entity):
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
         if self._group_id in self.coordinator.data:
-            if hasattr(self, "_attr_hvac_mode"):
-                self._attr_hvac_mode = None
-            if hasattr(self, "_attr_target_temperature"):
-                self._attr_target_temperature = None
             self._attr_assumed_state = False
             self.async_write_ha_state()
-        super()._handle_coordinator_update()
 
 
 class HcuHomeBaseEntity(CoordinatorEntity["HcuCoordinator"], Entity):
@@ -172,4 +165,3 @@ class HcuHomeBaseEntity(CoordinatorEntity["HcuCoordinator"], Entity):
         if self._home_uuid in self.coordinator.data:
             self._attr_assumed_state = False
             self.async_write_ha_state()
-        super()._handle_coordinator_update()

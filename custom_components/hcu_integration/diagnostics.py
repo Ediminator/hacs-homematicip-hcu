@@ -1,4 +1,3 @@
-# custom_components/hcu_integration/diagnostics.py
 from __future__ import annotations
 
 from typing import Any
@@ -16,13 +15,11 @@ async def async_get_config_entry_diagnostics(
     hass: HomeAssistant, config_entry: ConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
-    from homeassistant.const import CONF_TOKEN
-
     coordinator = hass.data[DOMAIN][config_entry.entry_id]
     client: HcuApiClient = coordinator.client
 
     # Redact sensitive information for privacy
-    to_redact_config = {CONF_TOKEN, CONF_PIN}
+    to_redact_config = {CONF_PIN}
     to_redact_state = {"authtoken", "pin"}
 
     def _redact_dict(data: dict[str, Any], keys_to_redact: set[str]) -> dict[str, Any]:
@@ -42,8 +39,8 @@ async def async_get_config_entry_diagnostics(
 
     redacted_config = {
         "title": config_entry.title,
-        "data": _redact_dict(config_entry.data, to_redact_config),
-        "options": _redact_dict(config_entry.options, to_redact_config),
+        "data": _redact_dict(dict(config_entry.data), to_redact_config),
+        "options": _redact_dict(dict(config_entry.options), to_redact_config),
     }
 
     device_registry = dr.async_get(hass)

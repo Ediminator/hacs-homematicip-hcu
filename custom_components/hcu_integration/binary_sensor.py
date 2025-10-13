@@ -1,10 +1,9 @@
+from __future__ import annotations
+
 import logging
 from typing import TYPE_CHECKING
 
-from homeassistant.components.binary_sensor import (
-    BinarySensorDeviceClass,
-    BinarySensorEntity,
-)
+from homeassistant.components.binary_sensor import BinarySensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
@@ -24,7 +23,7 @@ async def async_setup_entry(
     config_entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up the binary_sensor platform from a config entry."""
+    """Set up the binary sensor platform from a config entry."""
     coordinator: "HcuCoordinator" = hass.data[config_entry.domain][
         config_entry.entry_id
     ]
@@ -33,9 +32,13 @@ async def async_setup_entry(
 
 
 class HcuBinarySensor(HcuBaseEntity, BinarySensorEntity):
-    """Representation of an HCU binary sensor."""
+    """
+    Representation of a generic Homematic IP HCU binary sensor.
+    This class is the foundation for all binary sensors in the integration.
+    """
 
     PLATFORM = Platform.BINARY_SENSOR
+    _attr_has_entity_name = True
 
     def __init__(
         self,
@@ -46,12 +49,11 @@ class HcuBinarySensor(HcuBaseEntity, BinarySensorEntity):
         feature: str,
         mapping: dict,
     ):
-        """Initialize the binary sensor."""
         super().__init__(coordinator, client, device_data, channel_index)
         self._feature = feature
-        self._on_state = mapping.get("on_state", True)
+        self._on_state = mapping.get("on_state")
 
-        self._attr_name = mapping.get("name")
+        self._attr_name = mapping["name"]
         self._attr_unique_id = f"{self._device_id}_{self._channel_index}_{self._feature}"
         self._attr_device_class = mapping.get("device_class")
 
@@ -61,35 +63,56 @@ class HcuBinarySensor(HcuBaseEntity, BinarySensorEntity):
             ]
 
     @property
-    def available(self) -> bool:
+    def is_on(self) -> bool:
         """
-        Return availability of the entity.
+        Return true if the binary sensor is on.
+        """
+        value = self._channel.get(self._feature)
+        if self._on_state:
+            return value == self._on_state
+        return bool(value)
 
-        The connectivity sensor must be available even when the device is unreachable.
-        """
-        if self.device_class == BinarySensorDeviceClass.CONNECTIVITY:
-            return self.coordinator.last_update_success
-        return super().available
+
+class HcuWindowBinarySensor(HcuBinarySensor):
+    """
+    Representation of a Homematic IP HCU window sensor.
+    This class provides specialized logic for window sensors.
+    """
 
     @property
-    def is_on(self) -> bool | None:
-        """Return the state of the binary sensor."""
-        value = self._channel.get(self._feature)
-        if value is None:
-            return None
+    def is_on(self) -> bool:
+        """
+        Return true if the window is open or tilted.
+        """
+        return self._channel.get(self._feature) in ("OPEN", "TILTED")
 
-        # The 'connectivity' device class expects 'on' for connected and 'off' for disconnected.
-        # The HCU API's 'unreach' property is 'true' for disconnected and 'false' for connected.
-        # Therefore, we must invert the logic for this specific device class.
-        if self.device_class == BinarySensorDeviceClass.CONNECTIVITY:
-            return not value
 
-        # Special handling for inverted logic sensors
-        if self.device_class == BinarySensorDeviceClass.LOCK:
-            return not value
+class HcuSmokeBinarySensor(HcuBinarySensor):
+    """
+    Representation of a Homematic IP HCU smoke detector.
+    This class provides specialized logic for smoke detectors.
+    """
 
-        # Window sensors have multiple states (OPEN, TILTED, CLOSED)
-        if self._feature == "windowState":
-            return value in ("OPEN", "TILTED")
+    @property
+    def is_on(self) -> bool:
+        """
+        Return true if the smoke detector alarm is active.
+        """
+        return self._channel.get(self._feature) in ("PRIMARY_ALARM", "SECONDARY_ALARM")
 
-        return value == self._on_state
+
+class HcuUnreachBinarySensor(HcuBinarySensor):
+    """
+    Representation of a Homematic IP HCU device's reachability.
+    This class provides specialized logic for the 'unreach' status.
+    """
+
+    @property
+    def is_on(self) -> bool:
+        """
+        Return true if the device is connected.
+        The API's 'unreach' property is `True` when the device is unreachable.
+        For Home Assistant's `connectivity` device class, `is_on` should be
+        `True` when the device is connected, so we must invert the value.
+        """
+        return not self._channel.get(self._feature, False)

@@ -19,6 +19,7 @@ if TYPE_CHECKING:
 
 _LOGGER = logging.getLogger(__name__)
 
+
 async def async_setup_entry(
     hass: HomeAssistant, config_entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
@@ -108,7 +109,7 @@ class HcuAlarmControlPanel(HcuHomeBaseEntity, AlarmControlPanelEntity):
         self.async_write_ha_state()
 
         try:
-            await self._client.async_set_zones_activation(body=payload)
+            await self._client.async_set_zones_activation(payload=payload)
         except (HcuApiError, ConnectionError) as err:
             _LOGGER.error("Failed to set alarm state for %s: %s", self.name, err)
             self._attr_alarm_state = None
@@ -134,4 +135,4 @@ class HcuAlarmControlPanel(HcuHomeBaseEntity, AlarmControlPanelEntity):
         await self._async_set_alarm_state(
             AlarmControlPanelState.ARMED_AWAY,
             {"zonesActivation": {"INTERNAL": True, "EXTERNAL": True}}
-        )
+)

@@ -97,10 +97,10 @@ class HcuLight(HcuBaseEntity, LightEntity):
             hs_color = kwargs[ATTR_HS_COLOR]
             hue = int(hs_color[0])
             saturation = hs_color[1] / 100.0
-            await self._client.async_set_hue(self._device_id, self._channel_index, hue, saturation, dim_level)
+            await self._client.async_set_hue_saturation(self._device_id, self._channel_index, hue, saturation, dim_level)
         elif ATTR_COLOR_TEMP_KELVIN in kwargs and ColorMode.COLOR_TEMP in self.supported_color_modes:
             color_temp = kwargs[ATTR_COLOR_TEMP_KELVIN]
-            await self._client.async_set_color_temp(self._device_id, self._channel_index, color_temp, dim_level)
+            await self._client.async_set_color_temperature(self._device_id, self._channel_index, color_temp, dim_level)
         else:
             await self._client.async_set_dim_level(self._device_id, self._channel_index, dim_level)
 

@@ -60,6 +60,9 @@ class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
 
     VERSION = 1
     reauth_entry: ConfigEntry | None = None
+    
+    # FIX: Add an instance variable to store config data between steps.
+    _config_data: dict[str, Any] = {}
 
     @staticmethod
     @callback
@@ -77,8 +80,12 @@ class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
             host = user_input[CONF_HOST]
             await self.async_set_unique_id(host)
             self._abort_if_unique_id_configured(updates={CONF_HOST: host})
-            # Pass all user input to the auth step
-            return await self.async_step_auth(user_input)
+            
+            # FIX: Store the data from this step in the instance variable.
+            self._config_data = user_input
+            
+            # FIX: Proceed to the auth step to show the next form.
+            return await self.async_step_auth()
 
         return self.async_show_form(
             step_id="user",
@@ -92,17 +99,18 @@ class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
     async def async_step_auth(
-        self, user_input: dict[str, Any]
+        self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
         """
         Handle the authentication step where the user provides an activation key.
         This step communicates with the HCU to acquire a long-lived auth token.
         """
         errors = {}
-        host = user_input[CONF_HOST]
-        auth_port = user_input[CONF_AUTH_PORT]
+        # FIX: Retrieve host and port from the stored config data.
+        host = self._config_data[CONF_HOST]
+        auth_port = self._config_data[CONF_AUTH_PORT]
 
-        if "activation_key" in user_input:
+        if user_input is not None:
             activation_key = user_input["activation_key"]
             session = aiohttp_client.async_get_clientsession(self.hass)
             ssl_context = await create_unverified_ssl_context(self.hass)
@@ -120,15 +128,12 @@ class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
                     host,
                 )
                 
-                # Create a new entry for a fresh installation
+                # FIX: Merge stored data with the new token for the final config entry.
+                final_data = {**self._config_data, CONF_TOKEN: auth_token}
+                
                 return self.async_create_entry(
                     title="Homematic IP Local (HCU)",
-                    data={
-                        CONF_HOST: host,
-                        CONF_AUTH_PORT: auth_port,
-                        CONF_WEBSOCKET_PORT: user_input[CONF_WEBSOCKET_PORT],
-                        CONF_TOKEN: auth_token
-                    },
+                    data=final_data,
                 )
 
             except (aiohttp.ClientError, asyncio.TimeoutError):

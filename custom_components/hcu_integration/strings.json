@@ -1,59 +1,60 @@
 {
-"config": {
-"step": {
-"user": {
-"title": "Connect to Homematic IP HCU",
-"description": "Please enter the IP address or hostname of your Home Control Unit (HCU).",
-"data": {
-"host": "HCU IP Address or Hostname"
-}
-},
-"auth": {
-"title": "Authorize Integration",
-"description": "A new authorization token is required. Please follow these steps on your HCU's web interface (likely at https://{hcu_ip}):\n\n1. Navigate to Developer Mode.\n2. Press the Generate activation key button.\n3. Enter the temporary key below.\n\n",
-"data": {
-"activation_key": "Activation Key"
-}
-},
-"reconfigure": {
-"title": "Reconfigure HCU Connection",
-"description": "Update the IP address or hostname for your Home Control Unit (HCU).",
-"data": {
-"host": "New HCU IP Address or Hostname"
-}
-},
-"reauth_confirm": {
-"title": "Re-authenticate to HCU",
-"description": "The PIN for your door lock has changed or is missing. Please enter the new PIN.",
-"data": {
-"pin": "Lock Authorization PIN"
-}
-}
-},
-"error": {
-"cannot_connect": "Failed to connect to the HCU. Please check the IP address or hostname and your network connection.",
-"invalid_key": "Invalid or expired activation key. Please generate a new one and try again.",
-"unknown": "An unknown error occurred."
-},
-"abort": {
-"already_configured": "This Homematic IP HCU is already configured.",
-"reconfigure_successful": "Reconfiguration successful. The integration will now reload with the new settings.",
-"reauth_successful": "Re-authentication successful."
-}
-},
-"options": {
-"step": {
-"init": {
-"title": "Configure HCU Options",
-"description": "Set options for your Homematic IP HCU integration.",
-"data": {
-"comfort_temperature": "Default Comfort Temperature (°C)"
-}
-}
-}
-},
-"device_action": {
-"reset_energy": "Reset Energy Counter"
-},
-"title": "Homematic IP Local (HCU)"
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to Homematic IP HCU",
+        "description": "Please enter the IP address or hostname and ports of your Home Control Unit (HCU).",
+        "data": {
+          "host": "HCU IP Address or Hostname",
+          "auth_port": "Authentication Port",
+          "websocket_port": "WebSocket Port"
+        }
+      },
+      "auth": {
+        "title": "Authorize Integration",
+        "description": "A new authorization token is required. Please follow these steps on your HCU's web interface (likely at https://{hcu_ip}):\n\n1. Navigate to Developer Mode.\n2. Press the Generate activation key button.\n3. Enter the temporary key below.\n\n",
+        "data": {
+          "activation_key": "Activation Key"
+        }
+      },
+      "reconfigure": {
+        "title": "Reconfigure HCU Connection",
+        "description": "Update the connection details for your Home Control Unit (HCU).",
+        "data": {
+          "host": "New HCU IP Address or Hostname",
+          "auth_port": "New Authentication Port",
+          "websocket_port": "New WebSocket Port"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Re-authenticate to HCU",
+        "description": "The PIN for your door lock has changed or is missing. Please enter the new PIN.",
+        "data": {
+          "pin": "Lock Authorization PIN"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to the HCU. Please check the host/ports and your network connection.",
+      "invalid_key": "Invalid or expired activation key. Please generate a new one and try again.",
+      "unknown": "An unknown error occurred."
+    },
+    "abort": {
+      "already_configured": "This Homematic IP HCU is already configured.",
+      "reconfigure_successful": "Reconfiguration successful. The integration will now reload with the new settings.",
+      "reauth_successful": "Re-authentication successful."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Configure HCU Options",
+        "description": "Set options for your Homematic IP HCU integration.",
+        "data": {
+          "comfort_temperature": "Default Comfort Temperature (°C)"
+        }
+      }
+    }
+  },
+  "title": "Homematic IP Local (HCU)"
 }

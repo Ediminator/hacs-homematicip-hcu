@@ -8,7 +8,6 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.entity import DeviceAction
 
 from .api import HcuApiClient
 from .entity import HcuBaseEntity, HcuHomeBaseEntity
@@ -120,24 +119,3 @@ class HcuGenericSensor(HcuBaseEntity, SensorEntity):
             return round(value, 2)
 
         return value
-
-    async def async_get_entity_actions(self) -> list[DeviceAction]:
-        """Return the available actions for this entity."""
-        if self._feature == "energyCounter":
-            return [
-                DeviceAction(
-                    key="reset_energy",
-                    translation_key="reset_energy",
-                )
-            ]
-        return []
-
-    async def async_run_entity_action(self, key: str, **kwargs: Any) -> None:
-        """Run an action on the entity."""
-        if key == "reset_energy":
-            _LOGGER.info("Resetting energy counter for %s", self.entity_id)
-            await self._client.async_reset_energy_counter(
-                self._device_id, self._channel_index
-            )
-        else:
-            _LOGGER.warning("Unknown action %s called for %s", key, self.entity_id)

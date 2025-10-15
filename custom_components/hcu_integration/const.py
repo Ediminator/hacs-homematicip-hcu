@@ -15,6 +15,7 @@ from homeassistant.const import (
     UnitOfPower,
     UnitOfSpeed,
     UnitOfTemperature,
+    UnitOfVolume,
 )
 
 # Domain of the integration
@@ -35,12 +36,13 @@ PLATFORMS: list[Platform] = [
 
 # --- Configuration Constants ---
 CONF_PIN = "pin"
-CONF_COMFORT_TEMPERATURE = "comfort_temperature"
-DEFAULT_COMFORT_TEMPERATURE = 21.0
 CONF_AUTH_PORT = "auth_port"
 CONF_WEBSOCKET_PORT = "websocket_port"
 DEFAULT_HCU_AUTH_PORT = 6969
 DEFAULT_HCU_WEBSOCKET_PORT = 9001
+CONF_COMFORT_TEMPERATURE = "comfort_temperature"
+DEFAULT_COMFORT_TEMPERATURE = 21.0
+
 
 # --- API and Plugin Constants ---
 PLUGIN_ID = "de.homeassistant.hcu.integration"
@@ -62,6 +64,13 @@ API_RETRY_DELAY = 2
 # --- Service Constants ---
 SERVICE_PLAY_SOUND = "play_sound"
 SERVICE_SET_RULE_STATE = "set_rule_state"
+SERVICE_SET_DISPLAY_CONTENT = "set_display_content"
+SERVICE_ACTIVATE_PARTY_MODE = "activate_party_mode"
+
+# --- Preset Constants ---
+PRESET_ECO = "Eco"
+PRESET_PARTY = "Party"
+
 
 # --- Service Attribute Constants ---
 ATTR_SOUND_FILE = "sound_file"
@@ -69,6 +78,11 @@ ATTR_DURATION = "duration"
 ATTR_VOLUME = "volume"
 ATTR_RULE_ID = "rule_id"
 ATTR_ENABLED = "enabled"
+ATTR_EPAPER_LINE1 = "line_1"
+ATTR_EPAPER_LINE2 = "line_2"
+ATTR_EPAPER_LINE3 = "line_3"
+ATTR_EPAPER_ICON = "icon"
+ATTR_END_TIME = "end_time"
 
 
 # --- API Path Constants ---
@@ -90,11 +104,15 @@ API_PATHS = {
     "ENABLE_SIMPLE_RULE": "/hmip/rule/enableSimpleRule",
     "ACTIVATE_VACATION": "/hmip/home/heating/activateVacation",
     "DEACTIVATE_VACATION": "/hmip/home/heating/deactivateVacation",
+    "ACTIVATE_ABSENCE_PERMANENT": "/hmip/home/heating/activateAbsencePermanent",
+    "DEACTIVATE_ABSENCE": "/hmip/home/heating/deactivateAbsence",
     "SET_GROUP_BOOST": "/hmip/group/heating/setBoost",
     "SET_GROUP_CONTROL_MODE": "/hmip/group/heating/setControlMode",
     "SET_GROUP_SET_POINT_TEMP": "/hmip/group/heating/setSetPointTemperature",
+    "SET_GROUP_ACTIVE_PROFILE": "/hmip/group/heating/setActiveProfile",
     "SET_ZONES_ACTIVATION": "/hmip/home/security/setExtendedZonesActivation",
     "SET_EPAPER_DISPLAY": "/hmip/device/control/setEpaperDisplay",
+    "ACTIVATE_PARTY_MODE": "/hmip/group/heating/activatePartyMode",
 }
 
 # --- Device Identification Constants ---
@@ -126,7 +144,14 @@ HMIP_DEVICE_TYPE_TO_DEVICE_CLASS = {
 HMIP_FEATURE_TO_ENTITY = {
     # Sensor Features
     "actualTemperature": {
-        "class": "HcuGenericSensor",
+        "class": "HcuTemperatureSensor",
+        "name": "Temperature",
+        "unit": UnitOfTemperature.CELSIUS,
+        "device_class": SensorDeviceClass.TEMPERATURE,
+        "state_class": SensorStateClass.MEASUREMENT,
+    },
+    "valveActualTemperature": {
+        "class": "HcuTemperatureSensor",
         "name": "Temperature",
         "unit": UnitOfTemperature.CELSIUS,
         "device_class": SensorDeviceClass.TEMPERATURE,
@@ -166,6 +191,20 @@ HMIP_FEATURE_TO_ENTITY = {
         "name": "Power Consumption",
         "unit": UnitOfPower.WATT,
         "device_class": SensorDeviceClass.POWER,
+        "state_class": SensorStateClass.MEASUREMENT,
+    },
+    "gasVolume": {
+        "class": "HcuGenericSensor",
+        "name": "Gas Volume",
+        "unit": UnitOfVolume.CUBIC_METERS,
+        "device_class": SensorDeviceClass.GAS,
+        "state_class": SensorStateClass.TOTAL_INCREASING,
+    },
+    "gasFlowRate": {
+        "class": "HcuGenericSensor",
+        "name": "Gas Flow Rate",
+        "unit": "m³/h",
+        "icon": "mdi:meter-gas",
         "state_class": SensorStateClass.MEASUREMENT,
     },
     "valvePosition": {

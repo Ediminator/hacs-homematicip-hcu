@@ -104,11 +104,6 @@ class HcuGenericSensor(HcuBaseEntity, SensorEntity):
     @property
     def native_value(self) -> float | str | None:
         """Return the sensor value, with special handling for certain features."""
-        if self._feature in ("actualTemperature", "valveActualTemperature"):
-            return self._channel.get("actualTemperature") or self._channel.get(
-                "valveActualTemperature"
-            )
-
         value = self._channel.get(self._feature)
         if value is None:
             return None
@@ -119,3 +114,19 @@ class HcuGenericSensor(HcuBaseEntity, SensorEntity):
             return round(value, 2)
 
         return value
+
+
+class HcuTemperatureSensor(HcuGenericSensor):
+    """
+    Representation of an HCU temperature sensor.
+    This class is designed to handle temperature readings from both
+    wall-mounted thermostats (`actualTemperature`) and radiator thermostats
+    (`valveActualTemperature`).
+    """
+    
+    @property
+    def native_value(self) -> float | str | None:
+        """Return the temperature, checking both possible keys."""
+        return self._channel.get("actualTemperature") or self._channel.get(
+            "valveActualTemperature"
+        )

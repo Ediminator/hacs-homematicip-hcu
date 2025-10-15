@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from homeassistant.helpers.entity import DeviceInfo, Entity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 
 
 class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], Entity):
-    """Base class for entities tied to a specific device channel."""
+    """Base class for entities tied to a specific Homematic IP device channel."""
 
     _attr_should_poll = False
     _attr_has_entity_name = True
@@ -20,9 +20,9 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], Entity):
     def __init__(
         self,
         coordinator: "HcuCoordinator",
-        client: HcuApiClient, 
-        device_data: dict, 
-        channel_index: str
+        client: HcuApiClient,
+        device_data: dict[str, Any],
+        channel_index: str,
     ):
         """Initialize the base entity."""
         super().__init__(coordinator)
@@ -33,12 +33,12 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], Entity):
         self._attr_assumed_state = False
 
     @property
-    def _device(self) -> dict:
-        """Return the latest parent device data from the client's cache."""
+    def _device(self) -> dict[str, Any]:
+        """Return the latest parent device data from the client's state cache."""
         return self._client.get_device_by_address(self._device_id) or {}
 
     @property
-    def _channel(self) -> dict:
+    def _channel(self) -> dict[str, Any]:
         """Return the latest channel data from the parent device's data structure."""
         return self._device.get("functionalChannels", {}).get(self._channel_index_str, {})
 
@@ -47,6 +47,7 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], Entity):
         """Return device information for the Home Assistant device registry."""
         hcu_device_id = self._client.hcu_device_id
 
+        # If the entity belongs to the HCU itself, link it to the main HCU device
         if self._device_id in self._client.hcu_part_device_ids:
             return DeviceInfo(
                 identifiers={(DOMAIN, hcu_device_id)},
@@ -63,10 +64,11 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], Entity):
 
     @property
     def available(self) -> bool:
-        """Return if entity is available."""
+        """Return True if the entity is available (i.e., the device is reachable)."""
+        # Channel '0' is the maintenance channel for most devices
         maintenance_channel = self._device.get("functionalChannels", {}).get("0", {})
         return not maintenance_channel.get("unreach", False)
-    
+
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
         if self._device_id in self.coordinator.data:
@@ -75,16 +77,16 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], Entity):
 
 
 class HcuGroupBaseEntity(CoordinatorEntity["HcuCoordinator"], Entity):
-    """Base class for entities that are tied to a group."""
+    """Base class for entities that represent a Homematic IP group."""
 
     _attr_should_poll = False
     _attr_has_entity_name = True
 
     def __init__(
-        self, 
+        self,
         coordinator: "HcuCoordinator",
-        client: HcuApiClient, 
-        group_data: dict
+        client: HcuApiClient,
+        group_data: dict[str, Any],
     ):
         """Initialize the group base entity."""
         super().__init__(coordinator)
@@ -93,21 +95,20 @@ class HcuGroupBaseEntity(CoordinatorEntity["HcuCoordinator"], Entity):
         self._attr_assumed_state = False
 
     @property
-    def _group(self) -> dict:
-        """Return the latest group data from the client's central cache."""
+    def _group(self) -> dict[str, Any]:
+        """Return the latest group data from the client's state cache."""
         return self._client.get_group_by_id(self._group_id) or {}
 
     @property
     def device_info(self) -> DeviceInfo:
         """Return device information for this virtual group entity."""
         hcu_device_id = self._client.hcu_device_id
-        # Format the group type to be more descriptive (e.g., "HEATING" -> "Heating Group")
         group_type = self._group.get("type", "Group").replace("_", " ").title()
         model_name = f"{group_type} Group"
-        
+
         return DeviceInfo(
             identifiers={(DOMAIN, self._group_id)},
-            name=self._group.get("label") or "Unknown Group",
+            name=self._group.get("label", "Unknown Group"),
             manufacturer="Homematic IP",
             model=model_name,
             via_device=(DOMAIN, hcu_device_id),
@@ -126,7 +127,7 @@ class HcuGroupBaseEntity(CoordinatorEntity["HcuCoordinator"], Entity):
 
 
 class HcuHomeBaseEntity(CoordinatorEntity["HcuCoordinator"], Entity):
-    """Base class for entities tied to the 'home' object."""
+    """Base class for entities tied to the global 'home' object."""
 
     _attr_should_poll = False
     _attr_has_entity_name = True
@@ -134,7 +135,7 @@ class HcuHomeBaseEntity(CoordinatorEntity["HcuCoordinator"], Entity):
     def __init__(
         self,
         coordinator: "HcuCoordinator",
-        client: HcuApiClient
+        client: HcuApiClient,
     ):
         """Initialize the home base entity."""
         super().__init__(coordinator)
@@ -144,8 +145,8 @@ class HcuHomeBaseEntity(CoordinatorEntity["HcuCoordinator"], Entity):
         self._attr_assumed_state = False
 
     @property
-    def _home(self) -> dict:
-        """Return the latest home data from the client's cache."""
+    def _home(self) -> dict[str, Any]:
+        """Return the latest home data from the client's state cache."""
         return self._client.state.get("home", {})
 
     @property
@@ -158,10 +159,10 @@ class HcuHomeBaseEntity(CoordinatorEntity["HcuCoordinator"], Entity):
     @property
     def available(self) -> bool:
         """Return True if the home object exists in the state cache."""
-        return bool(self._home)
+        return "home" in self._client.state
 
     def _handle_coordinator_update(self) -> None:
-        """Handle updated data from the client."""
+        """Handle updated data from the coordinator."""
         if self._home_uuid in self.coordinator.data:
             self._attr_assumed_state = False
             self.async_write_ha_state()

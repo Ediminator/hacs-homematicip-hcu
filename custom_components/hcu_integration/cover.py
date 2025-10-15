@@ -124,13 +124,13 @@ class HcuGarageDoorCover(HcuBaseEntity, CoverEntity):
     def is_opening(self) -> bool:
         if not self._is_stateful:
             return False
-        return self._channel.get("processing") is True and self._channel.get("doorState") == "OPEN"
+        return self._channel.get("doorMotion") == "OPENING"
 
     @property
     def is_closing(self) -> bool:
         if not self._is_stateful:
             return False
-        return self._channel.get("processing") is True and self._channel.get("doorState") == "CLOSED"
+        return self._channel.get("doorMotion") == "CLOSING"
 
     async def async_open_cover(self, **kwargs) -> None:
         self._attr_assumed_state = True

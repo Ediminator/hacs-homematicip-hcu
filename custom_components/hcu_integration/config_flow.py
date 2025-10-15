@@ -52,7 +52,7 @@ class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
 
     VERSION = 1
     reauth_entry: ConfigEntry | None = None
-
+    
     _config_data: dict[str, Any] = {}
 
     @staticmethod
@@ -71,20 +71,18 @@ class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
             host = user_input[CONF_HOST]
             await self.async_set_unique_id(host)
             self._abort_if_unique_id_configured(updates={CONF_HOST: host})
-
+            
             self._config_data = user_input
-
+            
             return await self.async_step_auth()
 
         return self.async_show_form(
             step_id="user",
             data_schema=vol.Schema(
                 {
-                    vol.Required(CONF_HOST, default=self.context.get("host", "")): str,
-                    vol.Required(CONF_AUTH_PORT, default=DEFAULT_HCU_AUTH_PORT): int,
-                    vol.Required(
-                        CONF_WEBSOCKET_PORT, default=DEFAULT_HCU_WEBSOCKET_PORT
-                    ): int,
+                    vol.Required("host", default=self.context.get("host", "")): str,
+                    vol.Required("auth_port", default=DEFAULT_HCU_AUTH_PORT): int,
+                    vol.Required("websocket_port", default=DEFAULT_HCU_WEBSOCKET_PORT): int,
                 }
             ),
         )
@@ -94,8 +92,8 @@ class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
     ) -> FlowResult:
         """Handle the authentication step where the user provides an activation key."""
         errors = {}
-        host = self._config_data[CONF_HOST]
-        auth_port = self._config_data[CONF_AUTH_PORT]
+        host = self._config_data["host"]
+        auth_port = self._config_data["auth_port"]
 
         if user_input is not None:
             activation_key = user_input["activation_key"]
@@ -114,9 +112,14 @@ class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
                     "Successfully received and confirmed auth token from HCU at %s",
                     host,
                 )
-
-                final_data = {**self._config_data, CONF_TOKEN: auth_token}
-
+                
+                final_data = {
+                    CONF_HOST: self._config_data["host"],
+                    CONF_AUTH_PORT: self._config_data["auth_port"],
+                    CONF_WEBSOCKET_PORT: self._config_data["websocket_port"],
+                    CONF_TOKEN: auth_token,
+                }
+                
                 return self.async_create_entry(
                     title="Homematic IP Local (HCU)",
                     data=final_data,
@@ -136,7 +139,7 @@ class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
             description_placeholders={"hcu_ip": host},
             errors=errors,
         )
-
+    
     async def async_step_reauth(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
@@ -161,6 +164,7 @@ class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
             data_schema=vol.Schema({vol.Required(CONF_PIN): str}),
         )
 
+
     async def async_step_reconfigure(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
@@ -172,43 +176,39 @@ class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
             new_host = user_input[CONF_HOST]
             new_auth_port = user_input[CONF_AUTH_PORT]
             new_websocket_port = user_input[CONF_WEBSOCKET_PORT]
-
-            session = aiohttp_client.async_get_clientsession(self.hass)
-            client = HcuApiClient(
-                self.hass,
-                new_host,
-                entry.data[CONF_TOKEN],
-                session,
-                new_auth_port,
-                new_websocket_port,
-            )
+            
             listener_task = None
+            client = None
             try:
-                await client.connect()
+                session = aiohttp_client.async_get_clientsession(self.hass)
+                client = HcuApiClient(
+                    self.hass,
+                    new_host,
+                    entry.data[CONF_TOKEN],
+                    session,
+                    new_auth_port,
+                    new_websocket_port,
+                )
 
-                # Run listener task to process responses.
+                await client.connect()
+                
+                # Create a temporary listener to handle the response
                 listener_task = self.hass.async_create_task(client.listen())
 
                 await client.get_system_state()
 
                 self.hass.config_entries.async_update_entry(
-                    entry,
-                    data={
+                    entry, data={
                         **entry.data,
                         CONF_HOST: new_host,
                         CONF_AUTH_PORT: new_auth_port,
                         CONF_WEBSOCKET_PORT: new_websocket_port,
-                    },
+                    }
                 )
                 await self.hass.config_entries.async_reload(entry.entry_id)
                 return self.async_abort(reason="reconfigure_successful")
 
-            except (
-                HcuApiError,
-                ConnectionError,
-                asyncio.TimeoutError,
-                aiohttp.ClientConnectorError,
-            ):
+            except (HcuApiError, ConnectionError, asyncio.TimeoutError, aiohttp.ClientConnectorError):
                 _LOGGER.error("Failed to connect to new HCU host/port combination")
                 errors["base"] = "cannot_connect"
             except Exception:
@@ -217,11 +217,7 @@ class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
             finally:
                 if listener_task:
                     listener_task.cancel()
-                    try:
-                        await listener_task
-                    except asyncio.CancelledError:
-                        pass  # This is expected behavior.
-                if client.is_connected:
+                if client and client.is_connected:
                     await client.disconnect()
 
         return self.async_show_form(
@@ -229,16 +225,8 @@ class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
             data_schema=vol.Schema(
                 {
                     vol.Required(CONF_HOST, default=entry.data[CONF_HOST]): str,
-                    vol.Required(
-                        CONF_AUTH_PORT,
-                        default=entry.data.get(CONF_AUTH_PORT, DEFAULT_HCU_AUTH_PORT),
-                    ): int,
-                    vol.Required(
-                        CONF_WEBSOCKET_PORT,
-                        default=entry.data.get(
-                            CONF_WEBSOCKET_PORT, DEFAULT_HCU_WEBSOCKET_PORT
-                        ),
-                    ): int,
+                    vol.Required(CONF_AUTH_PORT, default=entry.data.get(CONF_AUTH_PORT, DEFAULT_HCU_AUTH_PORT)): int,
+                    vol.Required(CONF_WEBSOCKET_PORT, default=entry.data.get(CONF_WEBSOCKET_PORT, DEFAULT_HCU_WEBSOCKET_PORT)): int,
                 }
             ),
             errors=errors,

@@ -6,13 +6,21 @@ import aiohttp
 import asyncio
 import logging
 from typing import cast
+from datetime import timedelta
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, CONF_TOKEN, ATTR_ENTITY_ID, Platform
+from homeassistant.const import (
+    CONF_HOST,
+    CONF_TOKEN,
+    ATTR_ENTITY_ID,
+    Platform,
+    ATTR_TEMPERATURE,
+)
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers import device_registry as dr, entity_registry as er
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from homeassistant.util import dt as dt_util
 
 from .api import HcuApiClient, HcuApiError
 from .const import (
@@ -28,11 +36,13 @@ from .const import (
     DEFAULT_HCU_WEBSOCKET_PORT,
     SERVICE_PLAY_SOUND,
     SERVICE_SET_RULE_STATE,
+    SERVICE_ACTIVATE_PARTY_MODE,
     ATTR_SOUND_FILE,
     ATTR_DURATION,
     ATTR_VOLUME,
     ATTR_RULE_ID,
     ATTR_ENABLED,
+    ATTR_END_TIME,
 )
 from .discovery import async_discover_entities
 
@@ -111,9 +121,47 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         except (HcuApiError, ConnectionError) as err:
             _LOGGER.error("Error setting state for rule %s: %s", rule_id, err)
 
+    async def handle_activate_party_mode(call: ServiceCall) -> None:
+        """Handle the activate_party_mode service call."""
+        entity_registry_instance = er.async_get(hass)
+        for entity_id in call.data[ATTR_ENTITY_ID]:
+            entity_entry = entity_registry_instance.async_get(entity_id)
+            if not entity_entry or entity_entry.platform != DOMAIN:
+                _LOGGER.warning(
+                    "Cannot activate party mode on %s, as it is not a Homematic IP Local (HCU) entity.",
+                    entity_id,
+                )
+                continue
+
+            group_id = entity_entry.unique_id
+            temperature = call.data[ATTR_TEMPERATURE]
+            end_time_str = call.data.get(ATTR_END_TIME)
+            duration = call.data.get(ATTR_DURATION)
+
+            if not end_time_str and duration:
+                end_time = dt_util.now() + timedelta(hours=duration)
+                end_time_str = end_time.strftime("%Y_%m_%d %H:%M")
+
+            if end_time_str:
+                try:
+                    await client.async_activate_group_party_mode(
+                        group_id=group_id,
+                        temperature=temperature,
+                        end_time=end_time_str,
+                    )
+                except (HcuApiError, ConnectionError) as err:
+                    _LOGGER.error(
+                        "Error calling activate_party_mode for %s: %s", entity_id, err
+                    )
+            else:
+                _LOGGER.error("Either end_time or duration must be provided for activate_party_mode service.")
+
     hass.services.async_register(DOMAIN, SERVICE_PLAY_SOUND, handle_play_sound)
     hass.services.async_register(
         DOMAIN, SERVICE_SET_RULE_STATE, handle_set_rule_state
+    )
+    hass.services.async_register(
+        DOMAIN, SERVICE_ACTIVATE_PARTY_MODE, handle_activate_party_mode
     )
 
     entry.add_update_listener(async_reload_entry)
@@ -261,6 +309,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     hass.services.async_remove(DOMAIN, SERVICE_PLAY_SOUND)
     hass.services.async_remove(DOMAIN, SERVICE_SET_RULE_STATE)
+    hass.services.async_remove(DOMAIN, SERVICE_ACTIVATE_PARTY_MODE)
 
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
@@ -274,3 +323,4 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Reload config entry when options are updated."""
     await hass.config_entries.async_reload(entry.entry_id)
+

@@ -52,7 +52,6 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
     _attr_hvac_modes = [HVACMode.AUTO, HVACMode.HEAT, HVACMode.OFF]
     _attr_temperature_unit = UnitOfTemperature.CELSIUS
     _attr_has_entity_name = False  # Use the group name as the entity name
-    _enable_turn_on_off_backwards_compatibility = False
 
     def __init__(
         self,
@@ -67,6 +66,10 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
         self._config_entry = config_entry
         self._profiles: dict[str, str] = {}
         self._default_profile_index: str | None = None
+        
+        # Attributes for optimistic state
+        self._attr_hvac_mode: HVACMode | None = None
+        self._attr_target_temperature: float | None = None
 
         # Dynamically build the list of supported presets from the group's profiles.
         self._attr_preset_modes = [PRESET_NONE, PRESET_BOOST, PRESET_ECO, PRESET_PARTY]
@@ -89,18 +92,36 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
     def supported_features(self) -> ClimateEntityFeature:
         """Return the list of supported features."""
         features = (
-            ClimateEntityFeature.TARGET_TEMPERATURE | ClimateEntityFeature.PRESET_MODE
+            ClimateEntityFeature.TARGET_TEMPERATURE | ClimateEntityFeature.PRESET_MODE | ClimateEntityFeature.TURN_OFF | ClimateEntityFeature.TURN_ON
         )
         return features
     
     @property
     def current_humidity(self) -> int | None:
-        """Return the current humidity."""
-        return self._group.get("humidity")
+        """
+        Return the current humidity.
+        Prefers the group's humidity, but falls back to the first available
+        humidity sensor of a device within the group.
+        """
+        if (humidity := self._group.get("humidity")) is not None:
+            return humidity
+
+        for channel_ref in self._group.get("channels", []):
+            device_id = channel_ref.get("deviceId")
+            channel_index = str(channel_ref.get("channelIndex"))
+            
+            if device := self._client.get_device_by_address(device_id):
+                if channel := device.get("functionalChannels", {}).get(channel_index):
+                    if (humidity := channel.get("humidity")) is not None:
+                        return humidity
+        return None
 
     @property
     def hvac_mode(self) -> HVACMode:
         """Return the current HVAC mode."""
+        if self._attr_assumed_state and self._attr_hvac_mode:
+            return self._attr_hvac_mode
+            
         if not self._group.get("controllable", True):
             return HVACMode.OFF
 
@@ -119,12 +140,32 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
 
     @property
     def current_temperature(self) -> float | None:
-        """Return the current temperature."""
-        return self._group.get("actualTemperature")
+        """
+        Return the current temperature.
+        Prefers the group's temperature, but falls back to the first available
+        temperature sensor (wall or valve) of a device within the group.
+        """
+        if (temp := self._group.get("actualTemperature")) is not None:
+            return temp
+
+        for channel_ref in self._group.get("channels", []):
+            device_id = channel_ref.get("deviceId")
+            channel_index = str(channel_ref.get("channelIndex"))
+            
+            if device := self._client.get_device_by_address(device_id):
+                if channel := device.get("functionalChannels", {}).get(channel_index):
+                    if (temp := channel.get("actualTemperature")) is not None:
+                        return temp
+                    if (temp := channel.get("valveActualTemperature")) is not None:
+                        return temp
+        return None
 
     @property
     def target_temperature(self) -> float | None:
         """Return the target temperature."""
+        if self._attr_assumed_state and self._attr_target_temperature is not None:
+            return self._attr_target_temperature
+
         heating_home = self._client.state.get("home", {}).get("functionalHomes", {}).get("HEATING", {})
         if heating_home.get("absenceType") == "PERMANENT":
             return heating_home.get("ecoTemperature")
@@ -192,46 +233,48 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
         temperature = kwargs.get(ATTR_TEMPERATURE)
         if temperature is None:
             return
-        
-        # When temperature is changed while in AUTO mode, switch to MANUAL mode.
+
+        self._attr_assumed_state = True
+        self._attr_hvac_mode = HVACMode.HEAT if temperature > self.min_temp else HVACMode.OFF
+        self._attr_target_temperature = temperature
+        self.async_write_ha_state()
+
         if self.hvac_mode == HVACMode.AUTO:
-            await self._async_set_group_property(
-                "async_set_group_control_mode", 
-                group_id=self._group_id, 
-                mode="MANUAL"
+            await self._client.async_set_group_control_mode(
+                self._group_id, "MANUAL"
             )
 
-        await self._async_set_group_property(
-            "async_set_group_setpoint_temperature",
-            group_id=self._group_id,
-            temperature=temperature,
+        await self._client.async_set_group_setpoint_temperature(
+            self._group_id, temperature
         )
 
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
-        """Set new HVAC mode."""
+        """Set new HVAC mode with improved optimistic state handling."""
         self._attr_assumed_state = True
-        self.async_write_ha_state()
-        try:
-            if hvac_mode == HVACMode.AUTO:
-                await self._client.async_set_group_control_mode(self._group_id, "AUTOMATIC")
-            elif hvac_mode == HVACMode.HEAT:
-                if self.target_temperature and self.target_temperature <= self.min_temp:
-                    comfort_temp = self._config_entry.options.get(
-                        CONF_COMFORT_TEMPERATURE, DEFAULT_COMFORT_TEMPERATURE
-                    )
-                    await self._client.async_set_group_setpoint_temperature(
-                        self._group_id, comfort_temp
-                    )
-                await self._client.async_set_group_control_mode(self._group_id, "MANUAL")
-            elif hvac_mode == HVACMode.OFF:
-                await self._client.async_set_group_setpoint_temperature(
-                    self._group_id, self.min_temp
-                )
-                await self._client.async_set_group_control_mode(self._group_id, "MANUAL")
-        except (HcuApiError, ConnectionError) as err:
-            _LOGGER.error("Failed to set HVAC mode for %s: %s", self.name, err)
-            self._attr_assumed_state = False
+        self._attr_hvac_mode = hvac_mode
+
+        if hvac_mode == HVACMode.OFF:
+            self._attr_target_temperature = self.min_temp
             self.async_write_ha_state()
+            await self._client.async_set_group_control_mode(self._group_id, "MANUAL")
+            await self._client.async_set_group_setpoint_temperature(self._group_id, self.min_temp)
+
+        elif hvac_mode == HVACMode.AUTO:
+            self.async_write_ha_state()
+            await self._client.async_set_group_control_mode(self._group_id, "AUTOMATIC")
+
+        elif hvac_mode == HVACMode.HEAT:
+            if self.target_temperature is not None and self.target_temperature <= self.min_temp:
+                self._attr_target_temperature = self._config_entry.options.get(
+                    CONF_COMFORT_TEMPERATURE, DEFAULT_COMFORT_TEMPERATURE
+                )
+            self.async_write_ha_state()
+            
+            await self._client.async_set_group_control_mode(self._group_id, "MANUAL")
+            if self.target_temperature is not None and self.target_temperature <= self.min_temp:
+                await self._client.async_set_group_setpoint_temperature(
+                    self._group_id, self._attr_target_temperature
+                )
 
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:
@@ -286,3 +329,11 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
                  await self._async_set_group_property(
                     "async_set_group_active_profile", group_id=self._group_id, profile_index=self._default_profile_index
                 )
+
+    async def async_turn_on(self) -> None:
+        """Turn on the climate entity."""
+        await self.async_set_hvac_mode(HVACMode.HEAT)
+
+    async def async_turn_off(self) -> None:
+        """Turn off the climate entity."""
+        await self.async_set_hvac_mode(HVACMode.OFF)

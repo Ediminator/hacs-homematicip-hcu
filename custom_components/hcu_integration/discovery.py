@@ -23,6 +23,7 @@ from .const import (
     DEACTIVATED_BY_DEFAULT_DEVICES,
     HMIP_CHANNEL_TYPE_TO_ENTITY,
     HMIP_FEATURE_TO_ENTITY,
+    PLATFORMS,
 )
 
 if TYPE_CHECKING:
@@ -38,16 +39,18 @@ async def async_discover_entities(
     coordinator: "HcuCoordinator",
 ) -> dict[Platform, list[Any]]:
     """Discover and instantiate all entities for the integration."""
-    entities: dict[Platform, list[Any]] = {platform: [] for platform in Platform}
+    entities: dict[Platform, list[Any]] = {platform: [] for platform in PLATFORMS}
     state = client.state
 
+    # Mapping from class names to their respective module for dynamic instantiation.
+    # Note: HcuButton is removed as stateless buttons are now handled by events.
     class_module_map = {
         "HcuLight": light, "HcuSwitch": switch, "HcuWateringSwitch": switch,
         "HcuCover": cover, "HcuGarageDoorCover": cover, "HcuLock": lock,
-        "HcuButton": button, "HcuGenericSensor": sensor, "HcuTemperatureSensor": sensor,
-        "HcuHomeSensor": sensor, "HcuBinarySensor": binary_sensor,
-        "HcuWindowBinarySensor": binary_sensor, "HcuSmokeBinarySensor": binary_sensor,
-        "HcuUnreachBinarySensor": binary_sensor,
+        "HcuResetEnergyButton": button, "HcuGenericSensor": sensor, 
+        "HcuTemperatureSensor": sensor, "HcuHomeSensor": sensor, 
+        "HcuBinarySensor": binary_sensor, "HcuWindowBinarySensor": binary_sensor, 
+        "HcuSmokeBinarySensor": binary_sensor, "HcuUnreachBinarySensor": binary_sensor,
     }
 
     for device_data in state.get("devices", {}).values():
@@ -58,6 +61,9 @@ async def async_discover_entities(
 
             channel_type = channel_data.get("functionalChannelType")
             if channel_mapping := HMIP_CHANNEL_TYPE_TO_ENTITY.get(channel_type):
+                # Skip creating button entities for stateless buttons, they are handled by events.
+                if channel_mapping["class"] == "HcuButton":
+                    continue
                 if is_unused_channel:
                     continue
                 class_name = channel_mapping["class"]

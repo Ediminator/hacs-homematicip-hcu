@@ -56,11 +56,12 @@ class HcuAlarmControlPanel(HcuHomeBaseEntity, AlarmControlPanelEntity):
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
-        if self._home_uuid in self.coordinator.data:
-            self._attr_alarm_state = None
-            self._attr_assumed_state = False
-            self.async_write_ha_state()
+        # Call super first to handle assumed_state and async_write_ha_state
         super()._handle_coordinator_update()
+        if self._home_uuid in self.coordinator.data:
+            # Clear any optimistically set alarm state
+            self._attr_alarm_state = None
+            self.async_write_ha_state()
 
 
     @property

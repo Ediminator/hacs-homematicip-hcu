@@ -57,13 +57,21 @@ class HcuSwitch(HcuBaseEntity, SwitchEntity):
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         self._attr_assumed_state = True
-        self.async_write_ha_state()
         await self._client.async_set_switch_state(self._device_id, self._channel_index, True)
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         self._attr_assumed_state = True
-        self.async_write_ha_state()
         await self._client.async_set_switch_state(self._device_id, self._channel_index, False)
+
+    async def async_play_sound(self, sound_file: str, volume: float, duration: float) -> None:
+        """Service call to play a sound on this device."""
+        await self._client.async_set_sound_file(
+            device_id=self._device_id,
+            channel_index=self._channel_index,
+            sound_file=sound_file,
+            volume=volume,
+            duration=duration,
+        )
 
 
 class HcuWateringSwitch(HcuBaseEntity, SwitchEntity):
@@ -91,14 +99,12 @@ class HcuWateringSwitch(HcuBaseEntity, SwitchEntity):
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         self._attr_assumed_state = True
-        self.async_write_ha_state()
         await self._client.async_set_watering_switch_state(
             self._device_id, self._channel_index, True
         )
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         self._attr_assumed_state = True
-        self.async_write_ha_state()
         await self._client.async_set_watering_switch_state(
             self._device_id, self._channel_index, False
         )

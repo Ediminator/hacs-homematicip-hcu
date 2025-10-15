@@ -7,6 +7,7 @@ import asyncio
 import logging
 from typing import cast
 from datetime import timedelta
+import random
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
@@ -80,30 +81,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     async def handle_play_sound(call: ServiceCall) -> None:
-        """Handle the play_sound service call."""
-        entity_registry_instance = er.async_get(hass)
+        """Handle the play_sound service call by delegating to the entity."""
         for entity_id in call.data[ATTR_ENTITY_ID]:
-            entity_entry = entity_registry_instance.async_get(entity_id)
-            if not entity_entry or entity_entry.platform != DOMAIN:
+            # This will only find entities from the switch domain, as defined in services.yaml
+            hcu_entity = hass.data["entity_components"].get(Platform.SWITCH).get_entity(entity_id)
+
+            if not hcu_entity or not hasattr(hcu_entity, "async_play_sound"):
                 _LOGGER.warning(
-                    "Cannot play sound on %s, as it is not a Homematic IP Local (HCU) entity.",
+                    "Cannot play sound on %s, as it is not a compatible Homematic IP Local (HCU) switch.",
                     entity_id,
                 )
                 continue
 
-            # Extract device_id and channel_index from the entity's unique_id
-            unique_id_parts = entity_entry.unique_id.split("_")
-            if len(unique_id_parts) < 2:
-                _LOGGER.warning(
-                    "Could not determine device and channel for entity %s", entity_id
-                )
-                continue
-
-            device_id, channel_index_str = unique_id_parts[0], unique_id_parts[1]
             try:
-                await client.async_set_sound_file(
-                    device_id=device_id,
-                    channel_index=int(channel_index_str),
+                await hcu_entity.async_play_sound(
                     sound_file=call.data[ATTR_SOUND_FILE],
                     volume=call.data[ATTR_VOLUME],
                     duration=call.data[ATTR_DURATION],
@@ -123,38 +114,29 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     async def handle_activate_party_mode(call: ServiceCall) -> None:
         """Handle the activate_party_mode service call."""
-        entity_registry_instance = er.async_get(hass)
         for entity_id in call.data[ATTR_ENTITY_ID]:
-            entity_entry = entity_registry_instance.async_get(entity_id)
-            if not entity_entry or entity_entry.platform != DOMAIN:
+            hcu_entity = hass.data["entity_components"].get(Platform.CLIMATE).get_entity(entity_id)
+
+            if not hcu_entity or not hasattr(hcu_entity, "async_activate_party_mode"):
                 _LOGGER.warning(
-                    "Cannot activate party mode on %s, as it is not a Homematic IP Local (HCU) entity.",
+                    "Cannot activate party mode on %s, as it is not a compatible Homematic IP Local (HCU) climate entity.",
                     entity_id,
                 )
                 continue
 
-            group_id = entity_entry.unique_id
             temperature = call.data[ATTR_TEMPERATURE]
             end_time_str = call.data.get(ATTR_END_TIME)
             duration = call.data.get(ATTR_DURATION)
 
-            if not end_time_str and duration:
-                end_time = dt_util.now() + timedelta(hours=duration)
-                end_time_str = end_time.strftime("%Y_%m_%d %H:%M")
+            try:
+                await hcu_entity.async_activate_party_mode(
+                    temperature=temperature, end_time_str=end_time_str, duration=duration
+                )
+            except (HcuApiError, ConnectionError) as err:
+                _LOGGER.error("Error calling activate_party_mode for %s: %s", entity_id, err)
+            except ValueError as err:
+                _LOGGER.error("Invalid parameter for activate_party_mode for %s: %s", entity_id, err)
 
-            if end_time_str:
-                try:
-                    await client.async_activate_group_party_mode(
-                        group_id=group_id,
-                        temperature=temperature,
-                        end_time=end_time_str,
-                    )
-                except (HcuApiError, ConnectionError) as err:
-                    _LOGGER.error(
-                        "Error calling activate_party_mode for %s: %s", entity_id, err
-                    )
-            else:
-                _LOGGER.error("Either end_time or duration must be provided for activate_party_mode service.")
 
     hass.services.async_register(DOMAIN, SERVICE_PLAY_SOUND, handle_play_sound)
     hass.services.async_register(
@@ -249,16 +231,44 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
         events = message.get("body", {}).get("eventTransaction", {}).get("events", {})
         if not events:
             return
+        
+        # Store old timestamps to detect stateless button presses
+        old_state = {
+            dev_id: {
+                ch_idx: ch.get("lastStatusUpdate")
+                for ch_idx, ch in dev.get("functionalChannels", {}).items()
+            }
+            for dev_id, dev in self.client.state.get("devices", {}).items()
+        }
 
         updated_ids = self.client.process_events(events)
+
+        # After state is updated, check for button presses by comparing timestamps
+        for dev_id in updated_ids:
+            device = self.client.get_device_by_address(dev_id)
+            if not device:
+                continue
+            
+            for ch_idx, channel in device.get("functionalChannels", {}).items():
+                if channel.get("functionalChannelType") in ("WALL_MOUNTED_TRANSMITTER_CHANNEL", "KEY_REMOTE_CONTROL_CHANNEL"):
+                    new_ts = channel.get("lastStatusUpdate")
+                    old_ts = old_state.get(dev_id, {}).get(ch_idx)
+                    if new_ts and new_ts != old_ts:
+                        _LOGGER.debug("Button press detected for device %s channel %s", dev_id, ch_idx)
+                        self.hass.bus.async_fire(
+                            f"{DOMAIN}_event",
+                            {
+                                "device_id": dev_id,
+                                "channel": ch_idx,
+                                "type": "press",
+                            },
+                        )
 
         if updated_ids:
             self.async_set_updated_data(updated_ids)
 
     async def _listen_for_events(self) -> None:
         """Maintain a persistent WebSocket connection with automatic reconnection."""
-        import random
-
         reconnect_delay = WEBSOCKET_RECONNECT_INITIAL_DELAY
 
         while True:
@@ -323,4 +333,3 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Reload config entry when options are updated."""
     await hass.config_entries.async_reload(entry.entry_id)
-

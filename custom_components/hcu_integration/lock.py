@@ -77,15 +77,9 @@ class HcuLock(HcuBaseEntity, LockEntity):
         """Send the command to set the lock state."""
         pin = self._config_entry.data.get(CONF_PIN)
         if not pin:
-            # This should theoretically not be reached due to the availability check,
-            # but it's good practice to have it as a safeguard.
             _LOGGER.error(
                 "Cannot operate lock '%s': Please set the Authorization PIN in the integration options.",
                 self.name,
-            )
-            # Request re-authentication to prompt the user for the PIN
-            self.hass.async_create_task(
-                self.hass.config_entries.async_reload(self._config_entry.entry_id)
             )
             self._config_entry.async_start_reauth(self.hass)
             raise HomeAssistantError("Authorization PIN for lock is not configured.")

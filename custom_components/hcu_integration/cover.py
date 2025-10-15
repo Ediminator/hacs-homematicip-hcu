@@ -65,30 +65,25 @@ class HcuCover(HcuBaseEntity, CoverEntity):
 
     async def async_open_cover(self, **kwargs) -> None:
         self._attr_assumed_state = True
-        self.async_write_ha_state()
         await self._client.async_set_shutter_level(self._device_id, self._channel_index, 0.0)
 
     async def async_close_cover(self, **kwargs) -> None:
         self._attr_assumed_state = True
-        self.async_write_ha_state()
         await self._client.async_set_shutter_level(self._device_id, self._channel_index, 1.0)
 
     async def async_stop_cover(self, **kwargs) -> None:
         self._attr_assumed_state = True
-        self.async_write_ha_state()
         await self._client.async_stop_cover(self._device_id, self._channel_index)
 
     async def async_set_cover_position(self, **kwargs) -> None:
         position = kwargs[ATTR_POSITION]
         self._attr_assumed_state = True
-        self.async_write_ha_state()
         shutter_level = round((100 - position) / 100.0, 2)
         await self._client.async_set_shutter_level(self._device_id, self._channel_index, shutter_level)
 
     async def async_set_cover_tilt_position(self, **kwargs) -> None:
         position = kwargs[ATTR_TILT_POSITION]
         self._attr_assumed_state = True
-        self.async_write_ha_state()
         slats_level = round((100 - position) / 100.0, 2)
         await self._client.async_set_slats_level(self._device_id, self._channel_index, slats_level)
 
@@ -134,7 +129,6 @@ class HcuGarageDoorCover(HcuBaseEntity, CoverEntity):
 
     async def async_open_cover(self, **kwargs) -> None:
         self._attr_assumed_state = True
-        self.async_write_ha_state()
         if self._is_stateful:
             await self._client.async_send_door_command(self._device_id, self._channel_index, "OPEN")
         else:
@@ -142,7 +136,6 @@ class HcuGarageDoorCover(HcuBaseEntity, CoverEntity):
 
     async def async_close_cover(self, **kwargs) -> None:
         self._attr_assumed_state = True
-        self.async_write_ha_state()
         if self._is_stateful:
             await self._client.async_send_door_command(self._device_id, self._channel_index, "CLOSE")
         else:
@@ -152,5 +145,4 @@ class HcuGarageDoorCover(HcuBaseEntity, CoverEntity):
         if not self._is_stateful:
             return
         self._attr_assumed_state = True
-        self.async_write_ha_state()
         await self._client.async_send_door_command(self._device_id, self._channel_index, "STOP")

@@ -64,8 +64,14 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], Entity):
 
     @property
     def available(self) -> bool:
-        """Return True if the entity is available (i.e., the device is reachable)."""
-        # Channel '0' is the maintenance channel for most devices
+        """
+        Return True if the entity is available.
+        An entity is available if the coordinator is connected and the underlying
+        Homematic IP device is reported as reachable.
+        """
+        if not self._client.is_connected:
+            return False
+        
         maintenance_channel = self._device.get("functionalChannels", {}).get("0", {})
         return not maintenance_channel.get("unreach", False)
 
@@ -116,7 +122,13 @@ class HcuGroupBaseEntity(CoordinatorEntity["HcuCoordinator"], Entity):
 
     @property
     def available(self) -> bool:
-        """Return True if the entity's group exists in the state cache."""
+        """
+        Return True if the entity is available.
+        A group entity is available if the coordinator is connected and the
+        group exists in the HCU's state.
+        """
+        if not self._client.is_connected:
+            return False
         return self._group_id in self._client.state.get("groups", {})
 
     def _handle_coordinator_update(self) -> None:
@@ -158,7 +170,13 @@ class HcuHomeBaseEntity(CoordinatorEntity["HcuCoordinator"], Entity):
 
     @property
     def available(self) -> bool:
-        """Return True if the home object exists in the state cache."""
+        """
+        Return True if the entity is available.
+        A home-level entity is available if the coordinator is connected and
+        the home object exists in the HCU's state.
+        """
+        if not self._client.is_connected:
+            return False
         return "home" in self._client.state
 
     def _handle_coordinator_update(self) -> None:

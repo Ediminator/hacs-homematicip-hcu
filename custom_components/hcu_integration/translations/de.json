@@ -1,0 +1,60 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Mit Homematic IP HCU verbinden",
+        "description": "Bitte geben Sie die IP-Adresse oder den Hostnamen und die Ports Ihrer Home Control Unit (HCU) ein.",
+        "data": {
+          "host": "HCU IP-Adresse oder Hostname",
+          "auth_port": "Authentifizierungs-Port",
+          "websocket_port": "WebSocket-Port"
+        }
+      },
+      "auth": {
+        "title": "Integration autorisieren",
+        "description": "Ein neues Autorisierungs-Token ist erforderlich. Bitte führen Sie die folgenden Schritte auf der Weboberfläche Ihrer HCU aus (erreichbar unter https://{hcu_ip}):\n\n1. Navigieren Sie zum Entwicklermodus.\n2. Drücken Sie die Schaltfläche \"Aktivierungsschlüssel erzeugen\".\n3. Geben Sie den temporären Schlüssel unten ein.\n\n",
+        "data": {
+          "activation_key": "Aktivierungsschlüssel"
+        }
+      },
+      "reconfigure": {
+        "title": "HCU-Verbindung neukonfigurieren",
+        "description": "Aktualisieren Sie die Verbindungsdetails für Ihre Home Control Unit (HCU).",
+        "data": {
+          "host": "Neue HCU IP-Adresse oder Hostname",
+          "auth_port": "Neuer Authentifizierungs-Port",
+          "websocket_port": "Neuer WebSocket-Port"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Erneut bei der HCU authentifizieren",
+        "description": "Die PIN für Ihr Türschloss hat sich geändert oder fehlt. Bitte geben Sie die neue PIN ein.",
+        "data": {
+          "pin": "Autorisierungs-PIN für das Schloss"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Verbindung zur HCU fehlgeschlagen. Bitte überprüfen Sie Host/Ports und Ihre Netzwerkverbindung.",
+      "invalid_key": "Ungültiger oder abgelaufener Aktivierungsschlüssel. Bitte generieren Sie einen neuen und versuchen Sie es erneut.",
+      "unknown": "Ein unbekannter Fehler ist aufgetreten."
+    },
+    "abort": {
+      "already_configured": "Diese Homematic IP HCU ist bereits konfiguriert.",
+      "reconfigure_successful": "Neukonfiguration erfolgreich. Die Integration wird nun mit den neuen Einstellungen neu geladen.",
+      "reauth_successful": "Erneute Authentifizierung erfolgreich."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "HCU-Optionen konfigurieren",
+        "description": "Legen Sie Optionen für Ihre Homematic IP HCU-Integration fest.",
+        "data": {
+          "comfort_temperature": "Standard-Komforttemperatur (°C)"
+        }
+      }
+    }
+  },
+  "title": "Homematic IP Local (HCU)"
+}

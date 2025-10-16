@@ -237,6 +237,13 @@ HMIP_FEATURE_TO_ENTITY = {
         "state_class": SensorStateClass.TOTAL_INCREASING,
         "entity_registry_enabled_default": False,
     },
+    "todayRainCounter": {
+        "class": "HcuGenericSensor",
+        "name": "Today's Rain",
+        "unit": UnitOfLength.MILLIMETERS,
+        "device_class": SensorDeviceClass.PRECIPITATION,
+        "state_class": SensorStateClass.TOTAL,
+    },
     "co2Concentration": {
         "class": "HcuGenericSensor",
         "name": "CO2 Concentration",
@@ -254,6 +261,14 @@ HMIP_FEATURE_TO_ENTITY = {
         "class": "HcuGenericSensor",
         "name": "Last Passage Direction",
         "icon": "mdi:arrow-left-right",
+    },
+    "sunshineDuration": {
+        "class": "HcuGenericSensor",
+        "name": "Sunshine Duration",
+        "unit": "h",
+        "icon": "mdi:timer-sand",
+        "state_class": SensorStateClass.TOTAL_INCREASING,
+        "entity_registry_enabled_default": False,
     },
     "carrierSense": {
         "class": "HcuHomeSensor",
@@ -339,6 +354,22 @@ HMIP_FEATURE_TO_ENTITY = {
         "class": "HcuSwitch",
         "name": "Siren",
         "device_class": SwitchDeviceClass.SWITCH,
+    },
+    "sunshine": {
+        "class": "HcuBinarySensor",
+        "name": "Sunshine",
+        "device_class": BinarySensorDeviceClass.LIGHT,
+    },
+    "storm": {
+        "class": "HcuBinarySensor",
+        "name": "Storm",
+        "device_class": BinarySensorDeviceClass.SAFETY,
+        "entity_registry_enabled_default": False,
+    },
+    "raining": {
+        "class": "HcuBinarySensor",
+        "name": "Raining",
+        "device_class": BinarySensorDeviceClass.MOISTURE,
     },
 }
 

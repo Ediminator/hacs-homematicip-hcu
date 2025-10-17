@@ -12,7 +12,7 @@
       },
       "auth": {
         "title": "Authorize Integration",
-        "description": "A new authorization token is required. Please follow these steps on your HCU's web interface (likely at https://hcu1-XXXX.local`, where `XXXX` are the last four digits of the SGTIN):\n\n1. Navigate to Developer Mode.\n2. Press the Generate activation key button.\n3. Enter the temporary key below.\n\n",
+        "description": "A new authorization token is required. Please follow these steps on your HCU's web interface (at https://{hcu_ip}):\n\n1. Navigate to Developer Mode.\n2. Press the Generate activation key button.\n3. Enter the temporary key below.\n\n",
         "data": {
           "activation_key": "Activation Key"
         }

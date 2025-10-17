@@ -1,3 +1,4 @@
+# custom_components/hcu_integration/light.py
 from typing import TYPE_CHECKING
 from homeassistant.components.light import (
     ATTR_BRIGHTNESS, ATTR_COLOR_TEMP_KELVIN, ATTR_HS_COLOR, ColorMode, LightEntity
@@ -25,11 +26,19 @@ async def async_setup_entry(
 class HcuLight(HcuBaseEntity, LightEntity):
     """Representation of a Homematic IP HCU light."""
     PLATFORM = Platform.LIGHT
-    _attr_has_entity_name = False
-    _attr_name = None # Use device name
-
+    
     def __init__(self, coordinator: "HcuCoordinator", client: HcuApiClient, device_data: dict, channel_index: str, **kwargs):
         super().__init__(coordinator, client, device_data, channel_index)
+        
+        # Set entity name based on channel label or fallback to device name
+        channel_label = self._channel.get("label")
+        if channel_label:
+            self._attr_name = channel_label
+            self._attr_has_entity_name = False
+        else:
+            self._attr_name = None
+            self._attr_has_entity_name = False
+            
         self._attr_unique_id = f"{self._device_id}_{self._channel_index}_light"
 
         supported_modes = set()

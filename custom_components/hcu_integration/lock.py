@@ -1,17 +1,17 @@
+# custom_components/hcu_integration/lock.py
 import logging
 from typing import TYPE_CHECKING
+import json
 
 from homeassistant.components.lock import LockEntity, LockEntityFeature
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.exceptions import HomeAssistantError
-
 
 from .const import CONF_PIN
 from .entity import HcuBaseEntity
-from .api import HcuApiClient
+from .api import HcuApiClient, HcuApiError
 
 if TYPE_CHECKING:
     from . import HcuCoordinator
@@ -37,9 +37,7 @@ class HcuLock(HcuBaseEntity, LockEntity):
 
     PLATFORM = Platform.LOCK
     _attr_supported_features = LockEntityFeature.OPEN
-    _attr_has_entity_name = True
-    _attr_name = None  # Use device name
-
+    
     def __init__(
         self,
         coordinator: "HcuCoordinator",
@@ -50,6 +48,15 @@ class HcuLock(HcuBaseEntity, LockEntity):
     ):
         super().__init__(coordinator, client, device_data, channel_index)
         self._config_entry = config_entry
+        
+        channel_label = self._channel.get("label")
+        if channel_label:
+            self._attr_name = channel_label
+            self._attr_has_entity_name = False
+        else:
+            self._attr_name = None
+            self._attr_has_entity_name = False
+
         self._attr_unique_id = f"{self._device_id}_{self._channel_index}_lock"
 
     @property
@@ -61,7 +68,6 @@ class HcuLock(HcuBaseEntity, LockEntity):
     def available(self) -> bool:
         """
         Return if entity is available.
-
         The lock is unavailable if the base device is unreachable OR if the PIN
         has not been configured in the integration.
         """
@@ -82,7 +88,7 @@ class HcuLock(HcuBaseEntity, LockEntity):
                 self.name,
             )
             self._config_entry.async_start_reauth(self.hass)
-            raise HomeAssistantError("Authorization PIN for lock is not configured.")
+            return
 
         self._attr_assumed_state = True
         self.async_write_ha_state()
@@ -91,12 +97,21 @@ class HcuLock(HcuBaseEntity, LockEntity):
             await self._client.async_set_lock_state(
                 self._device_id, self._channel_index, state=state, pin=pin
             )
-        except Exception as err:
+        except HcuApiError as err:
             _LOGGER.error("Failed to set lock state for %s: %s", self.name, err)
-            # If the operation fails, clear the assumed state to reflect the actual state
+            try:
+                error_body = json.loads(err.args[0].replace("HCU Error: ", "").replace("'", "\""))
+                if error_body.get("body", {}).get("errorCode") == "INVALID_AUTHORIZATION_PIN":
+                    _LOGGER.error("Invalid PIN for lock '%s'. Triggering re-authentication.", self.name)
+                    self._config_entry.async_start_reauth(self.hass)
+            except (json.JSONDecodeError, IndexError, AttributeError):
+                pass # Not the error we are looking for
+        except ConnectionError as err:
+            _LOGGER.error("Connection failed while setting lock state for %s: %s", self.name, err)
+        finally:
             self._attr_assumed_state = False
             self.async_write_ha_state()
-            raise HomeAssistantError(f"Failed to set lock state: {err}") from err
+
 
     async def async_lock(self, **kwargs) -> None:
         """Lock the door."""

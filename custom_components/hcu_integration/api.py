@@ -232,10 +232,9 @@ class HcuApiClient:
                 if attempt == 0:
                     await asyncio.sleep(API_RETRY_DELAY)
             except HcuApiError as err:
-                _LOGGER.error("HCU returned an unrecoverable error for path %s.", path)
+                # Re-raise specific HcuApiError immediately to be handled by calling functions
                 self._pending_requests.pop(message_id, None)
-                last_exception = err
-                break  # Do not retry on explicit API errors
+                raise err
 
         raise HcuApiError(
             f"Request failed after multiple retries for path {path}"

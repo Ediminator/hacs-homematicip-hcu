@@ -1,3 +1,4 @@
+# custom_components/hcu_integration/climate.py
 from __future__ import annotations
 
 import logging
@@ -17,7 +18,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.util import dt as dt_util
 
-from .api import HcuApiClient, HcuApiError
+from .api import HcuApiClient
 from .const import (
     CONF_COMFORT_TEMPERATURE,
     DEFAULT_COMFORT_TEMPERATURE,
@@ -92,7 +93,7 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
     def supported_features(self) -> ClimateEntityFeature:
         """Return the list of supported features."""
         features = (
-            ClimateEntityFeature.TARGET_TEMPERATURE | ClimateEntityFeature.PRESET_MODE | ClimateEntityFeature.TURN_OFF | ClimateEntityFeature.TURN_ON
+            ClimateEntityFeature.TARGET_TEMPERATURE | ClimateEntityFeature.PRESET_MODE
         )
         return features
     
@@ -204,30 +205,6 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
 
         return PRESET_NONE
 
-    async def _async_set_group_property(self, method: str, *args: Any, **kwargs: Any) -> None:
-        """Optimistically update state and call a group-level API method."""
-        self._attr_assumed_state = True
-        self.async_write_ha_state()
-        try:
-            api_method = getattr(self._client, method)
-            await api_method(*args, **kwargs)
-        except (HcuApiError, ConnectionError) as err:
-            _LOGGER.error("Failed to set group property for %s: %s", self.name, err)
-            self._attr_assumed_state = False
-            self.async_write_ha_state()
-
-    async def _async_set_home_property(self, method: str, *args: Any, **kwargs: Any) -> None:
-        """Optimistically update state and call a home-level API method."""
-        self._attr_assumed_state = True
-        self.async_write_ha_state()
-        try:
-            api_method = getattr(self._client, method)
-            await api_method(*args, **kwargs)
-        except (HcuApiError, ConnectionError) as err:
-            _LOGGER.error("Failed to set home property for %s: %s", self.name, err)
-            self._attr_assumed_state = False
-            self.async_write_ha_state()
-
     async def async_set_temperature(self, **kwargs: Any) -> None:
         """Set new target temperature."""
         temperature = kwargs.get(ATTR_TEMPERATURE)
@@ -279,61 +256,57 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:
         """Set new preset mode."""
+        self._attr_assumed_state = True
+        self.async_write_ha_state()
+
         if preset_mode == PRESET_BOOST:
-            await self._async_set_group_property(
-                "async_set_group_boost", group_id=self._group_id, boost=True
-            )
+            await self._client.async_set_group_boost(group_id=self._group_id, boost=True)
             
         elif preset_mode == PRESET_ECO:
-            await self._async_set_home_property("async_activate_absence_permanent")
+            await self._client.async_activate_absence_permanent()
             
         elif preset_mode == PRESET_PARTY:
-            comfort_temp = self._config_entry.options.get(
-                CONF_COMFORT_TEMPERATURE, DEFAULT_COMFORT_TEMPERATURE
-            )
+            comfort_temp = self._config_entry.options.get(CONF_COMFORT_TEMPERATURE, DEFAULT_COMFORT_TEMPERATURE)
             end_time = dt_util.now() + timedelta(hours=4)
-            await self._async_set_group_property(
-                "async_activate_group_party_mode",
-                group_id=self._group_id,
-                temperature=comfort_temp,
-                end_time=end_time.strftime("%Y_%m_%d %H:%M"),
-            )
+            await self.async_activate_party_mode(temperature=comfort_temp, end_time_str=end_time.strftime("%Y_%m_%d %H:%M"))
 
         elif preset_mode in self._profiles:
-            # First, ensure the HVAC mode is AUTO, as profiles only work in this mode.
-            await self._async_set_group_property(
-                "async_set_group_control_mode", group_id=self._group_id, mode="AUTOMATIC"
-            )
-            # Then, set the active profile using the correct API call.
+            await self._client.async_set_group_control_mode(group_id=self._group_id, mode="AUTOMATIC")
             profile_index = self._profiles[preset_mode]
-            await self._async_set_group_property(
-                "async_set_group_active_profile", group_id=self._group_id, profile_index=profile_index
-            )
+            await self._client.async_set_group_active_profile(group_id=self._group_id, profile_index=profile_index)
+            
         elif preset_mode == PRESET_NONE:
             current_preset = self.preset_mode
             if current_preset == PRESET_BOOST:
-                await self._async_set_group_property(
-                    "async_set_group_boost", group_id=self._group_id, boost=False
-                )
+                await self._client.async_set_group_boost(group_id=self._group_id, boost=False)
             elif current_preset == PRESET_ECO:
-                await self._async_set_home_property("async_deactivate_absence")
+                await self._client.async_deactivate_absence()
             elif current_preset == PRESET_PARTY:
-                await self._async_set_home_property("async_deactivate_vacation")
+                await self._client.async_deactivate_vacation()
             else:
-                await self._async_set_group_property(
-                    "async_set_group_control_mode", group_id=self._group_id, mode="AUTOMATIC"
-                )
+                await self._client.async_set_group_control_mode(group_id=self._group_id, mode="AUTOMATIC")
             
-            # Revert to the default automatic profile if available.
             if self._default_profile_index:
-                 await self._async_set_group_property(
-                    "async_set_group_active_profile", group_id=self._group_id, profile_index=self._default_profile_index
-                )
+                 await self._client.async_set_group_active_profile(group_id=self._group_id, profile_index=self._default_profile_index)
+    
+    async def async_activate_party_mode(
+        self, temperature: float, end_time_str: str | None = None, duration: int | None = None
+    ) -> None:
+        """Service call to activate party mode."""
+        if end_time_str is None and duration is None:
+            raise ValueError("Either end_time or duration must be provided for party mode.")
 
-    async def async_turn_on(self) -> None:
-        """Turn on the climate entity."""
-        await self.async_set_hvac_mode(HVACMode.HEAT)
+        if end_time_str:
+            end_time = end_time_str
+        else:
+            end_time_dt = dt_util.now() + timedelta(seconds=duration)
+            end_time = end_time_dt.strftime("%Y_%m_%d %H:%M")
+        
+        self._attr_assumed_state = True
+        self.async_write_ha_state()
 
-    async def async_turn_off(self) -> None:
-        """Turn off the climate entity."""
-        await self.async_set_hvac_mode(HVACMode.OFF)
+        await self._client.async_activate_group_party_mode(
+            group_id=self._group_id,
+            temperature=temperature,
+            end_time=end_time,
+        )

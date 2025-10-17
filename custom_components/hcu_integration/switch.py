@@ -1,3 +1,4 @@
+# custom_components/hcu_integration/switch.py
 from typing import TYPE_CHECKING, Any
 import logging
 
@@ -34,8 +35,6 @@ class HcuSwitch(HcuBaseEntity, SwitchEntity):
     """Representation of a standard Homematic IP HCU switch."""
 
     PLATFORM = Platform.SWITCH
-    _attr_has_entity_name = False
-    _attr_name = None  # Use device name
 
     def __init__(
         self,
@@ -46,6 +45,16 @@ class HcuSwitch(HcuBaseEntity, SwitchEntity):
         **kwargs: Any,
     ):
         super().__init__(coordinator, client, device_data, channel_index)
+        
+        # Set entity name based on channel label or fallback to device name
+        channel_label = self._channel.get("label")
+        if channel_label:
+            self._attr_name = channel_label
+            self._attr_has_entity_name = False
+        else:
+            self._attr_name = None
+            self._attr_has_entity_name = False
+            
         self._attr_unique_id = f"{self._device_id}_{self._channel_index}_on"
 
         device_type = self._device.get("type")
@@ -79,8 +88,6 @@ class HcuWateringSwitch(HcuBaseEntity, SwitchEntity):
 
     PLATFORM = Platform.SWITCH
     _attr_icon = "mdi:water"
-    _attr_has_entity_name = False
-    _attr_name = None  # Use device name
 
     def __init__(
         self,
@@ -91,6 +98,16 @@ class HcuWateringSwitch(HcuBaseEntity, SwitchEntity):
         **kwargs: Any,
     ):
         super().__init__(coordinator, client, device_data, channel_index)
+        
+        # Set entity name based on channel label or fallback to device name
+        channel_label = self._channel.get("label")
+        if channel_label:
+            self._attr_name = channel_label
+            self._attr_has_entity_name = False
+        else:
+            self._attr_name = None
+            self._attr_has_entity_name = False
+            
         self._attr_unique_id = f"{self._device_id}_{self._channel_index}_watering"
 
     @property

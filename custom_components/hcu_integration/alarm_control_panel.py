@@ -1,3 +1,4 @@
+# custom_components/hcu_integration/alarm_control_panel.py
 import logging
 from typing import TYPE_CHECKING
 
@@ -137,3 +138,4 @@ class HcuAlarmControlPanel(HcuHomeBaseEntity, AlarmControlPanelEntity):
             AlarmControlPanelState.ARMED_AWAY,
             {"zonesActivation": {"INTERNAL": True, "EXTERNAL": True}}
 )
+

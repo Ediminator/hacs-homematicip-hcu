@@ -1,3 +1,4 @@
+# custom_components/hcu_integration/const.py
 """Constants for the Homematic IP Local (HCU) integration."""
 
 from homeassistant.components.binary_sensor import BinarySensorDeviceClass
@@ -229,6 +230,14 @@ HMIP_FEATURE_TO_ENTITY = {
         "icon": "mdi:weather-windy",
         "state_class": SensorStateClass.MEASUREMENT,
     },
+    "windDirectionVariation": {
+        "class": "HcuGenericSensor",
+        "name": "Wind Direction Variation",
+        "unit": DEGREE,
+        "icon": "mdi:compass-rose",
+        "state_class": SensorStateClass.MEASUREMENT,
+        "entity_registry_enabled_default": False,
+    },
     "rainCounter": {
         "class": "HcuGenericSensor",
         "name": "Rain Counter",
@@ -240,6 +249,13 @@ HMIP_FEATURE_TO_ENTITY = {
     "todayRainCounter": {
         "class": "HcuGenericSensor",
         "name": "Today's Rain",
+        "unit": UnitOfLength.MILLIMETERS,
+        "device_class": SensorDeviceClass.PRECIPITATION,
+        "state_class": SensorStateClass.TOTAL,
+    },
+    "yesterdayRainCounter": {
+        "class": "HcuGenericSensor",
+        "name": "Yesterday's Rain",
         "unit": UnitOfLength.MILLIMETERS,
         "device_class": SensorDeviceClass.PRECIPITATION,
         "state_class": SensorStateClass.TOTAL,
@@ -265,10 +281,16 @@ HMIP_FEATURE_TO_ENTITY = {
     "sunshineDuration": {
         "class": "HcuGenericSensor",
         "name": "Sunshine Duration",
-        "unit": "h",
+        "unit": "min",
         "icon": "mdi:timer-sand",
         "state_class": SensorStateClass.TOTAL_INCREASING,
-        "entity_registry_enabled_default": False,
+    },
+    "yesterdaySunshineDuration": {
+        "class": "HcuGenericSensor",
+        "name": "Yesterday's Sunshine Duration",
+        "unit": "min",
+        "icon": "mdi:timer-sand",
+        "state_class": SensorStateClass.TOTAL,
     },
     "carrierSense": {
         "class": "HcuHomeSensor",
@@ -374,15 +396,28 @@ HMIP_FEATURE_TO_ENTITY = {
 }
 
 HMIP_CHANNEL_TYPE_TO_ENTITY = {
+    # Lights
     "DIMMER_CHANNEL": {"class": "HcuLight"},
+    "RGBW_AUTOMATION_CHANNEL": {"class": "HcuLight"},
+    "UNIVERSAL_LIGHT_CHANNEL": {"class": "HcuLight"},
+    "NOTIFICATION_LIGHT_CHANNEL": {"class": "HcuLight"},
+    # Switches
     "ALARM_SIREN_CHANNEL": {"class": "HcuSwitch"},
     "SWITCH_CHANNEL": {"class": "HcuSwitch"},
+    "SWITCH_MEASURING_CHANNEL": {"class": "HcuSwitch"},
+    "WIRED_SWITCH_CHANNEL": {"class": "HcuSwitch"},
     "WATERING_CONTROLLER_CHANNEL": {"class": "HcuWateringSwitch"},
+    # Covers
     "SHUTTER_CHANNEL": {"class": "HcuCover"},
     "BLIND_CHANNEL": {"class": "HcuCover"},
     "GARAGE_DOOR_CHANNEL": {"class": "HcuGarageDoorCover"},
+    # Locks
     "DOOR_LOCK_CHANNEL": {"class": "HcuLock"},
+    # Event-based (will not create an entity, but fires an event)
     "WALL_MOUNTED_TRANSMITTER_CHANNEL": {"class": "HcuButton"},
     "KEY_REMOTE_CONTROL_CHANNEL": {"class": "HcuButton"},
-    "NOTIFICATION_LIGHT_CHANNEL": {"class": "HcuLight"},
+    "SWITCH_INPUT_CHANNEL": {"class": "HcuButton"},
+    # Other (no primary entity, rely on feature discovery)
+    "LIGHT_SENSOR_CHANNEL": None,
+    "CLIMATE_CONTROL_INPUT_CHANNEL": None,
 }

@@ -1,3 +1,4 @@
+# custom_components/hcu_integration/discovery.py
 from __future__ import annotations
 
 import logging

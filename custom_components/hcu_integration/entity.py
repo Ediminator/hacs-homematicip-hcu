@@ -1,3 +1,4 @@
+# custom_components/hcu_integration/entity.py
 from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
@@ -64,16 +65,14 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], Entity):
 
     @property
     def available(self) -> bool:
-        """
-        Return True if the entity is available.
-        An entity is available if the coordinator is connected and the underlying
-        Homematic IP device is reported as reachable.
-        """
-        if not self._client.is_connected:
+        """Return True if the entity is available."""
+        if not self._client.is_connected or not self._device or not self._channel:
             return False
-        
+
+        # Most devices report reachability on the maintenance channel '0'.
         maintenance_channel = self._device.get("functionalChannels", {}).get("0", {})
         return not maintenance_channel.get("unreach", False)
+
 
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
@@ -122,14 +121,9 @@ class HcuGroupBaseEntity(CoordinatorEntity["HcuCoordinator"], Entity):
 
     @property
     def available(self) -> bool:
-        """
-        Return True if the entity is available.
-        A group entity is available if the coordinator is connected and the
-        group exists in the HCU's state.
-        """
-        if not self._client.is_connected:
-            return False
-        return self._group_id in self._client.state.get("groups", {})
+        """Return True if the entity is available."""
+        return self._client.is_connected and bool(self._group)
+
 
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
@@ -170,14 +164,8 @@ class HcuHomeBaseEntity(CoordinatorEntity["HcuCoordinator"], Entity):
 
     @property
     def available(self) -> bool:
-        """
-        Return True if the entity is available.
-        A home-level entity is available if the coordinator is connected and
-        the home object exists in the HCU's state.
-        """
-        if not self._client.is_connected:
-            return False
-        return "home" in self._client.state
+        """Return True if the entity is available."""
+        return self._client.is_connected and bool(self._home)
 
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""

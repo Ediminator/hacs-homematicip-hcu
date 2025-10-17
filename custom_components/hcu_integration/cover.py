@@ -1,3 +1,4 @@
+# custom_components/hcu_integration/cover.py
 from typing import TYPE_CHECKING
 from homeassistant.components.cover import (
     ATTR_POSITION, ATTR_TILT_POSITION, CoverEntity, CoverEntityFeature
@@ -25,11 +26,19 @@ async def async_setup_entry(
 class HcuCover(HcuBaseEntity, CoverEntity):
     """Representation of an HCU Cover (shutter or blind)."""
     PLATFORM = Platform.COVER
-    _attr_has_entity_name = False
-    _attr_name = None # Use device name
-
+    
     def __init__(self, coordinator: "HcuCoordinator", client: HcuApiClient, device_data: dict, channel_index: str, **kwargs):
         super().__init__(coordinator, client, device_data, channel_index)
+        
+        # Set entity name based on channel label or fallback to device name
+        channel_label = self._channel.get("label")
+        if channel_label:
+            self._attr_name = channel_label
+            self._attr_has_entity_name = False
+        else:
+            self._attr_name = None
+            self._attr_has_entity_name = False
+
         self._attr_unique_id = f"{self._device_id}_{self._channel_index}_cover"
 
         device_type = self._device.get("type")
@@ -91,11 +100,19 @@ class HcuCover(HcuBaseEntity, CoverEntity):
 class HcuGarageDoorCover(HcuBaseEntity, CoverEntity):
     """Representation of an HCU Garage Door Cover."""
     PLATFORM = Platform.COVER
-    _attr_has_entity_name = False
-    _attr_name = None # Use device name
-
+    
     def __init__(self, coordinator: "HcuCoordinator", client: HcuApiClient, device_data: dict, channel_index: str, **kwargs):
         super().__init__(coordinator, client, device_data, channel_index)
+
+        # Set entity name based on channel label or fallback to device name
+        channel_label = self._channel.get("label")
+        if channel_label:
+            self._attr_name = channel_label
+            self._attr_has_entity_name = False
+        else:
+            self._attr_name = None
+            self._attr_has_entity_name = False
+
         self._attr_unique_id = f"{self._device_id}_{self._channel_index}_cover"
 
         device_type = self._device.get("type")

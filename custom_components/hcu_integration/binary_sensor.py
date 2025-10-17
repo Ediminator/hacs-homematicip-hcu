@@ -1,3 +1,4 @@
+# custom_components/hcu_integration/binary_sensor.py
 from __future__ import annotations
 
 import logging
@@ -52,8 +53,15 @@ class HcuBinarySensor(HcuBaseEntity, BinarySensorEntity):
         super().__init__(coordinator, client, device_data, channel_index)
         self._feature = feature
         self._on_state = mapping.get("on_state")
+        
+        # Set entity name based on channel label or fallback to mapping name
+        channel_label = self._channel.get("label")
+        if channel_label:
+            self._attr_name = channel_label
+            self._attr_has_entity_name = False
+        else:
+            self._attr_name = mapping["name"]
 
-        self._attr_name = mapping["name"]
         self._attr_unique_id = f"{self._device_id}_{self._channel_index}_{self._feature}"
         self._attr_device_class = mapping.get("device_class")
 

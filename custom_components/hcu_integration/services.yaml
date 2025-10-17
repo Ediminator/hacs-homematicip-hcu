@@ -1,3 +1,4 @@
+# custom_components/hcu_integration/services.yaml
 # Describes the services offered by the Homematic IP Local (HCU) integration.
 
 play_sound:
@@ -86,3 +87,36 @@ set_display_content:
       required: false
       selector:
         text:
+
+activate_party_mode:
+  name: Activate Party Mode
+  description: Activates the party mode for a heating group with a specific temperature.
+  target:
+    entity:
+      - integration: hcu_integration
+        domain: climate
+  fields:
+    temperature:
+      name: Temperature
+      description: The target temperature for the party mode.
+      required: true
+      selector:
+        number:
+          min: 4.5
+          max: 30.5
+          step: 0.5
+          unit_of_measurement: "°C"
+    end_time:
+      name: End Time
+      description: "The date and time when the party mode should end (e.g., '2025-12-24 23:00'). Mutually exclusive with duration."
+      required: false
+      selector:
+        text:
+    duration:
+      name: Duration
+      description: "The duration in seconds for the party mode. Mutually exclusive with end_time."
+      required: false
+      selector:
+        number:
+          min: 60
+          unit_of_measurement: "s"

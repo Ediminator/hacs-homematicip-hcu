@@ -250,7 +250,11 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
                 continue
             
             for ch_idx, channel in device.get("functionalChannels", {}).items():
-                if channel.get("functionalChannelType") in ("WALL_MOUNTED_TRANSMITTER_CHANNEL", "KEY_REMOTE_CONTROL_CHANNEL"):
+                if channel.get("functionalChannelType") in (
+                    "WALL_MOUNTED_TRANSMITTER_CHANNEL", 
+                    "KEY_REMOTE_CONTROL_CHANNEL",
+                    "SWITCH_INPUT_CHANNEL"
+                ):
                     new_ts = channel.get("lastStatusUpdate")
                     old_ts = old_state.get(dev_id, {}).get(ch_idx)
                     if new_ts and new_ts != old_ts:

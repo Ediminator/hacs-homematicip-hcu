@@ -316,6 +316,39 @@ HMIP_FEATURE_TO_ENTITY = {
         "state_class": SensorStateClass.MEASUREMENT,
         "entity_registry_enabled_default": False,
     },
+    "accelerationSensorMode": {
+        "class": "HcuGenericSensor",
+        "name": "Acceleration Sensor Mode",
+        "icon": "mdi:axis-arrow",
+    },
+    "accelerationSensorValueX": {
+        "class": "HcuGenericSensor",
+        "name": "Acceleration X",
+        "icon": "mdi:axis-x-arrow",
+        "state_class": SensorStateClass.MEASUREMENT,
+        "entity_registry_enabled_default": False,
+    },
+    "accelerationSensorValueY": {
+        "class": "HcuGenericSensor",
+        "name": "Acceleration Y",
+        "icon": "mdi:axis-y-arrow",
+        "state_class": SensorStateClass.MEASUREMENT,
+        "entity_registry_enabled_default": False,
+    },
+    "accelerationSensorValueZ": {
+        "class": "HcuGenericSensor",
+        "name": "Acceleration Z",
+        "icon": "mdi:axis-z-arrow",
+        "state_class": SensorStateClass.MEASUREMENT,
+        "entity_registry_enabled_default": False,
+    },
+    "accelerationSensorEventCounter": {
+        "class": "HcuGenericSensor",
+        "name": "Acceleration Events",
+        "icon": "mdi:counter",
+        "state_class": SensorStateClass.TOTAL_INCREASING,
+        "entity_registry_enabled_default": False,
+    },
     # Binary Sensor Features
     "lowBat": {
         "class": "HcuBinarySensor",

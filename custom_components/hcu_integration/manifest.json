@@ -19,7 +19,6 @@
     "light",
     "lock",
     "sensor",
-    "switch",
-    "diagnostics"
+    "switch"
   ]
 }

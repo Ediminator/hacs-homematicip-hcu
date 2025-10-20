@@ -131,6 +131,10 @@ DEACTIVATED_BY_DEFAULT_DEVICES = {
     "DIN_RAIL_SWITCH_4",
     "DIN_RAIL_BLIND_4",
     "DIN_RAIL_DIMMER_3",
+    "WIRED_DIN_RAIL_SWITCH_8",
+    "WIRED_DIN_RAIL_BLIND_4",
+    "WIRED_DIN_RAIL_DIMMER_3",
+    "OPEN_COLLECTOR_MODULE_8",
 }
 
 # --- Entity Mapping Dictionaries ---
@@ -140,6 +144,16 @@ HMIP_DEVICE_TYPE_TO_DEVICE_CLASS = {
     "SHUTTER_ACTUATOR": CoverDeviceClass.SHUTTER,
     "PLUGABLE_SWITCH": SwitchDeviceClass.OUTLET,
     "PLUGABLE_SWITCH_MEASURING": SwitchDeviceClass.OUTLET,
+    "BRAND_SWITCH_2": SwitchDeviceClass.SWITCH,
+    "WALL_MOUNTED_GLASS_SWITCH": SwitchDeviceClass.SWITCH,
+    "FULL_FLUSH_SWITCH_16": SwitchDeviceClass.SWITCH,
+    "BRAND_SWITCH_16": SwitchDeviceClass.SWITCH,
+    "WIRED_DIN_RAIL_SWITCH_8": SwitchDeviceClass.SWITCH,
+    "WIRED_DIN_RAIL_BLIND_4": CoverDeviceClass.BLIND,
+    "WIRED_DIN_RAIL_DIMMER_3": None,  # Dimmer is a light, not a device class
+    "OPEN_COLLECTOR_MODULE_8": SwitchDeviceClass.SWITCH,
+    "CONTACT_INTERFACE_6": None,  # Stateless button/event
+    "ENERGY_SENSING_INTERFACE": None,  # Creates sensors based on features
 }
 
 HMIP_FEATURE_TO_ENTITY = {
@@ -434,6 +448,7 @@ HMIP_CHANNEL_TYPE_TO_ENTITY = {
     "RGBW_AUTOMATION_CHANNEL": {"class": "HcuLight"},
     "UNIVERSAL_LIGHT_CHANNEL": {"class": "HcuLight"},
     "NOTIFICATION_LIGHT_CHANNEL": {"class": "HcuLight"},
+    "BACKLIGHT_CHANNEL": {"class": "HcuLight"},
     # Switches
     "ALARM_SIREN_CHANNEL": {"class": "HcuSwitch"},
     "SWITCH_CHANNEL": {"class": "HcuSwitch"},

@@ -97,8 +97,6 @@ class HcuLight(HcuBaseEntity, LightEntity):
 
     async def async_turn_on(self, **kwargs) -> None:
         """Turn the light on and adjust brightness or color."""
-        self._attr_assumed_state = True
-
         dim_level = kwargs.get(ATTR_BRIGHTNESS, self.brightness or 255) / 255.0
 
         if ATTR_HS_COLOR in kwargs and ColorMode.HS in self.supported_color_modes:
@@ -114,5 +112,4 @@ class HcuLight(HcuBaseEntity, LightEntity):
 
     async def async_turn_off(self, **kwargs) -> None:
         """Turn the light off by setting its dim level to 0."""
-        self._attr_assumed_state = True
         await self._client.async_set_dim_level(self._device_id, self._channel_index, 0.0)

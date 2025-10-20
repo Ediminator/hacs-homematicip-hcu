@@ -316,7 +316,19 @@ class HcuApiClient:
 
     # --- Specific Device Control Methods ---
     async def async_set_switch_state(self, device_id: str, channel_index: int, is_on: bool) -> None:
-        await self.async_device_control(API_PATHS["SET_SWITCH_STATE"], device_id, channel_index, {"on": is_on})
+        """
+        Set the state of a switch.
+
+        Includes onLevel for compatibility with devices like HmIP-BSM that may require it,
+        while still working for devices that only need the 'on' parameter.
+        """
+        on_level = 1.0 if is_on else 0.0
+        await self.async_device_control(
+            API_PATHS["SET_SWITCH_STATE"],
+            device_id,
+            channel_index,
+            {"on": is_on, "onLevel": on_level},
+        )
 
     async def async_set_watering_switch_state(self, device_id: str, channel_index: int, is_on: bool) -> None:
         await self.async_device_control(API_PATHS["SET_WATERING_SWITCH_STATE"], device_id, channel_index, {"wateringActive": is_on})

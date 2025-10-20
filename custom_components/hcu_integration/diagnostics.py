@@ -4,12 +4,51 @@ from __future__ import annotations
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import CONF_HOST, CONF_TOKEN
 from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
 from homeassistant.helpers import device_registry as dr, entity_registry as er
 
 from .const import DOMAIN, CONF_PIN
 from .api import HcuApiClient
+
+# Keys to redact from the config_entry (credentials)
+TO_REDACT_CONFIG = {
+    CONF_HOST,
+    CONF_TOKEN,
+    CONF_PIN,
+}
+
+# Keys to redact from the HCU state data (sensitive personal/location data)
+TO_REDACT_STATE = {
+    "authtoken",
+    "pin",
+    "authorizationPin",
+    "display",  # Can contain user-set text
+    "homeId",
+    "city",
+    "latitude",
+    "longitude",
+}
+
+# Keys to redact from the Home Assistant device/entity registry dump.
+# We keep this empty as all HA-side identifiers are useful for debugging.
+TO_REDACT_HA: set[str] = set()
+
+
+def _redact_data(data: Any, keys_to_redact: set[str]) -> Any:
+    """Recursively redact sensitive data in a dictionary or list."""
+    if isinstance(data, dict):
+        redacted = data.copy()
+        for key, value in redacted.items():
+            if key in keys_to_redact and isinstance(value, (str, int, float)):
+                redacted[key] = "**REDACTED**"
+            elif isinstance(value, (dict, list)):
+                redacted[key] = _redact_data(value, keys_to_redact)
+        return redacted
+    if isinstance(data, list):
+        return [_redact_data(item, keys_to_redact) for item in data]
+    return data
 
 
 async def async_get_config_entry_diagnostics(
@@ -19,29 +58,10 @@ async def async_get_config_entry_diagnostics(
     coordinator = hass.data[DOMAIN][config_entry.entry_id]
     client: HcuApiClient = coordinator.client
 
-    # Redact sensitive information for privacy
-    to_redact_config = {CONF_PIN}
-    to_redact_state = {"authtoken", "pin"}
-
-    def _redact_dict(data: dict[str, Any], keys_to_redact: set[str]) -> dict[str, Any]:
-        """Recursively redact sensitive data in a dictionary."""
-        if not isinstance(data, dict):
-            return data
-            
-        redacted = data.copy()
-        for key, value in redacted.items():
-            if key in keys_to_redact:
-                redacted[key] = "**REDACTED**"
-            elif isinstance(value, dict):
-                redacted[key] = _redact_dict(value, keys_to_redact)
-            elif isinstance(value, list):
-                redacted[key] = [_redact_dict(item, keys_to_redact) for item in value]
-        return redacted
-
     redacted_config = {
         "title": config_entry.title,
-        "data": _redact_dict(dict(config_entry.data), to_redact_config),
-        "options": _redact_dict(dict(config_entry.options), to_redact_config),
+        "data": _redact_data(dict(config_entry.data), TO_REDACT_CONFIG),
+        "options": _redact_data(dict(config_entry.options), TO_REDACT_CONFIG),
     }
 
     device_registry = dr.async_get(hass)
@@ -75,14 +95,14 @@ async def async_get_config_entry_diagnostics(
                 entities.append({
                     "entity_id": entity.entity_id,
                     "unique_id": entity.unique_id,
-                    "state": state.as_dict() if state else "NOT_FOUND",
+                    "state": _redact_data(state.as_dict(), TO_REDACT_HA) if state else "NOT_FOUND",
                     "disabled_by": entity.disabled_by,
                 })
 
         correlated_devices[device_id] = {
-            "hcu_data": _redact_dict(hcu_data, to_redact_state),
-            "ha_device": device_info or "NOT_IN_REGISTRY",
-            "ha_entities": entities,
+            "hcu_data": _redact_data(hcu_data, TO_REDACT_STATE),
+            "ha_device": _redact_data(device_info, TO_REDACT_HA) or "NOT_IN_REGISTRY",
+            "ha_entities": _redact_data(entities, TO_REDACT_HA),
         }
 
     # Correlate HCU group data with Home Assistant virtual devices and entities
@@ -113,14 +133,14 @@ async def async_get_config_entry_diagnostics(
                 entities.append({
                     "entity_id": entity.entity_id,
                     "unique_id": entity.unique_id,
-                    "state": state.as_dict() if state else "NOT_FOUND",
+                    "state": _redact_data(state.as_dict(), TO_REDACT_HA) if state else "NOT_FOUND",
                     "disabled_by": entity.disabled_by,
                 })
         
         correlated_groups[group_id] = {
-            "hcu_data": _redact_dict(hcu_group_data, to_redact_state),
-            "ha_device": device_info or "NOT_IN_REGISTRY",
-            "ha_entities": entities,
+            "hcu_data": _redact_data(hcu_group_data, TO_REDACT_STATE),
+            "ha_device": _redact_data(device_info, TO_REDACT_HA) or "NOT_IN_REGISTRY",
+            "ha_entities": _redact_data(entities, TO_REDACT_HA),
         }
 
 

@@ -78,7 +78,7 @@ Before adding the integration, you must enable the local API on your HCU.
 
 4. Toggle the switch to **activate Developer Mode**
 
-5. Toggle the switch to **Expose the Connect API WebSocket** - Sometimes the toggle for the Websocket is already activated, even when this is the first time the developer mode was activated. Please **deactivate and activate the toggle** in that case.
+5. Toggle the switch to **Expose the Connect API WebSocket** - ⚠️ Sometimes the toggle for the Websocket is already activated, even when this is the first time the developer mode was activated. Please **deactivate and activate the toggle** in that case.
 
 6. Leave this page open - you'll need it in the next step!
 

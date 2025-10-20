@@ -316,31 +316,31 @@ class HcuApiClient:
 
     # --- Specific Device Control Methods ---
     async def async_set_switch_state(self, device_id: str, channel_index: int, is_on: bool) -> None:
-        """
-        Set the state of a switch.
-
-        Includes onLevel for compatibility with devices like HmIP-BSM that may require it,
-        while still working for devices that only need the 'on' parameter.
-        """
-        on_level = 1.0 if is_on else 0.0
-        await self.async_device_control(
-            API_PATHS["SET_SWITCH_STATE"],
-            device_id,
-            channel_index,
-            {"on": is_on, "onLevel": on_level},
-        )
+        payload = {"on": is_on}
+        if is_on:
+            payload["onLevel"] = 1.0
+        await self.async_device_control(API_PATHS["SET_SWITCH_STATE"], device_id, channel_index, payload)
 
     async def async_set_watering_switch_state(self, device_id: str, channel_index: int, is_on: bool) -> None:
         await self.async_device_control(API_PATHS["SET_WATERING_SWITCH_STATE"], device_id, channel_index, {"wateringActive": is_on})
 
-    async def async_set_dim_level(self, device_id: str, channel_index: int, dim_level: float) -> None:
-        await self.async_device_control(API_PATHS["SET_DIM_LEVEL"], device_id, channel_index, {"dimLevel": dim_level})
+    async def async_set_dim_level(self, device_id: str, channel_index: int, dim_level: float, ramp_time: float | None = None) -> None:
+        body = {"dimLevel": dim_level}
+        if ramp_time is not None:
+            body["rampTime"] = ramp_time
+        await self.async_device_control(API_PATHS["SET_DIM_LEVEL"], device_id, channel_index, body)
 
-    async def async_set_color_temperature(self, device_id: str, channel_index: int, color_temp: int, dim_level: float) -> None:
-        await self.async_device_control(API_PATHS["SET_COLOR_TEMP"], device_id, channel_index, {"colorTemperature": color_temp, "dimLevel": dim_level})
+    async def async_set_color_temperature(self, device_id: str, channel_index: int, color_temp: int, dim_level: float, ramp_time: float | None = None) -> None:
+        body = {"colorTemperature": color_temp, "dimLevel": dim_level}
+        if ramp_time is not None:
+            body["rampTime"] = ramp_time
+        await self.async_device_control(API_PATHS["SET_COLOR_TEMP"], device_id, channel_index, body)
 
-    async def async_set_hue_saturation(self, device_id: str, channel_index: int, hue: int, saturation: float, dim_level: float) -> None:
-        await self.async_device_control(API_PATHS["SET_HUE"], device_id, channel_index, {"hue": hue, "saturationLevel": saturation, "dimLevel": dim_level})
+    async def async_set_hue_saturation(self, device_id: str, channel_index: int, hue: int, saturation: float, dim_level: float, ramp_time: float | None = None) -> None:
+        body = {"hue": hue, "saturationLevel": saturation, "dimLevel": dim_level}
+        if ramp_time is not None:
+            body["rampTime"] = ramp_time
+        await self.async_device_control(API_PATHS["SET_HUE"], device_id, channel_index, body)
 
     async def async_set_shutter_level(self, device_id: str, channel_index: int, shutter_level: float) -> None:
         await self.async_device_control(API_PATHS["SET_SHUTTER_LEVEL"], device_id, channel_index, {"shutterLevel": shutter_level})

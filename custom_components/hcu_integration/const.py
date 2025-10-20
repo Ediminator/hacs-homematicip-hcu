@@ -145,9 +145,12 @@ HMIP_DEVICE_TYPE_TO_DEVICE_CLASS = {
     "PLUGABLE_SWITCH": SwitchDeviceClass.OUTLET,
     "PLUGABLE_SWITCH_MEASURING": SwitchDeviceClass.OUTLET,
     "BRAND_SWITCH_2": SwitchDeviceClass.SWITCH,
+    "BRAND_SWITCH_MEASURING": SwitchDeviceClass.SWITCH,
     "WALL_MOUNTED_GLASS_SWITCH": SwitchDeviceClass.SWITCH,
     "FULL_FLUSH_SWITCH_16": SwitchDeviceClass.SWITCH,
     "BRAND_SWITCH_16": SwitchDeviceClass.SWITCH,
+    "DIN_RAIL_SWITCH_1": SwitchDeviceClass.SWITCH,
+    "BRAND_REMOTE_CONTROL_2": None, # Event-based device
     "WIRED_DIN_RAIL_SWITCH_8": SwitchDeviceClass.SWITCH,
     "WIRED_DIN_RAIL_BLIND_4": CoverDeviceClass.BLIND,
     "WIRED_DIN_RAIL_DIMMER_3": None,  # Dimmer is a light, not a device class
@@ -188,6 +191,13 @@ HMIP_FEATURE_TO_ENTITY = {
         "entity_registry_enabled_default": False,
     },
     "illumination": {
+        "class": "HcuGenericSensor",
+        "name": "Illumination",
+        "unit": LIGHT_LUX,
+        "device_class": SensorDeviceClass.ILLUMINANCE,
+        "state_class": SensorStateClass.MEASUREMENT,
+    },
+    "currentIllumination": {
         "class": "HcuGenericSensor",
         "name": "Illumination",
         "unit": LIGHT_LUX,
@@ -454,6 +464,7 @@ HMIP_CHANNEL_TYPE_TO_ENTITY = {
     "SWITCH_CHANNEL": {"class": "HcuSwitch"},
     "SWITCH_MEASURING_CHANNEL": {"class": "HcuSwitch"},
     "WIRED_SWITCH_CHANNEL": {"class": "HcuSwitch"},
+    "BACKLIGHT_CHANNEL": {"class": "HcuLight"},
     "WATERING_CONTROLLER_CHANNEL": {"class": "HcuWateringSwitch"},
     # Covers
     "SHUTTER_CHANNEL": {"class": "HcuCover"},

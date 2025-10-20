@@ -1,7 +1,6 @@
-# custom_components/hcu_integration/light.py
 from typing import TYPE_CHECKING
 from homeassistant.components.light import (
-    ATTR_BRIGHTNESS, ATTR_COLOR_TEMP_KELVIN, ATTR_HS_COLOR, ColorMode, LightEntity
+    ATTR_BRIGHTNESS, ATTR_COLOR_TEMP_KELVIN, ATTR_HS_COLOR, ATTR_TRANSITION, ColorMode, LightEntity, LightEntityFeature
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
@@ -44,6 +43,7 @@ class HcuLight(HcuBaseEntity, LightEntity):
         supported_modes = set()
         if "dimLevel" in self._channel:
             supported_modes.add(ColorMode.BRIGHTNESS)
+            self._attr_supported_features |= LightEntityFeature.TRANSITION
 
         if self._channel.get("hue") is not None:
             supported_modes.add(ColorMode.HS)
@@ -98,18 +98,20 @@ class HcuLight(HcuBaseEntity, LightEntity):
     async def async_turn_on(self, **kwargs) -> None:
         """Turn the light on and adjust brightness or color."""
         dim_level = kwargs.get(ATTR_BRIGHTNESS, self.brightness or 255) / 255.0
+        ramp_time = kwargs.get(ATTR_TRANSITION)
 
         if ATTR_HS_COLOR in kwargs and ColorMode.HS in self.supported_color_modes:
             hs_color = kwargs[ATTR_HS_COLOR]
             hue = int(hs_color[0])
             saturation = hs_color[1] / 100.0
-            await self._client.async_set_hue_saturation(self._device_id, self._channel_index, hue, saturation, dim_level)
+            await self._client.async_set_hue_saturation(self._device_id, self._channel_index, hue, saturation, dim_level, ramp_time)
         elif ATTR_COLOR_TEMP_KELVIN in kwargs and ColorMode.COLOR_TEMP in self.supported_color_modes:
             color_temp = kwargs[ATTR_COLOR_TEMP_KELVIN]
-            await self._client.async_set_color_temperature(self._device_id, self._channel_index, color_temp, dim_level)
+            await self._client.async_set_color_temperature(self._device_id, self._channel_index, color_temp, dim_level, ramp_time)
         else:
-            await self._client.async_set_dim_level(self._device_id, self._channel_index, dim_level)
+            await self._client.async_set_dim_level(self._device_id, self._channel_index, dim_level, ramp_time)
 
     async def async_turn_off(self, **kwargs) -> None:
         """Turn the light off by setting its dim level to 0."""
-        await self._client.async_set_dim_level(self._device_id, self._channel_index, 0.0)
+        ramp_time = kwargs.get(ATTR_TRANSITION)
+        await self._client.async_set_dim_level(self._device_id, self._channel_index, 0.0, ramp_time)

@@ -204,6 +204,14 @@ HMIP_FEATURE_TO_ENTITY = {
         "device_class": SensorDeviceClass.ILLUMINANCE,
         "state_class": SensorStateClass.MEASUREMENT,
     },
+    "averageIllumination": {
+        "class": "HcuGenericSensor",
+        "name": "Average Illumination",
+        "unit": LIGHT_LUX,
+        "device_class": SensorDeviceClass.ILLUMINANCE,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "entity_registry_enabled_default": False,
+    },
     "energyCounter": {
         "class": "HcuGenericSensor",
         "name": "Energy Counter",

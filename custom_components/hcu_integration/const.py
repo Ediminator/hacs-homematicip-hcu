@@ -140,23 +140,30 @@ DEACTIVATED_BY_DEFAULT_DEVICES = {
 # --- Entity Mapping Dictionaries ---
 HMIP_DEVICE_TYPE_TO_DEVICE_CLASS = {
     "BLIND_ACTUATOR": CoverDeviceClass.BLIND,
+    "BRAND_BLIND": CoverDeviceClass.BLIND,
+    "BRAND_DIMMER": None,  # Dimmer is a light, not a device class
+    "BRAND_SWITCH_2": SwitchDeviceClass.SWITCH,
+    "BRAND_SWITCH_16": SwitchDeviceClass.SWITCH,
+    "BRAND_SWITCH_LIGHT": None,
+    "BRAND_SWITCH_MEASURING": SwitchDeviceClass.SWITCH,
+    "BRAND_REMOTE_CONTROL_2": None, # Event-based device
+    "CONTACT_INTERFACE_6": None,  # Stateless button/event
+    "DIN_RAIL_SWITCH_1": SwitchDeviceClass.SWITCH,
+    "ENERGY_SENSING_INTERFACE": None,  # Creates sensors based on features
+    "FLUSH_MOUNT_CONTACT_INTERFACE_1": None,
+    "FLUSH_MOUNT_DIMMER": None,
+    "FULL_FLUSH_SWITCH_16": SwitchDeviceClass.SWITCH,
     "GARAGE_DOOR_CONTROLLER": CoverDeviceClass.GARAGE,
-    "SHUTTER_ACTUATOR": CoverDeviceClass.SHUTTER,
+    "MOTION_DETECTOR_INDOOR_55": None,
+    "OPEN_COLLECTOR_MODULE_8": SwitchDeviceClass.SWITCH,
     "PLUGABLE_SWITCH": SwitchDeviceClass.OUTLET,
     "PLUGABLE_SWITCH_MEASURING": SwitchDeviceClass.OUTLET,
-    "BRAND_SWITCH_2": SwitchDeviceClass.SWITCH,
-    "BRAND_SWITCH_MEASURING": SwitchDeviceClass.SWITCH,
+    "SHUTTER_ACTUATOR": CoverDeviceClass.SHUTTER,
+    "SHUTTER_CONTACT_MAGNETIC": None,
     "WALL_MOUNTED_GLASS_SWITCH": SwitchDeviceClass.SWITCH,
-    "FULL_FLUSH_SWITCH_16": SwitchDeviceClass.SWITCH,
-    "BRAND_SWITCH_16": SwitchDeviceClass.SWITCH,
-    "DIN_RAIL_SWITCH_1": SwitchDeviceClass.SWITCH,
-    "BRAND_REMOTE_CONTROL_2": None, # Event-based device
-    "WIRED_DIN_RAIL_SWITCH_8": SwitchDeviceClass.SWITCH,
     "WIRED_DIN_RAIL_BLIND_4": CoverDeviceClass.BLIND,
     "WIRED_DIN_RAIL_DIMMER_3": None,  # Dimmer is a light, not a device class
-    "OPEN_COLLECTOR_MODULE_8": SwitchDeviceClass.SWITCH,
-    "CONTACT_INTERFACE_6": None,  # Stateless button/event
-    "ENERGY_SENSING_INTERFACE": None,  # Creates sensors based on features
+    "WIRED_DIN_RAIL_SWITCH_8": SwitchDeviceClass.SWITCH,
 }
 
 HMIP_FEATURE_TO_ENTITY = {
@@ -472,7 +479,6 @@ HMIP_CHANNEL_TYPE_TO_ENTITY = {
     "SWITCH_CHANNEL": {"class": "HcuSwitch"},
     "SWITCH_MEASURING_CHANNEL": {"class": "HcuSwitch"},
     "WIRED_SWITCH_CHANNEL": {"class": "HcuSwitch"},
-    "BACKLIGHT_CHANNEL": {"class": "HcuLight"},
     "WATERING_CONTROLLER_CHANNEL": {"class": "HcuWateringSwitch"},
     # Covers
     "SHUTTER_CHANNEL": {"class": "HcuCover"},
@@ -483,8 +489,10 @@ HMIP_CHANNEL_TYPE_TO_ENTITY = {
     # Event-based (will not create an entity, but fires an event)
     "WALL_MOUNTED_TRANSMITTER_CHANNEL": {"class": "HcuButton"},
     "KEY_REMOTE_CONTROL_CHANNEL": {"class": "HcuButton"},
+    "SINGLE_KEY_CHANNEL": {"class": "HcuButton"},
     "SWITCH_INPUT_CHANNEL": {"class": "HcuButton"},
     # Other (no primary entity, rely on feature discovery)
     "LIGHT_SENSOR_CHANNEL": None,
     "CLIMATE_CONTROL_INPUT_CHANNEL": None,
+    "MOTION_DETECTION_CHANNEL": None,
 }

@@ -25,6 +25,7 @@ from .const import (
     HMIP_CHANNEL_TYPE_TO_ENTITY,
     HMIP_FEATURE_TO_ENTITY,
     PLATFORMS,
+    EVENT_CHANNEL_TYPES,  # REFACTOR: Import new set
 )
 
 if TYPE_CHECKING:
@@ -52,6 +53,7 @@ async def async_discover_entities(
         "HcuTemperatureSensor": sensor, "HcuHomeSensor": sensor, 
         "HcuBinarySensor": binary_sensor, "HcuWindowBinarySensor": binary_sensor, 
         "HcuSmokeBinarySensor": binary_sensor, "HcuUnreachBinarySensor": binary_sensor,
+        "HcuVacationModeBinarySensor": binary_sensor,
     }
 
     for device_data in state.get("devices", {}).values():
@@ -62,8 +64,9 @@ async def async_discover_entities(
 
             channel_type = channel_data.get("functionalChannelType")
             if channel_mapping := HMIP_CHANNEL_TYPE_TO_ENTITY.get(channel_type):
+                # REFACTOR: Use EVENT_CHANNEL_TYPES set instead of class name.
                 # Skip creating button entities for stateless buttons, they are handled by events.
-                if channel_mapping["class"] == "HcuButton":
+                if channel_type in EVENT_CHANNEL_TYPES:
                     continue
                 if is_unused_channel:
                     continue
@@ -123,7 +126,7 @@ async def async_discover_entities(
 
     if "home" in state:
         entities[Platform.ALARM_CONTROL_PANEL].append(alarm_control_panel.HcuAlarmControlPanel(coordinator, client))
-        entities[Platform.SWITCH].append(switch.HcuHomeSwitch(coordinator, client))
+        entities[Platform.BINARY_SENSOR].append(binary_sensor.HcuVacationModeBinarySensor(coordinator, client))
         for feature, mapping in HMIP_FEATURE_TO_ENTITY.items():
             if feature in state["home"] and mapping.get("class") == "HcuHomeSensor":
                 entities[Platform.SENSOR].append(sensor.HcuHomeSensor(coordinator, client, feature, mapping))

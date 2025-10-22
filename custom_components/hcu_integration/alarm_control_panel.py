@@ -136,6 +136,5 @@ class HcuAlarmControlPanel(HcuHomeBaseEntity, AlarmControlPanelEntity):
         """Send arm away command."""
         await self._async_set_alarm_state(
             AlarmControlPanelState.ARMED_AWAY,
-            {"zonesActivation": {"INTERNAL": True, "EXTERNAL": True}}
-)
-
+            {"zonesActivation": {"INTERNAL": True, "EXTERNAL": True}},
+        )

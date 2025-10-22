@@ -315,11 +315,12 @@ class HcuApiClient:
         await self._send_hmip_request(path, body or {})
 
     # --- Specific Device Control Methods ---
-    async def async_set_switch_state(self, device_id: str, channel_index: int, is_on: bool) -> None:
-        payload = {"on": is_on}
-        if is_on:
-            payload["onLevel"] = 1.0
-        await self.async_device_control(API_PATHS["SET_SWITCH_STATE"], device_id, channel_index, payload)
+    async def async_set_switch_state(self, device_id: str, channel_index: int, is_on: bool, on_level: float | None = None) -> None:
+        """Set the state of a switch channel."""
+        body = {"on": is_on}
+        if on_level is not None:
+            body["onLevel"] = on_level
+        await self.async_device_control(API_PATHS["SET_SWITCH_STATE"], device_id, channel_index, body)
 
     async def async_set_watering_switch_state(self, device_id: str, channel_index: int, is_on: bool) -> None:
         await self.async_device_control(API_PATHS["SET_WATERING_SWITCH_STATE"], device_id, channel_index, {"wateringActive": is_on})
@@ -393,7 +394,15 @@ class HcuApiClient:
         await self.async_home_control(API_PATHS["SET_ZONES_ACTIVATION"], payload)
 
     async def async_activate_vacation(self, temperature: float, end_time: str) -> None:
-        await self.async_home_control(API_PATHS["ACTIVATE_VACATION"], {"temperature": temperature, "endTime": end_time})
+        """Activate the vacation mode for the home."""
+        await self.async_home_control(
+            API_PATHS["ACTIVATE_VACATION"],
+            {
+                "absenceType": "VACATION",
+                "temperature": temperature,
+                "endTime": end_time,
+            },
+        )
 
     async def async_deactivate_vacation(self) -> None:
         await self.async_home_control(API_PATHS["DEACTIVATE_VACATION"])

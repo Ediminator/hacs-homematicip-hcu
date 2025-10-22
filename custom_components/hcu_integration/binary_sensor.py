@@ -2,16 +2,18 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
+from datetime import datetime
 
-from homeassistant.components.binary_sensor import BinarySensorEntity
+from homeassistant.components.binary_sensor import BinarySensorEntity, BinarySensorDeviceClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.util import dt as dt_util
 
 from .api import HcuApiClient
-from .entity import HcuBaseEntity
+from .entity import HcuBaseEntity, HcuHomeBaseEntity
 
 if TYPE_CHECKING:
     from . import HcuCoordinator
@@ -124,3 +126,52 @@ class HcuUnreachBinarySensor(HcuBinarySensor):
         `True` when the device is connected, so we must invert the value.
         """
         return not self._channel.get(self._feature, False)
+
+
+class HcuVacationModeBinarySensor(HcuHomeBaseEntity, BinarySensorEntity):
+    """Representation of the HCU's system-wide Vacation Mode."""
+
+    PLATFORM = Platform.BINARY_SENSOR
+    _attr_has_entity_name = False
+    _attr_name = "Vacation Mode"
+    _attr_icon = "mdi:palm-tree"
+
+    def __init__(self, coordinator: "HcuCoordinator", client: HcuApiClient):
+        """Initialize the Vacation Mode sensor."""
+        super().__init__(coordinator, client)
+        self._attr_unique_id = f"{self._hcu_device_id}_vacation_mode"
+        self._update_attributes()
+
+    @property
+    def is_on(self) -> bool:
+        """Return true if vacation mode is active."""
+        heating_home = self._home.get("functionalHomes", {}).get("HEATING", {})
+        return heating_home.get("absenceType") == "VACATION"
+    
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return the state attributes of the vacation mode sensor."""
+        return {
+            "end_time": self._attr_extra_state_attributes.get("end_time"),
+            "target_temperature": self._attr_extra_state_attributes.get("target_temperature"),
+        }
+
+    def _update_attributes(self) -> None:
+        """Update the entity's attributes."""
+        heating_home = self._home.get("functionalHomes", {}).get("HEATING", {})
+        end_time_ts = heating_home.get("absenceEndTime")
+        
+        end_time = None
+        if end_time_ts and end_time_ts > 0:
+            end_time = dt_util.utc_from_timestamp(end_time_ts / 1000)
+
+        self._attr_extra_state_attributes = {
+            "end_time": end_time.isoformat() if end_time else None,
+            "target_temperature": heating_home.get("setPointTemperature"),
+        }
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        self._update_attributes()
+        super()._handle_coordinator_update()

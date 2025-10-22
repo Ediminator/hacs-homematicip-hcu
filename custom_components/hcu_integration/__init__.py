@@ -1,4 +1,3 @@
-# custom_components/hcu_integration/__init__.py
 """The Homematic IP Local (HCU) integration."""
 from __future__ import annotations
 
@@ -6,7 +5,6 @@ import aiohttp
 import asyncio
 import logging
 from typing import cast
-from datetime import timedelta
 import random
 
 from homeassistant.config_entries import ConfigEntry
@@ -19,9 +17,8 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
-from homeassistant.util import dt as dt_util
 
 from .api import HcuApiClient, HcuApiError
 from .const import (
@@ -38,12 +35,16 @@ from .const import (
     SERVICE_PLAY_SOUND,
     SERVICE_SET_RULE_STATE,
     SERVICE_ACTIVATE_PARTY_MODE,
+    SERVICE_ACTIVATE_VACATION_MODE,
+    SERVICE_ACTIVATE_ECO_MODE,
+    SERVICE_DEACTIVATE_ABSENCE_MODE,
     ATTR_SOUND_FILE,
     ATTR_DURATION,
     ATTR_VOLUME,
     ATTR_RULE_ID,
     ATTR_ENABLED,
     ATTR_END_TIME,
+    EVENT_CHANNEL_TYPES,  # REFACTOR: Import new set
 )
 from .discovery import async_discover_entities
 
@@ -137,14 +138,51 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             except ValueError as err:
                 _LOGGER.error("Invalid parameter for activate_party_mode for %s: %s", entity_id, err)
 
+    async def handle_activate_vacation_mode(call: ServiceCall) -> None:
+        """Handle the activate_vacation_mode service call."""
+        temperature = call.data[ATTR_TEMPERATURE]
+        end_time_str = call.data.get(ATTR_END_TIME)
+
+        try:
+            # The API requires the date and time to be separated by an underscore
+            formatted_end_time = end_time_str.replace(" ", "_")
+            await client.async_activate_vacation(
+                temperature=temperature, end_time=formatted_end_time
+            )
+            _LOGGER.info(
+                "Successfully activated vacation mode with temp %s until %s",
+                temperature,
+                end_time_str,
+            )
+        except (HcuApiError, ConnectionError) as err:
+            _LOGGER.error("Error activating vacation mode: %s", err)
+        except Exception:
+            _LOGGER.exception("Unexpected error during vacation mode activation.")
+
+    async def handle_activate_eco_mode(call: ServiceCall) -> None:
+        """Handle the activate_eco_mode service call."""
+        try:
+            await client.async_activate_absence_permanent()
+            _LOGGER.info("Successfully activated permanent absence (Eco mode).")
+        except (HcuApiError, ConnectionError) as err:
+            _LOGGER.error("Error activating permanent absence (Eco mode): %s", err)
+
+    async def handle_deactivate_absence_mode(call: ServiceCall) -> None:
+        """Handle the deactivate_absence_mode service call."""
+        try:
+            await client.async_deactivate_absence()
+            _LOGGER.info("Successfully deactivated absence mode.")
+        except (HcuApiError, ConnectionError) as err:
+            _LOGGER.error("Error deactivating absence mode: %s", err)
+
 
     hass.services.async_register(DOMAIN, SERVICE_PLAY_SOUND, handle_play_sound)
-    hass.services.async_register(
-        DOMAIN, SERVICE_SET_RULE_STATE, handle_set_rule_state
-    )
-    hass.services.async_register(
-        DOMAIN, SERVICE_ACTIVATE_PARTY_MODE, handle_activate_party_mode
-    )
+    hass.services.async_register(DOMAIN, SERVICE_SET_RULE_STATE, handle_set_rule_state)
+    hass.services.async_register(DOMAIN, SERVICE_ACTIVATE_PARTY_MODE, handle_activate_party_mode)
+    hass.services.async_register(DOMAIN, SERVICE_ACTIVATE_VACATION_MODE, handle_activate_vacation_mode)
+    hass.services.async_register(DOMAIN, SERVICE_ACTIVATE_ECO_MODE, handle_activate_eco_mode)
+    hass.services.async_register(DOMAIN, SERVICE_DEACTIVATE_ABSENCE_MODE, handle_deactivate_absence_mode)
+
 
     entry.add_update_listener(async_reload_entry)
 
@@ -250,11 +288,9 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
                 continue
             
             for ch_idx, channel in device.get("functionalChannels", {}).items():
-                if channel.get("functionalChannelType") in (
-                    "WALL_MOUNTED_TRANSMITTER_CHANNEL", 
-                    "KEY_REMOTE_CONTROL_CHANNEL",
-                    "SWITCH_INPUT_CHANNEL"
-                ):
+                # REFACTOR: Use centralized EVENT_CHANNEL_TYPES set
+                # This also adds SINGLE_KEY_CHANNEL and MULTI_MODE_INPUT_CHANNEL
+                if channel.get("functionalChannelType") in EVENT_CHANNEL_TYPES:
                     new_ts = channel.get("lastStatusUpdate")
                     old_ts = old_state.get(dev_id, {}).get(ch_idx)
                     if new_ts and new_ts != old_ts:
@@ -324,6 +360,9 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.services.async_remove(DOMAIN, SERVICE_PLAY_SOUND)
     hass.services.async_remove(DOMAIN, SERVICE_SET_RULE_STATE)
     hass.services.async_remove(DOMAIN, SERVICE_ACTIVATE_PARTY_MODE)
+    hass.services.async_remove(DOMAIN, SERVICE_ACTIVATE_VACATION_MODE)
+    hass.services.async_remove(DOMAIN, SERVICE_ACTIVATE_ECO_MODE)
+    hass.services.async_remove(DOMAIN, SERVICE_DEACTIVATE_ABSENCE_MODE)
 
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 

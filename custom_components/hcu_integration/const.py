@@ -67,6 +67,10 @@ SERVICE_PLAY_SOUND = "play_sound"
 SERVICE_SET_RULE_STATE = "set_rule_state"
 SERVICE_SET_DISPLAY_CONTENT = "set_display_content"
 SERVICE_ACTIVATE_PARTY_MODE = "activate_party_mode"
+SERVICE_ACTIVATE_VACATION_MODE = "activate_vacation_mode"
+SERVICE_ACTIVATE_ECO_MODE = "activate_eco_mode"
+SERVICE_DEACTIVATE_ABSENCE_MODE = "deactivate_absence_mode"
+
 
 # --- Preset Constants ---
 PRESET_ECO = "Eco"
@@ -141,29 +145,49 @@ DEACTIVATED_BY_DEFAULT_DEVICES = {
 HMIP_DEVICE_TYPE_TO_DEVICE_CLASS = {
     "BLIND_ACTUATOR": CoverDeviceClass.BLIND,
     "BRAND_BLIND": CoverDeviceClass.BLIND,
-    "BRAND_DIMMER": None,  # Dimmer is a light, not a device class
-    "BRAND_SWITCH_2": SwitchDeviceClass.SWITCH,
-    "BRAND_SWITCH_16": SwitchDeviceClass.SWITCH,
-    "BRAND_SWITCH_LIGHT": None,
-    "BRAND_SWITCH_MEASURING": SwitchDeviceClass.SWITCH,
-    "BRAND_REMOTE_CONTROL_2": None, # Event-based device
-    "CONTACT_INTERFACE_6": None,  # Stateless button/event
-    "DIN_RAIL_SWITCH_1": SwitchDeviceClass.SWITCH,
-    "ENERGY_SENSING_INTERFACE": None,  # Creates sensors based on features
-    "FLUSH_MOUNT_CONTACT_INTERFACE_1": None,
-    "FLUSH_MOUNT_DIMMER": None,
-    "FULL_FLUSH_SWITCH_16": SwitchDeviceClass.SWITCH,
+    "HUNTER_DOUGLAS_BLIND": CoverDeviceClass.BLIND,
     "GARAGE_DOOR_CONTROLLER": CoverDeviceClass.GARAGE,
-    "MOTION_DETECTOR_INDOOR_55": None,
-    "OPEN_COLLECTOR_MODULE_8": SwitchDeviceClass.SWITCH,
+    "SHUTTER_ACTUATOR": CoverDeviceClass.SHUTTER,
     "PLUGABLE_SWITCH": SwitchDeviceClass.OUTLET,
     "PLUGABLE_SWITCH_MEASURING": SwitchDeviceClass.OUTLET,
-    "SHUTTER_ACTUATOR": CoverDeviceClass.SHUTTER,
-    "SHUTTER_CONTACT_MAGNETIC": None,
+    "BRAND_SWITCH_MEASURING": SwitchDeviceClass.SWITCH,
+    "FULL_FLUSH_SWITCH_16": SwitchDeviceClass.SWITCH,
+    "BRAND_SWITCH_16": SwitchDeviceClass.SWITCH,
+    "BRAND_SWITCH_2": SwitchDeviceClass.SWITCH,
     "WALL_MOUNTED_GLASS_SWITCH": SwitchDeviceClass.SWITCH,
+    "WIRED_DIN_RAIL_SWITCH_8": SwitchDeviceClass.SWITCH,
     "WIRED_DIN_RAIL_BLIND_4": CoverDeviceClass.BLIND,
     "WIRED_DIN_RAIL_DIMMER_3": None,  # Dimmer is a light, not a device class
-    "WIRED_DIN_RAIL_SWITCH_8": SwitchDeviceClass.SWITCH,
+    "BRAND_DIMMER": None,  # Dimmer is a light, not a device class
+    "OPEN_COLLECTOR_MODULE_8": SwitchDeviceClass.SWITCH,
+    "DIN_RAIL_SWITCH_1": SwitchDeviceClass.SWITCH,
+    "FLUSH_MOUNT_DIMMER": None,
+    # Event-based or feature-based devices
+    "CONTACT_INTERFACE_6": None,
+    "ENERGY_SENSING_INTERFACE": None,
+    "ENERGY_SENSORS_INTERFACE": None,
+    "BRAND_REMOTE_CONTROL_2": None,
+    "PUSH_BUTTON_2": None,
+    "DOOR_LOCK_DRIVE": None,
+    "TEMPERATURE_HUMIDITY_SENSOR_OUTDOOR": None,
+    "TILT_VIBRATION_SENSOR": None,
+    "GLASS_WALL_THERMOSTAT_CARBON": None,
+    "SOIL_MOUNTURE_SENSOR_INTERFACE": None,
+    "FLUSH_MOUNT_CONTACT_INTERFACE_1": None,
+    "SHUTTER_CONTACT_MAGNETIC": None,
+    "WALL_MOUNTED_GLASS_SWITCH_2": None,
+    # REFACTOR: Added missing device types from diagnostics
+    "RADIATOR_THERMOSTAT": None,
+    "SHUTTER_CONTACT": None,
+    "BRAND_WALL_THERMOSTAT": None,
+    "FLOOR_TERMINAL_BLOCK_MOTOR": None,
+    "PRESENCE_DETECTOR_INDOOR": None,
+    "ALARM_SIREN_INDOOR": None,
+    "LIGHT_SENSOR_OUTDOOR": None,
+    "PLUGABLE_DIMMER": None,
+    "FLUSH_MOUNT_SWITCH_1": SwitchDeviceClass.SWITCH,
+    "NOTIFICATION_MP3_SOUND_PLAYER": None,
+    "SHUTTER_CONTACT_INVISIBLE": None,
 }
 
 HMIP_FEATURE_TO_ENTITY = {
@@ -226,6 +250,36 @@ HMIP_FEATURE_TO_ENTITY = {
         "device_class": SensorDeviceClass.ENERGY,
         "state_class": SensorStateClass.TOTAL_INCREASING,
     },
+    # REFACTOR: Added missing HmIP-ESI features
+    "energyCounterT1": {
+        "class": "HcuGenericSensor",
+        "name": "Energy Counter T1",
+        "unit": UnitOfEnergy.WATT_HOUR,
+        "device_class": SensorDeviceClass.ENERGY,
+        "state_class": SensorStateClass.TOTAL_INCREASING,
+    },
+    "energyCounterT2": {
+        "class": "HcuGenericSensor",
+        "name": "Energy Counter T2",
+        "unit": UnitOfEnergy.WATT_HOUR,
+        "device_class": SensorDeviceClass.ENERGY,
+        "state_class": SensorStateClass.TOTAL_INCREASING,
+    },
+    "powerProduction": {
+        "class": "HcuGenericSensor",
+        "name": "Power Production",
+        "unit": UnitOfPower.WATT,
+        "device_class": SensorDeviceClass.POWER,
+        "state_class": SensorStateClass.MEASUREMENT,
+    },
+    "energyProduction": {
+        "class": "HcuGenericSensor",
+        "name": "Energy Production",
+        "unit": UnitOfEnergy.WATT_HOUR,
+        "device_class": SensorDeviceClass.ENERGY,
+        "state_class": SensorStateClass.TOTAL_INCREASING,
+    },
+    # END REFACTOR
     "currentPowerConsumption": {
         "class": "HcuGenericSensor",
         "name": "Power Consumption",
@@ -240,6 +294,7 @@ HMIP_FEATURE_TO_ENTITY = {
         "device_class": SensorDeviceClass.GAS,
         "state_class": SensorStateClass.TOTAL_INCREASING,
     },
+    # REFACTOR: Added missing gasFlowRate
     "gasFlowRate": {
         "class": "HcuGenericSensor",
         "name": "Gas Flow Rate",
@@ -247,6 +302,7 @@ HMIP_FEATURE_TO_ENTITY = {
         "icon": "mdi:meter-gas",
         "state_class": SensorStateClass.MEASUREMENT,
     },
+    # END REFACTOR
     "valvePosition": {
         "class": "HcuGenericSensor",
         "name": "Valve Position",
@@ -330,6 +386,13 @@ HMIP_FEATURE_TO_ENTITY = {
         "unit": "min",
         "icon": "mdi:timer-sand",
         "state_class": SensorStateClass.TOTAL,
+    },
+    "soilMoisture": {
+        "class": "HcuGenericSensor",
+        "name": "Soil Moisture",
+        "unit": PERCENTAGE,
+        "device_class": SensorDeviceClass.MOISTURE,
+        "state_class": SensorStateClass.MEASUREMENT,
     },
     "carrierSense": {
         "class": "HcuHomeSensor",
@@ -444,11 +507,10 @@ HMIP_FEATURE_TO_ENTITY = {
         "name": "Frost Protection",
         "device_class": BinarySensorDeviceClass.COLD,
     },
-    "acousticAlarmActive": {
-        "class": "HcuSwitch",
-        "name": "Siren",
-        "device_class": SwitchDeviceClass.SWITCH,
-    },
+    # REFACTOR: Removed "acousticAlarmActive" from feature map.
+    # This feature is a read-only state of the ALARM_SIREN_CHANNEL.
+    # The channel-based discovery already creates the HcuSwitch.
+    # Keeping this mapping would create a duplicate, incorrect entity.
     "sunshine": {
         "class": "HcuBinarySensor",
         "name": "Sunshine",
@@ -465,6 +527,15 @@ HMIP_FEATURE_TO_ENTITY = {
         "name": "Raining",
         "device_class": BinarySensorDeviceClass.MOISTURE,
     },
+}
+
+# REFACTOR: Centralized stateless (event-only) button channels
+EVENT_CHANNEL_TYPES = {
+    "WALL_MOUNTED_TRANSMITTER_CHANNEL",
+    "KEY_REMOTE_CONTROL_CHANNEL",
+    "SWITCH_INPUT_CHANNEL",
+    "SINGLE_KEY_CHANNEL",
+    "MULTI_MODE_INPUT_CHANNEL",
 }
 
 HMIP_CHANNEL_TYPE_TO_ENTITY = {
@@ -487,12 +558,22 @@ HMIP_CHANNEL_TYPE_TO_ENTITY = {
     # Locks
     "DOOR_LOCK_CHANNEL": {"class": "HcuLock"},
     # Event-based (will not create an entity, but fires an event)
-    "WALL_MOUNTED_TRANSMITTER_CHANNEL": {"class": "HcuButton"},
-    "KEY_REMOTE_CONTROL_CHANNEL": {"class": "HcuButton"},
-    "SINGLE_KEY_CHANNEL": {"class": "HcuButton"},
-    "SWITCH_INPUT_CHANNEL": {"class": "HcuButton"},
+    # REFACTOR: Removed all "HcuButton" mappings.
+    # Logic is now centralized in EVENT_CHANNEL_TYPES set.
     # Other (no primary entity, rely on feature discovery)
     "LIGHT_SENSOR_CHANNEL": None,
-    "CLIMATE_CONTROL_INPUT_CHANNEL": None,
     "MOTION_DETECTION_CHANNEL": None,
+    "CLIMATE_CONTROL_INPUT_CHANNEL": None,
+    "CLIMATE_SENSOR_CHANNEL": None,
+    "ACCELERATION_SENSOR_CHANNEL": None,
+    "WALL_MOUNTED_THERMOSTAT_CARBON_CHANNEL": None,
+    "SOIL_MOISTURE_SENSOR_CHANNEL": None,
+    "ENERGY_SENSORS_INTERFACE_CHANNEL": None,
+    # REFACTOR: Added missing channel types from diagnostics
+    "CLIMATE_CONTROL_CHANNEL": None,
+    "HEATING_CHANNEL": None,
+    "WALL_MOUNTED_THERMOSTAT_CHANNEL": None,
+    "SHUTTER_CONTACT_CHANNEL": None,
+    "GAS_CHANNEL": None,
+    "PRESENCE_DETECTION_CHANNEL": None,
 }

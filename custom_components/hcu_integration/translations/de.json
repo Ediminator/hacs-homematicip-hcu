@@ -1,60 +1,75 @@
 {
-  "config": {
-    "step": {
-      "user": {
-        "title": "Mit Homematic IP HCU verbinden",
-        "description": "Bitte geben Sie die IP-Adresse oder den Hostnamen und die Ports Ihrer Home Control Unit (HCU) ein.",
-        "data": {
-          "host": "HCU IP-Adresse oder Hostname",
-          "auth_port": "Authentifizierungs-Port",
-          "websocket_port": "WebSocket-Port"
+    "config": {
+        "step": {
+            "user": {
+                "title": "Mit Homematic IP HCU verbinden",
+                "description": "Geben Sie die Verbindungsdetails für Ihre Homematic IP HCU ein.",
+                "data": {
+                    "host": "Hostname oder IP-Adresse",
+                    "auth_port": "Authentifizierungs-API-Port (Standard: 6969)",
+                    "websocket_port": "WebSocket-API-Port (Standard: 9001)"
+                }
+            },
+            "auth": {
+                "title": "Mit HCU authentifizieren",
+                "description": "Bitte geben Sie den Aktivierungsschlüssel für '{hcu_ip}' aus der HCU WebUI > Einstellungen > Connect ein.",
+                "data": {
+                    "activation_key": "Aktivierungsschlüssel"
+                }
+            },
+            "reauth_confirm": {
+                "title": "PIN erforderlich",
+                "description": "Die HCU erfordert für diese Aktion die PIN. Bitte geben Sie die PIN ein, die Sie in der HCU-App festgelegt haben.",
+                "data": {
+                    "pin": "PIN"
+                }
+            }
+        },
+        "error": {
+            "cannot_connect": "Verbindung zur HCU fehlgeschlagen. Host und Ports prüfen.",
+            "invalid_key": "Authentifizierung fehlgeschlagen. Der Aktivierungsschlüssel ist möglicherweise ungültig oder abgelaufen.",
+            "api_error": "Ein unerwarteter API-Fehler ist aufgetreten.",
+            "unknown": "Ein unbekannter Fehler ist aufgetreten."
+        },
+        "abort": {
+            "already_configured": "Diese HCU ist bereits konfiguriert.",
+            "internal_error": "Ein interner Fehler ist aufgetreten.",
+            "reauth_successful": "Neu-Authentifizierung war erfolgreich.",
+            "reconfigure_successful": "Rekonfiguration war erfolgreich."
         }
-      },
-      "auth": {
-        "title": "Integration autorisieren",
-        "description": "Ein neues Autorisierungs-Token ist erforderlich. Bitte führen Sie die folgenden Schritte auf der Weboberfläche Ihrer HCU aus (erreichbar unter https://{hcu_ip}):\n\n1. Navigieren Sie zum Entwicklermodus.\n2. Drücken Sie die Schaltfläche \"Aktivierungsschlüssel erzeugen\".\n3. Geben Sie den temporären Schlüssel unten ein.\n\n",
-        "data": {
-          "activation_key": "Aktivierungsschlüssel"
-        }
-      },
-      "reconfigure": {
-        "title": "HCU-Verbindung neukonfigurieren",
-        "description": "Aktualisieren Sie die Verbindungsdetails für Ihre Home Control Unit (HCU).",
-        "data": {
-          "host": "Neue HCU IP-Adresse oder Hostname",
-          "auth_port": "Neuer Authentifizierungs-Port",
-          "websocket_port": "Neuer WebSocket-Port"
-        }
-      },
-      "reauth_confirm": {
-        "title": "Erneut bei der HCU authentifizieren",
-        "description": "Die PIN für Ihr Türschloss hat sich geändert oder fehlt. Bitte geben Sie die neue PIN ein.",
-        "data": {
-          "pin": "Autorisierungs-PIN für das Schloss"
-        }
-      }
     },
-    "error": {
-      "cannot_connect": "Verbindung zur HCU fehlgeschlagen. Bitte überprüfen Sie Host/Ports und Ihre Netzwerkverbindung.",
-      "invalid_key": "Ungültiger oder abgelaufener Aktivierungsschlüssel. Bitte generieren Sie einen neuen und versuchen Sie es erneut.",
-      "unknown": "Ein unbekannter Fehler ist aufgetreten."
-    },
-    "abort": {
-      "already_configured": "Diese Homematic IP HCU ist bereits konfiguriert.",
-      "reconfigure_successful": "Neukonfiguration erfolgreich. Die Integration wird nun mit den neuen Einstellungen neu geladen.",
-      "reauth_successful": "Erneute Authentifizierung erfolgreich."
-    }
-  },
-  "options": {
-    "step": {
-      "init": {
-        "title": "HCU-Optionen konfigurieren",
-        "description": "Legen Sie Optionen für Ihre Homematic IP HCU-Integration fest.",
-        "data": {
-          "comfort_temperature": "Standard-Komforttemperatur (°C)"
+    "options": {
+        "step": {
+            "init": {
+                "title": "HCU Integration Optionen",
+                "menu_options": {
+                    "global_settings": "Globale Einstellungen",
+                    "vacation": "Urlaubsmodus einstellen"
+                }
+            },
+            "global_settings": {
+                "title": "Globale Einstellungen",
+                "description": "Konfigurieren Sie globale Einstellungen und Geräte-Importfilter.",
+                "data": {
+                    "comfort_temperature": "Standard-Komfort-Temperatur (für Party-Modus)",
+                    "import_sytronic": "Sytronic-Geräte importieren",
+                    "import_novotronic": "Novotronic-Geräte importieren"
+                }
+            },
+            "vacation": {
+                "title": "Urlaubsmodus einstellen",
+                "description": "Aktivieren Sie den zeitbasierten Urlaubsmodus. Dies stellt alle Heizgruppen bis zum Endzeitpunkt auf die angegebene Temperatur. Zum Deaktivieren verwenden Sie den Dienst 'hcu_integration.deactivate_absence_mode'.",
+                "data": {
+                    "temperature": "Ziel-Temperatur",
+                    "end_time": "Enddatum und -uhrzeit"
+                }
+            }
+        },
+        "error": {
+            "cannot_connect": "Verbindung zur HCU fehlgeschlagen.",
+            "api_error": "Ein API-Fehler ist beim Einstellen des Urlaubsmodus aufgetreten.",
+            "unknown": "Ein unbekannter Fehler ist aufgetreten.",
+            "internal_error": "Interner Fehler: Client nicht verfügbar."
         }
-      }
     }
-  },
-  "title": "Homematic IP Local (HCU)"
 }

@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Version 1.7.0 - 2025-10-23
+
+### 🎉 New Features
+* **New Vacation Mode UI:** A "Set Vacation Mode" configuration option has been added to the integration's settings menu (in Settings → Devices & Services → Configure). This provides a user-friendly form to set the target temperature and end date/time, removing the need to manually call a service for vacation mode activation. **<-- This feature is still in beta and still has some issues**
+
+### 🐛 Bug Fixes
+* **Fixed Unresponsive Switches:** Resolved a critical bug that caused certain switch models (e.g., `HmIP-BSM`, `HmIP-DRSI1`) to become unresponsive to commands from Home Assistant. The integration now correctly sends the `onLevel` parameter to the API for all switch operations.
+* **HmIP-FSI16 Full Channel Support:** Fixed an issue where only the first 8 channels of the `HmIP-FSI16` (16-channel flush-mount switch actuator) were created. All 16 switch entities are now correctly discovered and functional.
+* **HmIP-ESI Energy Meter Support:** Added comprehensive support for all features of the `HmIP-ESI` (Energy Meter and Sensor Interface). New sensors are now created for:
+  * Energy Counter T1 (Low Tariff)
+  * Energy Counter T2 (High Tariff)
+  * Power Production (Current Grid Feed-in)
+  * Energy Production (Total Grid Feed-in)
+* **HmIP-SLO Light Sensor:** The `illumination` sensor for the `HmIP-SLO` (Light Sensor Outdoor) is now correctly discovered and created.
+* **Alarm Control Panel Syntax Error:** Fixed a syntax error in `alarm_control_panel.py` that could prevent the alarm panel from arming correctly.
+* **Duplicate Siren Entities:** Removed a redundant mapping for `acousticAlarmActive` that was causing duplicate siren switch entities to be created for some devices.
+
+### ✨ Improvements
+* **Modernized Stateless Button Handling:** Refactored how stateless buttons (e.g., wall switches like `HmIP-BRC2`, remote controls like `HmIP-KRC4`) are handled. These devices no longer create button entities and instead fire `hcu_integration_event` on the Home Assistant event bus. This aligns with Home Assistant's standard approach for stateless device triggers and provides better flexibility in automations. See the README for automation examples.
+* **Instant UI Updates for Absence Modes:** Implemented proactive state synchronization for Vacation and Eco modes. When you activate an absence mode from Home Assistant, related entities (such as `binary_sensor.vacation_mode`) now update instantly, matching the behavior of the official Homematic IP app for a more responsive user experience.
+* **Enhanced Device Compatibility:** Added numerous new device types and channel type definitions to improve device mapping accuracy and ensure better support for future Homematic IP devices.
+
 ## Version 1.6.1 - 2025-10-20
 
 ### 🚀 New Device Support
@@ -178,9 +200,3 @@ This is the initial stable release of the Homematic IP Local (HCU) integration, 
 [Unreleased]: https://github.com/Ediminator/hacs-homematicip-hcu/compare/v1.0.0...HEAD
 
 [1.0.0]: https://github.com/Ediminator/hacs-homematicip-hcu/releases/tag/v1.0.0
-
-
-
-
-
-

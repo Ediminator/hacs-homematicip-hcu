@@ -17,6 +17,8 @@ from homeassistant.const import (
     UnitOfSpeed,
     UnitOfTemperature,
     UnitOfVolume,
+    UnitOfElectricPotential,
+    UnitOfFrequency,
 )
 
 # Domain of the integration
@@ -83,10 +85,6 @@ ATTR_DURATION = "duration"
 ATTR_VOLUME = "volume"
 ATTR_RULE_ID = "rule_id"
 ATTR_ENABLED = "enabled"
-ATTR_EPAPER_LINE1 = "line_1"
-ATTR_EPAPER_LINE2 = "line_2"
-ATTR_EPAPER_LINE3 = "line_3"
-ATTR_EPAPER_ICON = "icon"
 ATTR_END_TIME = "end_time"
 
 
@@ -118,6 +116,10 @@ API_PATHS = {
     "SET_ZONES_ACTIVATION": "/hmip/home/security/setExtendedZonesActivation",
     "SET_EPAPER_DISPLAY": "/hmip/device/control/setEpaperDisplay",
     "ACTIVATE_PARTY_MODE": "/hmip/group/heating/activatePartyMode",
+    # ADDED: Group cover controls found in diagnostics
+    "SET_GROUP_SHUTTER_LEVEL": "/hmip/group/switching/setPrimaryShadingLevel",
+    "SET_GROUP_SLATS_LEVEL": "/hmip/group/switching/setSecondaryShadingLevel",
+    "STOP_GROUP_COVER": "/hmip/group/switching/stop",
 }
 
 # --- Device Identification Constants ---
@@ -147,6 +149,7 @@ HMIP_DEVICE_TYPE_TO_DEVICE_CLASS = {
     "BRAND_BLIND": CoverDeviceClass.BLIND,
     "HUNTER_DOUGLAS_BLIND": CoverDeviceClass.BLIND,
     "GARAGE_DOOR_CONTROLLER": CoverDeviceClass.GARAGE,
+    "GARAGE_DOOR_MODULE": CoverDeviceClass.GARAGE,
     "SHUTTER_ACTUATOR": CoverDeviceClass.SHUTTER,
     "PLUGABLE_SWITCH": SwitchDeviceClass.OUTLET,
     "PLUGABLE_SWITCH_MEASURING": SwitchDeviceClass.OUTLET,
@@ -157,15 +160,16 @@ HMIP_DEVICE_TYPE_TO_DEVICE_CLASS = {
     "WALL_MOUNTED_GLASS_SWITCH": SwitchDeviceClass.SWITCH,
     "WIRED_DIN_RAIL_SWITCH_8": SwitchDeviceClass.SWITCH,
     "WIRED_DIN_RAIL_BLIND_4": CoverDeviceClass.BLIND,
-    "WIRED_DIN_RAIL_DIMMER_3": None,  # Dimmer is a light, not a device class
-    "BRAND_DIMMER": None,  # Dimmer is a light, not a device class
+    "WIRED_DIN_RAIL_DIMMER_3": None,  # Dimmer is a light
+    "BRAND_DIMMER": None,  # Dimmer is a light
     "OPEN_COLLECTOR_MODULE_8": SwitchDeviceClass.SWITCH,
     "DIN_RAIL_SWITCH_1": SwitchDeviceClass.SWITCH,
     "FLUSH_MOUNT_DIMMER": None,
-    # Event-based or feature-based devices
+    # Devices handled by features or events
     "CONTACT_INTERFACE_6": None,
     "ENERGY_SENSING_INTERFACE": None,
     "ENERGY_SENSORS_INTERFACE": None,
+    "MAINS_FAILURE_SENSOR": None,
     "BRAND_REMOTE_CONTROL_2": None,
     "PUSH_BUTTON_2": None,
     "DOOR_LOCK_DRIVE": None,
@@ -176,7 +180,6 @@ HMIP_DEVICE_TYPE_TO_DEVICE_CLASS = {
     "FLUSH_MOUNT_CONTACT_INTERFACE_1": None,
     "SHUTTER_CONTACT_MAGNETIC": None,
     "WALL_MOUNTED_GLASS_SWITCH_2": None,
-    # REFACTOR: Added missing device types from diagnostics
     "RADIATOR_THERMOSTAT": None,
     "SHUTTER_CONTACT": None,
     "BRAND_WALL_THERMOSTAT": None,
@@ -250,7 +253,6 @@ HMIP_FEATURE_TO_ENTITY = {
         "device_class": SensorDeviceClass.ENERGY,
         "state_class": SensorStateClass.TOTAL_INCREASING,
     },
-    # REFACTOR: Added missing HmIP-ESI features
     "energyCounterT1": {
         "class": "HcuGenericSensor",
         "name": "Energy Counter T1",
@@ -279,7 +281,6 @@ HMIP_FEATURE_TO_ENTITY = {
         "device_class": SensorDeviceClass.ENERGY,
         "state_class": SensorStateClass.TOTAL_INCREASING,
     },
-    # END REFACTOR
     "currentPowerConsumption": {
         "class": "HcuGenericSensor",
         "name": "Power Consumption",
@@ -294,7 +295,6 @@ HMIP_FEATURE_TO_ENTITY = {
         "device_class": SensorDeviceClass.GAS,
         "state_class": SensorStateClass.TOTAL_INCREASING,
     },
-    # REFACTOR: Added missing gasFlowRate
     "gasFlowRate": {
         "class": "HcuGenericSensor",
         "name": "Gas Flow Rate",
@@ -302,7 +302,6 @@ HMIP_FEATURE_TO_ENTITY = {
         "icon": "mdi:meter-gas",
         "state_class": SensorStateClass.MEASUREMENT,
     },
-    # END REFACTOR
     "valvePosition": {
         "class": "HcuGenericSensor",
         "name": "Valve Position",
@@ -451,6 +450,32 @@ HMIP_FEATURE_TO_ENTITY = {
         "state_class": SensorStateClass.TOTAL_INCREASING,
         "entity_registry_enabled_default": False,
     },
+    # HmIP-PMFS Features
+    "mainsVoltage": {
+        "class": "HcuGenericSensor",
+        "name": "Mains Voltage",
+        "unit": UnitOfElectricPotential.VOLT,
+        "device_class": SensorDeviceClass.VOLTAGE,
+        "state_class": SensorStateClass.MEASUREMENT,
+    },
+    "frequency": {
+        "class": "HcuGenericSensor",
+        "name": "Mains Frequency",
+        "unit": UnitOfFrequency.HERTZ,
+        "device_class": SensorDeviceClass.FREQUENCY,
+        "state_class": SensorStateClass.MEASUREMENT,
+    },
+    "operationMode": {
+        "class": "HcuGenericSensor",
+        "name": "Operation Mode",
+        "icon": "mdi:power-plug",
+    },
+    # HmIP-PMFS Binary Sensor Feature
+    "mainsFailure": {
+        "class": "HcuBinarySensor",
+        "name": "Mains Failure",
+        "device_class": BinarySensorDeviceClass.POWER,
+    },
     # Binary Sensor Features
     "lowBat": {
         "class": "HcuBinarySensor",
@@ -507,10 +532,6 @@ HMIP_FEATURE_TO_ENTITY = {
         "name": "Frost Protection",
         "device_class": BinarySensorDeviceClass.COLD,
     },
-    # REFACTOR: Removed "acousticAlarmActive" from feature map.
-    # This feature is a read-only state of the ALARM_SIREN_CHANNEL.
-    # The channel-based discovery already creates the HcuSwitch.
-    # Keeping this mapping would create a duplicate, incorrect entity.
     "sunshine": {
         "class": "HcuBinarySensor",
         "name": "Sunshine",
@@ -527,9 +548,16 @@ HMIP_FEATURE_TO_ENTITY = {
         "name": "Raining",
         "device_class": BinarySensorDeviceClass.MOISTURE,
     },
+    # ADDED: 'processing' feature from HmIP-FROLL-2 (found in diagnostics)
+    "processing": {
+        "class": "HcuBinarySensor",
+        "name": "Activity",
+        "device_class": BinarySensorDeviceClass.RUNNING,
+        "entity_registry_enabled_default": False,
+    },
 }
 
-# REFACTOR: Centralized stateless (event-only) button channels
+# Centralized stateless (event-only) button channels
 EVENT_CHANNEL_TYPES = {
     "WALL_MOUNTED_TRANSMITTER_CHANNEL",
     "KEY_REMOTE_CONTROL_CHANNEL",
@@ -551,16 +579,16 @@ HMIP_CHANNEL_TYPE_TO_ENTITY = {
     "SWITCH_MEASURING_CHANNEL": {"class": "HcuSwitch"},
     "WIRED_SWITCH_CHANNEL": {"class": "HcuSwitch"},
     "WATERING_CONTROLLER_CHANNEL": {"class": "HcuWateringSwitch"},
+    "CONDITIONAL_SWITCH_CHANNEL": {"class": "HcuSwitch"},
+    "OPEN_COLLECTOR_CHANNEL_8": {"class": "HcuSwitch"},
     # Covers
     "SHUTTER_CHANNEL": {"class": "HcuCover"},
     "BLIND_CHANNEL": {"class": "HcuCover"},
     "GARAGE_DOOR_CHANNEL": {"class": "HcuGarageDoorCover"},
     # Locks
     "DOOR_LOCK_CHANNEL": {"class": "HcuLock"},
-    # Event-based (will not create an entity, but fires an event)
-    # REFACTOR: Removed all "HcuButton" mappings.
-    # Logic is now centralized in EVENT_CHANNEL_TYPES set.
-    # Other (no primary entity, rely on feature discovery)
+    # Event-based channels are handled by EVENT_CHANNEL_TYPES
+    # Other channels rely on feature discovery
     "LIGHT_SENSOR_CHANNEL": None,
     "MOTION_DETECTION_CHANNEL": None,
     "CLIMATE_CONTROL_INPUT_CHANNEL": None,
@@ -569,7 +597,7 @@ HMIP_CHANNEL_TYPE_TO_ENTITY = {
     "WALL_MOUNTED_THERMOSTAT_CARBON_CHANNEL": None,
     "SOIL_MOISTURE_SENSOR_CHANNEL": None,
     "ENERGY_SENSORS_INTERFACE_CHANNEL": None,
-    # REFACTOR: Added missing channel types from diagnostics
+    "MAINS_FAILURE_SENSOR_CHANNEL": None,
     "CLIMATE_CONTROL_CHANNEL": None,
     "HEATING_CHANNEL": None,
     "WALL_MOUNTED_THERMOSTAT_CHANNEL": None,

@@ -45,16 +45,10 @@ class HcuSwitch(HcuBaseEntity, SwitchEntity):
         **kwargs: Any,
     ):
         super().__init__(coordinator, client, device_data, channel_index)
-        
-        # Set entity name based on channel label or fallback to device name
-        channel_label = self._channel.get("label")
-        if channel_label:
-            self._attr_name = channel_label
-            self._attr_has_entity_name = False
-        else:
-            self._attr_name = None
-            self._attr_has_entity_name = False
-            
+
+        # REFACTOR: Correctly call the centralized naming helper.
+        self._set_entity_name(channel_label=self._channel.get("label"))
+
         self._attr_unique_id = f"{self._device_id}_{self._channel_index}_on"
 
         device_type = self._device.get("type")
@@ -69,25 +63,30 @@ class HcuSwitch(HcuBaseEntity, SwitchEntity):
         self._attr_assumed_state = True
         self.async_write_ha_state()
         try:
-            await self._client.async_set_switch_state(self._device_id, self._channel_index, True, on_level=1.0)
+            await self._client.async_set_switch_state(
+                self._device_id, self._channel_index, True, on_level=1.0
+            )
         except (HcuApiError, ConnectionError) as err:
             _LOGGER.error("Failed to turn on switch %s: %s", self.name, err)
             self._attr_assumed_state = False
             self.async_write_ha_state()
-
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the switch off."""
         self._attr_assumed_state = True
         self.async_write_ha_state()
         try:
-            await self._client.async_set_switch_state(self._device_id, self._channel_index, False, on_level=0.0)
+            await self._client.async_set_switch_state(
+                self._device_id, self._channel_index, False, on_level=0.0
+            )
         except (HcuApiError, ConnectionError) as err:
             _LOGGER.error("Failed to turn off switch %s: %s", self.name, err)
             self._attr_assumed_state = False
             self.async_write_ha_state()
 
-    async def async_play_sound(self, sound_file: str, volume: float, duration: float) -> None:
+    async def async_play_sound(
+        self, sound_file: str, volume: float, duration: float
+    ) -> None:
         """Service call to play a sound on this device."""
         await self._client.async_set_sound_file(
             device_id=self._device_id,
@@ -113,16 +112,10 @@ class HcuWateringSwitch(HcuBaseEntity, SwitchEntity):
         **kwargs: Any,
     ):
         super().__init__(coordinator, client, device_data, channel_index)
-        
-        # Set entity name based on channel label or fallback to device name
-        channel_label = self._channel.get("label")
-        if channel_label:
-            self._attr_name = channel_label
-            self._attr_has_entity_name = False
-        else:
-            self._attr_name = None
-            self._attr_has_entity_name = False
-            
+
+        # REFACTOR: Correctly call the centralized naming helper.
+        self._set_entity_name(channel_label=self._channel.get("label"))
+
         self._attr_unique_id = f"{self._device_id}_{self._channel_index}_watering"
 
     @property

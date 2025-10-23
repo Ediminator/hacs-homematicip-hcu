@@ -3,9 +3,10 @@ from __future__ import annotations
 
 import logging
 from typing import TYPE_CHECKING, Any
-from datetime import datetime
 
-from homeassistant.components.binary_sensor import BinarySensorEntity, BinarySensorDeviceClass
+from homeassistant.components.binary_sensor import (
+    BinarySensorEntity,
+)
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, callback
@@ -55,14 +56,11 @@ class HcuBinarySensor(HcuBaseEntity, BinarySensorEntity):
         super().__init__(coordinator, client, device_data, channel_index)
         self._feature = feature
         self._on_state = mapping.get("on_state")
-        
-        # Set entity name based on channel label or fallback to mapping name
-        channel_label = self._channel.get("label")
-        if channel_label:
-            self._attr_name = channel_label
-            self._attr_has_entity_name = False
-        else:
-            self._attr_name = mapping["name"]
+
+        # REFACTOR: Correctly call the centralized naming helper for feature entities.
+        self._set_entity_name(
+            channel_label=self._channel.get("label"), feature_name=mapping["name"]
+        )
 
         self._attr_unique_id = f"{self._device_id}_{self._channel_index}_{self._feature}"
         self._attr_device_class = mapping.get("device_class")
@@ -147,20 +145,22 @@ class HcuVacationModeBinarySensor(HcuHomeBaseEntity, BinarySensorEntity):
         """Return true if vacation mode is active."""
         heating_home = self._home.get("functionalHomes", {}).get("HEATING", {})
         return heating_home.get("absenceType") == "VACATION"
-    
+
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return the state attributes of the vacation mode sensor."""
         return {
             "end_time": self._attr_extra_state_attributes.get("end_time"),
-            "target_temperature": self._attr_extra_state_attributes.get("target_temperature"),
+            "target_temperature": self._attr_extra_state_attributes.get(
+                "target_temperature"
+            ),
         }
 
     def _update_attributes(self) -> None:
         """Update the entity's attributes."""
         heating_home = self._home.get("functionalHomes", {}).get("HEATING", {})
         end_time_ts = heating_home.get("absenceEndTime")
-        
+
         end_time = None
         if end_time_ts and end_time_ts > 0:
             end_time = dt_util.utc_from_timestamp(end_time_ts / 1000)

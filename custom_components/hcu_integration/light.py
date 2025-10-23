@@ -1,6 +1,14 @@
+# custom_components/hcu_integration/light.py
 from typing import TYPE_CHECKING
+
 from homeassistant.components.light import (
-    ATTR_BRIGHTNESS, ATTR_COLOR_TEMP_KELVIN, ATTR_HS_COLOR, ATTR_TRANSITION, ColorMode, LightEntity, LightEntityFeature
+    ATTR_BRIGHTNESS,
+    ATTR_COLOR_TEMP_KELVIN,
+    ATTR_HS_COLOR,
+    ATTR_TRANSITION,
+    ColorMode,
+    LightEntity,
+    LightEntityFeature,
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
@@ -15,29 +23,36 @@ if TYPE_CHECKING:
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, config_entry: ConfigEntry, async_add_entities: AddEntitiesCallback,
+    hass: HomeAssistant,
+    config_entry: ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the light platform from a config entry."""
-    coordinator: "HcuCoordinator" = hass.data[config_entry.domain][config_entry.entry_id]
+    coordinator: "HcuCoordinator" = hass.data[config_entry.domain][
+        config_entry.entry_id
+    ]
     if entities := coordinator.entities.get(Platform.LIGHT):
         async_add_entities(entities)
 
+
 class HcuLight(HcuBaseEntity, LightEntity):
     """Representation of a Homematic IP HCU light."""
+
     PLATFORM = Platform.LIGHT
-    
-    def __init__(self, coordinator: "HcuCoordinator", client: HcuApiClient, device_data: dict, channel_index: str, **kwargs):
+
+    def __init__(
+        self,
+        coordinator: "HcuCoordinator",
+        client: HcuApiClient,
+        device_data: dict,
+        channel_index: str,
+        **kwargs,
+    ):
         super().__init__(coordinator, client, device_data, channel_index)
-        
-        # Set entity name based on channel label or fallback to device name
-        channel_label = self._channel.get("label")
-        if channel_label:
-            self._attr_name = channel_label
-            self._attr_has_entity_name = False
-        else:
-            self._attr_name = None
-            self._attr_has_entity_name = False
-            
+
+        # REFACTOR: Correctly call the centralized naming helper.
+        self._set_entity_name(channel_label=self._channel.get("label"))
+
         self._attr_unique_id = f"{self._device_id}_{self._channel_index}_light"
 
         supported_modes = set()
@@ -49,8 +64,12 @@ class HcuLight(HcuBaseEntity, LightEntity):
             supported_modes.add(ColorMode.HS)
         elif "colorTemperature" in self._channel:
             supported_modes.add(ColorMode.COLOR_TEMP)
-            self._attr_min_color_temp_kelvin = self._channel.get("minimalColorTemperature", 2000)
-            self._attr_max_color_temp_kelvin = self._channel.get("maximumColorTemperature", 6500)
+            self._attr_min_color_temp_kelvin = self._channel.get(
+                "minimalColorTemperature", 2000
+            )
+            self._attr_max_color_temp_kelvin = self._channel.get(
+                "maximumColorTemperature", 6500
+            )
 
         if not supported_modes:
             supported_modes.add(ColorMode.ONOFF)
@@ -104,14 +123,30 @@ class HcuLight(HcuBaseEntity, LightEntity):
             hs_color = kwargs[ATTR_HS_COLOR]
             hue = int(hs_color[0])
             saturation = hs_color[1] / 100.0
-            await self._client.async_set_hue_saturation(self._device_id, self._channel_index, hue, saturation, dim_level, ramp_time)
-        elif ATTR_COLOR_TEMP_KELVIN in kwargs and ColorMode.COLOR_TEMP in self.supported_color_modes:
+            await self._client.async_set_hue_saturation(
+                self._device_id,
+                self._channel_index,
+                hue,
+                saturation,
+                dim_level,
+                ramp_time,
+            )
+        elif (
+            ATTR_COLOR_TEMP_KELVIN in kwargs
+            and ColorMode.COLOR_TEMP in self.supported_color_modes
+        ):
             color_temp = kwargs[ATTR_COLOR_TEMP_KELVIN]
-            await self._client.async_set_color_temperature(self._device_id, self._channel_index, color_temp, dim_level, ramp_time)
+            await self._client.async_set_color_temperature(
+                self._device_id, self._channel_index, color_temp, dim_level, ramp_time
+            )
         else:
-            await self._client.async_set_dim_level(self._device_id, self._channel_index, dim_level, ramp_time)
+            await self._client.async_set_dim_level(
+                self._device_id, self._channel_index, dim_level, ramp_time
+            )
 
     async def async_turn_off(self, **kwargs) -> None:
         """Turn the light off by setting its dim level to 0."""
         ramp_time = kwargs.get(ATTR_TRANSITION)
-        await self._client.async_set_dim_level(self._device_id, self._channel_index, 0.0, ramp_time)
+        await self._client.async_set_dim_level(
+            self._device_id, self._channel_index, 0.0, ramp_time
+        )

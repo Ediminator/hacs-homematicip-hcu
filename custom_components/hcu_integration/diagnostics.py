@@ -32,7 +32,6 @@ TO_REDACT_STATE = {
 }
 
 # Keys to redact from the Home Assistant device/entity registry dump.
-# We keep this empty as all HA-side identifiers are useful for debugging.
 TO_REDACT_HA: set[str] = set()
 
 
@@ -88,20 +87,25 @@ async def async_get_config_entry_diagnostics(
                 "name_by_user": ha_device.name_by_user,
                 "disabled_by": ha_device.disabled_by,
             }
-            
+
             ha_entities = er.async_entries_for_device(entity_registry, ha_device.id)
             for entity in ha_entities:
                 state = hass.states.get(entity.entity_id)
-                entities.append({
-                    "entity_id": entity.entity_id,
-                    "unique_id": entity.unique_id,
-                    "state": _redact_data(state.as_dict(), TO_REDACT_HA) if state else "NOT_FOUND",
-                    "disabled_by": entity.disabled_by,
-                })
+                entities.append(
+                    {
+                        "entity_id": entity.entity_id,
+                        "unique_id": entity.unique_id,
+                        "state": _redact_data(state.as_dict(), TO_REDACT_HA)
+                        if state
+                        else "NOT_FOUND",
+                        "disabled_by": entity.disabled_by,
+                    }
+                )
 
         correlated_devices[device_id] = {
             "hcu_data": _redact_data(hcu_data, TO_REDACT_STATE),
-            "ha_device": _redact_data(device_info, TO_REDACT_HA) or "NOT_IN_REGISTRY",
+            "ha_device": _redact_data(device_info, TO_REDACT_HA)
+            or "NOT_IN_REGISTRY",
             "ha_entities": _redact_data(entities, TO_REDACT_HA),
         }
 
@@ -126,23 +130,27 @@ async def async_get_config_entry_diagnostics(
                 "name_by_user": ha_device.name_by_user,
                 "disabled_by": ha_device.disabled_by,
             }
-            
+
             ha_entities = er.async_entries_for_device(entity_registry, ha_device.id)
             for entity in ha_entities:
                 state = hass.states.get(entity.entity_id)
-                entities.append({
-                    "entity_id": entity.entity_id,
-                    "unique_id": entity.unique_id,
-                    "state": _redact_data(state.as_dict(), TO_REDACT_HA) if state else "NOT_FOUND",
-                    "disabled_by": entity.disabled_by,
-                })
-        
+                entities.append(
+                    {
+                        "entity_id": entity.entity_id,
+                        "unique_id": entity.unique_id,
+                        "state": _redact_data(state.as_dict(), TO_REDACT_HA)
+                        if state
+                        else "NOT_FOUND",
+                        "disabled_by": entity.disabled_by,
+                    }
+                )
+
         correlated_groups[group_id] = {
             "hcu_data": _redact_data(hcu_group_data, TO_REDACT_STATE),
-            "ha_device": _redact_data(device_info, TO_REDACT_HA) or "NOT_IN_REGISTRY",
+            "ha_device": _redact_data(device_info, TO_REDACT_HA)
+            or "NOT_IN_REGISTRY",
             "ha_entities": _redact_data(entities, TO_REDACT_HA),
         }
-
 
     return {
         "generated_at": dt_util.utcnow().isoformat(),

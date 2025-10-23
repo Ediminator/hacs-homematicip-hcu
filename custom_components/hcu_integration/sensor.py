@@ -1,7 +1,6 @@
 # custom_components/hcu_integration/sensor.py
 from __future__ import annotations
 
-import logging
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.sensor import SensorEntity
@@ -15,8 +14,6 @@ from .entity import HcuBaseEntity, HcuHomeBaseEntity
 
 if TYPE_CHECKING:
     from . import HcuCoordinator
-
-_LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
@@ -90,13 +87,11 @@ class HcuGenericSensor(HcuBaseEntity, SensorEntity):
         super().__init__(coordinator, client, device_data, channel_index)
         self._feature = feature
 
-        # Set entity name based on channel label or fallback to mapping name
-        channel_label = self._channel.get("label")
-        if channel_label:
-            self._attr_name = f"{channel_label} {mapping['name']}"
-            self._attr_has_entity_name = False
-        else:
-            self._attr_name = mapping["name"]
+        # REFACTOR: Correctly call the centralized naming helper for feature entities.
+        self._set_entity_name(
+            channel_label=self._channel.get("label"),
+            feature_name=mapping["name"]
+        )
 
         self._attr_unique_id = f"{self._device_id}_{self._channel_index}_{self._feature}"
         self._attr_device_class = mapping.get("device_class")
@@ -115,7 +110,7 @@ class HcuGenericSensor(HcuBaseEntity, SensorEntity):
         value = self._channel.get(self._feature)
         if value is None:
             return None
-            
+
         if self._feature == "valvePosition":
             return round(value * 100.0, 1)
         if self._feature == "vaporAmount":
@@ -131,7 +126,7 @@ class HcuTemperatureSensor(HcuGenericSensor):
     wall-mounted thermostats (`actualTemperature`) and radiator thermostats
     (`valveActualTemperature`).
     """
-    
+
     @property
     def native_value(self) -> float | str | None:
         """Return the temperature, checking both possible keys."""

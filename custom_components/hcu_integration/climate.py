@@ -84,7 +84,12 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
                 elif profile_name:  # Only include other profiles if they have a name
                     self._profiles[profile_name] = profile_index
 
-        self._attr_preset_modes = [PRESET_BOOST, PRESET_ECO, PRESET_PARTY, *self._profiles.keys()]
+        self._attr_preset_modes = [
+            PRESET_BOOST,
+            PRESET_ECO,
+            PRESET_PARTY,
+            *self._profiles.keys(),
+        ]
 
         self._update_attributes_from_group_data()
 
@@ -99,30 +104,43 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
         control_mode = self._group.get("controlMode")
         target_temp = self._group.get("setPointTemperature")
 
+        # Prevent state flapping during optimistic updates
         if (
             self._attr_assumed_state
             and self._attr_hvac_mode == HVACMode.OFF
             and control_mode == "MANUAL"
-            and target_temp is not None and target_temp > self.min_temp
+            and target_temp is not None
+            and target_temp > self.min_temp
         ):
             return
 
+        # Determine HVAC mode
         if not self._group.get("controllable", True):
             self._attr_hvac_mode = HVACMode.OFF
         else:
             if control_mode == "MANUAL":
-                self._attr_hvac_mode = HVACMode.OFF if target_temp is not None and target_temp <= self.min_temp else HVACMode.HEAT
+                self._attr_hvac_mode = (
+                    HVACMode.OFF
+                    if target_temp is not None and target_temp <= self.min_temp
+                    else HVACMode.HEAT
+                )
             elif control_mode in ("AUTOMATIC", "ECO"):
                 self._attr_hvac_mode = HVACMode.AUTO
             else:
                 self._attr_hvac_mode = HVACMode.OFF
 
-        heating_home = self._client.state.get("home", {}).get("functionalHomes", {}).get("HEATING", {})
+        # Determine Target Temperature
+        heating_home = (
+            self._client.state.get("home", {})
+            .get("functionalHomes", {})
+            .get("HEATING", {})
+        )
         if heating_home.get("absenceType") == "PERMANENT":
             self._attr_target_temperature = heating_home.get("ecoTemperature")
         else:
             self._attr_target_temperature = self._group.get("setPointTemperature")
 
+        # Determine Preset Mode
         if self._group.get("boostMode"):
             self._attr_preset_mode = PRESET_BOOST
         elif heating_home.get("absenceType") == "PERMANENT":
@@ -143,8 +161,11 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
         if (humidity := self._group.get("humidity")) is not None:
             return humidity
 
+        # Fallback: Find humidity from a device in the group
         for channel_ref in self._group.get("channels", []):
-            device_id, channel_index = channel_ref.get("deviceId"), str(channel_ref.get("channelIndex"))
+            device_id, channel_index = channel_ref.get("deviceId"), str(
+                channel_ref.get("channelIndex")
+            )
             if device := self._client.get_device_by_address(device_id):
                 if channel := device.get("functionalChannels", {}).get(channel_index):
                     if (humidity := channel.get("humidity")) is not None:
@@ -157,11 +178,17 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
         if (temp := self._group.get("actualTemperature")) is not None:
             return temp
 
+        # Fallback: Find temperature from a device in the group
         for channel_ref in self._group.get("channels", []):
-            device_id, channel_index = channel_ref.get("deviceId"), str(channel_ref.get("channelIndex"))
+            device_id, channel_index = channel_ref.get("deviceId"), str(
+                channel_ref.get("channelIndex")
+            )
             if device := self._client.get_device_by_address(device_id):
                 if channel := device.get("functionalChannels", {}).get(channel_index):
-                    if (temp := channel.get("actualTemperature") or channel.get("valveActualTemperature")) is not None:
+                    if (
+                        temp := channel.get("actualTemperature")
+                        or channel.get("valveActualTemperature")
+                    ) is not None:
                         return temp
         return None
 
@@ -183,31 +210,39 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
 
         self._attr_assumed_state = True
         self._attr_target_temperature = temperature
-        self._attr_hvac_mode = HVACMode.HEAT if temperature > self.min_temp else HVACMode.OFF
+        self._attr_hvac_mode = (
+            HVACMode.HEAT if temperature > self.min_temp else HVACMode.OFF
+        )
         self.async_write_ha_state()
 
         if self._group.get("controlMode") != "MANUAL":
             await self._client.async_set_group_control_mode(self._group_id, "MANUAL")
-        
-        await self._client.async_set_group_setpoint_temperature(self._group_id, temperature)
+
+        await self._client.async_set_group_setpoint_temperature(
+            self._group_id, temperature
+        )
 
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
         """Set new HVAC mode."""
         self._attr_assumed_state = True
         self._attr_hvac_mode = hvac_mode
-        
+
         if hvac_mode == HVACMode.OFF:
             self._attr_target_temperature = self.min_temp
             self.async_write_ha_state()
             if self._group.get("controlMode") != "MANUAL":
                 await self._client.async_set_group_control_mode(self._group_id, "MANUAL")
             if self._group.get("setPointTemperature") != self.min_temp:
-                await self._client.async_set_group_setpoint_temperature(self._group_id, self.min_temp)
-        
+                await self._client.async_set_group_setpoint_temperature(
+                    self._group_id, self.min_temp
+                )
+
         elif hvac_mode == HVACMode.AUTO:
             self.async_write_ha_state()
             if self._group.get("controlMode") != "AUTOMATIC":
-                await self._client.async_set_group_control_mode(self._group_id, "AUTOMATIC")
+                await self._client.async_set_group_control_mode(
+                    self._group_id, "AUTOMATIC"
+                )
 
         elif hvac_mode == HVACMode.HEAT:
             comfort_temp = self._config_entry.options.get(
@@ -219,7 +254,9 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
             if self._group.get("controlMode") != "MANUAL":
                 await self._client.async_set_group_control_mode(self._group_id, "MANUAL")
 
-            await self._client.async_set_group_setpoint_temperature(self._group_id, comfort_temp)
+            await self._client.async_set_group_setpoint_temperature(
+                self._group_id, comfort_temp
+            )
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:
         """Set new preset mode."""
@@ -228,37 +265,62 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
         self._attr_preset_mode = preset_mode
         self.async_write_ha_state()
 
-        if preset_mode == PRESET_BOOST:
-            await self._client.async_set_group_boost(group_id=self._group_id, boost=True)
-        elif preset_mode == PRESET_ECO:
-            await self._client.async_activate_absence_permanent()
-        elif preset_mode == PRESET_PARTY:
-            comfort_temp = self._config_entry.options.get(CONF_COMFORT_TEMPERATURE, DEFAULT_COMFORT_TEMPERATURE)
-            end_time = dt_util.now() + timedelta(hours=4)
-            await self.async_activate_party_mode(temperature=comfort_temp, end_time_str=end_time.strftime("%Y_%m_%d %H:%M"))
-        
-        elif preset_mode in self._profiles:
-            if current_preset == PRESET_BOOST:
-                await self._client.async_set_group_boost(group_id=self._group_id, boost=False)
-            elif current_preset == PRESET_ECO:
-                await self._client.async_deactivate_absence()
-            elif current_preset == PRESET_PARTY:
-                await self._client.async_deactivate_vacation()
+        try:
+            if preset_mode == PRESET_BOOST:
+                await self._client.async_set_group_boost(
+                    group_id=self._group_id, boost=True
+                )
+            elif preset_mode == PRESET_ECO:
+                await self._client.async_activate_absence_permanent()
+            elif preset_mode == PRESET_PARTY:
+                comfort_temp = self._config_entry.options.get(
+                    CONF_COMFORT_TEMPERATURE, DEFAULT_COMFORT_TEMPERATURE
+                )
+                end_time = dt_util.now() + timedelta(hours=4)
+                await self.async_activate_party_mode(
+                    temperature=comfort_temp,
+                    end_time_str=end_time.strftime("%Y_%m_%d %H:%M"),
+                )
 
-            if self._group.get("controlMode") != "AUTOMATIC":
-                await self._client.async_set_group_control_mode(group_id=self._group_id, mode="AUTOMATIC")
-            
-            await self._client.async_set_group_active_profile(group_id=self._group_id, profile_index=self._profiles[preset_mode])
-    
+            elif preset_mode in self._profiles:
+                if current_preset == PRESET_BOOST:
+                    await self._client.async_set_group_boost(
+                        group_id=self._group_id, boost=False
+                    )
+                elif current_preset == PRESET_ECO:
+                    await self._client.async_deactivate_absence()
+                elif current_preset == PRESET_PARTY:
+                    await self._client.async_deactivate_vacation()
+
+                if self._group.get("controlMode") != "AUTOMATIC":
+                    await self._client.async_set_group_control_mode(
+                        group_id=self._group_id, mode="AUTOMATIC"
+                    )
+
+                await self._client.async_set_group_active_profile(
+                    group_id=self._group_id, profile_index=self._profiles[preset_mode]
+                )
+        except (HcuApiError, ConnectionError) as err:
+            _LOGGER.error("Failed to set preset mode: %s", err)
+            self._attr_assumed_state = False
+            self.async_write_ha_state()
+
     async def async_activate_party_mode(
-        self, temperature: float, end_time_str: str | None = None, duration: int | None = None
+        self,
+        temperature: float,
+        end_time_str: str | None = None,
+        duration: int | None = None,
     ) -> None:
         """Service call to activate party mode."""
         if not end_time_str and not duration:
-            raise ValueError("Either end_time or duration must be provided for party mode.")
+            raise ValueError(
+                "Either end_time or duration must be provided for party mode."
+            )
 
-        end_time = end_time_str or (dt_util.now() + timedelta(seconds=duration)).strftime("%Y_%m_%d %H:%M")
-        
+        end_time = end_time_str or (
+            dt_util.now() + timedelta(seconds=duration)
+        ).strftime("%Y_%m_%d %H:%M")
+
         self._attr_assumed_state = True
         self._attr_preset_mode = PRESET_PARTY
         self.async_write_ha_state()
@@ -273,4 +335,3 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
             _LOGGER.error("Failed to activate party mode: %s", err)
             self._attr_assumed_state = False
             self.async_write_ha_state()
-

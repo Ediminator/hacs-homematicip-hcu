@@ -22,20 +22,24 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, config_entry: ConfigEntry, async_add_entities: AddEntitiesCallback
+    hass: HomeAssistant,
+    config_entry: ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the button platform from a config entry."""
-    coordinator: "HcuCoordinator" = hass.data[config_entry.domain][config_entry.entry_id]
+    coordinator: "HcuCoordinator" = hass.data[config_entry.domain][
+        config_entry.entry_id
+    ]
     if entities := coordinator.entities.get(Platform.BUTTON):
         async_add_entities(entities)
 
 
 class HcuResetEnergyButton(HcuBaseEntity, ButtonEntity):
     """Representation of a button to reset the energy counter."""
+
     PLATFORM = Platform.BUTTON
     _attr_has_entity_name = True
     _attr_icon = "mdi:reload"
-    _attr_name = "Reset Energy Counter"
 
     def __init__(
         self,
@@ -46,7 +50,14 @@ class HcuResetEnergyButton(HcuBaseEntity, ButtonEntity):
     ):
         """Initialize the reset button."""
         super().__init__(coordinator, client, device_data, channel_index)
-        self._attr_unique_id = f"{self._device_id}_{self._channel_index}_reset_energy_counter"
+
+        # REFACTOR: Correctly call the centralized naming helper for feature entities.
+        self._set_entity_name(
+            channel_label=self._channel.get("label"), feature_name="Reset Energy Counter"
+        )
+        self._attr_unique_id = (
+            f"{self._device_id}_{self._channel_index}_reset_energy_counter"
+        )
 
     async def async_press(self) -> None:
         """Handle the button press action."""
@@ -56,4 +67,6 @@ class HcuResetEnergyButton(HcuBaseEntity, ButtonEntity):
                 self._device_id, self._channel_index
             )
         except (HcuApiError, ConnectionError) as err:
-            _LOGGER.error("Error resetting energy counter for %s: %s", self.entity_id, err)
+            _LOGGER.error(
+                "Error resetting energy counter for %s: %s", self.entity_id, err
+            )

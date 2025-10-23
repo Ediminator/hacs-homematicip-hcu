@@ -22,16 +22,21 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, config_entry: ConfigEntry, async_add_entities: AddEntitiesCallback
+    hass: HomeAssistant,
+    config_entry: ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the alarm control panel platform from a config entry."""
-    coordinator: "HcuCoordinator" = hass.data[config_entry.domain][config_entry.entry_id]
+    coordinator: "HcuCoordinator" = hass.data[config_entry.domain][
+        config_entry.entry_id
+    ]
     if entities := coordinator.entities.get(Platform.ALARM_CONTROL_PANEL):
         async_add_entities(entities)
 
 
 class HcuAlarmControlPanel(HcuHomeBaseEntity, AlarmControlPanelEntity):
     """Representation of the HCU Security System."""
+
     PLATFORM = Platform.ALARM_CONTROL_PANEL
     _attr_supported_features = (
         AlarmControlPanelEntityFeature.ARM_HOME | AlarmControlPanelEntityFeature.ARM_AWAY
@@ -40,7 +45,6 @@ class HcuAlarmControlPanel(HcuHomeBaseEntity, AlarmControlPanelEntity):
     _enable_turn_on_off_backwards_compatibility = False
     _attr_name = "Homematic IP Alarm"
     _attr_has_entity_name = False
-
 
     def __init__(self, coordinator: "HcuCoordinator", client: HcuApiClient):
         super().__init__(coordinator, client)
@@ -57,13 +61,13 @@ class HcuAlarmControlPanel(HcuHomeBaseEntity, AlarmControlPanelEntity):
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
-        # Call super first to handle assumed_state and async_write_ha_state
-        super()._handle_coordinator_update()
         if self._home_uuid in self.coordinator.data:
             # Clear any optimistically set alarm state
             self._attr_alarm_state = None
             self.async_write_ha_state()
-
+        
+        # Call super *after* clearing optimistic state
+        super()._handle_coordinator_update()
 
     @property
     def alarm_state(self) -> AlarmControlPanelState | None:
@@ -83,14 +87,20 @@ class HcuAlarmControlPanel(HcuHomeBaseEntity, AlarmControlPanelEntity):
         zones = sec_home.get("securityZones", {})
 
         if not isinstance(zones, dict):
-            _LOGGER.warning("Security zones data is not in the expected format: %s", zones)
+            _LOGGER.warning(
+                "Security zones data is not in the expected format: %s", zones
+            )
             return AlarmControlPanelState.DISARMED
 
         internal_group_id = zones.get("INTERNAL")
         external_group_id = zones.get("EXTERNAL")
 
-        internal_group = self._client.get_group_by_id(internal_group_id) if internal_group_id else {}
-        external_group = self._client.get_group_by_id(external_group_id) if external_group_id else {}
+        internal_group = (
+            self._client.get_group_by_id(internal_group_id) if internal_group_id else {}
+        )
+        external_group = (
+            self._client.get_group_by_id(external_group_id) if external_group_id else {}
+        )
 
         internal_active = internal_group.get("active", False)
         external_active = external_group.get("active", False)
@@ -101,7 +111,9 @@ class HcuAlarmControlPanel(HcuHomeBaseEntity, AlarmControlPanelEntity):
             return AlarmControlPanelState.ARMED_HOME
         return AlarmControlPanelState.DISARMED
 
-    async def _async_set_alarm_state(self, new_state: AlarmControlPanelState, payload: dict) -> None:
+    async def _async_set_alarm_state(
+        self, new_state: AlarmControlPanelState, payload: dict
+    ) -> None:
         if new_state in (AlarmControlPanelState.ARMED_HOME, AlarmControlPanelState.ARMED_AWAY):
             self._attr_alarm_state = AlarmControlPanelState.ARMING
         else:
@@ -122,14 +134,14 @@ class HcuAlarmControlPanel(HcuHomeBaseEntity, AlarmControlPanelEntity):
         """Send disarm command."""
         await self._async_set_alarm_state(
             AlarmControlPanelState.DISARMED,
-            {"zonesActivation": {"INTERNAL": False, "EXTERNAL": False}}
+            {"zonesActivation": {"INTERNAL": False, "EXTERNAL": False}},
         )
 
     async def async_alarm_arm_home(self, code: str | None = None) -> None:
         """Send arm home command."""
         await self._async_set_alarm_state(
             AlarmControlPanelState.ARMED_HOME,
-            {"zonesActivation": {"INTERNAL": False, "EXTERNAL": True}}
+            {"zonesActivation": {"INTERNAL": False, "EXTERNAL": True}},
         )
 
     async def async_alarm_arm_away(self, code: str | None = None) -> None:

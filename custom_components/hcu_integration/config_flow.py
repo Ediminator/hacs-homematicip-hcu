@@ -12,9 +12,8 @@ from homeassistant.const import CONF_HOST, CONF_TOKEN, ATTR_TEMPERATURE
 from homeassistant.core import callback, HomeAssistant
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import aiohttp_client, device_registry as dr
-import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers import selector
-from homeassistant.util import dt as dt_util  # <-- ADDED IMPORT
+from homeassistant.util import dt as dt_util
 
 from .api import HcuApiClient, HcuApiError
 from .const import (
@@ -43,7 +42,9 @@ async def async_setup(hass: HomeAssistant, config: dict):
     return True
 
 
-async def async_will_remove_config_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> None:
+async def async_will_remove_config_entry(
+    hass: HomeAssistant, config_entry: ConfigEntry
+) -> None:
     """Handle removal of a config entry."""
     _LOGGER.warning(
         "The HCU integration has been removed. For security, please manually delete the "
@@ -66,7 +67,8 @@ class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
         config_entry: ConfigEntry,
     ) -> "HcuOptionsFlowHandler":
         """Get the options flow for this handler."""
-        return HcuOptionsFlowHandler(config_entry)
+        # REFACTOR: Do not pass config_entry to OptionsFlow constructor
+        return HcuOptionsFlowHandler()
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -86,8 +88,12 @@ class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
             data_schema=vol.Schema(
                 {
                     vol.Required("host", default=self.context.get("host", "")): str,
-                    vol.Required("auth_port", default=DEFAULT_HCU_AUTH_PORT): int,
-                    vol.Required("websocket_port", default=DEFAULT_HCU_WEBSOCKET_PORT): int,
+                    vol.Required(
+                        "auth_port", default=DEFAULT_HCU_AUTH_PORT
+                    ): int,
+                    vol.Required(
+                        "websocket_port", default=DEFAULT_HCU_WEBSOCKET_PORT
+                    ): int,
                 }
             ),
         )
@@ -160,7 +166,9 @@ class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
         """Handle the PIN reauthentication form."""
         if user_input is not None and self.reauth_entry:
             new_data = {**self.reauth_entry.data, CONF_PIN: user_input[CONF_PIN]}
-            self.hass.config_entries.async_update_entry(self.reauth_entry, data=new_data)
+            self.hass.config_entries.async_update_entry(
+                self.reauth_entry, data=new_data
+            )
             await self.hass.config_entries.async_reload(self.reauth_entry.entry_id)
             return self.async_abort(reason="reauth_successful")
 
@@ -202,17 +210,23 @@ class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
                 await client.get_system_state()
 
                 self.hass.config_entries.async_update_entry(
-                    entry, data={
+                    entry,
+                    data={
                         **entry.data,
                         CONF_HOST: new_host,
                         CONF_AUTH_PORT: new_auth_port,
                         CONF_WEBSOCKET_PORT: new_websocket_port,
-                    }
+                    },
                 )
                 await self.hass.config_entries.async_reload(entry.entry_id)
                 return self.async_abort(reason="reconfigure_successful")
 
-            except (HcuApiError, ConnectionError, asyncio.TimeoutError, aiohttp.ClientConnectorError):
+            except (
+                HcuApiError,
+                ConnectionError,
+                asyncio.TimeoutError,
+                aiohttp.ClientConnectorError,
+            ):
                 _LOGGER.error("Failed to connect to new HCU host/port combination")
                 errors["base"] = "cannot_connect"
             except Exception:
@@ -229,15 +243,28 @@ class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
             data_schema=vol.Schema(
                 {
                     vol.Required(CONF_HOST, default=entry.data[CONF_HOST]): str,
-                    vol.Required(CONF_AUTH_PORT, default=entry.data.get(CONF_AUTH_PORT, DEFAULT_HCU_AUTH_PORT)): int,
-                    vol.Required(CONF_WEBSOCKET_PORT, default=entry.data.get(CONF_WEBSOCKET_PORT, DEFAULT_HCU_WEBSOCKET_PORT)): int,
+                    vol.Required(
+                        CONF_AUTH_PORT,
+                        default=entry.data.get(CONF_AUTH_PORT, DEFAULT_HCU_AUTH_PORT),
+                    ): int,
+                    vol.Required(
+                        CONF_WEBSOCKET_PORT,
+                        default=entry.data.get(
+                            CONF_WEBSOCKET_PORT, DEFAULT_HCU_WEBSOCKET_PORT
+                        ),
+                    ): int,
                 }
             ),
             errors=errors,
         )
 
     async def _async_get_auth_token(
-        self, session: aiohttp.ClientSession, host: str, port: int, key: str, ssl_context
+        self,
+        session: aiohttp.ClientSession,
+        host: str,
+        port: int,
+        key: str,
+        ssl_context,
     ) -> str:
         """Request a new auth token from the HCU."""
         url = f"https://{host}:{port}/hmip/auth/requestConnectApiAuthToken"
@@ -282,9 +309,11 @@ class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
 class HcuOptionsFlowHandler(OptionsFlow):
     """Handle an options flow for the HCU integration."""
 
-    def __init__(self, config_entry: ConfigEntry) -> None:
-        """Initialize options flow."""
-        self.config_entry = config_entry
+    # REFACTOR: Removed __init__ method.
+    # self.config_entry is automatically populated by Home Assistant.
+    # def __init__(self, config_entry: ConfigEntry) -> None:
+    #     """Initialize options flow."""
+    #     super().__init__(config_entry)
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
@@ -334,8 +363,7 @@ class HcuOptionsFlowHandler(OptionsFlow):
             ] = bool
 
         return self.async_show_form(
-            step_id="global_settings",
-            data_schema=vol.Schema(schema)
+            step_id="global_settings", data_schema=vol.Schema(schema)
         )
 
     async def async_step_vacation(
@@ -343,7 +371,7 @@ class HcuOptionsFlowHandler(OptionsFlow):
     ) -> FlowResult:
         """Handle activating vacation mode."""
         errors: dict[str, str] = {}
-        
+
         coordinator: "HcuCoordinator" | None = self.hass.data[DOMAIN].get(
             self.config_entry.entry_id
         )
@@ -351,30 +379,30 @@ class HcuOptionsFlowHandler(OptionsFlow):
 
         if not client:
             _LOGGER.error("HCU client not available")
-            return self.async_abort(reason="internal_error") 
+            return self.async_abort(reason="internal_error")
 
         if user_input is not None:
             try:
                 end_time_str = user_input[ATTR_END_TIME]
                 end_time_dt = datetime.fromisoformat(end_time_str)
-                
-                # --- THIS IS THE FIX ---
+
                 # Get the Home Assistant tzinfo object
                 ha_tz = dt_util.get_time_zone(self.hass.config.time_zone)
-                
+
                 # Convert the datetime to the HA local timezone
                 local_end_time = end_time_dt.astimezone(ha_tz)
-                # --- END FIX ---
 
-                # Format end_time as required by API: "YYYY-MM-DD_HH:MM"
-                formatted_end_time = local_end_time.strftime("%Y-%m-%d_%H:%M")
+                # REFACTOR: Format end_time as required by API: "YYYY_MM_DD HH:MM"
+                # This fixes the bug from vCurrent and vWiP.
+                formatted_end_time = local_end_time.strftime("%Y_%m_%d %H:%M")
                 temperature = user_input[ATTR_TEMPERATURE]
 
                 await client.async_activate_vacation(
                     temperature=temperature, end_time=formatted_end_time
                 )
-                
-                return self.async_create_entry(data=None) 
+
+                # REFACTOR: Return async_create_entry with empty data to close the flow.
+                return self.async_create_entry(data={})
 
             except HcuApiError as e:
                 _LOGGER.error("Failed to activate vacation mode: %s", e)
@@ -397,9 +425,7 @@ class HcuOptionsFlowHandler(OptionsFlow):
                         ATTR_TEMPERATURE,
                         default=default_temp,
                     ): vol.All(vol.Coerce(float), vol.Range(min=5.0, max=30.0)),
-                    vol.Required(
-                        ATTR_END_TIME
-                    ): selector.DateTimeSelector(),
+                    vol.Required(ATTR_END_TIME): selector.DateTimeSelector(),
                 }
             ),
             errors=errors,
@@ -412,9 +438,17 @@ class HcuOptionsFlowHandler(OptionsFlow):
         disabled_oems = set()
         for key, value in user_input.items():
             if key.startswith("import_") and not value:
+                # Check if this is a new change (was previously True or not set)
                 if self.config_entry.options.get(key, True):
+                    # Convert 'import_some_oem' to 'Some Oem'
                     oem_name = key.replace("import_", "").replace("_", " ").title()
-                    disabled_cmall_devices = dr.async_entries_for_config_entry(
+                    disabled_oems.add(oem_name)
+
+        if not disabled_oems:
+            return
+
+        # REFACTOR: Fixed typo in variable name 'disabled_cmall_devices' to 'all_devices'.
+        all_devices = dr.async_entries_for_config_entry(
             device_registry, self.config_entry.entry_id
         )
 

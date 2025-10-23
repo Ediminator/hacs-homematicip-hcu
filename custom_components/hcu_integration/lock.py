@@ -37,7 +37,7 @@ class HcuLock(HcuBaseEntity, LockEntity):
 
     PLATFORM = Platform.LOCK
     _attr_supported_features = LockEntityFeature.OPEN
-    
+
     def __init__(
         self,
         coordinator: "HcuCoordinator",
@@ -48,14 +48,9 @@ class HcuLock(HcuBaseEntity, LockEntity):
     ):
         super().__init__(coordinator, client, device_data, channel_index)
         self._config_entry = config_entry
-        
-        channel_label = self._channel.get("label")
-        if channel_label:
-            self._attr_name = channel_label
-            self._attr_has_entity_name = False
-        else:
-            self._attr_name = None
-            self._attr_has_entity_name = False
+
+        # REFACTOR: Correctly call the centralized naming helper.
+        self._set_entity_name(channel_label=self._channel.get("label"))
 
         self._attr_unique_id = f"{self._device_id}_{self._channel_index}_lock"
 
@@ -63,7 +58,7 @@ class HcuLock(HcuBaseEntity, LockEntity):
     def is_locked(self) -> bool:
         """Return true if the lock is locked."""
         return self._channel.get("lockState") == "LOCKED"
-    
+
     @property
     def available(self) -> bool:
         """
@@ -77,7 +72,6 @@ class HcuLock(HcuBaseEntity, LockEntity):
                 "Lock '%s' is unavailable because the PIN is not configured.", self.name
             )
         return super().available and pin_configured
-
 
     async def _set_lock_state(self, state: str) -> None:
         """Send the command to set the lock state."""
@@ -100,18 +94,30 @@ class HcuLock(HcuBaseEntity, LockEntity):
         except HcuApiError as err:
             _LOGGER.error("Failed to set lock state for %s: %s", self.name, err)
             try:
-                error_body = json.loads(err.args[0].replace("HCU Error: ", "").replace("'", "\""))
-                if error_body.get("body", {}).get("errorCode") == "INVALID_AUTHORIZATION_PIN":
-                    _LOGGER.error("Invalid PIN for lock '%s'. Triggering re-authentication.", self.name)
+                # Try to parse the error message to see if it's an invalid PIN
+                error_body = json.loads(
+                    err.args[0].replace("HCU Error: ", "").replace("'", '"')
+                )
+                if (
+                    error_body.get("body", {}).get("errorCode")
+                    == "INVALID_AUTHORIZATION_PIN"
+                ):
+                    _LOGGER.error(
+                        "Invalid PIN for lock '%s'. Triggering re-authentication.",
+                        self.name,
+                    )
                     self._config_entry.async_start_reauth(self.hass)
             except (json.JSONDecodeError, IndexError, AttributeError):
-                pass # Not the error we are looking for
+                pass  # Not the error we are looking for
         except ConnectionError as err:
-            _LOGGER.error("Connection failed while setting lock state for %s: %s", self.name, err)
+            _LOGGER.error(
+                "Connection failed while setting lock state for %s: %s", self.name, err
+            )
         finally:
-            self._attr_assumed_state = False
-            self.async_write_ha_state()
-
+            # Note: We don't reset assumed state here, we let the coordinator update do it
+            # to prevent state flickering if the command succeeds but the error handling
+            # was for a different issue. The coordinator is the source of truth.
+            pass
 
     async def async_lock(self, **kwargs) -> None:
         """Lock the door."""

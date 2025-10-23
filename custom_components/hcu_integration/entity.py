@@ -33,6 +33,42 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], Entity):
         self._channel_index = int(channel_index)
         self._attr_assumed_state = False
 
+    def _set_entity_name(
+        self,
+        channel_label: str | None = None,
+        feature_name: str | None = None,
+    ) -> None:
+        """
+        Set the entity name based on the channel label and feature.
+
+        This central helper ensures consistent naming across all platforms.
+        """
+        if feature_name:
+            # This is a "feature" entity (sensor, binary_sensor, button)
+            if channel_label:
+                # Sensor on a labeled channel: "Channel Label Feature Name"
+                # (e.g., "Living Room Thermostat Temperature")
+                self._attr_name = f"{channel_label} {feature_name}"
+                self._attr_has_entity_name = False
+            else:
+                # Sensor on an unlabeled channel: "Feature Name"
+                # (e.g., "Low Battery" on a device)
+                self._attr_name = feature_name
+                self._attr_has_entity_name = True
+        else:
+            # This is a "main" entity (switch, light, cover, lock)
+            if channel_label:
+                # Main entity on a labeled channel: "Channel Label"
+                # (e.g., "Ceiling Light")
+                self._attr_name = channel_label
+                self._attr_has_entity_name = False
+            else:
+                # Main entity on an unlabeled channel (e.g., FROLL, PSM-2)
+                # Let HA use the device name by setting name to None.
+                # (e.g., "HmIP-PSM-2")
+                self._attr_name = None
+                self._attr_has_entity_name = False
+
     @property
     def _device(self) -> dict[str, Any]:
         """Return the latest parent device data from the client's state cache."""

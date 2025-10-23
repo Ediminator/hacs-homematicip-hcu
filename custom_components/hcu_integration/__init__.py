@@ -19,6 +19,7 @@ from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from homeassistant.util import dt as dt_util
 
 from .api import HcuApiClient, HcuApiError
 from .const import (
@@ -44,7 +45,7 @@ from .const import (
     ATTR_RULE_ID,
     ATTR_ENABLED,
     ATTR_END_TIME,
-    EVENT_CHANNEL_TYPES,  # REFACTOR: Import new set
+    EVENT_CHANNEL_TYPES,
 )
 from .discovery import async_discover_entities
 
@@ -85,7 +86,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         """Handle the play_sound service call by delegating to the entity."""
         for entity_id in call.data[ATTR_ENTITY_ID]:
             # This will only find entities from the switch domain, as defined in services.yaml
-            hcu_entity = hass.data["entity_components"].get(Platform.SWITCH).get_entity(entity_id)
+            hcu_entity = (
+                hass.data["entity_components"]
+                .get(Platform.SWITCH)
+                .get_entity(entity_id)
+            )
 
             if not hcu_entity or not hasattr(hcu_entity, "async_play_sound"):
                 _LOGGER.warning(
@@ -116,7 +121,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     async def handle_activate_party_mode(call: ServiceCall) -> None:
         """Handle the activate_party_mode service call."""
         for entity_id in call.data[ATTR_ENTITY_ID]:
-            hcu_entity = hass.data["entity_components"].get(Platform.CLIMATE).get_entity(entity_id)
+            hcu_entity = (
+                hass.data["entity_components"]
+                .get(Platform.CLIMATE)
+                .get_entity(entity_id)
+            )
 
             if not hcu_entity or not hasattr(hcu_entity, "async_activate_party_mode"):
                 _LOGGER.warning(
@@ -131,12 +140,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
             try:
                 await hcu_entity.async_activate_party_mode(
-                    temperature=temperature, end_time_str=end_time_str, duration=duration
+                    temperature=temperature,
+                    end_time_str=end_time_str,
+                    duration=duration,
                 )
             except (HcuApiError, ConnectionError) as err:
-                _LOGGER.error("Error calling activate_party_mode for %s: %s", entity_id, err)
+                _LOGGER.error(
+                    "Error calling activate_party_mode for %s: %s", entity_id, err
+                )
             except ValueError as err:
-                _LOGGER.error("Invalid parameter for activate_party_mode for %s: %s", entity_id, err)
+                _LOGGER.error(
+                    "Invalid parameter for activate_party_mode for %s: %s",
+                    entity_id,
+                    err,
+                )
 
     async def handle_activate_vacation_mode(call: ServiceCall) -> None:
         """Handle the activate_vacation_mode service call."""
@@ -144,8 +161,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         end_time_str = call.data.get(ATTR_END_TIME)
 
         try:
-            # The API requires the date and time to be separated by an underscore
-            formatted_end_time = end_time_str.replace(" ", "_")
+            # REFACTOR: Parse the datetime string from the service call and format it
+            # to match the API expectation: 'YYYY_MM_DD HH:MM'
+            # Both previous versions had this formatting wrong.
+            dt_obj = dt_util.parse_datetime(end_time_str)
+            if dt_obj is None:
+                raise ValueError(f"Invalid datetime string received: {end_time_str}")
+
+            formatted_end_time = dt_obj.strftime("%Y_%m_%d %H:%M")
+
             await client.async_activate_vacation(
                 temperature=temperature, end_time=formatted_end_time
             )
@@ -156,6 +180,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             )
         except (HcuApiError, ConnectionError) as err:
             _LOGGER.error("Error activating vacation mode: %s", err)
+        except ValueError as err:
+            _LOGGER.error("Invalid end_time for vacation mode: %s", err)
         except Exception:
             _LOGGER.exception("Unexpected error during vacation mode activation.")
 
@@ -175,14 +201,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         except (HcuApiError, ConnectionError) as err:
             _LOGGER.error("Error deactivating absence mode: %s", err)
 
-
     hass.services.async_register(DOMAIN, SERVICE_PLAY_SOUND, handle_play_sound)
     hass.services.async_register(DOMAIN, SERVICE_SET_RULE_STATE, handle_set_rule_state)
-    hass.services.async_register(DOMAIN, SERVICE_ACTIVATE_PARTY_MODE, handle_activate_party_mode)
-    hass.services.async_register(DOMAIN, SERVICE_ACTIVATE_VACATION_MODE, handle_activate_vacation_mode)
-    hass.services.async_register(DOMAIN, SERVICE_ACTIVATE_ECO_MODE, handle_activate_eco_mode)
-    hass.services.async_register(DOMAIN, SERVICE_DEACTIVATE_ABSENCE_MODE, handle_deactivate_absence_mode)
-
+    hass.services.async_register(
+        DOMAIN, SERVICE_ACTIVATE_PARTY_MODE, handle_activate_party_mode
+    )
+    hass.services.async_register(
+        DOMAIN, SERVICE_ACTIVATE_VACATION_MODE, handle_activate_vacation_mode
+    )
+    hass.services.async_register(
+        DOMAIN, SERVICE_ACTIVATE_ECO_MODE, handle_activate_eco_mode
+    )
+    hass.services.async_register(
+        DOMAIN, SERVICE_DEACTIVATE_ABSENCE_MODE, handle_deactivate_absence_mode
+    )
 
     entry.add_update_listener(async_reload_entry)
 
@@ -269,7 +301,7 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
         events = message.get("body", {}).get("eventTransaction", {}).get("events", {})
         if not events:
             return
-        
+
         # Store old timestamps to detect stateless button presses
         old_state = {
             dev_id: {
@@ -286,15 +318,13 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
             device = self.client.get_device_by_address(dev_id)
             if not device:
                 continue
-            
+
             for ch_idx, channel in device.get("functionalChannels", {}).items():
-                # REFACTOR: Use centralized EVENT_CHANNEL_TYPES set
-                # This also adds SINGLE_KEY_CHANNEL and MULTI_MODE_INPUT_CHANNEL
                 if channel.get("functionalChannelType") in EVENT_CHANNEL_TYPES:
                     new_ts = channel.get("lastStatusUpdate")
                     old_ts = old_state.get(dev_id, {}).get(ch_idx)
                     if new_ts and new_ts != old_ts:
-                        _LOGGER.debug("Button press detected for device %s channel %s", dev_id, ch_idx)
+                        # Fire event for stateless buttons
                         self.hass.bus.async_fire(
                             f"{DOMAIN}_event",
                             {

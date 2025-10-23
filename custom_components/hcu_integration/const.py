@@ -116,7 +116,6 @@ API_PATHS = {
     "SET_ZONES_ACTIVATION": "/hmip/home/security/setExtendedZonesActivation",
     "SET_EPAPER_DISPLAY": "/hmip/device/control/setEpaperDisplay",
     "ACTIVATE_PARTY_MODE": "/hmip/group/heating/activatePartyMode",
-    # ADDED: Group cover controls found in diagnostics
     "SET_GROUP_SHUTTER_LEVEL": "/hmip/group/switching/setPrimaryShadingLevel",
     "SET_GROUP_SLATS_LEVEL": "/hmip/group/switching/setSecondaryShadingLevel",
     "STOP_GROUP_COVER": "/hmip/group/switching/stop",
@@ -160,12 +159,11 @@ HMIP_DEVICE_TYPE_TO_DEVICE_CLASS = {
     "WALL_MOUNTED_GLASS_SWITCH": SwitchDeviceClass.SWITCH,
     "WIRED_DIN_RAIL_SWITCH_8": SwitchDeviceClass.SWITCH,
     "WIRED_DIN_RAIL_BLIND_4": CoverDeviceClass.BLIND,
-    "WIRED_DIN_RAIL_DIMMER_3": None,  # Dimmer is a light
-    "BRAND_DIMMER": None,  # Dimmer is a light
+    "WIRED_DIN_RAIL_DIMMER_3": None,
+    "BRAND_DIMMER": None,
     "OPEN_COLLECTOR_MODULE_8": SwitchDeviceClass.SWITCH,
     "DIN_RAIL_SWITCH_1": SwitchDeviceClass.SWITCH,
     "FLUSH_MOUNT_DIMMER": None,
-    # Devices handled by features or events
     "CONTACT_INTERFACE_6": None,
     "ENERGY_SENSING_INTERFACE": None,
     "ENERGY_SENSORS_INTERFACE": None,
@@ -253,16 +251,24 @@ HMIP_FEATURE_TO_ENTITY = {
         "device_class": SensorDeviceClass.ENERGY,
         "state_class": SensorStateClass.TOTAL_INCREASING,
     },
-    "energyCounterT1": {
+    # FIXED: Changed from energyCounterT1/T2 to energyCounterOne/Two/Three (API naming)
+    "energyCounterOne": {
         "class": "HcuGenericSensor",
-        "name": "Energy Counter T1",
+        "name": "Energy Counter One",
         "unit": UnitOfEnergy.WATT_HOUR,
         "device_class": SensorDeviceClass.ENERGY,
         "state_class": SensorStateClass.TOTAL_INCREASING,
     },
-    "energyCounterT2": {
+    "energyCounterTwo": {
         "class": "HcuGenericSensor",
-        "name": "Energy Counter T2",
+        "name": "Energy Counter Two",
+        "unit": UnitOfEnergy.WATT_HOUR,
+        "device_class": SensorDeviceClass.ENERGY,
+        "state_class": SensorStateClass.TOTAL_INCREASING,
+    },
+    "energyCounterThree": {
+        "class": "HcuGenericSensor",
+        "name": "Energy Counter Three",
         "unit": UnitOfEnergy.WATT_HOUR,
         "device_class": SensorDeviceClass.ENERGY,
         "state_class": SensorStateClass.TOTAL_INCREASING,
@@ -295,9 +301,10 @@ HMIP_FEATURE_TO_ENTITY = {
         "device_class": SensorDeviceClass.GAS,
         "state_class": SensorStateClass.TOTAL_INCREASING,
     },
-    "gasFlowRate": {
+    # FIXED: Changed from gasFlowRate to currentGasFlow (actual API key)
+    "currentGasFlow": {
         "class": "HcuGenericSensor",
-        "name": "Gas Flow Rate",
+        "name": "Current Gas Flow",
         "unit": "m³/h",
         "icon": "mdi:meter-gas",
         "state_class": SensorStateClass.MEASUREMENT,
@@ -450,7 +457,6 @@ HMIP_FEATURE_TO_ENTITY = {
         "state_class": SensorStateClass.TOTAL_INCREASING,
         "entity_registry_enabled_default": False,
     },
-    # HmIP-PMFS Features
     "mainsVoltage": {
         "class": "HcuGenericSensor",
         "name": "Mains Voltage",
@@ -470,7 +476,6 @@ HMIP_FEATURE_TO_ENTITY = {
         "name": "Operation Mode",
         "icon": "mdi:power-plug",
     },
-    # HmIP-PMFS Binary Sensor Feature
     "mainsFailure": {
         "class": "HcuBinarySensor",
         "name": "Mains Failure",
@@ -548,7 +553,6 @@ HMIP_FEATURE_TO_ENTITY = {
         "name": "Raining",
         "device_class": BinarySensorDeviceClass.MOISTURE,
     },
-    # ADDED: 'processing' feature from HmIP-FROLL-2 (found in diagnostics)
     "processing": {
         "class": "HcuBinarySensor",
         "name": "Activity",
@@ -557,7 +561,6 @@ HMIP_FEATURE_TO_ENTITY = {
     },
 }
 
-# Centralized stateless (event-only) button channels
 EVENT_CHANNEL_TYPES = {
     "WALL_MOUNTED_TRANSMITTER_CHANNEL",
     "KEY_REMOTE_CONTROL_CHANNEL",
@@ -567,28 +570,23 @@ EVENT_CHANNEL_TYPES = {
 }
 
 HMIP_CHANNEL_TYPE_TO_ENTITY = {
-    # Lights
     "DIMMER_CHANNEL": {"class": "HcuLight"},
     "RGBW_AUTOMATION_CHANNEL": {"class": "HcuLight"},
     "UNIVERSAL_LIGHT_CHANNEL": {"class": "HcuLight"},
     "NOTIFICATION_LIGHT_CHANNEL": {"class": "HcuLight"},
     "BACKLIGHT_CHANNEL": {"class": "HcuLight"},
-    # Switches
     "ALARM_SIREN_CHANNEL": {"class": "HcuSwitch"},
     "SWITCH_CHANNEL": {"class": "HcuSwitch"},
     "SWITCH_MEASURING_CHANNEL": {"class": "HcuSwitch"},
     "WIRED_SWITCH_CHANNEL": {"class": "HcuSwitch"},
+    "MULTI_MODE_INPUT_SWITCH_CHANNEL": {"class": "HcuSwitch"},
     "WATERING_CONTROLLER_CHANNEL": {"class": "HcuWateringSwitch"},
     "CONDITIONAL_SWITCH_CHANNEL": {"class": "HcuSwitch"},
     "OPEN_COLLECTOR_CHANNEL_8": {"class": "HcuSwitch"},
-    # Covers
     "SHUTTER_CHANNEL": {"class": "HcuCover"},
     "BLIND_CHANNEL": {"class": "HcuCover"},
     "GARAGE_DOOR_CHANNEL": {"class": "HcuGarageDoorCover"},
-    # Locks
     "DOOR_LOCK_CHANNEL": {"class": "HcuLock"},
-    # Event-based channels are handled by EVENT_CHANNEL_TYPES
-    # Other channels rely on feature discovery
     "LIGHT_SENSOR_CHANNEL": None,
     "MOTION_DETECTION_CHANNEL": None,
     "CLIMATE_CONTROL_INPUT_CHANNEL": None,

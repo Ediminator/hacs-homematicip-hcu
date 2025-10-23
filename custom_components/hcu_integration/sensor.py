@@ -86,11 +86,14 @@ class HcuGenericSensor(HcuBaseEntity, SensorEntity):
     ):
         super().__init__(coordinator, client, device_data, channel_index)
         self._feature = feature
+        self._base_mapping = mapping
 
-        # REFACTOR: Correctly call the centralized naming helper for feature entities.
+        # ENHANCED: Smart naming for energy counters based on type
+        feature_name = self._get_smart_feature_name()
+        
         self._set_entity_name(
             channel_label=self._channel.get("label"),
-            feature_name=mapping["name"]
+            feature_name=feature_name
         )
 
         self._attr_unique_id = f"{self._device_id}_{self._channel_index}_{self._feature}"
@@ -103,6 +106,27 @@ class HcuGenericSensor(HcuBaseEntity, SensorEntity):
             self._attr_entity_registry_enabled_default = mapping[
                 "entity_registry_enabled_default"
             ]
+
+    def _get_smart_feature_name(self) -> str:
+        """Generate smart feature name based on channel data."""
+        # For energy counters, use the type information if available
+        if self._feature.startswith("energyCounter"):
+            counter_type_key = f"{self._feature}Type"
+            counter_type = self._channel.get(counter_type_key, "UNKNOWN")
+            
+            # Map API counter types to user-friendly names
+            type_name_map = {
+                "ENERGY_COUNTER_USAGE_HIGH_TARIFF": "Energy Usage (High Tariff)",
+                "ENERGY_COUNTER_USAGE_LOW_TARIFF": "Energy Usage (Low Tariff)",
+                "ENERGY_COUNTER_INPUT_SINGLE_TARIFF": "Energy Feed-in",
+                "ENERGY_COUNTER_INPUT_HIGH_TARIFF": "Energy Feed-in (High Tariff)",
+                "ENERGY_COUNTER_INPUT_LOW_TARIFF": "Energy Feed-in (Low Tariff)",
+                "UNKNOWN": self._base_mapping["name"],
+            }
+            
+            return type_name_map.get(counter_type, self._base_mapping["name"])
+        
+        return self._base_mapping["name"]
 
     @property
     def native_value(self) -> float | str | None:

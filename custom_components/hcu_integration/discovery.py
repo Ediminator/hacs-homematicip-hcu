@@ -44,14 +44,12 @@ async def async_discover_entities(
     entities: dict[Platform, list[Any]] = {platform: [] for platform in PLATFORMS}
     state = client.state
 
-    # Mapping from class names to their respective module for dynamic instantiation.
     class_module_map = {
         "HcuLight": light,
         "HcuSwitch": switch,
         "HcuWateringSwitch": switch,
         "HcuCover": cover,
         "HcuGarageDoorCover": cover,
-        # ADDED: New group cover class from previous step
         "HcuCoverGroup": cover,
         "HcuLock": lock,
         "HcuResetEnergyButton": button,
@@ -79,17 +77,13 @@ async def async_discover_entities(
 
             channel_type = channel_data.get("functionalChannelType")
 
-            # REFACTOR: Handle indexed channel types (e.g., SWITCH_CHANNEL_1)
-            # by matching the base channel type.
             base_channel_type = None
             channel_mapping = None
 
             if channel_type in HMIP_CHANNEL_TYPE_TO_ENTITY:
-                # First, check for a direct match
                 base_channel_type = channel_type
                 channel_mapping = HMIP_CHANNEL_TYPE_TO_ENTITY[base_channel_type]
             elif channel_type:
-                # If no direct match, check for a 'startswith' match
                 for base_type in HMIP_CHANNEL_TYPE_TO_ENTITY:
                     if channel_type.startswith(base_type):
                         base_channel_type = base_type
@@ -97,7 +91,6 @@ async def async_discover_entities(
                         break
 
             if channel_mapping:
-                # Skip creating entities for stateless buttons, they are handled by events
                 if base_channel_type in EVENT_CHANNEL_TYPES:
                     continue
                 if is_unused_channel:
@@ -130,7 +123,6 @@ async def async_discover_entities(
                             e,
                         )
 
-            # Special handling for temperature to create one sensor per channel
             temp_features = {"actualTemperature", "valveActualTemperature"}
             found_temp_feature = next(
                 (f for f in temp_features if f in channel_data), None
@@ -156,9 +148,23 @@ async def async_discover_entities(
                         e,
                     )
 
-            # Main loop for all other features
+            # FIXED: Skip features with null values to prevent creating broken sensors
             for feature, mapping in HMIP_FEATURE_TO_ENTITY.items():
-                if feature in processed_features or feature not in channel_data:
+                if feature in processed_features:
+                    continue
+                
+                # Check if feature exists in channel data
+                if feature not in channel_data:
+                    continue
+                
+                # CRITICAL FIX: Skip features with null values
+                if channel_data[feature] is None:
+                    _LOGGER.debug(
+                        "Skipping feature '%s' on device %s channel %s: value is null",
+                        feature,
+                        device_data.get("id"),
+                        channel_index,
+                    )
                     continue
 
                 class_name = mapping["class"]
@@ -195,7 +201,6 @@ async def async_discover_entities(
             entities[Platform.CLIMATE].append(
                 climate.HcuClimate(coordinator, client, group_data, config_entry)
             )
-        # ADDED: Support for SHUTTER groups found in diagnostics
         elif group_data.get("type") == "SHUTTER":
             entities[Platform.COVER].append(
                 cover.HcuCoverGroup(coordinator, client, group_data)

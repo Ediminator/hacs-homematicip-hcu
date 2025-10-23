@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Version 1.8.0 - 2025-10-23
+
+### 🐛 Bug Fixes
+
+- **Fixed Critical Discovery Bug:** Corrected an issue where many entities (on devices like HmIP-PSM-2, HmIP-FSI16, HmIP-FROLL-2) were not created. The discovery logic now correctly handles indexed channel types (e.g., "SWITCH_CHANNEL_1", "SHUTTER_CHANNEL_2").
+- **Fixed Vacation/Party Mode:** Fixed a bug where activating Vacation Mode or Party Mode would fail due to an incorrect date/time format (YYYY-MM-DD instead of YYYY_MM_DD) being sent to the HCU API.
+- **Fixed Config Flow:** Resolved a TypeError in the options flow that occurred after fixing a deprecation warning.
+- **Fixed Entity Naming:** Corrected a core bug from a previous refactor that caused "main" entities (Switches, Lights, Covers, Locks) to be created without names.
+
+### 🚀 New Features
+
+- **Added Support for SHUTTER Groups:** The integration now discovers "SHUTTER" groups from the HCU and creates corresponding cover entities in Home Assistant, allowing control of grouped blinds/shutters.
+- **Added New Sensors for HmIP-ESI:** Full support for HmIP-ESI-GAS and HmIP-ESI-IEC energy/gas meters, including new sensors for: gasFlowRate, energyCounterT1 (Low Tariff), energyCounterT2 (High Tariff), powerProduction, and energyProduction.
+- **Added "Activity" Sensor for Covers:** Blinds and shutters (like HmIP-FROLL-2) now have a new binary sensor (disabled by default) that indicates when the cover is actively moving (processing state).
+
+### ✨ Improvements
+
+- **Updated Device Definitions:** Merged a large update to const.py with many new device and channel definitions, improving future device compatibility.
+- **Centralized Naming:** Completed the refactor to use a single, centralized _set_entity_name helper, making entity naming consistent and easier to maintain.
+
 ## Version 1.7.0 - 2025-10-23
 
 ### 🎉 New Features
@@ -200,3 +220,4 @@ This is the initial stable release of the Homematic IP Local (HCU) integration, 
 [Unreleased]: https://github.com/Ediminator/hacs-homematicip-hcu/compare/v1.0.0...HEAD
 
 [1.0.0]: https://github.com/Ediminator/hacs-homematicip-hcu/releases/tag/v1.0.0
+

@@ -1,54 +1,59 @@
 # Homematic IP Local (HCU) Integration for Home Assistant
 
-[![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg)](https://github.com/hacs/integration)
+[![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
+[![GitHub release](https://img.shields.io/github/release/Ediminator/hacs-homematicip-hcu.svg)](https://github.com/Ediminator/hacs-homematicip-hcu/releases)
+[![License](https://img.shields.io/github/license/Ediminator/hacs-homematicip-hcu.svg)](LICENSE)
 
-Control your **Homematic IP** devices locally through your **Home Control Unit (HCU)** without relying on the cloud. This custom integration for Home Assistant connects directly to your HCU over your local network for maximum speed, reliability, and privacy.
+**Local control** for your Homematic IP devices via the Home Control Unit (HCU). No cloud required!
 
-## ✨ Features
-
-* **🏠 Local Control:** All communication happens on your local network - no cloud dependency
-* **⚡ Real-Time Updates:** Instant state changes via persistent WebSocket connection
-* **🎯 Easy Setup:** Simple step-by-step configuration flow guides you through setup
-* **🔧 Broad Device Support:** Works with most Homematic IP devices based on their capabilities
-* **🎵 Custom Services:** Flexible services for sound playback, rule control, and party mode
-* **🔒 Secure:** Your data never leaves your network
-
-## 📋 Supported Devices
-
-This integration uses a **feature-based discovery system** rather than a fixed device list. This means that most Homematic IP devices will work automatically based on their capabilities:
-
-- **Switches & Dimmers:** Pluggable, flush-mounted, and DIN rail variants
-- **Covers:** Shutters, blinds, garage doors (including third-party modules like HunterDouglas)
-- **Climate Control:** Heating groups, wall thermostats, radiator thermostats
-- **Security Sensors:** Window/door contacts, motion detectors, smoke detectors, water sensors
-- **Lights:** Dimmers, RGBW controllers, notification lights
-- **Locks:** Door lock drives with PIN support
-- **Special Devices:** Watering controllers, notification devices, e-paper displays
-
-**How it works:** 
-- Devices with `dimLevel` → appear as lights
-- Devices with `shutterLevel` → appear as covers
-- Devices with `windowState` or `presenceDetected` → appear as binary sensors
-- And so on...
-
-## 🚀 Installation
-
-### Prerequisites
-
-Before you begin, make sure you have:
-
-1. ✅ A running Home Assistant instance
-2. ✅ [HACS](https://hacs.xyz/) (Home Assistant Community Store) installed
-3. ✅ A Homematic IP Home Control Unit (HCU) connected to your local network
-4. ✅ The HCU's IP address (you can find this in your router's device list)
+This integration connects directly to your HCU's local API, providing real-time control and status updates for all your Homematic IP devices through Home Assistant.
 
 ---
 
+## 📋 Table of Contents
+
+- [Features](#-features)
+- [Requirements](#-requirements)
+- [Installation](#-installation)
+- [Configuration](#-configuration-options)
+- [Working with Buttons & Remote Controls](#-working-with-buttons--remote-controls) ⭐ **NEW: Simplified Guide**
+- [Available Services](#-available-services)
+- [Diagnostics & Troubleshooting](#-diagnostics--troubleshooting)
+- [FAQ](#-faq)
+- [Support](#-support)
+
+---
+
+## 🌟 Features
+
+- **🏠 Local Control**: Direct communication with your HCU - no cloud dependency
+- **⚡ Real-time Updates**: Instant device state changes via WebSocket
+- **🔌 Full Device Support**: Switches, lights, sensors, climate, covers, locks, and more
+- **🎛️ Advanced Climate Control**: Heating profiles, party mode, vacation mode
+- **🔘 Event-Based Buttons**: Stateless button devices trigger automation events
+- **🛡️ Security Integration**: Alarm control panel for your security system
+- **🔧 Extensive Services**: Play sounds, control rules, manage heating schedules
+- **📊 Diagnostics**: Built-in diagnostics for troubleshooting and device support
+
+---
+
+## 📦 Requirements
+
+- **Home Assistant** 2024.1.0 or newer
+- **Homematic IP Home Control Unit (HCU)** with firmware 1.x or later
+- **Local network access** to your HCU
+
+**Compatible HCU Models:**
+- HmIP-HAP (Homematic IP Access Point)
+- HmIP-HCU-1 (Homematic IP Home Control Unit)
+
+---
+
+## 🚀 Installation
+
 ### Step 1: Install via HACS
 
-> ⚠️ **Important:** You must install the integration through HACS first before you can configure it in Home Assistant.
-
-1. Open HACS in your Home Assistant sidebar
+1. Open **HACS** in your Home Assistant sidebar
 2. Click on **Integrations**
 3. Click the **three dots** (⋮) in the top right corner
 4. Select **Custom repositories**
@@ -78,7 +83,8 @@ Before adding the integration, you must enable the local API on your HCU.
 
 4. Toggle the switch to **activate Developer Mode**
 
-5. Toggle the switch to **Expose the Connect API WebSocket** - ⚠️ Sometimes the toggle for the Websocket is already activated, even when this is the first time the developer mode was activated. Please **deactivate and activate the toggle** in that case.
+5. Toggle the switch to **Expose the Connect API WebSocket**
+   - ⚠️ **Important:** Sometimes the toggle is already activated even on first setup. Please **deactivate and activate the toggle** to ensure it's properly enabled.
 
 6. Leave this page open - you'll need it in the next step!
 
@@ -143,85 +149,392 @@ After installation, you can adjust some settings:
 
 ---
 
+## 🔘 Working with Buttons & Remote Controls
+
+**⭐ This is the most common question, so read this section carefully!**
+
+### Understanding Button Devices
+
+Stateless button devices (wall switches, remote controls, etc.) work differently from regular switches in Home Assistant:
+
+**❌ You will NOT see:**
+- Button entities in your entity list
+- Buttons in the device card
+- Toggle switches for each button
+
+**✅ You WILL get:**
+- Events fired on the Home Assistant event bus
+- Full control via automations
+- Support for multi-button scenarios
+
+**Why?** Stateless buttons don't maintain an on/off state - they only send momentary press signals. Home Assistant's standard approach for these devices is to use events, which provides much more flexibility for automations.
+
+---
+
+### Supported Button Devices
+
+This integration supports button events for:
+
+**Wall Switches:**
+- HmIP-WGS (Wall-mounted Glass Switch) ⭐ **Fixed in v1.8.1**
+- HmIP-WRC2 (2-button Wall Remote)
+- HmIP-WRC6 (6-button Wall Remote) ⭐ **Fixed in v1.8.1**
+- HmIP-WRCC2 (Wall Remote with Display)
+- HmIP-BRC2 (2-button Remote Control)
+- And more...
+
+**Remote Controls:**
+- HmIP-KRC4 (4-button Key Ring Remote)
+- HmIP-RC8 (8-button Remote)
+- HmIP-KRCK (Key Ring Remote with Display)
+- And more...
+
+**Contact Interfaces (when configured as buttons):**
+- HmIP-FCI1 (Flush-mount Contact Interface 1)
+- HmIP-FCI6 (Flush-mount Contact Interface 6)
+- HmIP-SCI (Shutter Contact Interface)
+
+---
+
+### Step-by-Step: Testing Your Buttons
+
+Before creating automations, verify your buttons are working:
+
+#### 1. Open the Events Monitor
+
+1. Go to **Developer Tools** → **Events** (in the sidebar)
+2. In the "Listen to events" section, type: `hcu_integration_event`
+3. Click **START LISTENING**
+
+#### 2. Press Your Buttons
+
+- Press any button on your Homematic IP device
+- You should immediately see an event appear in the event monitor
+
+#### 3. Understand the Event Data
+
+When a button is pressed, you'll see something like this:
+
+```yaml
+event_type: hcu_integration_event
+data:
+  device_id: "3014F711A00048240995D6BC"
+  channel: "4"
+  type: "press"
+origin: LOCAL
+time_fired: 2025-10-26T10:30:45.123456+00:00
+```
+
+**What each field means:**
+- `device_id`: The unique ID of your button device (SGTIN)
+- `channel`: Which button was pressed (1, 2, 3, etc.)
+- `type`: Always "press" for button events
+
+#### 4. Note Down Your Device ID and Channels
+
+**Important:** You'll need these values for your automations!
+
+- Write down your `device_id`
+- Note which `channel` corresponds to each physical button
+
+**💡 Tip:** You can find your device_id more easily in the diagnostics file - see the [Diagnostics section](#-diagnostics--troubleshooting) below.
+
+---
+
+### Creating Button Automations
+
+Now that you've confirmed your buttons work, let's create automations!
+
+#### Method 1: Visual Editor (Recommended for Beginners)
+
+**Example: Turn on a light when button 1 is pressed**
+
+1. Go to **Settings** → **Automations & Scenes**
+2. Click **+ CREATE AUTOMATION** → **Create new automation**
+3. **Add Trigger:**
+   - Click **ADD TRIGGER**
+   - Select **Event**
+   - Event type: `hcu_integration_event`
+4. **Add Condition:**
+   - Click **ADD CONDITION**
+   - Select **Template**
+   - Template:
+     ```jinja
+     {{ trigger.event.data.device_id == '3014F711A00048240995D6BC' and trigger.event.data.channel == '1' }}
+     ```
+   - Replace the device_id and channel with your values!
+5. **Add Action:**
+   - Click **ADD ACTION**
+   - Select **Call service**
+   - Service: `light.turn_on`
+   - Target: Choose your light
+6. **Save** your automation with a descriptive name
+
+---
+
+#### Method 2: YAML (For Advanced Users)
+
+**Example 1: Simple Toggle**
+
+```yaml
+alias: "Living Room - Button 1 Toggle Light"
+description: "Toggle living room light with wall switch button 1"
+trigger:
+  - platform: event
+    event_type: hcu_integration_event
+    event_data:
+      device_id: "3014F711A00048240995D6BC"
+      channel: "1"
+action:
+  - service: light.toggle
+    target:
+      entity_id: light.living_room
+mode: single
+```
+
+**Example 2: Multi-Button Control (Choose Action by Button)**
+
+```yaml
+alias: "Kitchen Remote - 4 Buttons"
+description: "Control multiple lights with a 4-button remote"
+trigger:
+  - platform: event
+    event_type: hcu_integration_event
+    event_data:
+      device_id: "3014F711A00048240995D6BC"
+action:
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.event.data.channel == '1' }}"
+        sequence:
+          - service: light.turn_on
+            target:
+              entity_id: light.kitchen_main
+      
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.event.data.channel == '2' }}"
+        sequence:
+          - service: light.turn_off
+            target:
+              entity_id: light.kitchen_main
+      
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.event.data.channel == '3' }}"
+        sequence:
+          - service: light.turn_on
+            target:
+              entity_id: light.kitchen_cabinet
+      
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.event.data.channel == '4' }}"
+        sequence:
+          - service: light.turn_off
+            target:
+              entity_id: light.kitchen_cabinet
+mode: single
+```
+
+**Example 3: Same Button for On/Off (Double Press Detection)**
+
+```yaml
+alias: "Bedroom - Button 1 with Double Press"
+description: "Single press = dim light, double press = full brightness"
+trigger:
+  - platform: event
+    event_type: hcu_integration_event
+    event_data:
+      device_id: "3014F711A00048240995D6BC"
+      channel: "1"
+action:
+  - if:
+      - condition: state
+        entity_id: timer.button_press_timer
+        state: active
+    then:
+      # Second press detected within 1 second
+      - service: light.turn_on
+        target:
+          entity_id: light.bedroom
+        data:
+          brightness: 255
+      - service: timer.cancel
+        target:
+          entity_id: timer.button_press_timer
+    else:
+      # First press - start timer
+      - service: timer.start
+        target:
+          entity_id: timer.button_press_timer
+        data:
+          duration: "00:00:01"
+      - wait_for_trigger:
+          - platform: state
+            entity_id: timer.button_press_timer
+            to: idle
+        timeout: "00:00:01"
+      # Timer expired - this was a single press
+      - if:
+          - condition: state
+            entity_id: timer.button_press_timer
+            state: idle
+        then:
+          - service: light.turn_on
+            target:
+              entity_id: light.bedroom
+            data:
+              brightness: 128
+mode: restart
+```
+
+*Note: For double-press detection, create a timer helper first:*
+1. Go to **Settings** → **Devices & Services** → **Helpers**
+2. Click **+ CREATE HELPER** → **Timer**
+3. Name: "Button Press Timer"
+4. Duration: "00:00:01"
+
+---
+
+### Finding Your Device ID and Channels
+
+**Easiest Method: Use Diagnostics**
+
+1. Go to **Settings** → **Devices & Services**
+2. Find the **Homematic IP Local (HCU)** card and click it
+3. Find your button device in the list and click it
+4. Click the **three dots** (⋮) in the top right
+5. Select **Download diagnostics** (or just look at the device info on the page)
+6. The device ID (SGTIN) is shown clearly
+
+**Manual Method: Diagnostics File**
+
+1. Download the full integration diagnostics:
+   - Settings → Devices & Services
+   - Click on the Homematic IP Local (HCU) card
+   - Three dots (⋮) → Download diagnostics
+
+2. Open the JSON file and search for your device name
+
+3. Look for the structure:
+   ```json
+   "3014F711A00048240995D6BC": {
+     "label": "Living Room Wall Switch",
+     "functionalChannels": {
+       "0": { "functionalChannelType": "DEVICE_BASE" },
+       "1": { "functionalChannelType": "SINGLE_KEY_CHANNEL" },
+       "2": { "functionalChannelType": "SINGLE_KEY_CHANNEL" },
+       "3": { "functionalChannelType": "SINGLE_KEY_CHANNEL" },
+       "4": { "functionalChannelType": "SINGLE_KEY_CHANNEL" }
+     }
+   }
+   ```
+
+4. Note:
+   - The long string is your `device_id`
+   - Channels 1, 2, 3, 4 are your buttons (ignore channel 0 - it's always the maintenance channel)
+
+---
+
+### Troubleshooting Button Events
+
+**Problem: No events appear when I press buttons**
+
+✅ **Solutions:**
+1. **Update to v1.8.1 or later** - Critical bug fixes for HmIP-WGS and HmIP-WRC6
+2. **Verify the device is connected:**
+   - Check Settings → Devices & Services → Your device
+   - Make sure it's not showing as "unavailable"
+3. **Check you're listening to the right event:**
+   - Event type must be exactly: `hcu_integration_event` (no spaces, underscores)
+4. **Enable debug logging:**
+   - See [Debug Logging section](#debug-logging) below
+   - Look for lines like "Button press detected via..." in the logs
+5. **Verify your button device is actually a button:**
+   - Not all channels are buttons
+   - Check diagnostics to see the channel type
+
+**Problem: I see button entities in my old version**
+
+This is expected if you're upgrading from a very old version (pre-1.5.0). The old button entities were removed because:
+- They didn't reflect the actual button press (always showed "unknown")
+- Event-based triggers are more flexible and reliable
+- This matches Home Assistant's standard approach
+
+Simply delete the old button entities and use event-based automations instead.
+
+---
+
 ## 📊 Diagnostics & Troubleshooting
 
 ### Downloading Diagnostics
 
-Diagnostics files are **extremely valuable** for improving the integration, adding support for new devices, and troubleshooting issues. Here's how to download them:
+Diagnostics files are **extremely valuable** for troubleshooting and adding support for new devices.
 
-> 🎯 **When to download diagnostics:**
-> - Before reporting an issue on GitHub
-> - When you have a device that isn't working correctly
-> - When you want to help add support for a new device type
-> - For general troubleshooting
+**When to download diagnostics:**
+- Before reporting an issue on GitHub
+- When buttons aren't working (v1.8.1 or later fixes most button issues)
+- When a device isn't working correctly
+- To help add support for a new device type
 
-#### How to Download:
+**How to Download:**
 
 1. Go to **Settings** → **Devices & Services**
 2. Find the **Homematic IP Local (HCU)** integration card
 3. Click on the card to open the integration details
 4. In the top right, click the **three dots** (⋮)
 5. Select **Download diagnostics**
-6. Your browser will download a JSON file with a name like `hcu_integration-XXXX.json`
+6. Your browser downloads: `hcu_integration-XXXX.json`
 
-#### What's in the diagnostics file?
+**What's in the file?**
+- Complete device inventory and current states
+- Heating groups and configurations
+- Entity mappings
+- Device capabilities
 
-The file contains:
-- Your device inventory and their current states
-- Your heating groups and their configurations
-- Entity mappings between HCU and Home Assistant
-- Device capabilities and features
-
-> 🔒 **Privacy:** Sensitive data like your door lock PINs and API tokens are automatically **redacted** (replaced with `**REDACTED**`) in the diagnostics file.
-
-#### Sharing diagnostics files:
-
-When reporting an issue on GitHub:
-1. Download the diagnostics file as described above
-2. Attach it to your GitHub issue
-3. This helps identify problems much faster!
+**Privacy:** Sensitive data like PINs and tokens are automatically redacted (`**REDACTED**`).
 
 ---
 
 ### Debug Logging
 
-If you need more detailed logs for troubleshooting:
+For detailed troubleshooting, especially for button events:
 
-#### Method 1: Via UI (Recommended for Quick Debugging)
-
-This method is perfect for capturing logs for a specific issue.
+#### Method 1: Quick Debug (Recommended)
 
 1. Go to **Settings** → **Devices & Services**
-2. Find the **Homematic IP Local (HCU)** card
-3. Click the **three dots** (⋮) on the card
+2. Find **Homematic IP Local (HCU)** card
+3. Click the **three dots** (⋮)
 4. Click **Enable debug logging**
-5. Reproduce the problem you're experiencing
+5. Reproduce the issue (e.g., press your buttons)
 6. Click the **three dots** (⋮) again
 7. Click **Disable debug logging**
-8. Your browser will immediately download the log file
+8. Your browser immediately downloads the log file
 
-#### Method 2: Via configuration.yaml (Permanent Logging)
+**Look for these log entries for button debugging:**
+- `Button press detected via timestamp change` - Timestamp-based detection (old devices)
+- `Button press detected for stateless channel` - Event-based detection (HmIP-WGS, HmIP-WRC6, etc.)
 
-For persistent debug logging that survives restarts:
+#### Method 2: Permanent Logging
 
-1. Edit your `configuration.yaml` file
-2. Add the following:
+For persistent debug logging:
 
-```yaml
-logger:
-  default: info
-  logs:
-    custom_components.hcu_integration: debug
-```
+1. Edit your `configuration.yaml`:
+   ```yaml
+   logger:
+     default: info
+     logs:
+       custom_components.hcu_integration: debug
+   ```
 
-3. Restart Home Assistant
-4. Logs will appear in **Settings** → **System** → **Logs**
+2. Restart Home Assistant
+3. View logs in **Settings** → **System** → **Logs**
 
 ---
 
 ## 🎮 Available Services
-
-The integration provides several custom services for advanced control:
 
 ### `hcu_integration.play_sound`
 
@@ -231,7 +544,7 @@ Play a sound on compatible notification devices (e.g., HmIP-MP3P).
 ```yaml
 service: hcu_integration.play_sound
 target:
-  entity_id: switch.notification_device
+  entity_id: switch.doorbell
 data:
   sound_file: "ALARM_01"
   volume: 0.8
@@ -240,7 +553,7 @@ data:
 
 ### `hcu_integration.set_rule_state`
 
-Enable or disable simple automation rules within the HCU.
+Enable or disable automation rules within the HCU.
 
 **Example:**
 ```yaml
@@ -252,7 +565,7 @@ data:
 
 ### `hcu_integration.activate_party_mode`
 
-Activate party mode for heating groups with a specific temperature and duration.
+Temporarily override heating schedule for a specific room.
 
 **Example:**
 ```yaml
@@ -261,261 +574,38 @@ target:
   entity_id: climate.living_room
 data:
   temperature: 22
-  duration: 4  # hours
+  duration: 14400  # 4 hours in seconds
 ```
----
 
-## 🔘 Working with Stateless Buttons
+### `hcu_integration.activate_vacation_mode`
 
-Stateless buttons (like wall switches and remote controls) don't maintain an on/off state. Instead, they fire events when pressed. This integration handles these devices using Home Assistant's event bus, which is the standard and most flexible approach.
+System-wide vacation mode for all heating groups.
 
-### Supported Stateless Devices
-
-- **Wall Switches:** HmIP-BRC2, HmIP-WRC2, HmIP-WRC6, HmIP-WRCC2, etc.
-- **Remote Controls:** HmIP-KRC4, HmIP-RC8, HmIP-KRCK, etc.
-- **Contact Interfaces:** HmIP-FCI1, HmIP-FCI6, HmIP-SCI, etc.
-
-### How Events Work
-
-When you press a button on one of these devices, the integration fires an `hcu_integration_event` on the Home Assistant event bus with the following data:
+**Example:**
 ```yaml
-event_type: hcu_integration_event
+service: hcu_integration.activate_vacation_mode
 data:
-  device_id: "3014F711A00004953B83BE88"  # The device's SGTIN
-  channel: "1"                            # The channel number that was pressed
-  type: "press"                           # Always "press" for button events
+  temperature: 15
+  end_time: "2025-12-24 18:00"
 ```
 
-### Creating Automations with Button Events
+### `hcu_integration.activate_eco_mode`
 
-There are two main ways to use button events in your automations:
+Activate permanent absence (Eco) mode.
 
-#### Method 1: Using the Visual Automation Editor (Recommended for Beginners)
-
-1. Go to **Settings** → **Automations & Scenes**
-2. Click **+ CREATE AUTOMATION** → **Create new automation**
-3. Click **ADD TRIGGER** → **Event**
-4. Set the following:
-   - **Event type:** `hcu_integration_event`
-5. Click **ADD CONDITION** (optional but recommended)
-6. Choose **Template** and enter:
-```jinja
-   {{ trigger.event.data.device_id == '3014F711A00004953B83BE88' and trigger.event.data.channel == '1' }}
-```
-   *(Replace the device_id with your actual device ID)*
-7. Add your desired actions
-
-**Example:** Turn on a light when button 1 is pressed:
+**Example:**
 ```yaml
-alias: "Living Room Switch - Button 1"
-description: "Turn on living room light when button 1 is pressed"
-trigger:
-  - platform: event
-    event_type: hcu_integration_event
-condition:
-  - condition: template
-    value_template: >
-      {{ trigger.event.data.device_id == '3014F711A00004953B83BE88' 
-         and trigger.event.data.channel == '1' }}
-action:
-  - service: light.turn_on
-    target:
-      entity_id: light.living_room
-mode: single
+service: hcu_integration.activate_eco_mode
 ```
 
-#### Method 2: Using YAML (Advanced Users)
+### `hcu_integration.deactivate_absence_mode`
 
-For more complex scenarios, you can write automations directly in YAML:
+Deactivate any active absence mode.
 
-**Example 1:** Toggle a light with a single button
+**Example:**
 ```yaml
-alias: "Wall Switch - Toggle Light"
-description: "Toggle the bedroom light with wall switch button 1"
-trigger:
-  - platform: event
-    event_type: hcu_integration_event
-    event_data:
-      device_id: "3014F711A00004953B83BE88"
-      channel: "1"
-action:
-  - service: light.toggle
-    target:
-      entity_id: light.bedroom
-mode: single
+service: hcu_integration.deactivate_absence_mode
 ```
-
-**Example 2:** Multi-button control (different actions per button)
-```yaml
-alias: "Remote Control - Multi Button"
-description: "Control multiple lights with a 4-button remote"
-trigger:
-  - platform: event
-    event_type: hcu_integration_event
-    event_data:
-      device_id: "3014F711A00004953B83BE88"
-action:
-  - choose:
-      - conditions:
-          - condition: template
-            value_template: "{{ trigger.event.data.channel == '1' }}"
-        sequence:
-          - service: light.turn_on
-            target:
-              entity_id: light.living_room
-      - conditions:
-          - condition: template
-            value_template: "{{ trigger.event.data.channel == '2' }}"
-        sequence:
-          - service: light.turn_off
-            target:
-              entity_id: light.living_room
-      - conditions:
-          - condition: template
-            value_template: "{{ trigger.event.data.channel == '3' }}"
-        sequence:
-          - service: light.turn_on
-            target:
-              entity_id: light.bedroom
-      - conditions:
-          - condition: template
-            value_template: "{{ trigger.event.data.channel == '4' }}"
-        sequence:
-          - service: light.turn_off
-            target:
-              entity_id: light.bedroom
-mode: single
-```
-
-**Example 3:** Long press detection (requires multiple presses within a time window)
-```yaml
-alias: "Wall Switch - Long Press Detection"
-description: "Detect long press by counting rapid button presses"
-trigger:
-  - platform: event
-    event_type: hcu_integration_event
-    event_data:
-      device_id: "3014F711A00004953B83BE88"
-      channel: "1"
-action:
-  - if:
-      - condition: state
-        entity_id: timer.button_press_timer
-        state: active
-    then:
-      # Second press detected - this is a "long press"
-      - service: scene.turn_on
-        target:
-          entity_id: scene.movie_mode
-      - service: timer.cancel
-        target:
-          entity_id: timer.button_press_timer
-    else:
-      # First press - start the timer
-      - service: timer.start
-        target:
-          entity_id: timer.button_press_timer
-        data:
-          duration: "00:00:01"
-      - wait_for_trigger:
-          - platform: state
-            entity_id: timer.button_press_timer
-            to: idle
-        timeout: "00:00:01"
-      # If timer expires without second press, do single press action
-      - if:
-          - condition: state
-            entity_id: timer.button_press_timer
-            state: idle
-        then:
-          - service: light.toggle
-            target:
-              entity_id: light.living_room
-mode: restart
-```
-
-*Note: For the long press example, you need to create a timer helper first:*
-1. Go to **Settings** → **Devices & Services** → **Helpers**
-2. Click **+ CREATE HELPER** → **Timer**
-3. Name it "Button Press Timer" (entity_id will be `timer.button_press_timer`)
-
-### Finding Your Device ID and Channel Numbers
-
-To find the device ID and channel numbers for your button device:
-
-1. **Download Diagnostics:**
-   - Go to **Settings** → **Devices & Services**
-   - Find the **Homematic IP Local (HCU)** integration
-   - Click on it, then click the **three dots** (⋮)
-   - Select **Download diagnostics**
-
-2. **Open the diagnostics file** in a text editor and search for your device name
-
-3. **Look for the device structure:**
-```json
-   {
-     "3014F711A00004953B83BE88": {
-       "hcu_data": {
-         "label": "Living Room Wall Switch",
-         "functionalChannels": {
-           "0": { ... },
-           "1": { "functionalChannelType": "SINGLE_KEY_CHANNEL", ... },
-           "2": { "functionalChannelType": "SINGLE_KEY_CHANNEL", ... }
-         }
-       }
-     }
-   }
-```
-
-4. **Note:**
-   - The long string (e.g., `3014F711A00004953B83BE88`) is your `device_id`
-   - The channel numbers are inside `functionalChannels` (usually "1", "2", "3", etc.)
-   - Channel "0" is always the maintenance channel - ignore it
-
-### Testing Your Button Events
-
-You can listen to events in real-time to test your buttons:
-
-1. Go to **Developer Tools** → **Events**
-2. In the "Listen to events" section, enter: `hcu_integration_event`
-3. Click **START LISTENING**
-4. Press buttons on your device and watch the events appear
-5. Copy the `device_id` and `channel` values for your automations
-
-### Tips and Best Practices
-
-- **Use Descriptive Aliases:** Name your automations clearly (e.g., "Kitchen Switch Button 1 - Lights")
-- **Mode Selection:** Use `mode: single` for most buttons to prevent accidental double-presses
-- **Visual Feedback:** Consider adding notifications or confirmation messages in your automations
-- **Documentation:** Comment your YAML automations to remember which button does what
-- **Test First:** Always test new button automations to ensure they trigger correctly
-
----
-
-## 🐛 Reporting Issues
-
-Found a bug or have a feature request? Please help improve the integration!
-
-### Before Reporting:
-
-1. ✅ Check if the issue already exists on [GitHub Issues](https://github.com/Ediminator/hacs-homematicip-hcu/issues)
-2. ✅ Download diagnostics (see above)
-3. ✅ Enable debug logging and capture relevant logs
-
-### Creating an Issue:
-
-1. Go to [GitHub Issues](https://github.com/Ediminator/hacs-homematicip-hcu/issues)
-2. Click **New Issue**
-3. Provide:
-   - Clear description of the problem
-   - Steps to reproduce
-   - Expected vs actual behavior
-   - **Attach your diagnostics file**
-   - Relevant log excerpts (if applicable)
-   - Home Assistant version
-   - Integration version
-
-> 💡 **Tip:** The more information you provide, especially diagnostics files, the faster issues can be resolved!
 
 ---
 
@@ -523,11 +613,13 @@ Found a bug or have a feature request? Please help improve the integration!
 
 When a new version is released:
 
-1. Open HACS
+1. Open **HACS**
 2. Go to **Integrations**
 3. Find **Homematic IP Local (HCU)**
 4. If an update is available, click **UPDATE**
-5. Restart Home Assistant when prompted
+5. **Restart Home Assistant**
+
+**Important:** Always check the CHANGELOG before updating for any breaking changes or new requirements.
 
 ---
 
@@ -535,30 +627,52 @@ When a new version is released:
 
 ### Can I use both the cloud integration and this local integration?
 
-It's not recommended to run both simultaneously as they may conflict. Choose one approach.
+Not recommended. Running both simultaneously may cause conflicts. Choose one approach.
+
+### My button device isn't working (HmIP-WGS, HmIP-WRC6, etc.)
+
+Make sure you're on **v1.8.1 or later**. This version includes critical fixes for button event detection. See the [Button Troubleshooting section](#troubleshooting-button-events) above.
+
+### Why don't I see button entities anymore?
+
+As of v1.5.0, button devices use **event-based triggers** instead of entities. This is the Home Assistant standard for stateless buttons and provides more flexibility. See the [Button section](#-working-with-buttons--remote-controls) for how to use them.
 
 ### My device isn't appearing in Home Assistant
 
-1. Make sure the device is visible in your HCU web interface
-2. Check if it's a third-party device that might be filtered (check Configuration Options)
-3. Download diagnostics and check if the device is listed there
+1. Verify the device appears in the HCU web interface
+2. Check if it's a third-party device (may be filtered)
+3. Download diagnostics and check if the device is listed
 4. Create an issue on GitHub with your diagnostics file
 
 ### The integration says "Failed to connect"
 
 - Verify the HCU's IP address is correct
-- Make sure Developer Mode is enabled on the HCU
-- Check that "Expose the Connect API WebSocket" is enabled
-- Verify your network allows communication on ports 6969 and 9001
+- Ensure Developer Mode is enabled on the HCU
+- Check "Expose the Connect API WebSocket" is enabled
+- Verify ports 6969 and 9001 are accessible
 - Try accessing the HCU web interface from the same machine running Home Assistant
 
-### My door lock is showing as "Unavailable"
+### My door lock shows as "Unavailable"
 
-Make sure you've configured the door lock PIN in the integration options (see Step 4 above).
+Configure the door lock PIN in the integration options (Settings → Devices & Services → HCU → Configure).
 
 ### Can I control the HCU itself (reboot, updates, etc.)?
 
-No, this integration only controls the devices connected to the HCU. HCU management must be done through the HCU web interface.
+No, this integration only controls devices connected to the HCU. HCU management must be done through the HCU web interface.
+
+---
+
+## 💬 Support
+
+- **Issues & Bug Reports:** [GitHub Issues](https://github.com/Ediminator/hacs-homematicip-hcu/issues)
+- **Discussions:** [GitHub Discussions](https://github.com/Ediminator/hacs-homematicip-hcu/discussions)
+
+**When asking for help:**
+1. Always include your Home Assistant version
+2. Include your integration version
+3. Attach diagnostics file when possible
+4. Enable debug logging and include relevant log excerpts
+5. Clearly describe what you expected vs. what happened
 
 ---
 
@@ -576,9 +690,4 @@ Special thanks to all contributors and users who provide diagnostics files and f
 
 ---
 
-## 💬 Support
-
-- **Issues & Bug Reports:** [GitHub Issues](https://github.com/Ediminator/hacs-homematicip-hcu/issues)
-- **Discussions:** [GitHub Discussions](https://github.com/Ediminator/hacs-homematicip-hcu/discussions)
-
-**Remember:** When asking for help, always include your diagnostics file - it makes troubleshooting much faster! 🚀
+**Remember:** When in doubt, download diagnostics - it makes troubleshooting much faster! 🚀

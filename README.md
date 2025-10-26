@@ -1,8 +1,6 @@
 # Homematic IP Local (HCU) Integration for Home Assistant
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
-[![GitHub release](https://img.shields.io/github/release/Ediminator/hacs-homematicip-hcu.svg)](https://github.com/Ediminator/hacs-homematicip-hcu/releases)
-[![License](https://img.shields.io/github/license/Ediminator/hacs-homematicip-hcu.svg)](LICENSE)
 
 **Local control** for your Homematic IP devices via the Home Control Unit (HCU). No cloud required!
 

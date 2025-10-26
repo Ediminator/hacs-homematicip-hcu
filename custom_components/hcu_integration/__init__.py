@@ -85,16 +85,25 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     async def handle_play_sound(call: ServiceCall) -> None:
         """Handle the play_sound service call by delegating to the entity."""
         for entity_id in call.data[ATTR_ENTITY_ID]:
-            # This will only find entities from the switch domain, as defined in services.yaml
-            hcu_entity = (
-                hass.data["entity_components"]
-                .get(Platform.SWITCH)
-                .get_entity(entity_id)
-            )
+            hcu_entity = None
+            entity_domain = entity_id.split(".")[0]
+            
+            if entity_domain == "switch":
+                hcu_entity = (
+                    hass.data["entity_components"]
+                    .get(Platform.SWITCH)
+                    .get_entity(entity_id)
+                )
+            elif entity_domain == "light":
+                hcu_entity = (
+                    hass.data["entity_components"]
+                    .get(Platform.LIGHT)
+                    .get_entity(entity_id)
+                )
 
             if not hcu_entity or not hasattr(hcu_entity, "async_play_sound"):
                 _LOGGER.warning(
-                    "Cannot play sound on %s, as it is not a compatible Homematic IP Local (HCU) switch.",
+                    "Cannot play sound on %s, as it is not a compatible Homematic IP Local (HCU) device with sound capability.",
                     entity_id,
                 )
                 continue
@@ -161,9 +170,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         end_time_str = call.data.get(ATTR_END_TIME)
 
         try:
-            # REFACTOR: Parse the datetime string from the service call and format it
-            # to match the API expectation: 'YYYY_MM_DD HH:MM'
-            # Both previous versions had this formatting wrong.
             dt_obj = dt_util.parse_datetime(end_time_str)
             if dt_obj is None:
                 raise ValueError(f"Invalid datetime string received: {end_time_str}")
@@ -230,7 +236,7 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
             hass,
             _LOGGER,
             name=DOMAIN,
-            update_interval=None,  # This is a push-based integration
+            update_interval=None,
         )
         self.client = client
         self.entry = entry
@@ -302,6 +308,17 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
         if not events:
             return
 
+        # Extract which specific channels were updated in these events
+        # This helps us identify button presses even without timestamps
+        event_channel_updates = set()  # Set of (device_id, channel_idx) tuples
+        for event in events.values():
+            if event.get("pushEventType") == "DEVICE_CHANGED":
+                device_data = event.get("device", {})
+                device_id = device_data.get("id")
+                if device_id:
+                    for ch_idx in device_data.get("functionalChannels", {}).keys():
+                        event_channel_updates.add((device_id, ch_idx))
+
         # Store old timestamps to detect stateless button presses
         old_state = {
             dev_id: {
@@ -320,19 +337,49 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
                 continue
 
             for ch_idx, channel in device.get("functionalChannels", {}).items():
-                if channel.get("functionalChannelType") in EVENT_CHANNEL_TYPES:
-                    new_ts = channel.get("lastStatusUpdate")
-                    old_ts = old_state.get(dev_id, {}).get(ch_idx)
-                    if new_ts and new_ts != old_ts:
-                        # Fire event for stateless buttons
-                        self.hass.bus.async_fire(
-                            f"{DOMAIN}_event",
-                            {
-                                "device_id": dev_id,
-                                "channel": ch_idx,
-                                "type": "press",
-                            },
-                        )
+                channel_type = channel.get("functionalChannelType")
+                if channel_type not in EVENT_CHANNEL_TYPES:
+                    continue
+
+                # Check if this specific channel was in the raw events
+                # This prevents firing events for unrelated channels on the same device
+                if (dev_id, ch_idx) not in event_channel_updates:
+                    continue
+
+                # Try timestamp-based detection first (for devices with timestamps)
+                new_ts = channel.get("lastStatusUpdate")
+                old_ts = old_state.get(dev_id, {}).get(ch_idx)
+                
+                # Fire event if:
+                # 1. Timestamp exists and changed (existing behavior - safe)
+                # 2. No timestamp exists but channel was in the event (new fix for HmIP-WGS)
+                should_fire = False
+                
+                if new_ts is not None and old_ts is not None and new_ts != old_ts:
+                    # Timestamp-based detection (existing logic for devices with timestamps)
+                    should_fire = True
+                    _LOGGER.debug(
+                        "Button press detected via timestamp change: device=%s, channel=%s",
+                        dev_id, ch_idx
+                    )
+                elif new_ts is None:
+                    # No timestamp available, but channel was in event
+                    # This handles stateless buttons like HmIP-WGS
+                    should_fire = True
+                    _LOGGER.debug(
+                        "Button press detected for stateless channel: device=%s, channel=%s",
+                        dev_id, ch_idx
+                    )
+                
+                if should_fire:
+                    self.hass.bus.async_fire(
+                        f"{DOMAIN}_event",
+                        {
+                            "device_id": dev_id,
+                            "channel": ch_idx,
+                            "type": "press",
+                        },
+                    )
 
         if updated_ids:
             self.async_set_updated_data(updated_ids)
@@ -348,8 +395,8 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
                     await self.client.connect()
                     self.client.register_event_callback(self._handle_event_message)
 
-                    self._connected_event.set()  # Signal that the connection is up
-                    reconnect_delay = WEBSOCKET_RECONNECT_INITIAL_DELAY  # Reset backoff on success
+                    self._connected_event.set()
+                    reconnect_delay = WEBSOCKET_RECONNECT_INITIAL_DELAY
 
                 await self.client.listen()
 

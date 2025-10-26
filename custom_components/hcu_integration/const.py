@@ -46,7 +46,6 @@ DEFAULT_HCU_WEBSOCKET_PORT = 9001
 CONF_COMFORT_TEMPERATURE = "comfort_temperature"
 DEFAULT_COMFORT_TEMPERATURE = 21.0
 
-
 # --- API and Plugin Constants ---
 PLUGIN_ID = "de.homeassistant.hcu.integration"
 PLUGIN_FRIENDLY_NAME = {
@@ -73,11 +72,9 @@ SERVICE_ACTIVATE_VACATION_MODE = "activate_vacation_mode"
 SERVICE_ACTIVATE_ECO_MODE = "activate_eco_mode"
 SERVICE_DEACTIVATE_ABSENCE_MODE = "deactivate_absence_mode"
 
-
 # --- Preset Constants ---
 PRESET_ECO = "Eco"
 PRESET_PARTY = "Party"
-
 
 # --- Service Attribute Constants ---
 ATTR_SOUND_FILE = "sound_file"
@@ -86,7 +83,6 @@ ATTR_VOLUME = "volume"
 ATTR_RULE_ID = "rule_id"
 ATTR_ENABLED = "enabled"
 ATTR_END_TIME = "end_time"
-
 
 # --- API Path Constants ---
 API_PATHS = {
@@ -187,7 +183,7 @@ HMIP_DEVICE_TYPE_TO_DEVICE_CLASS = {
     "LIGHT_SENSOR_OUTDOOR": None,
     "PLUGABLE_DIMMER": None,
     "FLUSH_MOUNT_SWITCH_1": SwitchDeviceClass.SWITCH,
-    "NOTIFICATION_MP3_SOUND_PLAYER": None,
+    "COMBINATION_SIGNALLING_DEVICE": None,
     "SHUTTER_CONTACT_INVISIBLE": None,
 }
 
@@ -251,7 +247,6 @@ HMIP_FEATURE_TO_ENTITY = {
         "device_class": SensorDeviceClass.ENERGY,
         "state_class": SensorStateClass.TOTAL_INCREASING,
     },
-    # FIXED: Changed from energyCounterT1/T2 to energyCounterOne/Two/Three (API naming)
     "energyCounterOne": {
         "class": "HcuGenericSensor",
         "name": "Energy Counter One",
@@ -301,7 +296,6 @@ HMIP_FEATURE_TO_ENTITY = {
         "device_class": SensorDeviceClass.GAS,
         "state_class": SensorStateClass.TOTAL_INCREASING,
     },
-    # FIXED: Changed from gasFlowRate to currentGasFlow (actual API key)
     "currentGasFlow": {
         "class": "HcuGenericSensor",
         "name": "Current Gas Flow",
@@ -335,67 +329,13 @@ HMIP_FEATURE_TO_ENTITY = {
         "class": "HcuGenericSensor",
         "name": "Wind Direction Variation",
         "unit": DEGREE,
-        "icon": "mdi:compass-rose",
+        "icon": "mdi:weather-windy-variant",
         "state_class": SensorStateClass.MEASUREMENT,
         "entity_registry_enabled_default": False,
     },
-    "rainCounter": {
+    "moistureLevel": {
         "class": "HcuGenericSensor",
-        "name": "Rain Counter",
-        "unit": UnitOfLength.MILLIMETERS,
-        "device_class": SensorDeviceClass.PRECIPITATION,
-        "state_class": SensorStateClass.TOTAL_INCREASING,
-        "entity_registry_enabled_default": False,
-    },
-    "todayRainCounter": {
-        "class": "HcuGenericSensor",
-        "name": "Today's Rain",
-        "unit": UnitOfLength.MILLIMETERS,
-        "device_class": SensorDeviceClass.PRECIPITATION,
-        "state_class": SensorStateClass.TOTAL,
-    },
-    "yesterdayRainCounter": {
-        "class": "HcuGenericSensor",
-        "name": "Yesterday's Rain",
-        "unit": UnitOfLength.MILLIMETERS,
-        "device_class": SensorDeviceClass.PRECIPITATION,
-        "state_class": SensorStateClass.TOTAL,
-    },
-    "co2Concentration": {
-        "class": "HcuGenericSensor",
-        "name": "CO2 Concentration",
-        "unit": CONCENTRATION_PARTS_PER_MILLION,
-        "device_class": SensorDeviceClass.CO2,
-        "state_class": SensorStateClass.MEASUREMENT,
-    },
-    "passageCounterValue": {
-        "class": "HcuGenericSensor",
-        "name": "Passage Counter",
-        "icon": "mdi:counter",
-        "state_class": SensorStateClass.TOTAL_INCREASING,
-    },
-    "lastPassageDirection": {
-        "class": "HcuGenericSensor",
-        "name": "Last Passage Direction",
-        "icon": "mdi:arrow-left-right",
-    },
-    "sunshineDuration": {
-        "class": "HcuGenericSensor",
-        "name": "Sunshine Duration",
-        "unit": "min",
-        "icon": "mdi:timer-sand",
-        "state_class": SensorStateClass.TOTAL_INCREASING,
-    },
-    "yesterdaySunshineDuration": {
-        "class": "HcuGenericSensor",
-        "name": "Yesterday's Sunshine Duration",
-        "unit": "min",
-        "icon": "mdi:timer-sand",
-        "state_class": SensorStateClass.TOTAL,
-    },
-    "soilMoisture": {
-        "class": "HcuGenericSensor",
-        "name": "Soil Moisture",
+        "name": "Moisture Level",
         "unit": PERCENTAGE,
         "device_class": SensorDeviceClass.MOISTURE,
         "state_class": SensorStateClass.MEASUREMENT,
@@ -463,23 +403,30 @@ HMIP_FEATURE_TO_ENTITY = {
         "unit": UnitOfElectricPotential.VOLT,
         "device_class": SensorDeviceClass.VOLTAGE,
         "state_class": SensorStateClass.MEASUREMENT,
+        "entity_registry_enabled_default": False,
+    },
+    "supplyVoltage": {
+        "class": "HcuGenericSensor",
+        "name": "Supply Voltage",
+        "unit": UnitOfElectricPotential.VOLT,
+        "device_class": SensorDeviceClass.VOLTAGE,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "entity_registry_enabled_default": False,
     },
     "frequency": {
         "class": "HcuGenericSensor",
-        "name": "Mains Frequency",
+        "name": "Frequency",
         "unit": UnitOfFrequency.HERTZ,
         "device_class": SensorDeviceClass.FREQUENCY,
         "state_class": SensorStateClass.MEASUREMENT,
+        "entity_registry_enabled_default": False,
     },
-    "operationMode": {
+    "carbonDioxideConcentration": {
         "class": "HcuGenericSensor",
-        "name": "Operation Mode",
-        "icon": "mdi:power-plug",
-    },
-    "mainsFailure": {
-        "class": "HcuBinarySensor",
-        "name": "Mains Failure",
-        "device_class": BinarySensorDeviceClass.POWER,
+        "name": "CO2 Concentration",
+        "unit": CONCENTRATION_PARTS_PER_MILLION,
+        "device_class": SensorDeviceClass.CO2,
+        "state_class": SensorStateClass.MEASUREMENT,
     },
     # Binary Sensor Features
     "lowBat": {
@@ -491,16 +438,12 @@ HMIP_FEATURE_TO_ENTITY = {
         "class": "HcuUnreachBinarySensor",
         "name": "Connectivity",
         "device_class": BinarySensorDeviceClass.CONNECTIVITY,
+        "entity_category": "diagnostic",
     },
-    "sabotage": {
-        "class": "HcuBinarySensor",
-        "name": "Sabotage",
-        "device_class": BinarySensorDeviceClass.TAMPER,
-    },
-    "smokeDetectorAlarmType": {
-        "class": "HcuSmokeBinarySensor",
-        "name": "Smoke Alarm",
-        "device_class": BinarySensorDeviceClass.SMOKE,
+    "windowState": {
+        "class": "HcuWindowBinarySensor",
+        "name": "Window",
+        "device_class": BinarySensorDeviceClass.WINDOW,
     },
     "motionDetected": {
         "class": "HcuBinarySensor",
@@ -510,32 +453,37 @@ HMIP_FEATURE_TO_ENTITY = {
     "presenceDetected": {
         "class": "HcuBinarySensor",
         "name": "Presence",
-        "device_class": BinarySensorDeviceClass.PRESENCE,
+        "device_class": BinarySensorDeviceClass.OCCUPANCY,
     },
-    "windowState": {
-        "class": "HcuWindowBinarySensor",
-        "name": "Window",
-        "device_class": BinarySensorDeviceClass.WINDOW,
+    "illuminationDetected": {
+        "class": "HcuBinarySensor",
+        "name": "Illumination Detected",
+        "device_class": BinarySensorDeviceClass.LIGHT,
+    },
+    "mainsFailureActive": {
+        "class": "HcuBinarySensor",
+        "name": "Mains Failure",
+        "device_class": BinarySensorDeviceClass.PROBLEM,
+    },
+    "sabotage": {
+        "class": "HcuBinarySensor",
+        "name": "Sabotage",
+        "device_class": BinarySensorDeviceClass.TAMPER,
     },
     "waterlevelDetected": {
         "class": "HcuBinarySensor",
-        "name": "Water",
+        "name": "Water Level",
         "device_class": BinarySensorDeviceClass.MOISTURE,
+    },
+    "smokeDetectorAlarmType": {
+        "class": "HcuSmokeBinarySensor",
+        "name": "Smoke",
+        "device_class": BinarySensorDeviceClass.SMOKE,
     },
     "moistureDetected": {
         "class": "HcuBinarySensor",
         "name": "Moisture",
         "device_class": BinarySensorDeviceClass.MOISTURE,
-    },
-    "dewPointAlarmActive": {
-        "class": "HcuBinarySensor",
-        "name": "Dew Point Alarm",
-        "device_class": BinarySensorDeviceClass.MOISTURE,
-    },
-    "frostProtectionActive": {
-        "class": "HcuBinarySensor",
-        "name": "Frost Protection",
-        "device_class": BinarySensorDeviceClass.COLD,
     },
     "sunshine": {
         "class": "HcuBinarySensor",
@@ -574,6 +522,7 @@ HMIP_CHANNEL_TYPE_TO_ENTITY = {
     "RGBW_AUTOMATION_CHANNEL": {"class": "HcuLight"},
     "UNIVERSAL_LIGHT_CHANNEL": {"class": "HcuLight"},
     "NOTIFICATION_LIGHT_CHANNEL": {"class": "HcuLight"},
+    "NOTIFICATION_MP3_SOUND_CHANNEL": {"class": "HcuNotificationLight"},
     "BACKLIGHT_CHANNEL": {"class": "HcuLight"},
     "ALARM_SIREN_CHANNEL": {"class": "HcuSwitch"},
     "SWITCH_CHANNEL": {"class": "HcuSwitch"},
@@ -602,4 +551,16 @@ HMIP_CHANNEL_TYPE_TO_ENTITY = {
     "SHUTTER_CONTACT_CHANNEL": None,
     "GAS_CHANNEL": None,
     "PRESENCE_DETECTION_CHANNEL": None,
+}
+
+# RGB Color mappings for HmIP-MP3P (simpleRGBColorState to HS color)
+HMIP_RGB_COLOR_MAP = {
+    "BLACK": (0, 0),        # Off/Black
+    "BLUE": (240, 100),     # Blue
+    "GREEN": (120, 100),    # Green
+    "TURQUOISE": (180, 100), # Cyan/Turquoise
+    "RED": (0, 100),        # Red
+    "PURPLE": (300, 100),   # Purple/Magenta
+    "YELLOW": (60, 100),    # Yellow
+    "WHITE": (0, 0),        # White (will be handled separately with brightness)
 }

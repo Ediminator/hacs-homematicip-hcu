@@ -161,6 +161,18 @@ class HcuApiClient:
                     future.set_exception(HcuApiError(f"HCU Error: {response_body}"))
                 else:
                     future.set_result(response_body.get("body"))
+        elif msg_type == "PLUGIN_STATE_REQUEST":
+            _LOGGER.debug("Received PLUGIN_STATE_REQUEST: %s", msg)
+            self._send_plugin_ready(msg_id)
+        elif msg_type == "DISCOVER_REQUEST":
+            _LOGGER.debug("Received DISCOVER_REQUEST: %s", msg)
+            self._send_discover_response(msg_id)
+        elif msg_type == "CONFIG_TEMPLATE_REQUEST":
+            _LOGGER.debug("Received CONFIG_TEMPLATE_REQUEST: %s", msg)
+            self._send_config_template_response(msg_id)
+        elif msg_type == "CONFIG_UPDATE_REQUEST":
+            _LOGGER.debug("Received CONFIG_UPDATE_REQUEST: %s", msg)
+            self._send_config_update_response(msg_id)
         elif self._event_callback:
             self._event_callback(msg)
 
@@ -239,6 +251,46 @@ class HcuApiClient:
         raise HcuApiError(
             f"Request failed after multiple retries for path {path}"
         ) from last_exception
+
+    async def _send_plugin_ready(self, message_id: str) -> None:
+        """Notify the HCU that the plugin is ready to receive events."""
+        message = {
+            "id": message_id,
+            "pluginId": self.plugin_id,
+            "type": "PLUGIN_STATE_RESPONSE",
+            "body": {"pluginReadinessStatus": "READY"},
+        }
+        await self._send_message(message)
+
+    async def _send_discover_response(self, message_id: str) -> None:
+        """Notify the HCU that the plugin is ready to receive events."""
+        message = {
+            "id": message_id,
+            "pluginId": self.plugin_id,
+            "type": "DISCOVER_RESPONSE",
+            "body": {"success": "true", "devices": []},
+        }
+        await self._send_message(message)
+
+    async def _send_config_template_response(self, message_id: str) -> None:
+        """Notify the HCU that the plugin is ready to receive events."""
+        message = {
+            "id": message_id,
+            "pluginId": self.plugin_id,
+            "type": "CONFIG_TEMPLATE_RESPONSE",
+            "body": {"properties": {}},
+        }
+        await self._send_message(message)
+
+    async def _send_config_update_response(self, message_id: str) -> None:
+        """Notify the HCU that the plugin is ready to receive events."""
+        message = {
+            "id": message_id,
+            "pluginId": self.plugin_id,
+            "type": "CONFIG_UPDATE_RESPONSE",
+            "body": {"status": "APPLIED"},
+        }
+        await self._send_message(message)
 
     async def get_system_state(self) -> dict[str, Any]:
         """Fetch the complete system state from the HCU."""

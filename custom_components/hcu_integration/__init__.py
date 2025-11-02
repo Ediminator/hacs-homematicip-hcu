@@ -46,6 +46,7 @@ from .const import (
     ATTR_ENABLED,
     ATTR_END_TIME,
     EVENT_CHANNEL_TYPES,
+    DEVICE_CHANNEL_EVENT_TYPES,
 )
 from .discovery import async_discover_entities
 
@@ -318,6 +319,23 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
                 if device_id:
                     for ch_idx in device_data.get("functionalChannels", {}).keys():
                         event_channel_updates.add((device_id, ch_idx))
+            elif event.get("pushEventType") == "DEVICE_CHANNEL_EVENT":
+                # stateless buttons such as HmIP-BRC2 or HmIP-RC8 only trigger
+                # a DEVICE_CHANNEL_EVENT when pressed and have neither a state
+                # nor a timestamp
+                if event.get("channelEventType") in DEVICE_CHANNEL_EVENT_TYPES:
+                    self.hass.bus.async_fire(
+                        f"{DOMAIN}_event",
+                        {
+                            "device_id": event.get("deviceId"),
+                            "channel": event.get("functionalChannelIndex"),
+                            "type": event.get("channelEventType"),
+                        },
+                    )
+                    _LOGGER.debug(                                               
+                        "Button press detected via device channel event: device=%s, c
+                        event.get("deviceId"), event.get("functionalChannelIndex"
+                    )
 
         # Store old timestamps to detect stateless button presses
         old_state = {

@@ -163,16 +163,16 @@ class HcuApiClient:
                     future.set_result(response_body.get("body"))
         elif msg_type == "PLUGIN_STATE_REQUEST":
             _LOGGER.debug("Received PLUGIN_STATE_REQUEST: %s", msg)
-            self._send_plugin_ready(msg_id)
+            asyncio.create_task(self._send_plugin_ready(msg_id))
         elif msg_type == "DISCOVER_REQUEST":
             _LOGGER.debug("Received DISCOVER_REQUEST: %s", msg)
-            self._send_discover_response(msg_id)
+            asyncio.create_task(self._send_discover_response(msg_id))
         elif msg_type == "CONFIG_TEMPLATE_REQUEST":
             _LOGGER.debug("Received CONFIG_TEMPLATE_REQUEST: %s", msg)
-            self._send_config_template_response(msg_id)
+            asyncio.create_task(self._send_config_template_response(msg_id))
         elif msg_type == "CONFIG_UPDATE_REQUEST":
             _LOGGER.debug("Received CONFIG_UPDATE_REQUEST: %s", msg)
-            self._send_config_update_response(msg_id)
+            asyncio.create_task(self._send_config_update_response(msg_id))
         elif self._event_callback:
             self._event_callback(msg)
 

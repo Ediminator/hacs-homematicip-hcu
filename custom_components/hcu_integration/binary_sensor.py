@@ -143,7 +143,7 @@ class HcuVacationModeBinarySensor(HcuHomeBaseEntity, BinarySensorEntity):
     @property
     def is_on(self) -> bool:
         """Return true if vacation mode is active."""
-        heating_home = self._home.get("functionalHomes", {}).get("HEATING", {})
+        heating_home = self._home.get("functionalHomes", {}).get("INDOOR_CLIMATE", {})
         return heating_home.get("absenceType") == "VACATION"
 
     @property
@@ -158,7 +158,7 @@ class HcuVacationModeBinarySensor(HcuHomeBaseEntity, BinarySensorEntity):
 
     def _update_attributes(self) -> None:
         """Update the entity's attributes."""
-        heating_home = self._home.get("functionalHomes", {}).get("HEATING", {})
+        heating_home = self._home.get("functionalHomes", {}).get("INDOOR_CLIMATE", {})
         end_time_ts = heating_home.get("absenceEndTime")
 
         end_time = None

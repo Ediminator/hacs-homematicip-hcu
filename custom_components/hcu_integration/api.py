@@ -161,18 +161,20 @@ class HcuApiClient:
                     future.set_exception(HcuApiError(f"HCU Error: {response_body}"))
                 else:
                     future.set_result(response_body.get("body"))
-        elif msg_type == "PLUGIN_STATE_REQUEST":
-            _LOGGER.debug("Received PLUGIN_STATE_REQUEST: %s", msg)
-            asyncio.create_task(self._send_plugin_ready(msg_id))
-        elif msg_type == "DISCOVER_REQUEST":
-            _LOGGER.debug("Received DISCOVER_REQUEST: %s", msg)
-            asyncio.create_task(self._send_discover_response(msg_id))
-        elif msg_type == "CONFIG_TEMPLATE_REQUEST":
-            _LOGGER.debug("Received CONFIG_TEMPLATE_REQUEST: %s", msg)
-            asyncio.create_task(self._send_config_template_response(msg_id))
-        elif msg_type == "CONFIG_UPDATE_REQUEST":
-            _LOGGER.debug("Received CONFIG_UPDATE_REQUEST: %s", msg)
-            asyncio.create_task(self._send_config_update_response(msg_id))
+        elif msg_type in (
+            "PLUGIN_STATE_REQUEST",
+            "DISCOVER_REQUEST",
+            "CONFIG_TEMPLATE_REQUEST",
+            "CONFIG_UPDATE_REQUEST",
+        ):
+            _LOGGER.debug("Received %s: %s", msg_type, msg)
+            handler_map = {
+                "PLUGIN_STATE_REQUEST": self._send_plugin_ready,
+                "DISCOVER_REQUEST": self._send_discover_response,
+                "CONFIG_TEMPLATE_REQUEST": self._send_config_template_response,
+                "CONFIG_UPDATE_REQUEST": self._send_config_update_response,
+            }
+            asyncio.create_task(handler_map[msg_type](msg_id))
         elif self._event_callback:
             self._event_callback(msg)
 

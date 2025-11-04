@@ -332,9 +332,10 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
                             "type": event.get("channelEventType"),
                         },
                     )
+                    # *** THIS IS THE CORRECTED LINE ***
                     _LOGGER.debug(                                               
-                        "Button press detected via device channel event: device=%s, c
-                        event.get("deviceId"), event.get("functionalChannelIndex"
+                        "Button press detected via device channel event: device=%s, channel=%s",
+                        event.get("deviceId"), event.get("functionalChannelIndex")
                     )
 
         # Store old timestamps to detect stateless button presses

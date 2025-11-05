@@ -18,8 +18,8 @@
                 }
             },
             "reauth_confirm": {
-                "title": "PIN erforderlich",
-                "description": "Die HCU erfordert für diese Aktion die PIN. Bitte geben Sie die PIN ein, die Sie in der HCU-App festgelegt haben.",
+                "title": "Türschloss-PIN erforderlich",
+                "description": "{info}",
                 "data": {
                     "pin": "PIN"
                 }
@@ -44,6 +44,7 @@
                 "title": "HCU Integration Optionen",
                 "menu_options": {
                     "global_settings": "Globale Einstellungen",
+                    "lock_pin": "Türschloss-PIN Konfiguration",
                     "vacation": "Urlaubsmodus einstellen"
                 }
             },
@@ -54,6 +55,13 @@
                     "comfort_temperature": "Standard-Komfort-Temperatur (für Party-Modus)",
                     "import_sytronic": "Sytronic-Geräte importieren",
                     "import_novotronic": "Novotronic-Geräte importieren"
+                }
+            },
+            "lock_pin": {
+                "title": "Türschloss-PIN Konfiguration",
+                "description": "{info}",
+                "data": {
+                    "pin": "Türschloss-PIN (Optional)"
                 }
             },
             "vacation": {

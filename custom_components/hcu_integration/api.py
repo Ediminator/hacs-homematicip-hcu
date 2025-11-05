@@ -192,7 +192,7 @@ class HcuApiClient:
                         f"WebSocket connection issue: {msg.data}"
                     )
         finally:
-            # Clean up any pending requests if the listener stops unexpectedly.
+            # Clean up any pending requests if the listener stops unexpectedly
             for future in self._pending_requests.values():
                 if not future.done():
                     future.set_exception(
@@ -412,8 +412,23 @@ class HcuApiClient:
     async def async_toggle_garage_door_state(self, device_id: str, channel_index: int) -> None:
         await self.async_device_control(API_PATHS["TOGGLE_GARAGE_DOOR_STATE"], device_id, channel_index)
 
-    async def async_set_lock_state(self, device_id: str, channel_index: int, state: str, pin: str) -> None:
-        await self.async_device_control(API_PATHS["SET_LOCK_STATE"], device_id, channel_index, {"targetLockState": state, "authorizationPin": pin})
+    async def async_set_lock_state(self, device_id: str, channel_index: int, state: str, pin: str | None) -> None:
+        """
+        Set the lock state (LOCKED, UNLOCKED, or OPEN).
+        
+        Args:
+            device_id: The device SGTIN
+            channel_index: The channel index
+            state: Target lock state (LOCKED, UNLOCKED, OPEN)
+            pin: Authorization PIN (optional - some locks don't require it)
+        """
+        body = {"targetLockState": state}
+        
+        # Only include PIN in payload if provided
+        if pin:
+            body["authorizationPin"] = pin
+            
+        await self.async_device_control(API_PATHS["SET_LOCK_STATE"], device_id, channel_index, body)
 
     async def async_set_sound_file(self, device_id: str, channel_index: int, sound_file: str, volume: float, duration: float) -> None:
         await self.async_device_control(API_PATHS["SET_SOUND_FILE"], device_id, channel_index, {"soundFile": sound_file, "volumeLevel": volume, "onTime": duration})

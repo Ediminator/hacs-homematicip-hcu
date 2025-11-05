@@ -48,11 +48,11 @@ class HcuLock(HcuBaseEntity, LockEntity):
     ):
         super().__init__(coordinator, client, device_data, channel_index)
         self._config_entry = config_entry
-
-        # REFACTOR: Correctly call the centralized naming helper.
         self._set_entity_name(channel_label=self._channel.get("label"))
-
         self._attr_unique_id = f"{self._device_id}_{self._channel_index}_lock"
+        
+        # Track if this specific lock has determined it requires a PIN
+        self._pin_required: bool | None = None
 
     @property
     def is_locked(self) -> bool:
@@ -60,30 +60,24 @@ class HcuLock(HcuBaseEntity, LockEntity):
         return self._channel.get("lockState") == "LOCKED"
 
     @property
-    def available(self) -> bool:
-        """
-        Return if entity is available.
-        The lock is unavailable if the base device is unreachable OR if the PIN
-        has not been configured in the integration.
-        """
+    def extra_state_attributes(self) -> dict:
+        """Return additional state attributes."""
+        attrs = {}
+        
+        # Indicate PIN status
         pin_configured = bool(self._config_entry.data.get(CONF_PIN))
-        if not pin_configured:
-            _LOGGER.warning(
-                "Lock '%s' is unavailable because the PIN is not configured.", self.name
-            )
-        return super().available and pin_configured
+        attrs["pin_configured"] = pin_configured
+        
+        # If we've determined this lock requires a PIN, indicate that
+        if self._pin_required is not None:
+            attrs["pin_required"] = self._pin_required
+            
+        return attrs
 
     async def _set_lock_state(self, state: str) -> None:
         """Send the command to set the lock state."""
         pin = self._config_entry.data.get(CONF_PIN)
-        if not pin:
-            _LOGGER.error(
-                "Cannot operate lock '%s': Please set the Authorization PIN in the integration options.",
-                self.name,
-            )
-            self._config_entry.async_start_reauth(self.hass)
-            return
-
+        
         self._attr_assumed_state = True
         self.async_write_ha_state()
 
@@ -91,32 +85,40 @@ class HcuLock(HcuBaseEntity, LockEntity):
             await self._client.async_set_lock_state(
                 self._device_id, self._channel_index, state=state, pin=pin
             )
+            # If successful and we used no PIN, mark this lock as not requiring one
+            if not pin and self._pin_required is None:
+                self._pin_required = False
+                
         except HcuApiError as err:
-            _LOGGER.error("Failed to set lock state for %s: %s", self.name, err)
-            try:
-                # Try to parse the error message to see if it's an invalid PIN
-                error_body = json.loads(
-                    err.args[0].replace("HCU Error: ", "").replace("'", '"')
+            error_str = str(err)
+            
+            # Parse the error to check if it's a PIN issue
+            if "INVALID_AUTHORIZATION_PIN" in error_str:
+                _LOGGER.error(
+                    "Invalid or missing PIN for lock '%s'. Please configure the correct PIN in integration settings.",
+                    self.name,
                 )
-                if (
-                    error_body.get("body", {}).get("errorCode")
-                    == "INVALID_AUTHORIZATION_PIN"
-                ):
-                    _LOGGER.error(
-                        "Invalid PIN for lock '%s'. Triggering re-authentication.",
-                        self.name,
-                    )
+                self._pin_required = True
+                
+                # Only trigger reauth if we already have a PIN configured (meaning it's wrong)
+                # If no PIN is configured, user will see the attribute and can add it
+                if pin:
                     self._config_entry.async_start_reauth(self.hass)
-            except (json.JSONDecodeError, IndexError, AttributeError):
-                pass  # Not the error we are looking for
+                else:
+                    _LOGGER.warning(
+                        "Lock '%s' requires a PIN. Please reconfigure the integration to add the PIN.",
+                        self.name
+                    )
+                    
+            else:
+                _LOGGER.error("Failed to set lock state for %s: %s", self.name, err)
+                
         except ConnectionError as err:
             _LOGGER.error(
                 "Connection failed while setting lock state for %s: %s", self.name, err
             )
         finally:
-            # Note: We don't reset assumed state here, we let the coordinator update do it
-            # to prevent state flickering if the command succeeds but the error handling
-            # was for a different issue. The coordinator is the source of truth.
+            # Reset assumed state to let coordinator update provide actual state
             pass
 
     async def async_lock(self, **kwargs) -> None:

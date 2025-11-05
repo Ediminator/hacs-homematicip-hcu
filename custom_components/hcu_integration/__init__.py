@@ -309,20 +309,20 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
         if not events:
             return
 
-        # Extract which specific channels were updated in these events
-        # This helps us identify button presses even without timestamps
+        # Extract which specific button channels were updated in these events
+        # Only track EVENT_CHANNEL_TYPES to prevent firing events for all channels
         event_channel_updates = set()  # Set of (device_id, channel_idx) tuples
         for event in events.values():
             if event.get("pushEventType") == "DEVICE_CHANGED":
                 device_data = event.get("device", {})
                 device_id = device_data.get("id")
                 if device_id:
-                    for ch_idx in device_data.get("functionalChannels", {}).keys():
-                        event_channel_updates.add((device_id, ch_idx))
+                    for ch_idx, ch_data in device_data.get("functionalChannels", {}).items():
+                        # Only add channels that are actually event channels (buttons)
+                        if ch_data.get("functionalChannelType") in EVENT_CHANNEL_TYPES:
+                            event_channel_updates.add((device_id, ch_idx))
             elif event.get("pushEventType") == "DEVICE_CHANNEL_EVENT":
-                # stateless buttons such as HmIP-BRC2 or HmIP-RC8 only trigger
-                # a DEVICE_CHANNEL_EVENT when pressed and have neither a state
-                # nor a timestamp
+                # Stateless buttons trigger DEVICE_CHANNEL_EVENT with no state/timestamp
                 if event.get("channelEventType") in DEVICE_CHANNEL_EVENT_TYPES:
                     self.hass.bus.async_fire(
                         f"{DOMAIN}_event",
@@ -332,7 +332,6 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
                             "type": event.get("channelEventType"),
                         },
                     )
-                    # *** THIS IS THE CORRECTED LINE ***
                     _LOGGER.debug(                                               
                         "Button press detected via device channel event: device=%s, channel=%s",
                         event.get("deviceId"), event.get("functionalChannelIndex")

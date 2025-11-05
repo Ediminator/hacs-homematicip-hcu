@@ -67,7 +67,6 @@ class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
         config_entry: ConfigEntry,
     ) -> "HcuOptionsFlowHandler":
         """Get the options flow for this handler."""
-        # REFACTOR: Do not pass config_entry to OptionsFlow constructor
         return HcuOptionsFlowHandler()
 
     async def async_step_user(
@@ -175,6 +174,9 @@ class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="reauth_confirm",
             data_schema=vol.Schema({vol.Required(CONF_PIN): str}),
+            description_placeholders={
+                "info": "Your door lock requires a PIN for operation. Please enter the PIN you configured in your Homematic IP app."
+            },
         )
 
     async def async_step_reconfigure(
@@ -203,10 +205,7 @@ class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
                 )
 
                 await client.connect()
-
-                # Create a temporary listener to handle the response
                 listener_task = self.hass.async_create_task(client.listen())
-
                 await client.get_system_state()
 
                 self.hass.config_entries.async_update_entry(
@@ -309,19 +308,13 @@ class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
 class HcuOptionsFlowHandler(OptionsFlow):
     """Handle an options flow for the HCU integration."""
 
-    # REFACTOR: Removed __init__ method.
-    # self.config_entry is automatically populated by Home Assistant.
-    # def __init__(self, config_entry: ConfigEntry) -> None:
-    #     """Initialize options flow."""
-    #     super().__init__(config_entry)
-
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
         """Manage the options for the integration."""
         return self.async_show_menu(
             step_id="init",
-            menu_options=["global_settings", "vacation"],
+            menu_options=["global_settings", "lock_pin", "vacation"],
         )
 
     async def async_step_global_settings(
@@ -366,6 +359,46 @@ class HcuOptionsFlowHandler(OptionsFlow):
             step_id="global_settings", data_schema=vol.Schema(schema)
         )
 
+    async def async_step_lock_pin(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Configure the lock PIN."""
+        if user_input is not None:
+            pin_value = user_input.get(CONF_PIN, "").strip()
+            
+            # Update config entry data with the new PIN (or remove it if empty)
+            new_data = {**self.config_entry.data}
+            if pin_value:
+                new_data[CONF_PIN] = pin_value
+            else:
+                new_data.pop(CONF_PIN, None)
+                
+            self.hass.config_entries.async_update_entry(
+                self.config_entry, data=new_data
+            )
+            
+            # Reload to apply changes
+            await self.hass.config_entries.async_reload(self.config_entry.entry_id)
+            return self.async_create_entry(title="", data={})
+
+        current_pin = self.config_entry.data.get(CONF_PIN, "")
+        
+        return self.async_show_form(
+            step_id="lock_pin",
+            data_schema=vol.Schema(
+                {
+                    vol.Optional(CONF_PIN, default=current_pin): str,
+                }
+            ),
+            description_placeholders={
+                "info": (
+                    "Some door locks require a PIN for operation. "
+                    "If your locks work without a PIN, leave this field empty. "
+                    "If you receive 'INVALID_AUTHORIZATION_PIN' errors, enter the PIN you configured in your Homematic IP app here."
+                )
+            },
+        )
+
     async def async_step_vacation(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
@@ -385,15 +418,8 @@ class HcuOptionsFlowHandler(OptionsFlow):
             try:
                 end_time_str = user_input[ATTR_END_TIME]
                 end_time_dt = datetime.fromisoformat(end_time_str)
-
-                # Get the Home Assistant tzinfo object
                 ha_tz = dt_util.get_time_zone(self.hass.config.time_zone)
-
-                # Convert the datetime to the HA local timezone
                 local_end_time = end_time_dt.astimezone(ha_tz)
-
-                # REFACTOR: Format end_time as required by API: "YYYY_MM_DD HH:MM"
-                # This fixes the bug from vCurrent and vWiP.
                 formatted_end_time = local_end_time.strftime("%Y_%m_%d %H:%M")
                 temperature = user_input[ATTR_TEMPERATURE]
 
@@ -401,8 +427,7 @@ class HcuOptionsFlowHandler(OptionsFlow):
                     temperature=temperature, end_time=formatted_end_time
                 )
 
-                # REFACTOR: Return async_create_entry with empty data to close the flow.
-                return self.async_create_entry(data={})
+                return self.async_create_entry(title="", data={})
 
             except HcuApiError as e:
                 _LOGGER.error("Failed to activate vacation mode: %s", e)
@@ -440,14 +465,12 @@ class HcuOptionsFlowHandler(OptionsFlow):
             if key.startswith("import_") and not value:
                 # Check if this is a new change (was previously True or not set)
                 if self.config_entry.options.get(key, True):
-                    # Convert 'import_some_oem' to 'Some Oem'
                     oem_name = key.replace("import_", "").replace("_", " ").title()
                     disabled_oems.add(oem_name)
 
         if not disabled_oems:
             return
 
-        # REFACTOR: Fixed typo in variable name 'disabled_cmall_devices' to 'all_devices'.
         all_devices = dr.async_entries_for_config_entry(
             device_registry, self.config_entry.entry_id
         )

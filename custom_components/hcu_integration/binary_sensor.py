@@ -185,13 +185,19 @@ class HcuVacationModeBinarySensor(HcuHomeBaseEntity, BinarySensorEntity):
         _start_time = _parse_hcu_datetime(heating_home.get("absenceStartTime"), "start")
         _end_time = _parse_hcu_datetime(heating_home.get("absenceEndTime"), "end")
         _type = heating_home.get("absenceType")
-        _temp = heating_home.get("lastVacationTemperature")
+
+        if _type == "VACATION":
+            _temp = heating_home.get("lastVacationTemperature")
+        elif _type == "PERIOD" or _type == "PERMANENT":
+            _temp = heating_home.get("ecoTemperature")
+        else:
+            _temp = None
 
         self._attr_extra_state_attributes = {
             "start_time": _start_time.isoformat() if _start_time else None,
             "end_time": _end_time.isoformat() if _end_time else None,
             "type": _type if _type != "NOT_ABSENT" else None,
-            "target_temperature": _temp if _type != "NOT_ABSENT" else None,
+            "target_temperature": _temp,
         }
 
     @callback

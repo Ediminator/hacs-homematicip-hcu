@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import logging
 from typing import TYPE_CHECKING, Any
+from datetime import datetime
 
 from homeassistant.components.binary_sensor import (
     BinarySensorEntity,
@@ -143,31 +144,54 @@ class HcuVacationModeBinarySensor(HcuHomeBaseEntity, BinarySensorEntity):
     @property
     def is_on(self) -> bool:
         """Return true if vacation mode is active."""
-        heating_home = self._home.get("functionalHomes", {}).get("HEATING", {})
-        return heating_home.get("absenceType") == "VACATION"
+        if self._attr_extra_state_attributes.get("type") != "VACATION":
+            return False
+
+        start_time = self._attr_extra_state_attributes.get("start_time")
+        if not start_time:
+            return False
+
+        try:
+            start_time_dt = datetime.fromisoformat(start_time)
+            return dt_util.utcnow() >= start_time_dt
+        except ValueError:
+            _LOGGER.warning("Invalid start_time format: %s", start_time)
+            return False
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return the state attributes of the vacation mode sensor."""
-        return {
-            "end_time": self._attr_extra_state_attributes.get("end_time"),
-            "target_temperature": self._attr_extra_state_attributes.get(
-                "target_temperature"
-            ),
-        }
+        return self._attr_extra_state_attributes
 
     def _update_attributes(self) -> None:
         """Update the entity's attributes."""
-        heating_home = self._home.get("functionalHomes", {}).get("HEATING", {})
-        end_time_ts = heating_home.get("absenceEndTime")
+        heating_home = self._home.get("functionalHomes", {}).get("INDOOR_CLIMATE", {})
 
-        end_time = None
-        if end_time_ts and end_time_ts > 0:
-            end_time = dt_util.utc_from_timestamp(end_time_ts / 1000)
+        # get the HA timezone info
+        ha_tz = dt_util.get_default_time_zone()
+
+        def _parse_hcu_datetime(time_str: str | None, name: str) -> datetime | None:
+            """Parse HCU datetime string and make it timezone-aware."""
+            if not time_str:
+                return None
+            try:
+                # HCU time is given in format "YYYY_MM_DD HH:MM"
+                dt_obj = datetime.strptime(time_str, "%Y_%m_%d %H:%M")
+                return dt_obj.replace(tzinfo=ha_tz)
+            except ValueError:
+                _LOGGER.warning("Could not parse HCU %s time: %s", name, time_str)
+                return None
+
+        _start_time = _parse_hcu_datetime(heating_home.get("absenceStartTime"), "start")
+        _end_time = _parse_hcu_datetime(heating_home.get("absenceEndTime"), "end")
+        _type = heating_home.get("absenceType")
+        _temp = heating_home.get("lastVacationTemperature")
 
         self._attr_extra_state_attributes = {
-            "end_time": end_time.isoformat() if end_time else None,
-            "target_temperature": heating_home.get("setPointTemperature"),
+            "start_time": _start_time.isoformat() if _start_time else None,
+            "end_time": _end_time.isoformat() if _end_time else None,
+            "type": _type if _type != "NOT_ABSENT" else None,
+            "target_temperature": _temp if _type != "NOT_ABSENT" else None,
         }
 
     @callback

@@ -105,7 +105,13 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], Entity):
         if not self._client.is_connected or not self._device or not self._channel:
             return False
 
-        # Most devices report reachability on the maintenance channel '0'.
+        # Devices that are permanently reachable (e.g., wired/powered devices)
+        # are always available when connected
+        if self._device.get("permanentlyReachable", False):
+            return True
+
+        # For non-permanently-reachable devices (e.g., battery-powered),
+        # check the maintenance channel's reachability status
         maintenance_channel = self._device.get("functionalChannels", {}).get("0", {})
         return not maintenance_channel.get("unreach", False)
 

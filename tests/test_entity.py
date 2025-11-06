@@ -38,6 +38,9 @@ async def test_hcu_base_entity_initialization(mock_coordinator, mock_hcu_client,
 
 async def test_hcu_base_entity_device_info(mock_coordinator, mock_hcu_client, mock_device_data):
     """Test device_info property."""
+    # Configure mock to return device data when entity accesses it
+    mock_hcu_client.get_device_by_address = MagicMock(return_value=mock_device_data)
+
     entity = HcuBaseEntity(
         coordinator=mock_coordinator,
         client=mock_hcu_client,

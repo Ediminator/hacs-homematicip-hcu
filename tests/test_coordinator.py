@@ -202,7 +202,10 @@ async def test_handle_event_message_full_flow(coordinator: HcuCoordinator, hass:
                         "device": {
                             "id": "device1",
                             "functionalChannels": {
-                                "1": {"functionalChannelType": "WALL_MOUNTED_TRANSMITTER_CHANNEL"},
+                                "1": {
+                                    "functionalChannelType": "WALL_MOUNTED_TRANSMITTER_CHANNEL",
+                                    "lastStatusUpdate": 2000,  # Updated timestamp in event
+                                },
                             },
                         },
                     },

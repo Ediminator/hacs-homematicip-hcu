@@ -231,7 +231,7 @@ class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
                 errors["base"] = "cannot_connect"
             except ValueError as err:
                 _LOGGER.error("Invalid configuration or response: %s", err)
-                errors["base"] = "unknown"
+                errors["base"] = "invalid_config"
             except Exception:
                 _LOGGER.exception("Unexpected error during reconfiguration.")
                 errors["base"] = "unknown"
@@ -440,7 +440,7 @@ class HcuOptionsFlowHandler(OptionsFlow):
                 errors["base"] = "cannot_connect"
             except (ValueError, TypeError) as err:
                 _LOGGER.error("Invalid date/time format or temperature: %s", err)
-                errors["base"] = "unknown"
+                errors["base"] = "invalid_data"
             except Exception:
                 _LOGGER.exception("Unexpected error activating vacation mode")
                 errors["base"] = "unknown"

@@ -28,6 +28,7 @@
         "error": {
             "cannot_connect": "Verbindung zur HCU fehlgeschlagen. Host und Ports prüfen.",
             "invalid_key": "Authentifizierung fehlgeschlagen. Der Aktivierungsschlüssel ist möglicherweise ungültig oder abgelaufen.",
+            "invalid_config": "Ungültige Konfiguration oder Antwort von der HCU. Bitte überprüfen Sie Ihre Einstellungen.",
             "api_error": "Ein unerwarteter API-Fehler ist aufgetreten.",
             "unknown": "Ein unbekannter Fehler ist aufgetreten."
         },
@@ -76,6 +77,7 @@
         "error": {
             "cannot_connect": "Verbindung zur HCU fehlgeschlagen.",
             "api_error": "Ein API-Fehler ist beim Einstellen des Urlaubsmodus aufgetreten.",
+            "invalid_data": "Ungültiges Datums-/Zeitformat oder Temperaturwert. Bitte überprüfen Sie Ihre Eingabe.",
             "unknown": "Ein unbekannter Fehler ist aufgetreten.",
             "internal_error": "Interner Fehler: Client nicht verfügbar."
         }

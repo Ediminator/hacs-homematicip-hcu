@@ -28,6 +28,7 @@
         "error": {
             "cannot_connect": "Failed to connect to the HCU. Check host and ports.",
             "invalid_key": "Authentication failed. The activation key may be invalid or expired.",
+            "invalid_config": "Invalid configuration or response from HCU. Please check your settings.",
             "api_error": "An unexpected API error occurred.",
             "unknown": "An unknown error occurred."
         },
@@ -76,6 +77,7 @@
         "error": {
             "cannot_connect": "Failed to connect to the HCU.",
             "api_error": "An API error occurred while trying to set vacation mode.",
+            "invalid_data": "Invalid date/time format or temperature value. Please check your input.",
             "unknown": "An unknown error occurred.",
             "internal_error": "Internal error: Client not available."
         }

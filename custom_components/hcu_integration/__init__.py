@@ -63,6 +63,7 @@ PLATFORM_MAP = {
     "switch": Platform.SWITCH,
     "light": Platform.LIGHT,
     "climate": Platform.CLIMATE,
+    "button": Platform.BUTTON,
 }
 
 # List of integration services (single source of truth for registration/removal)

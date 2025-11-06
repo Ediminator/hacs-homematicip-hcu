@@ -14,7 +14,8 @@ from .const import (
     HCU_MODEL_TYPES,
     API_REQUEST_TIMEOUT,
     API_PATHS,
-    API_RETRY_DELAY,
+    API_MAX_RETRIES,
+    API_RETRY_BASE_DELAY,
     WEBSOCKET_HEARTBEAT_INTERVAL,
     WEBSOCKET_RECEIVE_TIMEOUT,
 )
@@ -43,7 +44,7 @@ class HcuApiClient:
         session: aiohttp.ClientSession,
         auth_port: int,
         websocket_port: int,
-    ):
+    ) -> None:
         """Initialize the API client."""
         self.hass = hass
         self._host = host
@@ -226,32 +227,49 @@ class HcuApiClient:
 
         last_exception = None
 
-        for attempt in range(2):
+        for attempt in range(API_MAX_RETRIES):
             future: asyncio.Future[Any] = asyncio.get_running_loop().create_future()
             self._pending_requests[message_id] = future
 
             try:
                 await self._send_message(message)
-                return await asyncio.wait_for(future, timeout=timeout)
+                result = await asyncio.wait_for(future, timeout=timeout)
+                if attempt > 0:
+                    _LOGGER.info(
+                        "Request succeeded on attempt %d/%d for path %s",
+                        attempt + 1, API_MAX_RETRIES, path
+                    )
+                return result
             except (
                 ConnectionError,
                 ConnectionAbortedError,
                 asyncio.TimeoutError,
             ) as err:
                 _LOGGER.warning(
-                    "Request failed on attempt %d for path %s: %s", attempt + 1, path, err
+                    "Request failed on attempt %d/%d for path %s: %s",
+                    attempt + 1, API_MAX_RETRIES, path, err
                 )
                 last_exception = err
                 self._pending_requests.pop(message_id, None)
-                if attempt == 0:
-                    await asyncio.sleep(API_RETRY_DELAY)
+
+                # Apply exponential backoff with jitter for retries
+                if attempt < API_MAX_RETRIES - 1:
+                    delay = API_RETRY_BASE_DELAY * (2 ** attempt)
+                    # Add small jitter (0-20% of delay) to prevent thundering herd
+                    jitter = delay * 0.2 * (hash(message_id) % 100) / 100
+                    total_delay = delay + jitter
+                    _LOGGER.debug(
+                        "Retrying request for path %s after %.2fs delay (attempt %d)",
+                        path, total_delay, attempt + 2
+                    )
+                    await asyncio.sleep(total_delay)
             except HcuApiError as err:
                 # Re-raise specific HcuApiError immediately to be handled by calling functions
                 self._pending_requests.pop(message_id, None)
                 raise err
 
         raise HcuApiError(
-            f"Request failed after multiple retries for path {path}"
+            f"Request failed after {API_MAX_RETRIES} retries for path {path}"
         ) from last_exception
 
     async def _send_plugin_ready(self, message_id: str) -> None:

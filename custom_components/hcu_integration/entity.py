@@ -24,7 +24,7 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], Entity):
         client: HcuApiClient,
         device_data: dict[str, Any],
         channel_index: str,
-    ):
+    ) -> None:
         """Initialize the base entity."""
         super().__init__(coordinator)
         self._client = client
@@ -128,7 +128,7 @@ class HcuGroupBaseEntity(CoordinatorEntity["HcuCoordinator"], Entity):
         coordinator: "HcuCoordinator",
         client: HcuApiClient,
         group_data: dict[str, Any],
-    ):
+    ) -> None:
         """Initialize the group base entity."""
         super().__init__(coordinator)
         self._client = client
@@ -178,7 +178,7 @@ class HcuHomeBaseEntity(CoordinatorEntity["HcuCoordinator"], Entity):
         self,
         coordinator: "HcuCoordinator",
         client: HcuApiClient,
-    ):
+    ) -> None:
         """Initialize the home base entity."""
         super().__init__(coordinator)
         self._client = client

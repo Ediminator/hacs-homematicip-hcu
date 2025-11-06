@@ -1,11 +1,10 @@
 """Common test fixtures for Homematic IP HCU integration."""
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from homeassistant.core import HomeAssistant
-from homeassistant.setup import async_setup_component
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.hcu_integration.const import DOMAIN
@@ -107,17 +106,3 @@ def mock_group_data() -> dict:
         },
         "channels": [],
     }
-
-
-@pytest.fixture
-async def hass_with_integration(
-    hass: HomeAssistant, mock_hcu_client: MagicMock, mock_config_entry: MockConfigEntry
-) -> HomeAssistant:
-    """Set up the integration in Home Assistant."""
-    mock_config_entry.add_to_hass(hass)
-
-    with patch("custom_components.hcu_integration.HcuApiClient", return_value=mock_hcu_client):
-        assert await async_setup_component(hass, DOMAIN, {})
-        await hass.async_block_till_done()
-
-    return hass

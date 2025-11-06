@@ -207,7 +207,7 @@ def test_hcu_home_base_entity_device_info(mock_coordinator, mock_hcu_client):
 
 
 @pytest.mark.parametrize(
-    "is_connected,device_return,expected_available,test_id",
+    "is_connected,device_return,expected_available",
     [
         # Client connected, device reachable (non-permanently-reachable)
         (
@@ -221,10 +221,9 @@ def test_hcu_home_base_entity_device_info(mock_coordinator, mock_hcu_client):
                 },
             },
             True,
-            "connected_reachable_non_permanent",
         ),
         # Client disconnected
-        (False, None, False, "client_disconnected"),
+        (False, None, False),
         # Client connected, device unreachable (non-permanently-reachable)
         (
             True,
@@ -237,10 +236,9 @@ def test_hcu_home_base_entity_device_info(mock_coordinator, mock_hcu_client):
                 },
             },
             False,
-            "connected_unreachable_non_permanent",
         ),
         # Device not found
-        (True, None, False, "device_not_found"),
+        (True, None, False),
         # Permanently reachable device, even if marked unreachable
         (
             True,
@@ -253,7 +251,6 @@ def test_hcu_home_base_entity_device_info(mock_coordinator, mock_hcu_client):
                 },
             },
             True,
-            "permanently_reachable_marked_unreachable",
         ),
         # Permanently reachable device, marked reachable
         (
@@ -267,10 +264,16 @@ def test_hcu_home_base_entity_device_info(mock_coordinator, mock_hcu_client):
                 },
             },
             True,
-            "permanently_reachable_marked_reachable",
         ),
     ],
-    ids=lambda x: x if isinstance(x, str) else "",
+    ids=[
+        "connected_reachable_non_permanent",
+        "client_disconnected",
+        "connected_unreachable_non_permanent",
+        "device_not_found",
+        "permanently_reachable_marked_unreachable",
+        "permanently_reachable_marked_reachable",
+    ],
 )
 def test_hcu_base_entity_availability(
     mock_coordinator,
@@ -279,7 +282,6 @@ def test_hcu_base_entity_availability(
     is_connected,
     device_return,
     expected_available,
-    test_id,
 ):
     """Test entity availability across various scenarios."""
     mock_hcu_client.is_connected = is_connected

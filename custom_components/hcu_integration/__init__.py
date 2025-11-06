@@ -18,6 +18,7 @@ from homeassistant.const import (
 from homeassistant.core import HomeAssistant, ServiceCall, split_entity_id
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import dt as dt_util
 
@@ -103,14 +104,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
-    def _get_entity_from_entity_id(entity_id: str) -> Any | None:
+    def _get_entity_from_entity_id(entity_id: str) -> Entity | None:
         """Get entity object from entity_id across all coordinators.
 
         Args:
             entity_id: The entity ID to search for (e.g., "switch.my_switch")
 
         Returns:
-            The entity object if found, None otherwise
+            The Entity object if found, None otherwise
         """
         entity_domain, _ = split_entity_id(entity_id)
         platform = PLATFORM_MAP.get(entity_domain)

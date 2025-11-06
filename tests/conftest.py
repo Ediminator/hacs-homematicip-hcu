@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock, patch
-from typing import Generator
 
 import pytest
 from homeassistant.core import HomeAssistant

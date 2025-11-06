@@ -4,7 +4,6 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import pytest
-from homeassistant.core import HomeAssistant
 
 from custom_components.hcu_integration.entity import (
     HcuBaseEntity,
@@ -178,7 +177,8 @@ async def test_hcu_base_entity_available_when_connected(mock_coordinator, mock_h
     mock_hcu_client.get_device_by_address = MagicMock(return_value={
         "id": "test-device-id",
         "functionalChannels": {
-            "1": {"unreach": False},
+            "0": {"unreach": False},  # Maintenance channel must be reachable
+            "1": {},
         },
     })
 
@@ -212,7 +212,8 @@ async def test_hcu_base_entity_unavailable_when_device_unreachable(mock_coordina
     mock_hcu_client.get_device_by_address = MagicMock(return_value={
         "id": "test-device-id",
         "functionalChannels": {
-            "1": {"unreach": True},
+            "0": {"unreach": True},  # Maintenance channel reports unreachable
+            "1": {},
         },
     })
 

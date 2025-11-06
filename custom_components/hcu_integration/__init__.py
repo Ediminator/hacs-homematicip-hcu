@@ -15,7 +15,7 @@ from homeassistant.const import (
     Platform,
     ATTR_TEMPERATURE,
 )
-from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.core import HomeAssistant, ServiceCall, split_entity_id
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
@@ -64,6 +64,16 @@ PLATFORM_MAP = {
     "climate": Platform.CLIMATE,
 }
 
+# List of integration services (single source of truth for registration/removal)
+_INTEGRATION_SERVICES = [
+    SERVICE_PLAY_SOUND,
+    SERVICE_SET_RULE_STATE,
+    SERVICE_ACTIVATE_PARTY_MODE,
+    SERVICE_ACTIVATE_VACATION_MODE,
+    SERVICE_ACTIVATE_ECO_MODE,
+    SERVICE_DEACTIVATE_ABSENCE_MODE,
+]
+
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Homematic IP Local (HCU) from a config entry."""
@@ -102,7 +112,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         Returns:
             The entity object if found, None otherwise
         """
-        entity_domain = entity_id.split(".")[0]
+        entity_domain, _ = split_entity_id(entity_id)
         platform = PLATFORM_MAP.get(entity_domain)
 
         # Return early if platform not supported
@@ -511,16 +521,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         # Only remove services when the last config entry is unloaded
         if not service_entries:
             _LOGGER.debug("Unregistering HCU services (last config entry)")
-            # List of services to remove
-            services_to_remove = [
-                SERVICE_PLAY_SOUND,
-                SERVICE_SET_RULE_STATE,
-                SERVICE_ACTIVATE_PARTY_MODE,
-                SERVICE_ACTIVATE_VACATION_MODE,
-                SERVICE_ACTIVATE_ECO_MODE,
-                SERVICE_DEACTIVATE_ABSENCE_MODE,
-            ]
-            for service_name in services_to_remove:
+            for service_name in _INTEGRATION_SERVICES:
                 hass.services.async_remove(DOMAIN, service_name)
             # Clean up the set
             hass.data.pop(SERVICE_ENTRIES_KEY, None)

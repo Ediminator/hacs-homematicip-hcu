@@ -228,3 +228,62 @@ def test_event_callback_registration(api_client: HcuApiClient):
     api_client._handle_incoming_message({"type": "HMIP_SYSTEM_EVENT", "body": {}})
 
     assert callback_called
+
+
+async def test_handle_incoming_message_system_response_success(api_client: HcuApiClient):
+    """Test _handle_incoming_message resolves future on successful HMIP_SYSTEM_RESPONSE."""
+    message_id = "test-message-id-123"
+    expected_body = {"devices": {}, "groups": {}}
+
+    # Create a pending request
+    future = asyncio.get_running_loop().create_future()
+    api_client._pending_requests[message_id] = future
+
+    # Simulate successful response from HCU
+    success_message = {
+        "type": "HMIP_SYSTEM_RESPONSE",
+        "id": message_id,
+        "body": {
+            "code": 200,
+            "body": expected_body,
+        },
+    }
+
+    api_client._handle_incoming_message(success_message)
+
+    # Verify the future was resolved with the body
+    assert future.done()
+    assert not future.cancelled()
+    result = await future
+    assert result == expected_body
+    assert message_id not in api_client._pending_requests
+
+
+async def test_handle_incoming_message_system_response_error(api_client: HcuApiClient):
+    """Test _handle_incoming_message rejects future on error HMIP_SYSTEM_RESPONSE."""
+    message_id = "test-message-id-456"
+
+    # Create a pending request
+    future = asyncio.get_running_loop().create_future()
+    api_client._pending_requests[message_id] = future
+
+    # Simulate error response from HCU
+    error_message = {
+        "type": "HMIP_SYSTEM_RESPONSE",
+        "id": message_id,
+        "body": {
+            "code": 500,
+            "errorCode": "INTERNAL_ERROR",
+            "message": "Something went wrong",
+        },
+    }
+
+    api_client._handle_incoming_message(error_message)
+
+    # Verify the future was rejected with HcuApiError
+    assert future.done()
+    assert not future.cancelled()
+    with pytest.raises(HcuApiError) as exc_info:
+        await future
+    assert "HCU Error:" in str(exc_info.value)
+    assert message_id not in api_client._pending_requests

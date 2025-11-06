@@ -65,7 +65,8 @@ async def test_hcu_base_entity_set_entity_name_with_feature(mock_coordinator, mo
 
     entity._set_entity_name(channel_label="Test Channel", feature_name="Power Consumption")
 
-    assert entity._attr_name == "Power Consumption"
+    assert entity._attr_name == "Test Channel Power Consumption"
+    assert entity._attr_has_entity_name is False
     assert entity._attr_translation_key is None
 
 

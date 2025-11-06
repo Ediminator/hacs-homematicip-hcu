@@ -1,7 +1,7 @@
 """Common test fixtures for Homematic IP HCU integration."""
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 from typing import Generator
 
 import pytest
@@ -10,32 +10,32 @@ from homeassistant.setup import async_setup_component
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.hcu_integration.const import DOMAIN
+from custom_components.hcu_integration.api import HcuApiClient
 
 
 @pytest.fixture
-def mock_hcu_client() -> Generator[MagicMock, None, None]:
+def mock_hcu_client() -> MagicMock:
     """Create a mock HCU API client."""
-    with patch("custom_components.hcu_integration.api.HcuApiClient") as mock_client:
-        client = mock_client.return_value
-        client.state = {
-            "home": {
-                "id": "test-home-id",
-                "currentAPVersion": "1.0.0",
-            },
-            "devices": {},
-            "groups": {},
-        }
-        client.hcu_device_id = "test-hcu-device-id"
-        client.hcu_part_device_ids = set()
-        client.is_connected = True
-        client.connect = AsyncMock()
-        client.disconnect = AsyncMock()
-        client.listen = AsyncMock()
-        client.get_system_state = AsyncMock(return_value=client.state)
-        client.get_device_by_address = MagicMock(return_value=None)
-        client.get_group_by_id = MagicMock(return_value=None)
-        client.process_events = MagicMock(return_value=set())
-        yield client
+    client = MagicMock(spec=HcuApiClient)
+    client.state = {
+        "home": {
+            "id": "test-home-id",
+            "currentAPVersion": "1.0.0",
+        },
+        "devices": {},
+        "groups": {},
+    }
+    client.hcu_device_id = "test-hcu-device-id"
+    client.hcu_part_device_ids = set()
+    client.is_connected = True
+    client.connect = AsyncMock()
+    client.disconnect = AsyncMock()
+    client.listen = AsyncMock()
+    client.get_system_state = AsyncMock(return_value=client.state)
+    client.get_device_by_address = MagicMock(return_value=None)
+    client.get_group_by_id = MagicMock(return_value=None)
+    client.process_events = MagicMock(return_value=set())
+    return client
 
 
 @pytest.fixture

@@ -119,13 +119,11 @@ async def test_process_events_group_changed(api_client: HcuApiClient):
     assert api_client._state["groups"]["group1"] == group_data
 
 
-async def test_retry_logic_success_on_second_attempt(api_client: HcuApiClient, mock_websocket):
-    """Test retry logic succeeds on second attempt."""
-    # Mock the WebSocket to fail first then succeed
-    api_client._ws = mock_websocket
+async def test_retry_logic_connection_error_then_success(api_client: HcuApiClient):
+    """Test retry logic succeeds after ConnectionError on first attempt."""
     api_client._pending_requests = {}
 
-    # First attempt fails, second succeeds
+    # First attempt raises ConnectionError, second attempt succeeds
     call_count = 0
 
     async def mock_send(msg):
@@ -134,25 +132,34 @@ async def test_retry_logic_success_on_second_attempt(api_client: HcuApiClient, m
         if call_count == 1:
             raise ConnectionError("Connection failed")
 
-    async def mock_response():
-        return {"type": "HMIP_SYSTEM_RESPONSE", "id": "test-id", "body": {"result": "success"}}
-
     api_client._send_message = AsyncMock(side_effect=mock_send)
 
-    # Simulate receiving response on second attempt
+    # Second attempt succeeds
+    with patch.object(asyncio, "wait_for") as mock_wait:
+        mock_wait.return_value = {"result": "success"}
+
+        result = await api_client._send_hmip_request("/test/path", timeout=1)
+
+        assert result == {"result": "success"}
+        assert call_count == 2  # Failed once, succeeded on retry
+
+
+async def test_retry_logic_timeout_then_success(api_client: HcuApiClient):
+    """Test retry logic succeeds after TimeoutError on first attempt."""
+    api_client._pending_requests = {}
+    api_client._send_message = AsyncMock()
+
+    # First attempt times out, second attempt succeeds
     with patch.object(asyncio, "wait_for") as mock_wait:
         mock_wait.side_effect = [
             asyncio.TimeoutError(),
             {"result": "success"},
         ]
 
-        try:
-            result = await api_client._send_hmip_request("/test/path", timeout=1)
-            # Should succeed on retry
-            assert call_count >= 1
-        except HcuApiError:
-            # Expected if both attempts fail
-            assert call_count >= 2
+        result = await api_client._send_hmip_request("/test/path", timeout=1)
+
+        assert result == {"result": "success"}
+        assert mock_wait.call_count == 2  # Failed once, succeeded on retry
 
 
 async def test_hcu_device_id_property(api_client: HcuApiClient):

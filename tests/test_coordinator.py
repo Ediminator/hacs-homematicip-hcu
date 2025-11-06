@@ -214,8 +214,8 @@ async def test_handle_event_message_full_flow(coordinator: HcuCoordinator, hass:
     coordinator._handle_event_message(message)
     await hass.async_block_till_done()
 
-    # Should fire one event for timestamp change
-    assert len(events_fired) >= 1
+    # Should fire exactly one event for timestamp change
+    assert len(events_fired) == 1
 
 
 async def test_handle_event_message_ignores_non_event_types(coordinator: HcuCoordinator):

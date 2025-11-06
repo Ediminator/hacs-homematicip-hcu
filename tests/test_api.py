@@ -23,7 +23,7 @@ def mock_websocket():
 
 
 @pytest.fixture
-async def api_client(hass: HomeAssistant):
+def api_client(hass: HomeAssistant):
     """Create an API client instance."""
     session = MagicMock(spec=aiohttp.ClientSession)
     client = HcuApiClient(

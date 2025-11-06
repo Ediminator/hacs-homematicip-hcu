@@ -119,14 +119,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         if not platform:
             return None
 
-        # Search through all coordinators for this entity
-        for coordinator in hass.data[DOMAIN].values():
-            entities = coordinator.entities.get(platform, [])
-            for entity in entities:
-                # Check if entity_id is set and matches
-                if hasattr(entity, "entity_id") and entity.entity_id == entity_id:
-                    return entity
-        return None
+        # Search through all coordinators for this entity using generator expression
+        return next(
+            (
+                entity
+                for coordinator in hass.data[DOMAIN].values()
+                for entity in coordinator.entities.get(platform, [])
+                if hasattr(entity, "entity_id") and entity.entity_id == entity_id
+            ),
+            None,
+        )
 
     def _get_client_for_service() -> HcuApiClient:
         """Get the API client for service calls.

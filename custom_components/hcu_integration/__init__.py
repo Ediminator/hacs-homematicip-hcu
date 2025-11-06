@@ -86,6 +86,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
+    # Map domain to platform (defined once to avoid recreation)
+    PLATFORM_MAP = {
+        "switch": Platform.SWITCH,
+        "light": Platform.LIGHT,
+        "climate": Platform.CLIMATE,
+    }
+
     def _get_entity_from_entity_id(entity_id: str) -> Any | None:
         """Get entity object from entity_id across all coordinators.
 
@@ -96,14 +103,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             The entity object if found, None otherwise
         """
         entity_domain = entity_id.split(".")[0]
-
-        # Map domain to platform (defined once, not recreated per iteration)
-        platform_map = {
-            "switch": Platform.SWITCH,
-            "light": Platform.LIGHT,
-            "climate": Platform.CLIMATE,
-        }
-        platform = platform_map.get(entity_domain)
+        platform = PLATFORM_MAP.get(entity_domain)
 
         # Return early if platform not supported
         if not platform:
@@ -117,6 +117,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 if hasattr(entity, "entity_id") and entity.entity_id == entity_id:
                     return entity
         return None
+
+    def _get_client_for_service() -> HcuApiClient:
+        """Get the API client for service calls.
+
+        For services not tied to specific entities, we use the first available client.
+        All HCUs share the same home/rule/vacation settings.
+        """
+        for coordinator in hass.data[DOMAIN].values():
+            return coordinator.client
+        raise ValueError("No HCU client available")
 
     async def handle_play_sound(call: ServiceCall) -> None:
         """Handle the play_sound service call by delegating to the entity."""
@@ -144,10 +154,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         rule_id = call.data[ATTR_RULE_ID]
         enabled = call.data[ATTR_ENABLED]
         try:
+            client = _get_client_for_service()
             await client.async_enable_simple_rule(rule_id=rule_id, enabled=enabled)
             _LOGGER.info("Successfully set state for rule %s to %s", rule_id, enabled)
         except (HcuApiError, ConnectionError) as err:
             _LOGGER.error("Error setting state for rule %s: %s", rule_id, err)
+        except ValueError as err:
+            _LOGGER.error("No HCU available for service call: %s", err)
 
     async def handle_activate_party_mode(call: ServiceCall) -> None:
         """Handle the activate_party_mode service call."""
@@ -194,6 +207,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
             formatted_end_time = dt_obj.strftime("%Y_%m_%d %H:%M")
 
+            client = _get_client_for_service()
             await client.async_activate_vacation(
                 temperature=temperature, end_time=formatted_end_time
             )
@@ -205,25 +219,41 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         except (HcuApiError, ConnectionError) as err:
             _LOGGER.error("Error activating vacation mode: %s", err)
         except ValueError as err:
-            _LOGGER.error("Invalid end_time for vacation mode: %s", err)
+            _LOGGER.error("Invalid parameter for vacation mode: %s", err)
         except Exception:
             _LOGGER.exception("Unexpected error during vacation mode activation.")
 
     async def handle_activate_eco_mode(call: ServiceCall) -> None:
         """Handle the activate_eco_mode service call."""
         try:
+            client = _get_client_for_service()
             await client.async_activate_absence_permanent()
             _LOGGER.info("Successfully activated permanent absence (Eco mode).")
         except (HcuApiError, ConnectionError) as err:
             _LOGGER.error("Error activating permanent absence (Eco mode): %s", err)
+        except ValueError as err:
+            _LOGGER.error("No HCU available for service call: %s", err)
 
     async def handle_deactivate_absence_mode(call: ServiceCall) -> None:
         """Handle the deactivate_absence_mode service call."""
         try:
+            client = _get_client_for_service()
             await client.async_deactivate_absence()
             _LOGGER.info("Successfully deactivated absence mode.")
         except (HcuApiError, ConnectionError) as err:
             _LOGGER.error("Error deactivating absence mode: %s", err)
+        except ValueError as err:
+            _LOGGER.error("No HCU available for service call: %s", err)
+
+    # Define services and their handlers
+    SERVICES = {
+        SERVICE_PLAY_SOUND: handle_play_sound,
+        SERVICE_SET_RULE_STATE: handle_set_rule_state,
+        SERVICE_ACTIVATE_PARTY_MODE: handle_activate_party_mode,
+        SERVICE_ACTIVATE_VACATION_MODE: handle_activate_vacation_mode,
+        SERVICE_ACTIVATE_ECO_MODE: handle_activate_eco_mode,
+        SERVICE_DEACTIVATE_ABSENCE_MODE: handle_deactivate_absence_mode,
+    }
 
     # Register services only once, even with multiple config entries
     # Use a set to track active entry IDs (more robust than counter)
@@ -232,20 +262,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if not service_entries:
         # First config entry - register all services
         _LOGGER.debug("Registering HCU services for the first time")
-        hass.services.async_register(DOMAIN, SERVICE_PLAY_SOUND, handle_play_sound)
-        hass.services.async_register(DOMAIN, SERVICE_SET_RULE_STATE, handle_set_rule_state)
-        hass.services.async_register(
-            DOMAIN, SERVICE_ACTIVATE_PARTY_MODE, handle_activate_party_mode
-        )
-        hass.services.async_register(
-            DOMAIN, SERVICE_ACTIVATE_VACATION_MODE, handle_activate_vacation_mode
-        )
-        hass.services.async_register(
-            DOMAIN, SERVICE_ACTIVATE_ECO_MODE, handle_activate_eco_mode
-        )
-        hass.services.async_register(
-            DOMAIN, SERVICE_DEACTIVATE_ABSENCE_MODE, handle_deactivate_absence_mode
-        )
+        for service_name, handler in SERVICES.items():
+            hass.services.async_register(DOMAIN, service_name, handler)
     else:
         _LOGGER.debug(
             "HCU services already registered, skipping registration (active entries: %d)",
@@ -484,25 +502,26 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     coordinator: HcuCoordinator = hass.data[DOMAIN][entry.entry_id]
 
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
-
-    if unload_ok:
-        await coordinator.client.disconnect()
-        hass.data[DOMAIN].pop(entry.entry_id)
-
-        # Remove this entry from the set of active entries
-        service_entries: set[str] = hass.data.get(SERVICE_ENTRIES_KEY, set())
+    # Handle service cleanup BEFORE removing coordinator to avoid race conditions
+    # Check if SERVICE_ENTRIES_KEY exists before manipulating it
+    if SERVICE_ENTRIES_KEY in hass.data:
+        service_entries: set[str] = hass.data[SERVICE_ENTRIES_KEY]
         service_entries.discard(entry.entry_id)
 
         # Only remove services when the last config entry is unloaded
         if not service_entries:
             _LOGGER.debug("Unregistering HCU services (last config entry)")
-            hass.services.async_remove(DOMAIN, SERVICE_PLAY_SOUND)
-            hass.services.async_remove(DOMAIN, SERVICE_SET_RULE_STATE)
-            hass.services.async_remove(DOMAIN, SERVICE_ACTIVATE_PARTY_MODE)
-            hass.services.async_remove(DOMAIN, SERVICE_ACTIVATE_VACATION_MODE)
-            hass.services.async_remove(DOMAIN, SERVICE_ACTIVATE_ECO_MODE)
-            hass.services.async_remove(DOMAIN, SERVICE_DEACTIVATE_ABSENCE_MODE)
+            # List of services to remove
+            services_to_remove = [
+                SERVICE_PLAY_SOUND,
+                SERVICE_SET_RULE_STATE,
+                SERVICE_ACTIVATE_PARTY_MODE,
+                SERVICE_ACTIVATE_VACATION_MODE,
+                SERVICE_ACTIVATE_ECO_MODE,
+                SERVICE_DEACTIVATE_ABSENCE_MODE,
+            ]
+            for service_name in services_to_remove:
+                hass.services.async_remove(DOMAIN, service_name)
             # Clean up the set
             hass.data.pop(SERVICE_ENTRIES_KEY, None)
         else:
@@ -510,6 +529,12 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 "Keeping HCU services registered (remaining config entries: %d)",
                 len(service_entries)
             )
+
+    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+
+    if unload_ok:
+        await coordinator.client.disconnect()
+        hass.data[DOMAIN].pop(entry.entry_id)
 
     return unload_ok
 

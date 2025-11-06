@@ -225,7 +225,6 @@ class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
                 HcuApiError,
                 ConnectionError,
                 asyncio.TimeoutError,
-                aiohttp.ClientConnectorError,
                 aiohttp.ClientError,
             ):
                 _LOGGER.error("Failed to connect to new HCU host/port combination")

@@ -160,6 +160,7 @@ async def test_retry_logic_timeout_then_success(api_client: HcuApiClient):
 
         assert result == {"result": "success"}
         assert mock_wait.call_count == 2  # Failed once, succeeded on retry
+        assert api_client._send_message.call_count == 2
 
 
 async def test_retry_logic_exhaustion_raises_error(api_client: HcuApiClient):
@@ -177,6 +178,7 @@ async def test_retry_logic_exhaustion_raises_error(api_client: HcuApiClient):
         await api_client._send_hmip_request("/test/path", timeout=1)
 
     assert "Connection failed" in str(exc_info.value)
+    assert api_client._send_message.call_count == 3
 
 
 def test_hcu_device_id_property(api_client: HcuApiClient):

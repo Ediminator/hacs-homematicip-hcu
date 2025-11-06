@@ -82,6 +82,7 @@ def test_hcu_base_entity_set_entity_name_without_feature(mock_coordinator, mock_
     entity._set_entity_name(channel_label="Test Channel")
 
     assert entity._attr_name == "Test Channel"
+    assert entity._attr_has_entity_name is False
 
 
 def test_hcu_group_base_entity_initialization(mock_coordinator, mock_hcu_client, mock_group_data):

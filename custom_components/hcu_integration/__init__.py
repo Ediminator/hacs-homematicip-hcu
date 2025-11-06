@@ -402,7 +402,15 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
         )
 
     def _handle_device_channel_events(self, events: dict) -> None:
-        """Handle DEVICE_CHANNEL_EVENT type events (stateless buttons)."""
+        """Handle DEVICE_CHANNEL_EVENT type events (stateless buttons).
+
+        These events are fired by newer button devices that don't maintain state.
+        Examples: HmIP-WGS, HmIP-WRC6. The events contain direct button press
+        information without requiring timestamp comparison.
+
+        Args:
+            events: Dictionary of event data from the HCU WebSocket message
+        """
         for event in events.values():
             if event.get("pushEventType") != "DEVICE_CHANNEL_EVENT":
                 continue
@@ -413,6 +421,10 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
             device_id = event.get("deviceId")
             channel_idx = event.get("functionalChannelIndex")
             event_type = event.get("channelEventType")
+
+            if not device_id or not channel_idx or not event_type:
+                _LOGGER.debug("Skipping incomplete device channel event: %s", event)
+                continue
 
             self._fire_button_event(device_id, channel_idx, event_type)
             _LOGGER.debug(

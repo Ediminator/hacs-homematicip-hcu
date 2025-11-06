@@ -54,8 +54,8 @@ _LOGGER = logging.getLogger(__name__)
 
 type HcuData = dict[str, "HcuCoordinator"]
 
-# Track service registration across multiple config entries
-SERVICE_REGISTER_COUNT_KEY = f"{DOMAIN}_service_count"
+# Track service registration across multiple config entries using entry IDs
+SERVICE_ENTRIES_KEY = f"{DOMAIN}_service_entries"
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -97,21 +97,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         """
         entity_domain = entity_id.split(".")[0]
 
+        # Map domain to platform (defined once, not recreated per iteration)
+        platform_map = {
+            "switch": Platform.SWITCH,
+            "light": Platform.LIGHT,
+            "climate": Platform.CLIMATE,
+        }
+        platform = platform_map.get(entity_domain)
+
+        # Return early if platform not supported
+        if not platform:
+            return None
+
         # Search through all coordinators for this entity
         for coordinator in hass.data[DOMAIN].values():
-            if not isinstance(coordinator, HcuCoordinator):
-                continue
-
-            # Map domain to platform
-            platform_map = {
-                "switch": Platform.SWITCH,
-                "light": Platform.LIGHT,
-                "climate": Platform.CLIMATE,
-            }
-            platform = platform_map.get(entity_domain)
-            if not platform:
-                continue
-
             entities = coordinator.entities.get(platform, [])
             for entity in entities:
                 # Check if entity_id is set and matches
@@ -227,10 +226,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             _LOGGER.error("Error deactivating absence mode: %s", err)
 
     # Register services only once, even with multiple config entries
-    # Use a reference counter to track how many config entries are active
-    service_count = hass.data.setdefault(SERVICE_REGISTER_COUNT_KEY, 0)
+    # Use a set to track active entry IDs (more robust than counter)
+    service_entries: set[str] = hass.data.setdefault(SERVICE_ENTRIES_KEY, set())
 
-    if service_count == 0:
+    if not service_entries:
         # First config entry - register all services
         _LOGGER.debug("Registering HCU services for the first time")
         hass.services.async_register(DOMAIN, SERVICE_PLAY_SOUND, handle_play_sound)
@@ -249,12 +248,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         )
     else:
         _LOGGER.debug(
-            "HCU services already registered, skipping registration (count: %d)",
-            service_count
+            "HCU services already registered, skipping registration (active entries: %d)",
+            len(service_entries)
         )
 
-    # Increment the reference counter
-    hass.data[SERVICE_REGISTER_COUNT_KEY] = service_count + 1
+    # Add this entry to the set of active entries
+    service_entries.add(entry.entry_id)
 
     entry.add_update_listener(async_reload_entry)
 
@@ -491,13 +490,12 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         await coordinator.client.disconnect()
         hass.data[DOMAIN].pop(entry.entry_id)
 
-        # Decrement the service registration counter
-        service_count = hass.data.get(SERVICE_REGISTER_COUNT_KEY, 1)
-        service_count -= 1
-        hass.data[SERVICE_REGISTER_COUNT_KEY] = service_count
+        # Remove this entry from the set of active entries
+        service_entries: set[str] = hass.data.get(SERVICE_ENTRIES_KEY, set())
+        service_entries.discard(entry.entry_id)
 
         # Only remove services when the last config entry is unloaded
-        if service_count <= 0:
+        if not service_entries:
             _LOGGER.debug("Unregistering HCU services (last config entry)")
             hass.services.async_remove(DOMAIN, SERVICE_PLAY_SOUND)
             hass.services.async_remove(DOMAIN, SERVICE_SET_RULE_STATE)
@@ -505,12 +503,12 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             hass.services.async_remove(DOMAIN, SERVICE_ACTIVATE_VACATION_MODE)
             hass.services.async_remove(DOMAIN, SERVICE_ACTIVATE_ECO_MODE)
             hass.services.async_remove(DOMAIN, SERVICE_DEACTIVATE_ABSENCE_MODE)
-            # Clean up the counter
-            hass.data.pop(SERVICE_REGISTER_COUNT_KEY, None)
+            # Clean up the set
+            hass.data.pop(SERVICE_ENTRIES_KEY, None)
         else:
             _LOGGER.debug(
                 "Keeping HCU services registered (remaining config entries: %d)",
-                service_count
+                len(service_entries)
             )
 
     return unload_ok

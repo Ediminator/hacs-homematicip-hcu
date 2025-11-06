@@ -93,10 +93,6 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
             *self._profiles.keys(),
         ]
 
-        # Set temperature limits from group data with fallback to HCU defaults
-        self._attr_min_temp = self._group.get("minTemperature", DEFAULT_MIN_TEMP)
-        self._attr_max_temp = self._group.get("maxTemperature", DEFAULT_MAX_TEMP)
-
         self._update_attributes_from_group_data()
 
     @callback
@@ -107,6 +103,10 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
 
     def _update_attributes_from_group_data(self) -> None:
         """Update all HA state attributes from the latest group data."""
+        # Update temperature limits from group data with fallback to HCU defaults
+        self._attr_min_temp = self._group.get("minTemperature", DEFAULT_MIN_TEMP)
+        self._attr_max_temp = self._group.get("maxTemperature", DEFAULT_MAX_TEMP)
+
         control_mode = self._group.get("controlMode")
         target_temp = self._group.get("setPointTemperature")
 

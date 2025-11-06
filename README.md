@@ -51,6 +51,10 @@ This integration connects directly to your HCU's local API, providing real-time 
 
 ### Step 1: Install via HACS
 
+[![Open your Home Assistant instance and add this repository to HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Ediminator&repository=hacs-homematicip-hcu&category=Integration)
+
+Or, add it manually:
+
 1. Open **HACS** in your Home Assistant sidebar
 2. Click on **Integrations**
 3. Click the **three dots** (⋮) in the top right corner

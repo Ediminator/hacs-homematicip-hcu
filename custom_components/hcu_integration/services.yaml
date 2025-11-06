@@ -99,7 +99,7 @@ activate_vacation_mode:
       required: true
       selector:
         number:
-          min: 4.5
+          min: 5.0
           max: 30.0
           step: 0.5
           unit_of_measurement: "°C"
@@ -132,7 +132,7 @@ activate_party_mode:
       required: true
       selector:
         number:
-          min: 4.5
+          min: 5.0
           max: 30.0
           step: 0.5
           unit_of_measurement: "°C"

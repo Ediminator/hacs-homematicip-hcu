@@ -275,6 +275,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if not service_entries:
         # First config entry - register all services
         _LOGGER.debug("Registering HCU services for the first time")
+        # Ensure service registration and removal lists are consistent
+        assert set(SERVICES.keys()) == set(_INTEGRATION_SERVICES), (
+            "SERVICES and _INTEGRATION_SERVICES must contain the same service names"
+        )
         for service_name, handler in SERVICES.items():
             hass.services.async_register(DOMAIN, service_name, handler)
     else:

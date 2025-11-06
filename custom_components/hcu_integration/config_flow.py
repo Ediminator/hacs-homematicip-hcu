@@ -137,11 +137,14 @@ class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
 
             except (aiohttp.ClientError, asyncio.TimeoutError):
                 errors["base"] = "cannot_connect"
+            except ValueError as err:
+                _LOGGER.error("Invalid response from HCU: %s", err)
+                errors["base"] = "invalid_key"
             except Exception:
                 _LOGGER.exception(
                     "Handshake failed, likely due to an invalid or expired key."
                 )
-                errors["base"] = "invalid_key"
+                errors["base"] = "unknown"
 
         return self.async_show_form(
             step_id="auth",
@@ -225,9 +228,13 @@ class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
                 ConnectionError,
                 asyncio.TimeoutError,
                 aiohttp.ClientConnectorError,
+                aiohttp.ClientError,
             ):
                 _LOGGER.error("Failed to connect to new HCU host/port combination")
                 errors["base"] = "cannot_connect"
+            except ValueError as err:
+                _LOGGER.error("Invalid configuration or response: %s", err)
+                errors["base"] = "unknown"
             except Exception:
                 _LOGGER.exception("Unexpected error during reconfiguration.")
                 errors["base"] = "unknown"
@@ -429,11 +436,14 @@ class HcuOptionsFlowHandler(OptionsFlow):
 
                 return self.async_create_entry(title="", data={})
 
-            except HcuApiError as e:
-                _LOGGER.error("Failed to activate vacation mode: %s", e)
+            except HcuApiError as err:
+                _LOGGER.error("Failed to activate vacation mode: %s", err)
                 errors["base"] = "api_error"
             except ConnectionError:
                 errors["base"] = "cannot_connect"
+            except (ValueError, TypeError) as err:
+                _LOGGER.error("Invalid date/time format or temperature: %s", err)
+                errors["base"] = "unknown"
             except Exception:
                 _LOGGER.exception("Unexpected error activating vacation mode")
                 errors["base"] = "unknown"

@@ -21,6 +21,8 @@ from .api import HcuApiClient, HcuApiError
 from .const import (
     CONF_COMFORT_TEMPERATURE,
     DEFAULT_COMFORT_TEMPERATURE,
+    DEFAULT_MAX_TEMP,
+    DEFAULT_MIN_TEMP,
     PRESET_ECO,
     PRESET_PARTY,
 )
@@ -92,8 +94,8 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
         ]
 
         # Set temperature limits from group data with fallback to HCU defaults
-        self._attr_min_temp = self._group.get("minTemperature", 5.0)
-        self._attr_max_temp = self._group.get("maxTemperature", 30.5)
+        self._attr_min_temp = self._group.get("minTemperature", DEFAULT_MIN_TEMP)
+        self._attr_max_temp = self._group.get("maxTemperature", DEFAULT_MAX_TEMP)
 
         self._update_attributes_from_group_data()
 

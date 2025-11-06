@@ -45,6 +45,8 @@ DEFAULT_HCU_AUTH_PORT = 6969
 DEFAULT_HCU_WEBSOCKET_PORT = 9001
 CONF_COMFORT_TEMPERATURE = "comfort_temperature"
 DEFAULT_COMFORT_TEMPERATURE = 21.0
+DEFAULT_MIN_TEMP = 5.0
+DEFAULT_MAX_TEMP = 30.0
 
 # --- API and Plugin Constants ---
 PLUGIN_ID = "de.homeassistant.hcu.integration"

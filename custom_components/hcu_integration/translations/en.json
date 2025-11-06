@@ -169,11 +169,11 @@
                 },
                 "end_time": {
                     "name": "End Time",
-                    "description": "The date and time when the party mode should end (e.g., '2025-12-24 23:00'). Format: 'YYYY-MM-DD HH:MM' or any string parsable by Home Assistant. Mutually exclusive with duration."
+                    "description": "The date and time when the party mode should end (e.g., '2025-12-24 23:00'). Format: 'YYYY-MM-DD HH:MM' or any string parsable by Home Assistant. If provided, takes precedence over duration."
                 },
                 "duration": {
                     "name": "Duration",
-                    "description": "The duration in seconds for the party mode. Mutually exclusive with end_time."
+                    "description": "The duration in seconds for the party mode. Only used if end_time is not specified."
                 }
             }
         }

@@ -169,11 +169,11 @@
                 },
                 "end_time": {
                     "name": "Endzeitpunkt",
-                    "description": "Datum und Uhrzeit, wann der Party-Modus enden soll (z.B. '2025-12-24 23:00'). Format: 'YYYY-MM-DD HH:MM' oder eine von Home Assistant interpretierbare Zeichenfolge. Schließt sich gegenseitig mit Dauer aus."
+                    "description": "Datum und Uhrzeit, wann der Party-Modus enden soll (z.B. '2025-12-24 23:00'). Format: 'YYYY-MM-DD HH:MM' oder eine von Home Assistant interpretierbare Zeichenfolge. Hat Vorrang vor Dauer, falls beide angegeben sind."
                 },
                 "duration": {
                     "name": "Dauer",
-                    "description": "Die Dauer in Sekunden für den Party-Modus. Schließt sich gegenseitig mit Endzeitpunkt aus."
+                    "description": "Die Dauer in Sekunden für den Party-Modus. Wird nur verwendet, wenn Endzeitpunkt nicht angegeben ist."
                 }
             }
         }

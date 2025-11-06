@@ -147,7 +147,7 @@
                 },
                 "end_time": {
                     "name": "End Time",
-                    "description": "The date and time when the vacation mode should end. Format: 'YYYY-MM-DD HH:MM' or any string parsable by Home Assistant."
+                    "description": "The date and time when the vacation mode should end. Format: 'YYYY_MM_DD HH:MM' or any string parsable by Home Assistant."
                 }
             }
         },
@@ -169,7 +169,7 @@
                 },
                 "end_time": {
                     "name": "End Time",
-                    "description": "The date and time when the party mode should end (e.g., '2025-12-24 23:00'). Format: 'YYYY-MM-DD HH:MM' or any string parsable by Home Assistant. If provided, takes precedence over duration."
+                    "description": "The date and time when the party mode should end (e.g., '2025_12_24 23:00'). Format: 'YYYY_MM_DD HH:MM' or any string parsable by Home Assistant. If provided, takes precedence over duration."
                 },
                 "duration": {
                     "name": "Duration",

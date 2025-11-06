@@ -141,9 +141,7 @@ class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
                 _LOGGER.error("Invalid response from HCU: %s", err)
                 errors["base"] = "invalid_key"
             except Exception:
-                _LOGGER.exception(
-                    "Handshake failed, likely due to an invalid or expired key."
-                )
+                _LOGGER.exception("An unexpected error occurred during handshake")
                 errors["base"] = "unknown"
 
         return self.async_show_form(

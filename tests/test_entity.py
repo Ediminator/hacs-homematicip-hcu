@@ -170,3 +170,72 @@ async def test_hcu_home_base_entity_device_info(mock_coordinator, mock_hcu_clien
 
     device_info = entity.device_info
     assert device_info["identifiers"] == {("hcu_integration", "hcu-device-id")}
+
+
+async def test_hcu_base_entity_available_when_connected(mock_coordinator, mock_hcu_client, mock_device_data):
+    """Test entity availability when client is connected and device is reachable."""
+    mock_hcu_client.is_connected = True
+    mock_hcu_client.get_device_by_address = MagicMock(return_value={
+        "id": "test-device-id",
+        "functionalChannels": {
+            "1": {"unreach": False},
+        },
+    })
+
+    entity = HcuBaseEntity(
+        coordinator=mock_coordinator,
+        client=mock_hcu_client,
+        device_data=mock_device_data,
+        channel_index="1",
+    )
+
+    assert entity.available is True
+
+
+async def test_hcu_base_entity_unavailable_when_disconnected(mock_coordinator, mock_hcu_client, mock_device_data):
+    """Test entity availability when client is disconnected."""
+    mock_hcu_client.is_connected = False
+
+    entity = HcuBaseEntity(
+        coordinator=mock_coordinator,
+        client=mock_hcu_client,
+        device_data=mock_device_data,
+        channel_index="1",
+    )
+
+    assert entity.available is False
+
+
+async def test_hcu_base_entity_unavailable_when_device_unreachable(mock_coordinator, mock_hcu_client, mock_device_data):
+    """Test entity availability when device is unreachable."""
+    mock_hcu_client.is_connected = True
+    mock_hcu_client.get_device_by_address = MagicMock(return_value={
+        "id": "test-device-id",
+        "functionalChannels": {
+            "1": {"unreach": True},
+        },
+    })
+
+    entity = HcuBaseEntity(
+        coordinator=mock_coordinator,
+        client=mock_hcu_client,
+        device_data=mock_device_data,
+        channel_index="1",
+    )
+
+    assert entity.available is False
+
+
+async def test_hcu_base_entity_unavailable_when_device_not_found(mock_coordinator, mock_hcu_client, mock_device_data):
+    """Test entity availability when device is not found in client state."""
+    mock_hcu_client.is_connected = True
+    mock_hcu_client.get_device_by_address = MagicMock(return_value=None)
+
+    entity = HcuBaseEntity(
+        coordinator=mock_coordinator,
+        client=mock_hcu_client,
+        device_data=mock_device_data,
+        channel_index="1",
+    )
+
+    assert entity.available is False

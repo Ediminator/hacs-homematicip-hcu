@@ -32,7 +32,7 @@ async def test_extract_event_channels(coordinator: HcuCoordinator):
             "device": {
                 "id": "device1",
                 "functionalChannels": {
-                    "1": {"functionalChannelType": "KEY_TRANSCEIVER"},
+                    "1": {"functionalChannelType": "WALL_MOUNTED_TRANSMITTER_CHANNEL"},
                     "2": {"functionalChannelType": "SWITCH_MEASURING"},
                 },
             },
@@ -41,7 +41,7 @@ async def test_extract_event_channels(coordinator: HcuCoordinator):
 
     result = coordinator._extract_event_channels(events)
 
-    # KEY_TRANSCEIVER should be extracted (it's an event channel type)
+    # WALL_MOUNTED_TRANSMITTER_CHANNEL should be extracted (it's an event channel type)
     assert ("device1", "1") in result
     # SWITCH_MEASURING should not be extracted (not an event channel type)
     assert ("device1", "2") not in result
@@ -129,7 +129,7 @@ async def test_detect_timestamp_based_button_presses(coordinator: HcuCoordinator
         "id": "device1",
         "functionalChannels": {
             "1": {
-                "functionalChannelType": "KEY_TRANSCEIVER",
+                "functionalChannelType": "WALL_MOUNTED_TRANSMITTER_CHANNEL",
                 "lastStatusUpdate": 2000,
             },
         },
@@ -170,7 +170,7 @@ async def test_handle_event_message_full_flow(coordinator: HcuCoordinator, hass:
             "device1": {
                 "functionalChannels": {
                     "1": {
-                        "functionalChannelType": "KEY_TRANSCEIVER",
+                        "functionalChannelType": "WALL_MOUNTED_TRANSMITTER_CHANNEL",
                         "lastStatusUpdate": 1000,
                     },
                 },
@@ -184,7 +184,7 @@ async def test_handle_event_message_full_flow(coordinator: HcuCoordinator, hass:
         "id": "device1",
         "functionalChannels": {
             "1": {
-                "functionalChannelType": "KEY_TRANSCEIVER",
+                "functionalChannelType": "WALL_MOUNTED_TRANSMITTER_CHANNEL",
                 "lastStatusUpdate": 2000,  # Timestamp changed
             },
         },
@@ -202,7 +202,7 @@ async def test_handle_event_message_full_flow(coordinator: HcuCoordinator, hass:
                         "device": {
                             "id": "device1",
                             "functionalChannels": {
-                                "1": {"functionalChannelType": "KEY_TRANSCEIVER"},
+                                "1": {"functionalChannelType": "WALL_MOUNTED_TRANSMITTER_CHANNEL"},
                             },
                         },
                     },

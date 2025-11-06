@@ -1,7 +1,7 @@
 """Common test fixtures for Homematic IP HCU integration."""
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 from typing import Generator
 
 import pytest

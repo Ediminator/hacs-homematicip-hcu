@@ -162,6 +162,23 @@ async def test_retry_logic_timeout_then_success(api_client: HcuApiClient):
         assert mock_wait.call_count == 2  # Failed once, succeeded on retry
 
 
+async def test_retry_logic_exhaustion_raises_error(api_client: HcuApiClient):
+    """Test that HcuApiError is raised after exhausting max retries."""
+    api_client._pending_requests = {}
+
+    # All attempts fail with ConnectionError
+    async def mock_send(msg):
+        raise ConnectionError("Connection failed")
+
+    api_client._send_message = AsyncMock(side_effect=mock_send)
+
+    # Should raise HcuApiError after 3 failed attempts
+    with pytest.raises(HcuApiError) as exc_info:
+        await api_client._send_hmip_request("/test/path", timeout=1)
+
+    assert "Connection failed" in str(exc_info.value)
+
+
 async def test_hcu_device_id_property(api_client: HcuApiClient):
     """Test HCU device ID property."""
     api_client._state = {

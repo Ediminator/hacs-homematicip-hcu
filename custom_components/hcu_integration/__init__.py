@@ -57,6 +57,13 @@ type HcuData = dict[str, "HcuCoordinator"]
 # Track service registration across multiple config entries using entry IDs
 SERVICE_ENTRIES_KEY = f"{DOMAIN}_service_entries"
 
+# Platform mapping for entity lookup (defined once at module level)
+PLATFORM_MAP = {
+    "switch": Platform.SWITCH,
+    "light": Platform.LIGHT,
+    "climate": Platform.CLIMATE,
+}
+
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Homematic IP Local (HCU) from a config entry."""
@@ -85,13 +92,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-
-    # Map domain to platform (defined once to avoid recreation)
-    PLATFORM_MAP = {
-        "switch": Platform.SWITCH,
-        "light": Platform.LIGHT,
-        "climate": Platform.CLIMATE,
-    }
 
     def _get_entity_from_entity_id(entity_id: str) -> Any | None:
         """Get entity object from entity_id across all coordinators.

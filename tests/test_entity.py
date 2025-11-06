@@ -20,7 +20,7 @@ def mock_coordinator():
     return coordinator
 
 
-async def test_hcu_base_entity_initialization(mock_coordinator, mock_hcu_client, mock_device_data):
+def test_hcu_base_entity_initialization(mock_coordinator, mock_hcu_client, mock_device_data):
     """Test HcuBaseEntity initialization."""
     entity = HcuBaseEntity(
         coordinator=mock_coordinator,
@@ -36,7 +36,7 @@ async def test_hcu_base_entity_initialization(mock_coordinator, mock_hcu_client,
     assert entity._attr_assumed_state is False
 
 
-async def test_hcu_base_entity_device_info(mock_coordinator, mock_hcu_client, mock_device_data):
+def test_hcu_base_entity_device_info(mock_coordinator, mock_hcu_client, mock_device_data):
     """Test device_info property."""
     # Configure mock to return device data when entity accesses it
     mock_hcu_client.get_device_by_address = MagicMock(return_value=mock_device_data)
@@ -54,7 +54,7 @@ async def test_hcu_base_entity_device_info(mock_coordinator, mock_hcu_client, mo
     assert device_info["model"] == "HMIP-PSM"
 
 
-async def test_hcu_base_entity_set_entity_name_with_feature(mock_coordinator, mock_hcu_client, mock_device_data):
+def test_hcu_base_entity_set_entity_name_with_feature(mock_coordinator, mock_hcu_client, mock_device_data):
     """Test _set_entity_name with feature name."""
     entity = HcuBaseEntity(
         coordinator=mock_coordinator,
@@ -70,7 +70,7 @@ async def test_hcu_base_entity_set_entity_name_with_feature(mock_coordinator, mo
     assert entity._attr_translation_key is None
 
 
-async def test_hcu_base_entity_set_entity_name_without_feature(mock_coordinator, mock_hcu_client, mock_device_data):
+def test_hcu_base_entity_set_entity_name_without_feature(mock_coordinator, mock_hcu_client, mock_device_data):
     """Test _set_entity_name without feature name."""
     entity = HcuBaseEntity(
         coordinator=mock_coordinator,
@@ -84,7 +84,7 @@ async def test_hcu_base_entity_set_entity_name_without_feature(mock_coordinator,
     assert entity._attr_name == "Test Channel"
 
 
-async def test_hcu_group_base_entity_initialization(mock_coordinator, mock_hcu_client, mock_group_data):
+def test_hcu_group_base_entity_initialization(mock_coordinator, mock_hcu_client, mock_group_data):
     """Test HcuGroupBaseEntity initialization."""
     entity = HcuGroupBaseEntity(
         coordinator=mock_coordinator,
@@ -97,7 +97,7 @@ async def test_hcu_group_base_entity_initialization(mock_coordinator, mock_hcu_c
     assert entity._attr_assumed_state is False
 
 
-async def test_hcu_group_base_entity_group_property(mock_coordinator, mock_hcu_client, mock_group_data):
+def test_hcu_group_base_entity_group_property(mock_coordinator, mock_hcu_client, mock_group_data):
     """Test _group property."""
     mock_hcu_client.get_group_by_id = MagicMock(return_value=mock_group_data)
 
@@ -112,7 +112,7 @@ async def test_hcu_group_base_entity_group_property(mock_coordinator, mock_hcu_c
     mock_hcu_client.get_group_by_id.assert_called_once_with("test-group-id")
 
 
-async def test_hcu_group_base_entity_device_info(mock_coordinator, mock_hcu_client, mock_group_data):
+def test_hcu_group_base_entity_device_info(mock_coordinator, mock_hcu_client, mock_group_data):
     """Test device_info property for group entity."""
     mock_hcu_client.hcu_device_id = "hcu-device-id"
 
@@ -126,7 +126,7 @@ async def test_hcu_group_base_entity_device_info(mock_coordinator, mock_hcu_clie
     assert device_info["identifiers"] == {("hcu_integration", "hcu-device-id")}
 
 
-async def test_hcu_home_base_entity_initialization(mock_coordinator, mock_hcu_client):
+def test_hcu_home_base_entity_initialization(mock_coordinator, mock_hcu_client):
     """Test HcuHomeBaseEntity initialization."""
     mock_hcu_client.hcu_device_id = "hcu-device-id"
     mock_hcu_client.state = {
@@ -146,7 +146,7 @@ async def test_hcu_home_base_entity_initialization(mock_coordinator, mock_hcu_cl
     assert entity._attr_assumed_state is False
 
 
-async def test_hcu_home_base_entity_home_property(mock_coordinator, mock_hcu_client):
+def test_hcu_home_base_entity_home_property(mock_coordinator, mock_hcu_client):
     """Test _home property."""
     home_data = {"id": "home-uuid", "currentAPVersion": "1.0.0"}
     mock_hcu_client.state = {"home": home_data}
@@ -161,7 +161,7 @@ async def test_hcu_home_base_entity_home_property(mock_coordinator, mock_hcu_cli
     assert home == home_data
 
 
-async def test_hcu_home_base_entity_device_info(mock_coordinator, mock_hcu_client):
+def test_hcu_home_base_entity_device_info(mock_coordinator, mock_hcu_client):
     """Test device_info property for home entity."""
     mock_hcu_client.hcu_device_id = "hcu-device-id"
     mock_hcu_client.state = {"home": {"id": "home-uuid"}}
@@ -175,7 +175,7 @@ async def test_hcu_home_base_entity_device_info(mock_coordinator, mock_hcu_clien
     assert device_info["identifiers"] == {("hcu_integration", "hcu-device-id")}
 
 
-async def test_hcu_base_entity_available_when_connected(mock_coordinator, mock_hcu_client, mock_device_data):
+def test_hcu_base_entity_available_when_connected(mock_coordinator, mock_hcu_client, mock_device_data):
     """Test entity availability when client is connected and device is reachable."""
     mock_hcu_client.is_connected = True
     mock_hcu_client.get_device_by_address = MagicMock(return_value={
@@ -196,7 +196,7 @@ async def test_hcu_base_entity_available_when_connected(mock_coordinator, mock_h
     assert entity.available is True
 
 
-async def test_hcu_base_entity_unavailable_when_disconnected(mock_coordinator, mock_hcu_client, mock_device_data):
+def test_hcu_base_entity_unavailable_when_disconnected(mock_coordinator, mock_hcu_client, mock_device_data):
     """Test entity availability when client is disconnected."""
     mock_hcu_client.is_connected = False
 
@@ -210,7 +210,7 @@ async def test_hcu_base_entity_unavailable_when_disconnected(mock_coordinator, m
     assert entity.available is False
 
 
-async def test_hcu_base_entity_unavailable_when_device_unreachable(mock_coordinator, mock_hcu_client, mock_device_data):
+def test_hcu_base_entity_unavailable_when_device_unreachable(mock_coordinator, mock_hcu_client, mock_device_data):
     """Test entity availability when device is unreachable."""
     mock_hcu_client.is_connected = True
     mock_hcu_client.get_device_by_address = MagicMock(return_value={
@@ -231,7 +231,7 @@ async def test_hcu_base_entity_unavailable_when_device_unreachable(mock_coordina
     assert entity.available is False
 
 
-async def test_hcu_base_entity_unavailable_when_device_not_found(mock_coordinator, mock_hcu_client, mock_device_data):
+def test_hcu_base_entity_unavailable_when_device_not_found(mock_coordinator, mock_hcu_client, mock_device_data):
     """Test entity availability when device is not found in client state."""
     mock_hcu_client.is_connected = True
     mock_hcu_client.get_device_by_address = MagicMock(return_value=None)

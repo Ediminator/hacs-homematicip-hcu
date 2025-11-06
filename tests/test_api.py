@@ -37,7 +37,7 @@ async def api_client(hass: HomeAssistant):
     return client
 
 
-async def test_api_client_initialization(api_client: HcuApiClient):
+def test_api_client_initialization(api_client: HcuApiClient):
     """Test API client initialization."""
     assert api_client._host == "192.168.1.100"
     assert api_client._auth_token == "test-token"
@@ -47,14 +47,14 @@ async def test_api_client_initialization(api_client: HcuApiClient):
     assert not api_client.is_connected
 
 
-async def test_api_client_state_property(api_client: HcuApiClient):
+def test_api_client_state_property(api_client: HcuApiClient):
     """Test the state property."""
     test_state = {"devices": {}, "groups": {}}
     api_client._state = test_state
     assert api_client.state == test_state
 
 
-async def test_get_device_by_address(api_client: HcuApiClient):
+def test_get_device_by_address(api_client: HcuApiClient):
     """Test getting device by address."""
     test_device = {"id": "device1", "label": "Test Device"}
     api_client._state = {"devices": {"device1": test_device}}
@@ -66,7 +66,7 @@ async def test_get_device_by_address(api_client: HcuApiClient):
     assert result is None
 
 
-async def test_get_group_by_id(api_client: HcuApiClient):
+def test_get_group_by_id(api_client: HcuApiClient):
     """Test getting group by ID."""
     test_group = {"id": "group1", "label": "Test Group"}
     api_client._state = {"groups": {"group1": test_group}}
@@ -78,7 +78,7 @@ async def test_get_group_by_id(api_client: HcuApiClient):
     assert result is None
 
 
-async def test_process_events_device_changed(api_client: HcuApiClient):
+def test_process_events_device_changed(api_client: HcuApiClient):
     """Test processing DEVICE_CHANGED events."""
     device_data = {
         "id": "device1",
@@ -99,7 +99,7 @@ async def test_process_events_device_changed(api_client: HcuApiClient):
     assert api_client._state["devices"]["device1"] == device_data
 
 
-async def test_process_events_group_changed(api_client: HcuApiClient):
+def test_process_events_group_changed(api_client: HcuApiClient):
     """Test processing GROUP_CHANGED events."""
     group_data = {
         "id": "group1",
@@ -179,7 +179,7 @@ async def test_retry_logic_exhaustion_raises_error(api_client: HcuApiClient):
     assert "Connection failed" in str(exc_info.value)
 
 
-async def test_hcu_device_id_property(api_client: HcuApiClient):
+def test_hcu_device_id_property(api_client: HcuApiClient):
     """Test HCU device ID property."""
     api_client._state = {
         "devices": {
@@ -192,7 +192,7 @@ async def test_hcu_device_id_property(api_client: HcuApiClient):
     assert api_client.hcu_device_id == "device1"
 
 
-async def test_hcu_part_device_ids_property(api_client: HcuApiClient):
+def test_hcu_part_device_ids_property(api_client: HcuApiClient):
     """Test HCU part device IDs property."""
     api_client._state = {
         "devices": {
@@ -206,7 +206,7 @@ async def test_hcu_part_device_ids_property(api_client: HcuApiClient):
     assert api_client.hcu_part_device_ids == {"device2"}
 
 
-async def test_event_callback_registration(api_client: HcuApiClient):
+def test_event_callback_registration(api_client: HcuApiClient):
     """Test event callback registration."""
     callback_called = False
 

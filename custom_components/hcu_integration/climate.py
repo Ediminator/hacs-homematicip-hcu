@@ -64,7 +64,7 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
         client: HcuApiClient,
         group_data: dict,
         config_entry: ConfigEntry,
-    ):
+    ) -> None:
         """Initialize the HCU Climate entity."""
         super().__init__(coordinator, client, group_data)
         self._attr_name = self._group.get("label")

@@ -299,7 +299,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 class HcuCoordinator(DataUpdateCoordinator[set[str]]):
     """Manages the HCU API client and data updates."""
 
-    def __init__(self, hass: HomeAssistant, client: HcuApiClient, entry: ConfigEntry):
+    def __init__(self, hass: HomeAssistant, client: HcuApiClient, entry: ConfigEntry) -> None:
         """Initialize the coordinator."""
         super().__init__(
             hass,
@@ -368,6 +368,105 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
             sw_version=home_data.get("currentAPVersion"),
         )
 
+    def _extract_event_channels(self, events: dict) -> set[tuple[str, str]]:
+        """Extract button channels that were updated in the events.
+
+        Returns a set of (device_id, channel_index) tuples for channels that
+        are of EVENT_CHANNEL_TYPES and were updated in the events.
+        """
+        event_channels = set()
+        for event in events.values():
+            if event.get("pushEventType") != "DEVICE_CHANGED":
+                continue
+
+            device_data = event.get("device", {})
+            device_id = device_data.get("id")
+            if not device_id:
+                continue
+
+            for ch_idx, ch_data in device_data.get("functionalChannels", {}).items():
+                if ch_data.get("functionalChannelType") in EVENT_CHANNEL_TYPES:
+                    event_channels.add((device_id, ch_idx))
+
+        return event_channels
+
+    def _fire_button_event(self, device_id: str, channel_idx: str, event_type: str) -> None:
+        """Fire a button event to Home Assistant."""
+        self.hass.bus.async_fire(
+            f"{DOMAIN}_event",
+            {
+                "device_id": device_id,
+                "channel": channel_idx,
+                "type": event_type,
+            },
+        )
+
+    def _handle_device_channel_events(self, events: dict) -> None:
+        """Handle DEVICE_CHANNEL_EVENT type events (stateless buttons)."""
+        for event in events.values():
+            if event.get("pushEventType") != "DEVICE_CHANNEL_EVENT":
+                continue
+
+            if event.get("channelEventType") not in DEVICE_CHANNEL_EVENT_TYPES:
+                continue
+
+            device_id = event.get("deviceId")
+            channel_idx = event.get("functionalChannelIndex")
+            event_type = event.get("channelEventType")
+
+            self._fire_button_event(device_id, channel_idx, event_type)
+            _LOGGER.debug(
+                "Button press detected via device channel event: device=%s, channel=%s",
+                device_id, channel_idx
+            )
+
+    def _should_fire_button_press(
+        self, new_timestamp: int | None, old_timestamp: int | None
+    ) -> tuple[bool, str]:
+        """Determine if a button press event should be fired based on timestamps.
+
+        Returns:
+            tuple: (should_fire, reason) where reason describes the detection method
+        """
+        if new_timestamp is not None and old_timestamp is not None:
+            if new_timestamp != old_timestamp:
+                return True, "timestamp change"
+        elif new_timestamp is None:
+            # No timestamp available, but channel was in event (stateless buttons)
+            return True, "stateless channel"
+
+        return False, ""
+
+    def _detect_timestamp_based_button_presses(
+        self, updated_ids: set[str], event_channels: set[tuple[str, str]], old_state: dict
+    ) -> None:
+        """Detect button presses by comparing timestamps after state update."""
+        for dev_id in updated_ids:
+            device = self.client.get_device_by_address(dev_id)
+            if not device:
+                continue
+
+            for ch_idx, channel in device.get("functionalChannels", {}).items():
+                # Only process event channel types
+                if channel.get("functionalChannelType") not in EVENT_CHANNEL_TYPES:
+                    continue
+
+                # Only process channels that were in the raw events
+                if (dev_id, ch_idx) not in event_channels:
+                    continue
+
+                # Check if button press should be fired based on timestamps
+                new_ts = channel.get("lastStatusUpdate")
+                old_ts = old_state.get(dev_id, {}).get(ch_idx)
+                should_fire, reason = self._should_fire_button_press(new_ts, old_ts)
+
+                if should_fire:
+                    self._fire_button_event(dev_id, ch_idx, "press")
+                    _LOGGER.debug(
+                        "Button press detected via %s: device=%s, channel=%s",
+                        reason, dev_id, ch_idx
+                    )
+
     def _handle_event_message(self, message: dict) -> None:
         """Process incoming WebSocket event messages from the HCU."""
         if message.get("type") != "HMIP_SYSTEM_EVENT":
@@ -377,35 +476,13 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
         if not events:
             return
 
-        # Extract which specific button channels were updated in these events
-        # Only track EVENT_CHANNEL_TYPES to prevent firing events for all channels
-        event_channel_updates = set()  # Set of (device_id, channel_idx) tuples
-        for event in events.values():
-            if event.get("pushEventType") == "DEVICE_CHANGED":
-                device_data = event.get("device", {})
-                device_id = device_data.get("id")
-                if device_id:
-                    for ch_idx, ch_data in device_data.get("functionalChannels", {}).items():
-                        # Only add channels that are actually event channels (buttons)
-                        if ch_data.get("functionalChannelType") in EVENT_CHANNEL_TYPES:
-                            event_channel_updates.add((device_id, ch_idx))
-            elif event.get("pushEventType") == "DEVICE_CHANNEL_EVENT":
-                # Stateless buttons trigger DEVICE_CHANNEL_EVENT with no state/timestamp
-                if event.get("channelEventType") in DEVICE_CHANNEL_EVENT_TYPES:
-                    self.hass.bus.async_fire(
-                        f"{DOMAIN}_event",
-                        {
-                            "device_id": event.get("deviceId"),
-                            "channel": event.get("functionalChannelIndex"),
-                            "type": event.get("channelEventType"),
-                        },
-                    )
-                    _LOGGER.debug(                                               
-                        "Button press detected via device channel event: device=%s, channel=%s",
-                        event.get("deviceId"), event.get("functionalChannelIndex")
-                    )
+        # Handle immediate stateless button events
+        self._handle_device_channel_events(events)
 
-        # Store old timestamps to detect stateless button presses
+        # Extract which event channels were updated for timestamp-based detection
+        event_channels = self._extract_event_channels(events)
+
+        # Store old timestamps before state update
         old_state = {
             dev_id: {
                 ch_idx: ch.get("lastStatusUpdate")
@@ -414,58 +491,11 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
             for dev_id, dev in self.client.state.get("devices", {}).items()
         }
 
+        # Process events and update state
         updated_ids = self.client.process_events(events)
 
-        # After state is updated, check for button presses by comparing timestamps
-        for dev_id in updated_ids:
-            device = self.client.get_device_by_address(dev_id)
-            if not device:
-                continue
-
-            for ch_idx, channel in device.get("functionalChannels", {}).items():
-                channel_type = channel.get("functionalChannelType")
-                if channel_type not in EVENT_CHANNEL_TYPES:
-                    continue
-
-                # Check if this specific channel was in the raw events
-                # This prevents firing events for unrelated channels on the same device
-                if (dev_id, ch_idx) not in event_channel_updates:
-                    continue
-
-                # Try timestamp-based detection first (for devices with timestamps)
-                new_ts = channel.get("lastStatusUpdate")
-                old_ts = old_state.get(dev_id, {}).get(ch_idx)
-                
-                # Fire event if:
-                # 1. Timestamp exists and changed (existing behavior - safe)
-                # 2. No timestamp exists but channel was in the event (new fix for HmIP-WGS)
-                should_fire = False
-                
-                if new_ts is not None and old_ts is not None and new_ts != old_ts:
-                    # Timestamp-based detection (existing logic for devices with timestamps)
-                    should_fire = True
-                    _LOGGER.debug(
-                        "Button press detected via timestamp change: device=%s, channel=%s",
-                        dev_id, ch_idx
-                    )
-                elif new_ts is None:
-                    # No timestamp available, but channel was in event
-                    # This handles stateless buttons like HmIP-WGS
-                    should_fire = True
-                    _LOGGER.debug(
-                        "Button press detected for stateless channel: device=%s, channel=%s",
-                        dev_id, ch_idx
-                    )
-                
-                if should_fire:
-                    self.hass.bus.async_fire(
-                        f"{DOMAIN}_event",
-                        {
-                            "device_id": dev_id,
-                            "channel": ch_idx,
-                            "type": "press",
-                        },
-                    )
+        # Detect button presses via timestamp changes
+        self._detect_timestamp_based_button_presses(updated_ids, event_channels, old_state)
 
         if updated_ids:
             self.async_set_updated_data(updated_ids)

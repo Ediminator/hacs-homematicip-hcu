@@ -85,6 +85,36 @@ def test_hcu_base_entity_set_entity_name_without_feature(mock_coordinator, mock_
     assert entity._attr_has_entity_name is False
 
 
+def test_hcu_base_entity_set_entity_name_with_feature_no_label(mock_coordinator, mock_hcu_client, mock_device_data):
+    """Test _set_entity_name with feature name but no channel label."""
+    entity = HcuBaseEntity(
+        coordinator=mock_coordinator,
+        client=mock_hcu_client,
+        device_data=mock_device_data,
+        channel_index="1",
+    )
+
+    entity._set_entity_name(channel_label=None, feature_name="Low Battery")
+
+    assert entity._attr_name == "Low Battery"
+    assert entity._attr_has_entity_name is True
+
+
+def test_hcu_base_entity_set_entity_name_no_feature_no_label(mock_coordinator, mock_hcu_client, mock_device_data):
+    """Test _set_entity_name without feature name or channel label."""
+    entity = HcuBaseEntity(
+        coordinator=mock_coordinator,
+        client=mock_hcu_client,
+        device_data=mock_device_data,
+        channel_index="1",
+    )
+
+    entity._set_entity_name(channel_label=None, feature_name=None)
+
+    assert entity._attr_name is None
+    assert entity._attr_has_entity_name is False
+
+
 def test_hcu_group_base_entity_initialization(mock_coordinator, mock_hcu_client, mock_group_data):
     """Test HcuGroupBaseEntity initialization."""
     entity = HcuGroupBaseEntity(

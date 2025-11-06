@@ -184,8 +184,11 @@ async def test_retry_logic_exhaustion_raises_error(api_client: HcuApiClient):
 def test_hcu_device_id_property(api_client: HcuApiClient):
     """Test HCU device ID property."""
     api_client._state = {
+        "home": {
+            "accessPointId": "device1",
+        },
         "devices": {
-            "device1": {"type": "HCU", "id": "device1"},
+            "device1": {"type": "HOME_CONTROL_ACCESS_POINT", "id": "device1"},
             "device2": {"type": "HMIP-PSM", "id": "device2"},
         }
     }
@@ -197,15 +200,18 @@ def test_hcu_device_id_property(api_client: HcuApiClient):
 def test_hcu_part_device_ids_property(api_client: HcuApiClient):
     """Test HCU part device IDs property."""
     api_client._state = {
+        "home": {
+            "accessPointId": "device1",
+        },
         "devices": {
-            "device1": {"type": "HCU", "id": "device1"},
-            "device2": {"type": "HCU-PART", "id": "device2"},
+            "device1": {"type": "HOME_CONTROL_ACCESS_POINT", "id": "device1"},
+            "device2": {"type": "WIRED_ACCESS_POINT", "id": "device2"},
             "device3": {"type": "HMIP-PSM", "id": "device3"},
         }
     }
     api_client._update_hcu_device_ids()
 
-    assert api_client.hcu_part_device_ids == {"device2"}
+    assert api_client.hcu_part_device_ids == {"device1", "device2"}
 
 
 def test_event_callback_registration(api_client: HcuApiClient):

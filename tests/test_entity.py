@@ -123,7 +123,12 @@ def test_hcu_base_entity_set_entity_name_with_feature_no_label(mock_coordinator,
 
 
 def test_hcu_base_entity_set_entity_name_no_feature_no_label(mock_coordinator, mock_hcu_client, mock_device_data):
-    """Test _set_entity_name without feature name or channel label."""
+    """Test _set_entity_name without feature name or channel label.
+
+    When there's no channel label, the entity should use the device name only.
+    This is achieved by setting name=None and has_entity_name=True, which tells
+    Home Assistant to use just the device name without appending a suffix.
+    """
     entity = HcuBaseEntity(
         coordinator=mock_coordinator,
         client=mock_hcu_client,
@@ -134,7 +139,7 @@ def test_hcu_base_entity_set_entity_name_no_feature_no_label(mock_coordinator, m
     entity._set_entity_name(channel_label=None, feature_name=None)
 
     assert entity._attr_name is None
-    assert entity._attr_has_entity_name is False
+    assert entity._attr_has_entity_name is True
 
 
 def test_hcu_group_base_entity_initialization(mock_coordinator, mock_hcu_client, mock_group_data):

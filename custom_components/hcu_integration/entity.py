@@ -64,10 +64,11 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], Entity):
                 self._attr_has_entity_name = False
             else:
                 # Main entity on an unlabeled channel (e.g., FROLL, PSM-2)
-                # Let HA use the device name by setting name to None.
+                # Use device name only by setting name to None and has_entity_name to True.
+                # This prevents HA from falling back to displaying the unique_id.
                 # (e.g., "HmIP-PSM-2")
                 self._attr_name = None
-                self._attr_has_entity_name = False
+                self._attr_has_entity_name = True
 
     @property
     def _device(self) -> dict[str, Any]:

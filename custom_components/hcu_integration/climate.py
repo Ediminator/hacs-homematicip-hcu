@@ -21,6 +21,8 @@ from .api import HcuApiClient, HcuApiError
 from .const import (
     CONF_COMFORT_TEMPERATURE,
     DEFAULT_COMFORT_TEMPERATURE,
+    DEFAULT_MAX_TEMP,
+    DEFAULT_MIN_TEMP,
     PRESET_ECO,
     PRESET_PARTY,
 )
@@ -101,6 +103,10 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
 
     def _update_attributes_from_group_data(self) -> None:
         """Update all HA state attributes from the latest group data."""
+        # Update temperature limits from group data with fallback to HCU defaults
+        self._attr_min_temp = self._group.get("minTemperature", DEFAULT_MIN_TEMP)
+        self._attr_max_temp = self._group.get("maxTemperature", DEFAULT_MAX_TEMP)
+
         control_mode = self._group.get("controlMode")
         target_temp = self._group.get("setPointTemperature")
 
@@ -191,16 +197,6 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
                     ) is not None:
                         return temp
         return None
-
-    @property
-    def min_temp(self) -> float:
-        """Return the minimum supported temperature."""
-        return self._group.get("minTemperature", 5.0)
-
-    @property
-    def max_temp(self) -> float:
-        """Return the maximum supported temperature."""
-        return self._group.get("maxTemperature", 30.5)
 
     async def async_set_temperature(self, **kwargs: Any) -> None:
         """Set new target temperature."""

@@ -28,6 +28,7 @@
         "error": {
             "cannot_connect": "Failed to connect to the HCU. Check host and ports.",
             "invalid_key": "Authentication failed. The activation key may be invalid or expired.",
+            "invalid_config": "Invalid configuration or response from HCU. Please check your settings.",
             "api_error": "An unexpected API error occurred.",
             "unknown": "An unknown error occurred."
         },
@@ -76,8 +77,105 @@
         "error": {
             "cannot_connect": "Failed to connect to the HCU.",
             "api_error": "An API error occurred while trying to set vacation mode.",
+            "invalid_data": "Invalid date/time format or temperature value. Please check your input.",
             "unknown": "An unknown error occurred.",
             "internal_error": "Internal error: Client not available."
+        }
+    },
+    "services": {
+        "play_sound": {
+            "name": "Play Sound",
+            "description": "Plays a sound file on a compatible device (e.g., HmIP-MP3P doorbell, alarm sirens).",
+            "fields": {
+                "sound_file": {
+                    "name": "Sound File",
+                    "description": "The name of the sound file to play (e.g., 'SOUND_01', 'ALARM_01')."
+                },
+                "volume": {
+                    "name": "Volume",
+                    "description": "The volume level for the sound, from 0.0 to 1.0."
+                },
+                "duration": {
+                    "name": "Duration",
+                    "description": "The duration in seconds for which the sound should play."
+                }
+            }
+        },
+        "set_rule_state": {
+            "name": "Set Rule State",
+            "description": "Enables or disables a simple automation rule within the HCU.",
+            "fields": {
+                "rule_id": {
+                    "name": "Rule ID",
+                    "description": "The unique identifier of the rule to be controlled."
+                },
+                "enabled": {
+                    "name": "Enabled",
+                    "description": "Whether to enable or disable the rule."
+                }
+            }
+        },
+        "set_display_content": {
+            "name": "Set Display Content",
+            "description": "Sets the text and icon on an e-paper display of a compatible device (e.g., HmIP-WRCD).",
+            "fields": {
+                "line_1": {
+                    "name": "Line 1",
+                    "description": "The text to display on the first line."
+                },
+                "line_2": {
+                    "name": "Line 2",
+                    "description": "The text to display on the second line."
+                },
+                "line_3": {
+                    "name": "Line 3",
+                    "description": "The text to display on the third line."
+                },
+                "icon": {
+                    "name": "Icon",
+                    "description": "The name of the icon to display (e.g., 'ICON_SUN', 'ICON_MOON'). See API docs for options."
+                }
+            }
+        },
+        "activate_vacation_mode": {
+            "name": "Activate Vacation Mode",
+            "description": "Activates the system-wide vacation mode for all heating groups until a specified time.",
+            "fields": {
+                "temperature": {
+                    "name": "Temperature",
+                    "description": "The target temperature for the vacation period."
+                },
+                "end_time": {
+                    "name": "End Time",
+                    "description": "The date and time when the vacation mode should end. Format: 'YYYY_MM_DD HH:MM' or any string parsable by Home Assistant."
+                }
+            }
+        },
+        "activate_eco_mode": {
+            "name": "Activate Eco Mode (Permanent Absence)",
+            "description": "Activates the system-wide permanent absence (Eco) mode for all heating groups."
+        },
+        "deactivate_absence_mode": {
+            "name": "Deactivate Absence Mode",
+            "description": "Deactivates any active absence mode (Vacation or Eco) and returns heating to its previous schedule."
+        },
+        "activate_party_mode": {
+            "name": "Activate Party Mode",
+            "description": "Activates the party mode for a specific heating group with a specific temperature.",
+            "fields": {
+                "temperature": {
+                    "name": "Temperature",
+                    "description": "The target temperature for the party mode."
+                },
+                "end_time": {
+                    "name": "End Time",
+                    "description": "The date and time when the party mode should end (e.g., '2025_12_24 23:00'). Format: 'YYYY_MM_DD HH:MM' or any string parsable by Home Assistant. If provided, takes precedence over duration."
+                },
+                "duration": {
+                    "name": "Duration",
+                    "description": "The duration in seconds for the party mode. Only used if end_time is not specified."
+                }
+            }
         }
     }
 }

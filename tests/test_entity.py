@@ -206,16 +206,84 @@ def test_hcu_home_base_entity_device_info(mock_coordinator, mock_hcu_client):
     assert device_info["identifiers"] == {("hcu_integration", "hcu-device-id")}
 
 
-def test_hcu_base_entity_available_when_connected(mock_coordinator, mock_hcu_client, mock_device_data):
-    """Test entity availability when client is connected and device is reachable."""
-    mock_hcu_client.is_connected = True
-    mock_hcu_client.get_device_by_address = MagicMock(return_value={
-        "id": "test-device-id",
-        "functionalChannels": {
-            "0": {"unreach": False},  # Maintenance channel must be reachable
-            "1": {},
-        },
-    })
+@pytest.mark.parametrize(
+    "is_connected,device_return,expected_available,test_id",
+    [
+        # Client connected, device reachable (non-permanently-reachable)
+        (
+            True,
+            {
+                "id": "test-device-id",
+                "permanentlyReachable": False,
+                "functionalChannels": {
+                    "0": {"unreach": False},
+                    "1": {},
+                },
+            },
+            True,
+            "connected_reachable_non_permanent",
+        ),
+        # Client disconnected
+        (False, None, False, "client_disconnected"),
+        # Client connected, device unreachable (non-permanently-reachable)
+        (
+            True,
+            {
+                "id": "test-device-id",
+                "permanentlyReachable": False,
+                "functionalChannels": {
+                    "0": {"unreach": True},
+                    "1": {},
+                },
+            },
+            False,
+            "connected_unreachable_non_permanent",
+        ),
+        # Device not found
+        (True, None, False, "device_not_found"),
+        # Permanently reachable device, even if marked unreachable
+        (
+            True,
+            {
+                "id": "test-device-id",
+                "permanentlyReachable": True,
+                "functionalChannels": {
+                    "0": {"unreach": True},
+                    "1": {},
+                },
+            },
+            True,
+            "permanently_reachable_marked_unreachable",
+        ),
+        # Permanently reachable device, marked reachable
+        (
+            True,
+            {
+                "id": "test-device-id",
+                "permanentlyReachable": True,
+                "functionalChannels": {
+                    "0": {"unreach": False},
+                    "1": {},
+                },
+            },
+            True,
+            "permanently_reachable_marked_reachable",
+        ),
+    ],
+    ids=lambda x: x if isinstance(x, str) else "",
+)
+def test_hcu_base_entity_availability(
+    mock_coordinator,
+    mock_hcu_client,
+    mock_device_data,
+    is_connected,
+    device_return,
+    expected_available,
+    test_id,
+):
+    """Test entity availability across various scenarios."""
+    mock_hcu_client.is_connected = is_connected
+    mock_hcu_client.get_device_by_address = MagicMock(return_value=device_return)
 
     entity = HcuBaseEntity(
         coordinator=mock_coordinator,
@@ -224,54 +292,4 @@ def test_hcu_base_entity_available_when_connected(mock_coordinator, mock_hcu_cli
         channel_index="1",
     )
 
-    assert entity.available is True
-
-
-def test_hcu_base_entity_unavailable_when_disconnected(mock_coordinator, mock_hcu_client, mock_device_data):
-    """Test entity availability when client is disconnected."""
-    mock_hcu_client.is_connected = False
-
-    entity = HcuBaseEntity(
-        coordinator=mock_coordinator,
-        client=mock_hcu_client,
-        device_data=mock_device_data,
-        channel_index="1",
-    )
-
-    assert entity.available is False
-
-
-def test_hcu_base_entity_unavailable_when_device_unreachable(mock_coordinator, mock_hcu_client, mock_device_data):
-    """Test entity availability when device is unreachable."""
-    mock_hcu_client.is_connected = True
-    mock_hcu_client.get_device_by_address = MagicMock(return_value={
-        "id": "test-device-id",
-        "functionalChannels": {
-            "0": {"unreach": True},  # Maintenance channel reports unreachable
-            "1": {},
-        },
-    })
-
-    entity = HcuBaseEntity(
-        coordinator=mock_coordinator,
-        client=mock_hcu_client,
-        device_data=mock_device_data,
-        channel_index="1",
-    )
-
-    assert entity.available is False
-
-
-def test_hcu_base_entity_unavailable_when_device_not_found(mock_coordinator, mock_hcu_client, mock_device_data):
-    """Test entity availability when device is not found in client state."""
-    mock_hcu_client.is_connected = True
-    mock_hcu_client.get_device_by_address = MagicMock(return_value=None)
-
-    entity = HcuBaseEntity(
-        coordinator=mock_coordinator,
-        client=mock_hcu_client,
-        device_data=mock_device_data,
-        channel_index="1",
-    )
-
-    assert entity.available is False
+    assert entity.available is expected_available

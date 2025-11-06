@@ -54,6 +54,9 @@ _LOGGER = logging.getLogger(__name__)
 
 type HcuData = dict[str, "HcuCoordinator"]
 
+# Track service registration across multiple config entries
+SERVICE_REGISTER_COUNT_KEY = f"{DOMAIN}_service_count"
+
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Homematic IP Local (HCU) from a config entry."""
@@ -83,24 +86,43 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
+    def _get_entity_from_entity_id(entity_id: str) -> Any | None:
+        """Get entity object from entity_id across all coordinators.
+
+        Args:
+            entity_id: The entity ID to search for (e.g., "switch.my_switch")
+
+        Returns:
+            The entity object if found, None otherwise
+        """
+        entity_domain = entity_id.split(".")[0]
+
+        # Search through all coordinators for this entity
+        for coordinator in hass.data[DOMAIN].values():
+            if not isinstance(coordinator, HcuCoordinator):
+                continue
+
+            # Map domain to platform
+            platform_map = {
+                "switch": Platform.SWITCH,
+                "light": Platform.LIGHT,
+                "climate": Platform.CLIMATE,
+            }
+            platform = platform_map.get(entity_domain)
+            if not platform:
+                continue
+
+            entities = coordinator.entities.get(platform, [])
+            for entity in entities:
+                # Check if entity_id is set and matches
+                if hasattr(entity, "entity_id") and entity.entity_id == entity_id:
+                    return entity
+        return None
+
     async def handle_play_sound(call: ServiceCall) -> None:
         """Handle the play_sound service call by delegating to the entity."""
         for entity_id in call.data[ATTR_ENTITY_ID]:
-            hcu_entity = None
-            entity_domain = entity_id.split(".")[0]
-            
-            if entity_domain == "switch":
-                hcu_entity = (
-                    hass.data["entity_components"]
-                    .get(Platform.SWITCH)
-                    .get_entity(entity_id)
-                )
-            elif entity_domain == "light":
-                hcu_entity = (
-                    hass.data["entity_components"]
-                    .get(Platform.LIGHT)
-                    .get_entity(entity_id)
-                )
+            hcu_entity = _get_entity_from_entity_id(entity_id)
 
             if not hcu_entity or not hasattr(hcu_entity, "async_play_sound"):
                 _LOGGER.warning(
@@ -131,11 +153,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     async def handle_activate_party_mode(call: ServiceCall) -> None:
         """Handle the activate_party_mode service call."""
         for entity_id in call.data[ATTR_ENTITY_ID]:
-            hcu_entity = (
-                hass.data["entity_components"]
-                .get(Platform.CLIMATE)
-                .get_entity(entity_id)
-            )
+            hcu_entity = _get_entity_from_entity_id(entity_id)
 
             if not hcu_entity or not hasattr(hcu_entity, "async_activate_party_mode"):
                 _LOGGER.warning(
@@ -208,20 +226,35 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         except (HcuApiError, ConnectionError) as err:
             _LOGGER.error("Error deactivating absence mode: %s", err)
 
-    hass.services.async_register(DOMAIN, SERVICE_PLAY_SOUND, handle_play_sound)
-    hass.services.async_register(DOMAIN, SERVICE_SET_RULE_STATE, handle_set_rule_state)
-    hass.services.async_register(
-        DOMAIN, SERVICE_ACTIVATE_PARTY_MODE, handle_activate_party_mode
-    )
-    hass.services.async_register(
-        DOMAIN, SERVICE_ACTIVATE_VACATION_MODE, handle_activate_vacation_mode
-    )
-    hass.services.async_register(
-        DOMAIN, SERVICE_ACTIVATE_ECO_MODE, handle_activate_eco_mode
-    )
-    hass.services.async_register(
-        DOMAIN, SERVICE_DEACTIVATE_ABSENCE_MODE, handle_deactivate_absence_mode
-    )
+    # Register services only once, even with multiple config entries
+    # Use a reference counter to track how many config entries are active
+    service_count = hass.data.setdefault(SERVICE_REGISTER_COUNT_KEY, 0)
+
+    if service_count == 0:
+        # First config entry - register all services
+        _LOGGER.debug("Registering HCU services for the first time")
+        hass.services.async_register(DOMAIN, SERVICE_PLAY_SOUND, handle_play_sound)
+        hass.services.async_register(DOMAIN, SERVICE_SET_RULE_STATE, handle_set_rule_state)
+        hass.services.async_register(
+            DOMAIN, SERVICE_ACTIVATE_PARTY_MODE, handle_activate_party_mode
+        )
+        hass.services.async_register(
+            DOMAIN, SERVICE_ACTIVATE_VACATION_MODE, handle_activate_vacation_mode
+        )
+        hass.services.async_register(
+            DOMAIN, SERVICE_ACTIVATE_ECO_MODE, handle_activate_eco_mode
+        )
+        hass.services.async_register(
+            DOMAIN, SERVICE_DEACTIVATE_ABSENCE_MODE, handle_deactivate_absence_mode
+        )
+    else:
+        _LOGGER.debug(
+            "HCU services already registered, skipping registration (count: %d)",
+            service_count
+        )
+
+    # Increment the reference counter
+    hass.data[SERVICE_REGISTER_COUNT_KEY] = service_count + 1
 
     entry.add_update_listener(async_reload_entry)
 
@@ -452,18 +485,33 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     coordinator: HcuCoordinator = hass.data[DOMAIN][entry.entry_id]
 
-    hass.services.async_remove(DOMAIN, SERVICE_PLAY_SOUND)
-    hass.services.async_remove(DOMAIN, SERVICE_SET_RULE_STATE)
-    hass.services.async_remove(DOMAIN, SERVICE_ACTIVATE_PARTY_MODE)
-    hass.services.async_remove(DOMAIN, SERVICE_ACTIVATE_VACATION_MODE)
-    hass.services.async_remove(DOMAIN, SERVICE_ACTIVATE_ECO_MODE)
-    hass.services.async_remove(DOMAIN, SERVICE_DEACTIVATE_ABSENCE_MODE)
-
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
     if unload_ok:
         await coordinator.client.disconnect()
         hass.data[DOMAIN].pop(entry.entry_id)
+
+        # Decrement the service registration counter
+        service_count = hass.data.get(SERVICE_REGISTER_COUNT_KEY, 1)
+        service_count -= 1
+        hass.data[SERVICE_REGISTER_COUNT_KEY] = service_count
+
+        # Only remove services when the last config entry is unloaded
+        if service_count <= 0:
+            _LOGGER.debug("Unregistering HCU services (last config entry)")
+            hass.services.async_remove(DOMAIN, SERVICE_PLAY_SOUND)
+            hass.services.async_remove(DOMAIN, SERVICE_SET_RULE_STATE)
+            hass.services.async_remove(DOMAIN, SERVICE_ACTIVATE_PARTY_MODE)
+            hass.services.async_remove(DOMAIN, SERVICE_ACTIVATE_VACATION_MODE)
+            hass.services.async_remove(DOMAIN, SERVICE_ACTIVATE_ECO_MODE)
+            hass.services.async_remove(DOMAIN, SERVICE_DEACTIVATE_ABSENCE_MODE)
+            # Clean up the counter
+            hass.data.pop(SERVICE_REGISTER_COUNT_KEY, None)
+        else:
+            _LOGGER.debug(
+                "Keeping HCU services registered (remaining config entries: %d)",
+                service_count
+            )
 
     return unload_ok
 

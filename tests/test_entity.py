@@ -54,6 +54,28 @@ def test_hcu_base_entity_device_info(mock_coordinator, mock_hcu_client, mock_dev
     assert device_info["model"] == "HMIP-PSM"
 
 
+def test_hcu_base_entity_device_info_for_hcu_part(mock_coordinator, mock_hcu_client, mock_device_data):
+    """Test device_info property when device is part of HCU hardware."""
+    # Configure mock to return device data when entity accesses it
+    mock_hcu_client.get_device_by_address = MagicMock(return_value=mock_device_data)
+    mock_hcu_client.hcu_device_id = "hcu-main-device-id"
+    mock_hcu_client.hcu_part_device_ids = {"test-device-id"}  # Device is part of HCU
+
+    entity = HcuBaseEntity(
+        coordinator=mock_coordinator,
+        client=mock_hcu_client,
+        device_data=mock_device_data,
+        channel_index="1",
+    )
+
+    device_info = entity.device_info
+    # HCU part devices should link to the main HCU device
+    assert device_info["identifiers"] == {("hcu_integration", "hcu-main-device-id")}
+    # Should not include separate device info fields
+    assert "name" not in device_info
+    assert "model" not in device_info
+
+
 def test_hcu_base_entity_set_entity_name_with_feature(mock_coordinator, mock_hcu_client, mock_device_data):
     """Test _set_entity_name with feature name."""
     entity = HcuBaseEntity(
@@ -154,7 +176,7 @@ def test_hcu_group_base_entity_device_info(mock_coordinator, mock_hcu_client, mo
     )
 
     device_info = entity.device_info
-    assert device_info["identifiers"] == {("hcu_integration", "hcu-device-id")}
+    assert device_info["identifiers"] == {("hcu_integration", "test-group-id")}
 
 
 def test_hcu_home_base_entity_initialization(mock_coordinator, mock_hcu_client):

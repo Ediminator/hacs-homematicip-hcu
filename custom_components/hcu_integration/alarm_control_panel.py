@@ -43,11 +43,12 @@ class HcuAlarmControlPanel(HcuHomeBaseEntity, AlarmControlPanelEntity):
     )
     _attr_code_arm_required = False
     _enable_turn_on_off_backwards_compatibility = False
-    _attr_name = "Homematic IP Alarm"
     _attr_has_entity_name = False
 
     def __init__(self, coordinator: "HcuCoordinator", client: HcuApiClient):
         super().__init__(coordinator, client)
+        prefix = self._entity_prefix
+        self._attr_name = f"{prefix} Homematic IP Alarm" if prefix else "Homematic IP Alarm"
         self._attr_unique_id = f"{self._hcu_device_id}_security"
         self._attr_alarm_state: AlarmControlPanelState | None = None
 

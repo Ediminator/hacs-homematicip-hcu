@@ -67,7 +67,9 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
     ) -> None:
         """Initialize the HCU Climate entity."""
         super().__init__(coordinator, client, group_data)
-        self._attr_name = self._group.get("label")
+        label = self._group.get("label")
+        prefix = self._entity_prefix
+        self._attr_name = f"{prefix} {label}" if prefix and label else label
         self._attr_unique_id = self._group_id
         self._config_entry = config_entry
         self._default_profile_name = "Standard"

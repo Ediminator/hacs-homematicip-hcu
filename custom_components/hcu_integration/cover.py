@@ -216,7 +216,9 @@ class HcuCoverGroup(HcuGroupBaseEntity, CoverEntity):
     ):
         """Initialize the HCU Cover group."""
         super().__init__(coordinator, client, group_data)
-        self._attr_name = self._group.get("label")
+        label = self._group.get("label")
+        prefix = self._entity_prefix
+        self._attr_name = f"{prefix} {label}" if prefix and label else label
         self._attr_unique_id = self._group_id
 
         self._attr_supported_features = (

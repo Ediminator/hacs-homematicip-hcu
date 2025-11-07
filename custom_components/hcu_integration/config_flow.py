@@ -27,6 +27,7 @@ from .const import (
     DEFAULT_COMFORT_TEMPERATURE,
     CONF_AUTH_PORT,
     CONF_WEBSOCKET_PORT,
+    CONF_ENTITY_PREFIX,
     ATTR_END_TIME,
 )
 from .util import create_unverified_ssl_context
@@ -87,6 +88,7 @@ class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
             data_schema=vol.Schema(
                 {
                     vol.Required("host", default=self.context.get("host", "")): str,
+                    vol.Optional(CONF_ENTITY_PREFIX, default=""): str,
                     vol.Required(
                         "auth_port", default=DEFAULT_HCU_AUTH_PORT
                     ): int,
@@ -95,6 +97,9 @@ class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
                     ): int,
                 }
             ),
+            description_placeholders={
+                "info": "Entity prefix is optional. Use it for multi-home setups to distinguish entities (e.g., 'House1' will create 'House1 Living Room')."
+            },
         )
 
     async def async_step_auth(
@@ -129,6 +134,10 @@ class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
                     CONF_WEBSOCKET_PORT: self._config_data["websocket_port"],
                     CONF_TOKEN: auth_token,
                 }
+
+                # Add entity prefix if provided
+                if prefix := self._config_data.get(CONF_ENTITY_PREFIX, "").strip():
+                    final_data[CONF_ENTITY_PREFIX] = prefix
 
                 return self.async_create_entry(
                     title="Homematic IP Local (HCU)",

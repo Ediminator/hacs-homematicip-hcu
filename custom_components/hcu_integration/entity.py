@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any
 from homeassistant.helpers.entity import DeviceInfo, Entity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN
+from .const import DOMAIN, CONF_ENTITY_PREFIX
 from .api import HcuApiClient
 
 if TYPE_CHECKING:
@@ -33,6 +33,11 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], Entity):
         self._channel_index = int(channel_index)
         self._attr_assumed_state = False
 
+    @property
+    def _entity_prefix(self) -> str:
+        """Get the entity name prefix from config entry."""
+        return self.coordinator.config_entry.data.get(CONF_ENTITY_PREFIX, "")
+
     def _set_entity_name(
         self,
         channel_label: str | None = None,
@@ -42,31 +47,36 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], Entity):
         Set the entity name based on the channel label and feature.
 
         This central helper ensures consistent naming across all platforms.
+        Applies entity prefix if configured for multi-home setups.
         """
+        prefix = self._entity_prefix
+
         if feature_name:
             # This is a "feature" entity (sensor, binary_sensor, button)
             if channel_label:
                 # Sensor on a labeled channel: "Channel Label Feature Name"
                 # (e.g., "Living Room Thermostat Temperature")
-                self._attr_name = f"{channel_label} {feature_name}"
+                base_name = f"{channel_label} {feature_name}"
+                self._attr_name = f"{prefix} {base_name}" if prefix else base_name
                 self._attr_has_entity_name = False
             else:
                 # Sensor on an unlabeled channel: "Feature Name"
                 # (e.g., "Low Battery" on a device)
-                self._attr_name = feature_name
+                self._attr_name = f"{prefix} {feature_name}" if prefix else feature_name
                 self._attr_has_entity_name = True
         else:
             # This is a "main" entity (switch, light, cover, lock)
             if channel_label:
                 # Main entity on a labeled channel: "Channel Label"
                 # (e.g., "Ceiling Light")
-                self._attr_name = channel_label
+                self._attr_name = f"{prefix} {channel_label}" if prefix else channel_label
                 self._attr_has_entity_name = False
             else:
                 # Main entity on an unlabeled channel (e.g., FROLL, PSM-2)
                 # Use device name only by setting name to None and has_entity_name to True.
                 # This prevents HA from falling back to displaying the unique_id.
                 # (e.g., "HmIP-PSM-2")
+                # For unlabeled channels, the prefix will be applied to the device name automatically
                 self._attr_name = None
                 self._attr_has_entity_name = True
 
@@ -143,6 +153,11 @@ class HcuGroupBaseEntity(CoordinatorEntity["HcuCoordinator"], Entity):
         self._attr_assumed_state = False
 
     @property
+    def _entity_prefix(self) -> str:
+        """Get the entity name prefix from config entry."""
+        return self.coordinator.config_entry.data.get(CONF_ENTITY_PREFIX, "")
+
+    @property
     def _group(self) -> dict[str, Any]:
         """Return the latest group data from the client's state cache."""
         return self._client.get_group_by_id(self._group_id) or {}
@@ -192,6 +207,11 @@ class HcuHomeBaseEntity(CoordinatorEntity["HcuCoordinator"], Entity):
         self._hcu_device_id = self._client.hcu_device_id
         self._home_uuid = self._client.state.get("home", {}).get("id")
         self._attr_assumed_state = False
+
+    @property
+    def _entity_prefix(self) -> str:
+        """Get the entity name prefix from config entry."""
+        return self.coordinator.config_entry.data.get(CONF_ENTITY_PREFIX, "")
 
     @property
     def _home(self) -> dict[str, Any]:

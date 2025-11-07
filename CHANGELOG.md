@@ -4,6 +4,41 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 
 ---
 
+## Version 1.10.0 - 2025-11-07
+
+### 🐛 Bug Fixes
+
+**Window Sensor State Attribute (Issue #48)**
+- HmIP-SRH window sensors now expose the actual window state ("OPEN", "TILTED", or "CLOSED") as a state attribute
+- Users can now distinguish between tilted and fully open windows in automations
+- Binary sensor still shows on/off (on for both OPEN and TILTED), but the `window_state` attribute provides the precise state
+
+**Improved Lock PIN Error Messages (Issue #30)**
+- Door lock PIN configuration errors now include detailed step-by-step instructions
+- Error messages point directly to the configuration location in Home Assistant
+- Includes link to README documentation for additional help
+
+### ✨ Enhancements
+
+**Entity Name Prefix for Multi-Home Setups (Issue #43)**
+- Added optional entity name prefix during integration setup
+- Perfect for users with multiple HCU instances (e.g., multiple houses)
+- Prefix is applied to all entity names (e.g., "House1 Living Room")
+- Helps avoid naming conflicts and improves organization
+- Configured in Settings → Devices & Services → Add Integration → Enter optional prefix
+
+### 📝 Documentation
+
+**Issue #20 Closure**
+- Confirmed that HmIP-WGS and HmIP-WRC6 button event issues were fixed in v1.8.1
+- Created comprehensive closure documentation with testing instructions
+
+**Issue #55 Investigation**
+- Created diagnostics request for HmIP-BSM energy counter issue
+- Requires user diagnostics file to determine root cause
+
+---
+
 ## Version 1.9.0 - 2025-11-07
 
 ### 🐛 Bug Fixes

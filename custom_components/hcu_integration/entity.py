@@ -2,6 +2,7 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
+from homeassistant.core import callback
 from homeassistant.helpers.entity import DeviceInfo, Entity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -27,6 +28,27 @@ class HcuEntityPrefixMixin:
         if prefix := self._entity_prefix:
             return f"{prefix} {base_name}"
         return base_name
+
+
+class SwitchStateMixin:
+    """Mixin to provide common switch-like state handling with optimistic updates."""
+
+    _state_channel_key: str = "on"  # Default channel key, subclasses can override
+    _attr_is_on: bool
+    _channel: dict[str, Any]
+
+    def _init_switch_state(self) -> None:
+        """Initialize the switch state from channel data."""
+        self._attr_is_on = self._channel.get(self._state_channel_key, False)
+
+    @property
+    def is_on(self) -> bool:
+        """Return True if the switch is on."""
+        return self._attr_is_on
+
+    def _sync_switch_state_from_coordinator(self) -> None:
+        """Sync switch state from coordinator data."""
+        self._attr_is_on = self._channel.get(self._state_channel_key, False)
 
 
 class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, Entity):

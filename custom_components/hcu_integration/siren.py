@@ -8,7 +8,7 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .entity import HcuBaseEntity
+from .entity import HcuBaseEntity, SwitchStateMixin
 from .api import HcuApiClient, HcuApiError
 
 if TYPE_CHECKING:
@@ -30,7 +30,7 @@ async def async_setup_entry(
         async_add_entities(entities)
 
 
-class HcuSiren(HcuBaseEntity, SirenEntity):
+class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
     """Representation of a Homematic IP HCU alarm siren."""
 
     PLATFORM = Platform.SIREN
@@ -50,17 +50,12 @@ class HcuSiren(HcuBaseEntity, SirenEntity):
         self._set_entity_name(channel_label=self._channel.get("label"))
 
         self._attr_unique_id = f"{self._device_id}_{self._channel_index}_siren"
-        self._attr_is_on = self._channel.get("on", False)
-
-    @property
-    def is_on(self) -> bool:
-        """Return True if the siren is on."""
-        return self._attr_is_on
+        self._init_switch_state()
 
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
-        self._attr_is_on = self._channel.get("on", False)
+        self._sync_switch_state_from_coordinator()
         super()._handle_coordinator_update()
 
     async def _async_set_siren_state(self, turn_on: bool) -> None:

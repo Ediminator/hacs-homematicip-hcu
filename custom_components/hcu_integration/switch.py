@@ -9,7 +9,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import HMIP_DEVICE_TYPE_TO_DEVICE_CLASS
-from .entity import HcuBaseEntity
+from .entity import HcuBaseEntity, SwitchStateMixin
 from .api import HcuApiClient, HcuApiError
 
 if TYPE_CHECKING:
@@ -31,7 +31,7 @@ async def async_setup_entry(
         async_add_entities(entities)
 
 
-class HcuSwitch(HcuBaseEntity, SwitchEntity):
+class HcuSwitch(SwitchStateMixin, HcuBaseEntity, SwitchEntity):
     """Representation of a standard Homematic IP HCU switch."""
 
     PLATFORM = Platform.SWITCH
@@ -53,16 +53,12 @@ class HcuSwitch(HcuBaseEntity, SwitchEntity):
 
         device_type = self._device.get("type")
         self._attr_device_class = HMIP_DEVICE_TYPE_TO_DEVICE_CLASS.get(device_type)
-        self._attr_is_on = self._channel.get("on", False)
-
-    @property
-    def is_on(self) -> bool:
-        return self._attr_is_on
+        self._init_switch_state()
 
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
-        self._attr_is_on = self._channel.get("on", False)
+        self._sync_switch_state_from_coordinator()
         super()._handle_coordinator_update()
 
     async def _async_set_switch_state(self, turn_on: bool) -> None:
@@ -102,11 +98,12 @@ class HcuSwitch(HcuBaseEntity, SwitchEntity):
         )
 
 
-class HcuWateringSwitch(HcuBaseEntity, SwitchEntity):
+class HcuWateringSwitch(SwitchStateMixin, HcuBaseEntity, SwitchEntity):
     """Representation of a Homematic IP HCU watering controller."""
 
     PLATFORM = Platform.SWITCH
     _attr_icon = "mdi:water"
+    _state_channel_key = "wateringActive"
 
     def __init__(
         self,
@@ -121,16 +118,12 @@ class HcuWateringSwitch(HcuBaseEntity, SwitchEntity):
         self._set_entity_name(channel_label=self._channel.get("label"))
 
         self._attr_unique_id = f"{self._device_id}_{self._channel_index}_watering"
-        self._attr_is_on = self._channel.get("wateringActive", False)
-
-    @property
-    def is_on(self) -> bool:
-        return self._attr_is_on
+        self._init_switch_state()
 
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
-        self._attr_is_on = self._channel.get("wateringActive", False)
+        self._sync_switch_state_from_coordinator()
         super()._handle_coordinator_update()
 
     async def _async_set_watering_state(self, turn_on: bool) -> None:

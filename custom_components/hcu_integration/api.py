@@ -104,6 +104,10 @@ class HcuApiClient:
 
         # Prioritize actual HCU models (HmIP-HCU-1, HmIP-HCU1-A) over auxiliary access points
         # This ensures home-level entities (alarm, vacation) link to the real HCU, not HAP/DRAP
+        # The prioritization order is: actual HCU models -> accessPointId from home state -> any identified HCU-like device.
+        # Rationale: In multi-access-point setups, home.accessPointId may point to an auxiliary HAP/DRAP
+        # instead of the main HCU, causing incorrect device associations. By explicitly prioritizing
+        # actual HCU model types, we ensure the true central controller is always the primary device.
         primary_hcu_candidates = [
             device_id
             for device_id in hcu_ids

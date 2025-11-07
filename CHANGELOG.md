@@ -13,14 +13,14 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 - Home-level entities (vacation mode, alarm) are now correctly assigned to the HCU device instead of auxiliary access points
 - Updated logic to prioritize actual HCU models (HmIP-HCU-1, HmIP-HCU1-A) when determining the primary device
 - HAP and DRAP are now properly recognized as auxiliary access points connected to the main HCU
-- All devices now correctly show as children of the HCU instead of HAP
+- Devices that were incorrectly associated with HAP now correctly show as children of the HCU
 
 **Heating Group Auto Mode Preservation (Issue #35)**
 - Fixed behavior where manually adjusting temperature switched from AUTO to MANUAL mode permanently
 - Temperature adjustments in AUTO mode now create temporary overrides that automatically revert at the next scheduled temperature change
 - Matches the original Homematic IP app behavior - users can adjust temperature without disrupting heating schedules
 - System automatically resumes scheduled operation at the next programmed time
-- Only switches to MANUAL mode when explicitly setting HVAC mode to HEAT
+- Manual temperature adjustments in AUTO mode no longer force the system into MANUAL mode unless explicitly set to HEAT
 
 **Alarm Siren Device Classification (Issue #50)**
 - HmIP-ASIR2 alarm siren now properly classified as siren entity instead of switch

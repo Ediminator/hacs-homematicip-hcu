@@ -422,15 +422,20 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
         # Fallback: search entity list if not in dictionary (race condition during startup)
         if not entity:
             from .event import HcuDoorbellEvent
-            for event_entity in self.entities.get(Platform.EVENT, []):
-                if isinstance(event_entity, HcuDoorbellEvent):
-                    if event_entity._device_id == device_id and event_entity._channel_index_str == channel_idx:
-                        entity = event_entity
-                        # Cache the entity to avoid repeated O(n) lookups
-                        self._doorbell_events[key] = entity
-                        break
-
-            if not entity:
+            entity = next(
+                (
+                    event_entity
+                    for event_entity in self.entities.get(Platform.EVENT, [])
+                    if isinstance(event_entity, HcuDoorbellEvent)
+                    and event_entity._device_id == device_id
+                    and event_entity._channel_index_str == channel_idx
+                ),
+                None,
+            )
+            if entity:
+                # Cache the entity to avoid repeated O(n) lookups
+                self._doorbell_events[key] = entity
+            else:
                 _LOGGER.warning(
                     "Doorbell event entity not found for device=%s, channel=%s",
                     device_id, channel_idx

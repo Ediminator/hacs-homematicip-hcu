@@ -1,16 +1,19 @@
 # custom_components/hcu_integration/entity.py
 from __future__ import annotations
 from typing import TYPE_CHECKING, Any
+import logging
 
 from homeassistant.core import callback
 from homeassistant.helpers.entity import DeviceInfo, Entity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN, CONF_ENTITY_PREFIX
-from .api import HcuApiClient
+from .api import HcuApiClient, HcuApiError
 
 if TYPE_CHECKING:
     from . import HcuCoordinator
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class HcuEntityPrefixMixin:
@@ -35,7 +38,9 @@ class SwitchStateMixin:
 
     _state_channel_key: str = "on"  # Default channel key, subclasses can override
     _attr_is_on: bool
+    _attr_assumed_state: bool
     _channel: dict[str, Any]
+    name: str | None  # From Entity base class
 
     def _init_switch_state(self) -> None:
         """Initialize the switch state from channel data."""
@@ -49,6 +54,23 @@ class SwitchStateMixin:
     def _sync_switch_state_from_coordinator(self) -> None:
         """Sync switch state from coordinator data."""
         self._attr_is_on = self._channel.get(self._state_channel_key, False)
+
+    async def _call_switch_api(self, turn_on: bool) -> None:
+        """Call the API to set the switch state. Must be implemented by subclasses."""
+        raise NotImplementedError("Subclasses must implement _call_switch_api")
+
+    async def _async_set_optimistic_state(self, turn_on: bool, entity_type: str) -> None:
+        """Set the state with optimistic updates and error handling."""
+        self._attr_is_on = turn_on
+        self._attr_assumed_state = True
+        self.async_write_ha_state()  # type: ignore[attr-defined]
+        try:
+            await self._call_switch_api(turn_on)
+        except (HcuApiError, ConnectionError) as err:
+            action = "on" if turn_on else "off"
+            _LOGGER.error("Failed to turn %s %s %s: %s", action, entity_type, self.name, err)
+            self._attr_assumed_state = False
+            self.async_write_ha_state()  # type: ignore[attr-defined]
 
 
 class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, Entity):

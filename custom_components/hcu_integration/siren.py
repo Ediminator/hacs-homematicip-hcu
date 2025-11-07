@@ -1,6 +1,5 @@
 # custom_components/hcu_integration/siren.py
 from typing import TYPE_CHECKING, Any
-import logging
 
 from homeassistant.components.siren import SirenEntity, SirenEntityFeature
 from homeassistant.config_entries import ConfigEntry
@@ -9,12 +8,10 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .entity import HcuBaseEntity, SwitchStateMixin
-from .api import HcuApiClient, HcuApiError
+from .api import HcuApiClient
 
 if TYPE_CHECKING:
     from . import HcuCoordinator
-
-_LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
@@ -58,26 +55,17 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
         self._sync_switch_state_from_coordinator()
         super()._handle_coordinator_update()
 
-    async def _async_set_siren_state(self, turn_on: bool) -> None:
-        """Set the state of the siren."""
-        self._attr_is_on = turn_on
-        self._attr_assumed_state = True
-        self.async_write_ha_state()
-        try:
-            on_level = 1.0 if turn_on else 0.0
-            await self._client.async_set_switch_state(
-                self._device_id, self._channel_index, turn_on, on_level=on_level
-            )
-        except (HcuApiError, ConnectionError) as err:
-            action = "on" if turn_on else "off"
-            _LOGGER.error("Failed to turn %s siren %s: %s", action, self.name, err)
-            self._attr_assumed_state = False
-            self.async_write_ha_state()
+    async def _call_switch_api(self, turn_on: bool) -> None:
+        """Call the API to set the siren state."""
+        on_level = 1.0 if turn_on else 0.0
+        await self._client.async_set_switch_state(
+            self._device_id, self._channel_index, turn_on, on_level=on_level
+        )
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the siren on."""
-        await self._async_set_siren_state(True)
+        await self._async_set_optimistic_state(True, "siren")
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the siren off."""
-        await self._async_set_siren_state(False)
+        await self._async_set_optimistic_state(False, "siren")

@@ -31,6 +31,7 @@ PLATFORMS: list[Platform] = [
     Platform.BUTTON,
     Platform.CLIMATE,
     Platform.COVER,
+    Platform.EVENT,
     Platform.LIGHT,
     Platform.LOCK,
     Platform.SENSOR,
@@ -546,6 +547,7 @@ EVENT_CHANNEL_TYPES = {
     "SWITCH_INPUT_CHANNEL",
     "SINGLE_KEY_CHANNEL",
     "MULTI_MODE_INPUT_CHANNEL",
+    "MULTI_MODE_INPUT_TRANSMITTER",
 }
 
 DEVICE_CHANNEL_EVENT_TYPES = frozenset({
@@ -567,6 +569,7 @@ HMIP_CHANNEL_TYPE_TO_ENTITY = {
     "SWITCH_MEASURING_CHANNEL": {"class": "HcuSwitch"},
     "WIRED_SWITCH_CHANNEL": {"class": "HcuSwitch"},
     "MULTI_MODE_INPUT_SWITCH_CHANNEL": {"class": "HcuSwitch"},
+    "MULTI_MODE_INPUT_TRANSMITTER_CHANNEL": {"class": "HcuDoorbellEvent"},
     "WATERING_CONTROLLER_CHANNEL": {"class": "HcuWateringSwitch"},
     "CONDITIONAL_SWITCH_CHANNEL": {"class": "HcuSwitch"},
     "OPEN_COLLECTOR_CHANNEL_8": {"class": "HcuSwitch"},

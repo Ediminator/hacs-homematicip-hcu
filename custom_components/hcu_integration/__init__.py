@@ -401,6 +401,23 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
             },
         )
 
+    def _trigger_doorbell_event(self, device_id: str, channel_idx: str) -> None:
+        """Trigger the doorbell event entity for a specific device/channel."""
+        # Find the doorbell event entity for this device and channel
+        for entity in self.entities.get(Platform.EVENT, []):
+            if (
+                hasattr(entity, "_device_id") and
+                hasattr(entity, "_channel_index_str") and
+                entity._device_id == device_id and
+                entity._channel_index_str == channel_idx
+            ):
+                entity._handle_doorbell_press()
+                _LOGGER.debug(
+                    "Triggered doorbell event entity for device=%s, channel=%s",
+                    device_id, channel_idx
+                )
+                return
+
     def _handle_device_channel_events(self, events: dict) -> None:
         """Handle DEVICE_CHANNEL_EVENT type events (stateless buttons).
 
@@ -473,11 +490,22 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
                 should_fire, reason = self._should_fire_button_press(new_ts, old_ts)
 
                 if should_fire:
-                    self._fire_button_event(dev_id, ch_idx, "press")
-                    _LOGGER.debug(
-                        "Button press detected via %s: device=%s, channel=%s",
-                        reason, dev_id, ch_idx
-                    )
+                    channel_type = channel.get("functionalChannelType")
+
+                    # Trigger doorbell event entity for doorbell channels
+                    if channel_type == "MULTI_MODE_INPUT_TRANSMITTER":
+                        self._trigger_doorbell_event(dev_id, ch_idx)
+                        _LOGGER.debug(
+                            "Doorbell press detected via %s: device=%s, channel=%s",
+                            reason, dev_id, ch_idx
+                        )
+                    else:
+                        # Fire regular button event for other event channels
+                        self._fire_button_event(dev_id, ch_idx, "press")
+                        _LOGGER.debug(
+                            "Button press detected via %s: device=%s, channel=%s",
+                            reason, dev_id, ch_idx
+                        )
 
     def _handle_event_message(self, message: dict) -> None:
         """Process incoming WebSocket event messages from the HCU."""

@@ -4,7 +4,7 @@ from __future__ import annotations
 import aiohttp
 import asyncio
 import logging
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 import random
 
 from homeassistant.config_entries import ConfigEntry
@@ -51,6 +51,9 @@ from .const import (
     CHANNEL_TYPE_MULTI_MODE_INPUT_TRANSMITTER,
 )
 from .discovery import async_discover_entities
+
+if TYPE_CHECKING:
+    from .event import HcuDoorbellEvent
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -105,8 +108,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
 
     # Build doorbell event entity lookup dictionary for efficient O(1) access
+    from .event import HcuDoorbellEvent
     for event_entity in coordinator.entities.get(Platform.EVENT, []):
-        if hasattr(event_entity, "_device_id") and hasattr(event_entity, "_channel_index_str"):
+        if isinstance(event_entity, HcuDoorbellEvent):
             key = (event_entity._device_id, event_entity._channel_index_str)
             coordinator._doorbell_events[key] = event_entity
 
@@ -317,7 +321,7 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
         self.client = client
         self.entry = entry
         self.entities: dict[Platform, list] = {}
-        self._doorbell_events: dict[tuple[str, str], Any] = {}  # Maps (device_id, channel_idx) to event entity
+        self._doorbell_events: dict[tuple[str, str], "HcuDoorbellEvent"] = {}  # Maps (device_id, channel_idx) to doorbell event entity
         self._connected_event = asyncio.Event()
 
     async def async_setup(self) -> bool:

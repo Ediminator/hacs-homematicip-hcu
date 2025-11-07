@@ -574,6 +574,7 @@ HMIP_CHANNEL_TYPE_TO_ENTITY = {
     "BLIND_CHANNEL": {"class": "HcuCover"},
     "GARAGE_DOOR_CHANNEL": {"class": "HcuGarageDoorCover"},
     "DOOR_CHANNEL": {"class": "HcuGarageDoorCover"},
+    "DOOR_SWITCH_CHANNEL": {"class": "HcuDoorOpenerButton"},
     "DOOR_LOCK_CHANNEL": {"class": "HcuLock"},
     "LIGHT_SENSOR_CHANNEL": None,
     "MOTION_DETECTION_CHANNEL": None,

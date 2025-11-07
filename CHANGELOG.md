@@ -4,6 +4,57 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 
 ---
 
+## Version 1.9.0 - 2025-11-07
+
+### 🐛 Bug Fixes
+
+**Fixed Entity Naming for Unlabeled Channels (Issue #27)**
+- Entities without channel labels now display with proper names instead of showing unique IDs
+- Affected devices like HmIP-FROLL, HmIP-PSM-2, HmIP-BSM, and others now show friendly names (e.g., "HmIP-PSM-2" instead of "domain_id_1_on")
+- Fixed by correctly setting `has_entity_name=True` when entity name is `None`
+
+### ✨ Enhancements
+
+**Comprehensive API Response Validation**
+- Added robust validation for all API responses and WebSocket messages
+- System now gracefully handles malformed data, missing fields, and unexpected types
+- Enhanced error logging provides specific details for troubleshooting
+- Improved stability when HCU returns unexpected data structures
+
+**Enhanced Code Documentation**
+- Improved docstrings throughout the codebase with detailed parameter and return descriptions
+- Better inline comments explaining complex logic (button detection, state management)
+- Added validation pattern documentation for developers
+
+### 📚 New Developer Documentation
+
+**CONTRIBUTING.md**
+- Comprehensive developer guide (650+ lines)
+- Detailed code structure explanation for all modules
+- Testing guidelines and coverage goals (80% minimum, 90% target)
+- Pull request process and coding standards
+- Step-by-step guides for common tasks (adding devices, services)
+- API response validation patterns and best practices
+- Debugging tips and troubleshooting workflow
+
+### 🧪 Testing
+
+**Phase 3: Comprehensive Test Suite**
+- Added 32+ unit tests covering core infrastructure
+- 90%+ test coverage for api.py, coordinator, and entity modules
+- Tests for all critical paths including edge cases
+- Validates button detection, state management, and event processing
+
+### 🔧 Technical Improvements
+
+**API Client Enhancements**
+- `get_system_state()`: Validates response structure and ensures critical keys exist
+- `process_events()`: Type validation and required field checking
+- `_handle_incoming_message()`: Message structure validation with specific error logging
+- `_handle_device_channel_events()`: Validates complete event data before processing
+
+---
+
 ## Version 1.8.1 - 2025-10-26
 
 ### 🐛 Critical Bug Fix

@@ -216,9 +216,9 @@ When a button is pressed, you'll see something like this:
 ```yaml
 event_type: hcu_integration_event
 data:
-  device_id: "3014F711A00048240995D6BC"
-  channel: "4"
-  type: "press"
+  device_id: 3014F711A00048240995D6BC
+  channel: 1
+  type: KEY_PRESS_SHORT
 origin: LOCAL
 time_fired: 2025-10-26T10:30:45.123456+00:00
 ```
@@ -226,7 +226,14 @@ time_fired: 2025-10-26T10:30:45.123456+00:00
 **What each field means:**
 - `device_id`: The unique ID of your button device (SGTIN)
 - `channel`: Which button was pressed (1, 2, 3, etc.)
-- `type`: Always "press" for button events
+- `type`: The type of the button event (`KEY_PRESS_SHORT`, `KEY_PRESS_LONG`,
+          `KEY_PRESS_LONG_START` or `KEY_PRESS_LONG_STOP`)
+
+**Please note**: A long button press first generates a single `KEY_PRESS_LONG`
+event, followed by a single `KEY_PRESS_LONG_START` event. As long as the button
+is pressed, a sequence of periodic `KEY_PRESS_LONG` events is then generated
+approximately every 0.35 seconds. When the button is released, a single
+`KEY_PRESS_LONG_STOP` event is generated.
 
 #### 4. Note Down Your Device ID and Channels
 
@@ -258,9 +265,9 @@ Now that you've confirmed your buttons work, let's create automations!
    - Select **Template**
    - Template:
      ```jinja
-     {{ trigger.event.data.device_id == '3014F711A00048240995D6BC' and trigger.event.data.channel == '1' }}
+     {{ trigger.event.data.device_id == '3014F711A00048240995D6BC' and trigger.event.data.channel == 1 }}
      ```
-   - Replace the device_id and channel with your values!
+   - Replace the `device_id` and `channel` with your values!
 5. **Add Action:**
    - Click **ADD ACTION**
    - Select **Call service**
@@ -275,104 +282,102 @@ Now that you've confirmed your buttons work, let's create automations!
 **Example 1: Simple Toggle**
 
 ```yaml
-alias: "Living Room - Button 1 Toggle Light"
-description: "Toggle living room light with wall switch button 1"
-trigger:
-  - platform: event
-    event_type: hcu_integration_event
-    event_data:
-      device_id: "3014F711A00048240995D6BC"
-      channel: "1"
-action:
-  - service: light.toggle
-    target:
-      entity_id: light.living_room
+alias: Living Room - Button 1 Toggle Light
+description: Toggle living room light with wall switch button 1
 mode: single
+triggers:
+  - event_type: hcu_integration_event
+    event_data:
+      device_id: 3014F711A00048240995D6BC
+      channel: 1
+    trigger: event
+actions:
+  - target:
+      entity_id: light.living_room
+    action: light.toggle
 ```
 
 **Example 2: Multi-Button Control (Choose Action by Button)**
 
 ```yaml
-alias: "Kitchen Remote - 4 Buttons"
-description: "Control multiple lights with a 4-button remote"
-trigger:
-  - platform: event
-    event_type: hcu_integration_event
+alias: Kitchen Remote - 4 Buttons
+description: Control multiple lights with a 4-button remote
+mode: single
+triggers:
+  - event_type: hcu_integration_event
     event_data:
-      device_id: "3014F711A00048240995D6BC"
-action:
+      device_id: 3014F711A00048240995D6BC
+    trigger: event
+actions:
   - choose:
       - conditions:
           - condition: template
-            value_template: "{{ trigger.event.data.channel == '1' }}"
+            value_template: "{{ trigger.event.data.channel == 1 }}"
         sequence:
-          - service: light.turn_on
-            target:
+          - target:
               entity_id: light.kitchen_main
-      
+            action: light.turn_on
       - conditions:
           - condition: template
-            value_template: "{{ trigger.event.data.channel == '2' }}"
+            value_template: "{{ trigger.event.data.channel == 2 }}"
         sequence:
-          - service: light.turn_off
-            target:
+          - target:
               entity_id: light.kitchen_main
-      
+            action: light.turn_off
       - conditions:
           - condition: template
-            value_template: "{{ trigger.event.data.channel == '3' }}"
+            value_template: "{{ trigger.event.data.channel == 3 }}"
         sequence:
-          - service: light.turn_on
-            target:
+          - target:
               entity_id: light.kitchen_cabinet
-      
+            action: light.turn_on
       - conditions:
           - condition: template
-            value_template: "{{ trigger.event.data.channel == '4' }}"
+            value_template: "{{ trigger.event.data.channel == 4 }}"
         sequence:
-          - service: light.turn_off
-            target:
+          - target:
               entity_id: light.kitchen_cabinet
-mode: single
+            action: light.turn_off
 ```
 
 **Example 3: Same Button for On/Off (Double Press Detection)**
 
 ```yaml
-alias: "Bedroom - Button 1 with Double Press"
-description: "Single press = dim light, double press = full brightness"
-trigger:
-  - platform: event
-    event_type: hcu_integration_event
+alias: Bedroom - Button 1 with Double Press
+description: Single press = dim light, double press = full brightness
+mode: restart
+triggers:
+  - event_type: hcu_integration_event
     event_data:
-      device_id: "3014F711A00048240995D6BC"
-      channel: "1"
-action:
+      device_id: 3014F711A00048240995D6BC
+      channel: 1
+    trigger: event
+actions:
   - if:
       - condition: state
         entity_id: timer.button_press_timer
         state: active
     then:
       # Second press detected within 1 second
-      - service: light.turn_on
-        target:
+      - target:
           entity_id: light.bedroom
         data:
           brightness: 255
-      - service: timer.cancel
-        target:
+        action: light.turn_on
+      - target:
           entity_id: timer.button_press_timer
+        action: timer.cancel
     else:
       # First press - start timer
-      - service: timer.start
-        target:
+      - target:
           entity_id: timer.button_press_timer
         data:
           duration: "00:00:01"
+        action: timer.start
       - wait_for_trigger:
-          - platform: state
-            entity_id: timer.button_press_timer
+          - entity_id: timer.button_press_timer
             to: idle
+            trigger: state
         timeout: "00:00:01"
       # Timer expired - this was a single press
       - if:
@@ -380,12 +385,11 @@ action:
             entity_id: timer.button_press_timer
             state: idle
         then:
-          - service: light.turn_on
-            target:
+          - target:
               entity_id: light.bedroom
             data:
               brightness: 128
-mode: restart
+            action: light.turn_on
 ```
 
 *Note: For double-press detection, create a timer helper first:*
@@ -393,6 +397,43 @@ mode: restart
 2. Click **+ CREATE HELPER** → **Timer**
 3. Name: "Button Press Timer"
 4. Duration: "00:00:01"
+
+**Example 4: Switch or Dim (Using Short and Long Press Events)**
+
+```
+alias: Offic - Switch or Dim the light
+triggers:
+  - event_type: hcu_integration_event
+    event_data:
+      device_id: 3014F711A00048240995D6BC
+      channel: 1
+    trigger: event
+actions:
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.event.data.type == 'KEY_PRESS_SHORT' }}"
+        sequence:
+          - target:
+              entity_id: light.light_office
+            action: light.toggle
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.event.data.type == 'KEY_PRESS_LONG' }}"
+        sequence:
+          - repeat:
+              while:
+                - condition: template
+                  value_template: |
+                    {{ trigger.event.data.type == 'KEY_PRESS_LONG' }}
+              sequence:
+                - data:
+                    entity_id: light.light_office
+                    brightness_step: 10
+                  action: light.turn_on
+                - delay: "0.2"
+mode: restart
+```
 
 ---
 

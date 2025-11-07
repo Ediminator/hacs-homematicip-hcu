@@ -406,7 +406,7 @@ triggers:
   - event_type: hcu_integration_event
     event_data:
       device_id: 3014F711A00048240995D6BC
-      channel: 2
+      channel: 1
     trigger: event
 actions:
   - choose:

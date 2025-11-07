@@ -227,12 +227,13 @@ time_fired: 2025-10-26T10:30:45.123456+00:00
 - `device_id`: The unique ID of your button device (SGTIN)
 - `channel`: Which button was pressed (1, 2, 3, etc.)
 - `type`: The type of the button event (`KEY_PRESS_SHORT`, `KEY_PRESS_LONG`,
-          `KEY_PRESS_LONG_STOP` or `KEY_PRESS_LONG`)
+          `KEY_PRESS_LONG_START` or `KEY_PRESS_LONG_STOP`)
 
-**Please note**: A long button press first generates a `KEY_PRESS_LONG` event,
-followed by a single `KEY_PRESS_LONG_START` event. As long as the button is
-pressed, a sequence of periodic `KEY_PRESS_LONG` events is then generated.
-When the button is released, a single `KEY_PRESS_LONG_STOP` event is generated.
+**Please note**: A long button press first generates a single `KEY_PRESS_LONG`
+event, followed by a single `KEY_PRESS_LONG_START` event. As long as the button
+is pressed, a sequence of periodic `KEY_PRESS_LONG` events is then generated
+approximately every 0.35 seconds. When the button is released, a single
+`KEY_PRESS_LONG_STOP` event is generated.
 
 #### 4. Note Down Your Device ID and Channels
 

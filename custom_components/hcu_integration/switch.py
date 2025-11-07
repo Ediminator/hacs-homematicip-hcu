@@ -58,31 +58,28 @@ class HcuSwitch(HcuBaseEntity, SwitchEntity):
     def is_on(self) -> bool:
         return self._channel.get("on", False)
 
-    async def async_turn_on(self, **kwargs: Any) -> None:
-        """Turn the switch on."""
+    async def _async_set_switch_state(self, turn_on: bool) -> None:
+        """Set the state of the switch."""
         self._attr_assumed_state = True
         self.async_write_ha_state()
         try:
+            on_level = 1.0 if turn_on else 0.0
             await self._client.async_set_switch_state(
-                self._device_id, self._channel_index, True, on_level=1.0
+                self._device_id, self._channel_index, turn_on, on_level=on_level
             )
         except (HcuApiError, ConnectionError) as err:
-            _LOGGER.error("Failed to turn on switch %s: %s", self.name, err)
+            action = "on" if turn_on else "off"
+            _LOGGER.error("Failed to turn %s switch %s: %s", action, self.name, err)
             self._attr_assumed_state = False
             self.async_write_ha_state()
 
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        """Turn the switch on."""
+        await self._async_set_switch_state(True)
+
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the switch off."""
-        self._attr_assumed_state = True
-        self.async_write_ha_state()
-        try:
-            await self._client.async_set_switch_state(
-                self._device_id, self._channel_index, False, on_level=0.0
-            )
-        except (HcuApiError, ConnectionError) as err:
-            _LOGGER.error("Failed to turn off switch %s: %s", self.name, err)
-            self._attr_assumed_state = False
-            self.async_write_ha_state()
+        await self._async_set_switch_state(False)
 
     async def async_play_sound(
         self, sound_file: str, volume: float, duration: float
@@ -109,7 +106,6 @@ class HcuWateringSwitch(HcuBaseEntity, SwitchEntity):
         client: HcuApiClient,
         device_data: dict,
         channel_index: str,
-        **kwargs: Any,
     ):
         super().__init__(coordinator, client, device_data, channel_index)
 
@@ -122,28 +118,24 @@ class HcuWateringSwitch(HcuBaseEntity, SwitchEntity):
     def is_on(self) -> bool:
         return self._channel.get("wateringActive", False)
 
-    async def async_turn_on(self, **kwargs: Any) -> None:
-        """Turn the watering on."""
+    async def _async_set_watering_state(self, turn_on: bool) -> None:
+        """Set the state of the watering switch."""
         self._attr_assumed_state = True
         self.async_write_ha_state()
         try:
             await self._client.async_set_watering_switch_state(
-                self._device_id, self._channel_index, True
+                self._device_id, self._channel_index, turn_on
             )
         except (HcuApiError, ConnectionError) as err:
-            _LOGGER.error("Failed to turn on watering switch %s: %s", self.name, err)
+            action = "on" if turn_on else "off"
+            _LOGGER.error("Failed to turn %s watering switch %s: %s", action, self.name, err)
             self._attr_assumed_state = False
             self.async_write_ha_state()
 
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        """Turn the watering on."""
+        await self._async_set_watering_state(True)
+
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the watering off."""
-        self._attr_assumed_state = True
-        self.async_write_ha_state()
-        try:
-            await self._client.async_set_watering_switch_state(
-                self._device_id, self._channel_index, False
-            )
-        except (HcuApiError, ConnectionError) as err:
-            _LOGGER.error("Failed to turn off watering switch %s: %s", self.name, err)
-            self._attr_assumed_state = False
-            self.async_write_ha_state()
+        await self._async_set_watering_state(False)

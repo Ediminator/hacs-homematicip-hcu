@@ -108,21 +108,21 @@ class HcuApiClient:
         # Rationale: In multi-access-point setups, home.accessPointId may point to an auxiliary HAP/DRAP
         # instead of the main HCU, causing incorrect device associations. By explicitly prioritizing
         # actual HCU model types, we ensure the true central controller is always the primary device.
-        primary_hcu_candidates = [
+        primary_hcu_candidates = sorted([
             device_id
             for device_id in hcu_ids
             if self.state.get("devices", {}).get(device_id, {}).get("modelType") in HCU_MODEL_TYPES
-        ]
+        ])
 
         if primary_hcu_candidates:
-            # Use the actual HCU as primary
+            # Use the actual HCU as primary (deterministically select first after sorting)
             self._primary_hcu_device_id = primary_hcu_candidates[0]
         elif access_point_id:
             # Fallback to home.accessPointId if no HCU model found
             self._primary_hcu_device_id = access_point_id
         elif hcu_ids:
-            # Last resort: pick any access point
-            self._primary_hcu_device_id = next(iter(hcu_ids), None)
+            # Last resort: pick any access point (sort for deterministic selection)
+            self._primary_hcu_device_id = sorted(hcu_ids)[0]
         else:
             self._primary_hcu_device_id = None
 

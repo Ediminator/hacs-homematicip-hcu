@@ -43,7 +43,6 @@ class HcuSiren(HcuBaseEntity, SirenEntity):
         client: HcuApiClient,
         device_data: dict,
         channel_index: str,
-        **kwargs: Any,
     ):
         super().__init__(coordinator, client, device_data, channel_index)
 
@@ -57,28 +56,25 @@ class HcuSiren(HcuBaseEntity, SirenEntity):
         """Return True if the siren is on."""
         return self._channel.get("on", False)
 
-    async def async_turn_on(self, **kwargs: Any) -> None:
-        """Turn the siren on."""
+    async def _async_set_siren_state(self, turn_on: bool) -> None:
+        """Set the state of the siren."""
         self._attr_assumed_state = True
         self.async_write_ha_state()
         try:
+            on_level = 1.0 if turn_on else 0.0
             await self._client.async_set_switch_state(
-                self._device_id, self._channel_index, True, on_level=1.0
+                self._device_id, self._channel_index, turn_on, on_level=on_level
             )
         except (HcuApiError, ConnectionError) as err:
-            _LOGGER.error("Failed to turn on siren %s: %s", self.name, err)
+            action = "on" if turn_on else "off"
+            _LOGGER.error("Failed to turn %s siren %s: %s", action, self.name, err)
             self._attr_assumed_state = False
             self.async_write_ha_state()
 
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        """Turn the siren on."""
+        await self._async_set_siren_state(True)
+
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the siren off."""
-        self._attr_assumed_state = True
-        self.async_write_ha_state()
-        try:
-            await self._client.async_set_switch_state(
-                self._device_id, self._channel_index, False, on_level=0.0
-            )
-        except (HcuApiError, ConnectionError) as err:
-            _LOGGER.error("Failed to turn off siren %s: %s", self.name, err)
-            self._attr_assumed_state = False
-            self.async_write_ha_state()
+        await self._async_set_siren_state(False)

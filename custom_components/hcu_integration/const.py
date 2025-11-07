@@ -31,6 +31,7 @@ PLATFORMS: list[Platform] = [
     Platform.BUTTON,
     Platform.CLIMATE,
     Platform.COVER,
+    Platform.EVENT,
     Platform.LIGHT,
     Platform.LOCK,
     Platform.SENSOR,
@@ -52,6 +53,9 @@ DEFAULT_MAX_TEMP = 30.0
 
 # --- Documentation URLs ---
 DOCS_URL_LOCK_PIN_CONFIG = "https://github.com/Ediminator/hacs-homematicip-hcu#step-4-configure-door-lock-pin-optional"
+
+# --- Channel Type Constants ---
+CHANNEL_TYPE_MULTI_MODE_INPUT_TRANSMITTER = "MULTI_MODE_INPUT_TRANSMITTER"
 
 # --- API and Plugin Constants ---
 PLUGIN_ID = "de.homeassistant.hcu.integration"
@@ -546,6 +550,7 @@ EVENT_CHANNEL_TYPES = {
     "SWITCH_INPUT_CHANNEL",
     "SINGLE_KEY_CHANNEL",
     "MULTI_MODE_INPUT_CHANNEL",
+    CHANNEL_TYPE_MULTI_MODE_INPUT_TRANSMITTER,
 }
 
 DEVICE_CHANNEL_EVENT_TYPES = frozenset({
@@ -567,6 +572,7 @@ HMIP_CHANNEL_TYPE_TO_ENTITY = {
     "SWITCH_MEASURING_CHANNEL": {"class": "HcuSwitch"},
     "WIRED_SWITCH_CHANNEL": {"class": "HcuSwitch"},
     "MULTI_MODE_INPUT_SWITCH_CHANNEL": {"class": "HcuSwitch"},
+    CHANNEL_TYPE_MULTI_MODE_INPUT_TRANSMITTER: {"class": "HcuDoorbellEvent"},
     "WATERING_CONTROLLER_CHANNEL": {"class": "HcuWateringSwitch"},
     "CONDITIONAL_SWITCH_CHANNEL": {"class": "HcuSwitch"},
     "OPEN_COLLECTOR_CHANNEL_8": {"class": "HcuSwitch"},

@@ -4,7 +4,7 @@ from __future__ import annotations
 import aiohttp
 import asyncio
 import logging
-from typing import cast
+from typing import Any, cast
 import random
 
 from homeassistant.config_entries import ConfigEntry
@@ -48,8 +48,10 @@ from .const import (
     ATTR_END_TIME,
     EVENT_CHANNEL_TYPES,
     DEVICE_CHANNEL_EVENT_TYPES,
+    CHANNEL_TYPE_MULTI_MODE_INPUT_TRANSMITTER,
 )
 from .discovery import async_discover_entities
+from . import event
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -102,6 +104,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     coordinator.entities = await async_discover_entities(
         hass, client, entry, coordinator
     )
+
+    # Build event entity lookup dictionary for efficient O(1) access
+    # Register all event entities that implement the TriggerableEvent protocol
+    coordinator._event_entities = {
+        (event_entity._device_id, event_entity._channel_index_str): event_entity
+        for event_entity in coordinator.entities.get(Platform.EVENT, [])
+        if hasattr(event_entity, "handle_trigger")
+    }
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
@@ -310,6 +320,7 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
         self.client = client
         self.entry = entry
         self.entities: dict[Platform, list] = {}
+        self._event_entities: dict[tuple[str, str], event.TriggerableEvent] = {}  # Maps (device_id, channel_idx) to triggerable event entity
         self._connected_event = asyncio.Event()
 
     async def async_setup(self) -> bool:
@@ -401,6 +412,44 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
             },
         )
 
+    def _trigger_event_entity(self, device_id: str, channel_idx: str) -> None:
+        """Trigger an event entity for a specific device/channel.
+
+        Uses the TriggerableEvent protocol to support any event entity type
+        without coordinator needing to know specific implementation details.
+        """
+        # Use O(1) dictionary lookup
+        key = (device_id, channel_idx)
+        entity = self._event_entities.get(key)
+
+        # Fallback: search entity list if not in dictionary (race condition during startup)
+        if not entity:
+            entity = next(
+                (
+                    event_entity
+                    for event_entity in self.entities.get(Platform.EVENT, [])
+                    if hasattr(event_entity, "handle_trigger")
+                    and event_entity._device_id == device_id
+                    and event_entity._channel_index_str == channel_idx
+                ),
+                None,
+            )
+            if entity:
+                # Cache the entity to avoid repeated O(n) lookups
+                self._event_entities[key] = entity
+            else:
+                _LOGGER.warning(
+                    "Event entity not found for device=%s, channel=%s",
+                    device_id, channel_idx
+                )
+                return
+
+        entity.handle_trigger()
+        _LOGGER.debug(
+            "Triggered event entity for device=%s, channel=%s",
+            device_id, channel_idx
+        )
+
     def _handle_device_channel_events(self, events: dict) -> None:
         """Handle DEVICE_CHANNEL_EVENT type events (stateless buttons).
 
@@ -473,10 +522,19 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
                 should_fire, reason = self._should_fire_button_press(new_ts, old_ts)
 
                 if should_fire:
-                    self._fire_button_event(dev_id, ch_idx, "press")
+                    channel_type = channel.get("functionalChannelType")
+
+                    # Trigger event entity for doorbell channels, otherwise fire button event
+                    if channel_type == CHANNEL_TYPE_MULTI_MODE_INPUT_TRANSMITTER:
+                        self._trigger_event_entity(dev_id, ch_idx)
+                        event_label = "Doorbell press"
+                    else:
+                        self._fire_button_event(dev_id, ch_idx, "press")
+                        event_label = "Button press"
+
                     _LOGGER.debug(
-                        "Button press detected via %s: device=%s, channel=%s",
-                        reason, dev_id, ch_idx
+                        "%s detected via %s: device=%s, channel=%s",
+                        event_label, reason, dev_id, ch_idx
                     )
 
     def _handle_event_message(self, message: dict) -> None:

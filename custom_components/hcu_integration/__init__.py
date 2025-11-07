@@ -4,7 +4,7 @@ from __future__ import annotations
 import aiohttp
 import asyncio
 import logging
-from typing import TYPE_CHECKING, Any, cast
+from typing import Any, cast
 import random
 
 from homeassistant.config_entries import ConfigEntry
@@ -51,9 +51,7 @@ from .const import (
     CHANNEL_TYPE_MULTI_MODE_INPUT_TRANSMITTER,
 )
 from .discovery import async_discover_entities
-
-if TYPE_CHECKING:
-    from .event import HcuDoorbellEvent
+from . import event
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -108,11 +106,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
 
     # Build doorbell event entity lookup dictionary for efficient O(1) access
-    from .event import HcuDoorbellEvent
     coordinator._doorbell_events = {
         (event_entity._device_id, event_entity._channel_index_str): event_entity
         for event_entity in coordinator.entities.get(Platform.EVENT, [])
-        if isinstance(event_entity, HcuDoorbellEvent)
+        if isinstance(event_entity, event.HcuDoorbellEvent)
     }
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
@@ -322,7 +319,7 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
         self.client = client
         self.entry = entry
         self.entities: dict[Platform, list] = {}
-        self._doorbell_events: dict[tuple[str, str], "HcuDoorbellEvent"] = {}  # Maps (device_id, channel_idx) to doorbell event entity
+        self._doorbell_events: dict[tuple[str, str], event.HcuDoorbellEvent] = {}  # Maps (device_id, channel_idx) to doorbell event entity
         self._connected_event = asyncio.Event()
 
     async def async_setup(self) -> bool:
@@ -422,12 +419,11 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
 
         # Fallback: search entity list if not in dictionary (race condition during startup)
         if not entity:
-            from .event import HcuDoorbellEvent
             entity = next(
                 (
                     event_entity
                     for event_entity in self.entities.get(Platform.EVENT, [])
-                    if isinstance(event_entity, HcuDoorbellEvent)
+                    if isinstance(event_entity, event.HcuDoorbellEvent)
                     and event_entity._device_id == device_id
                     and event_entity._channel_index_str == channel_idx
                 ),

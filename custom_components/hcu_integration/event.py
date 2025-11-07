@@ -1,5 +1,5 @@
 # custom_components/hcu_integration/event.py
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.event import (
     EventDeviceClass,
@@ -42,7 +42,7 @@ class HcuDoorbellEvent(HcuBaseEntity, EventEntity):
         self,
         coordinator: "HcuCoordinator",
         client: HcuApiClient,
-        device_data: dict,
+        device_data: dict[str, Any],
         channel_index: str,
     ):
         super().__init__(coordinator, client, device_data, channel_index)

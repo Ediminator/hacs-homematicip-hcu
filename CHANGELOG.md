@@ -45,8 +45,9 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 
 - Added Platform.SIREN to platforms list
 - Updated HCU_MODEL_TYPES to correctly identify actual HCU devices (removed HmIP-HAP as it's an auxiliary access point)
-- Added `_apply_prefix` helper for consistent prefix handling
 - Enhanced device identification logic with proper fallback hierarchy
+- Refactored turn_on/turn_off methods to eliminate code duplication (DRY principle)
+- Added deterministic sorting for consistent primary HCU selection across restarts
 
 ---
 

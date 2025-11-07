@@ -34,6 +34,7 @@ PLATFORMS: list[Platform] = [
     Platform.LIGHT,
     Platform.LOCK,
     Platform.SENSOR,
+    Platform.SIREN,
     Platform.SWITCH,
 ]
 
@@ -561,7 +562,7 @@ HMIP_CHANNEL_TYPE_TO_ENTITY = {
     "NOTIFICATION_LIGHT_CHANNEL": {"class": "HcuLight"},
     "NOTIFICATION_MP3_SOUND_CHANNEL": {"class": "HcuNotificationLight"},
     "BACKLIGHT_CHANNEL": {"class": "HcuLight"},
-    "ALARM_SIREN_CHANNEL": {"class": "HcuSwitch"},
+    "ALARM_SIREN_CHANNEL": {"class": "HcuSiren"},
     "SWITCH_CHANNEL": {"class": "HcuSwitch"},
     "SWITCH_MEASURING_CHANNEL": {"class": "HcuSwitch"},
     "WIRED_SWITCH_CHANNEL": {"class": "HcuSwitch"},

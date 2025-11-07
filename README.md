@@ -398,6 +398,43 @@ actions:
 3. Name: "Button Press Timer"
 4. Duration: "00:00:01"
 
+**Example 4: Switch or Dim (Using Short and Long Press Events)**
+
+```
+alias: Offic - Switch or Dim the light
+triggers:
+  - event_type: hcu_integration_event
+    event_data:
+      device_id: 3014F711A00048240995D6BC
+      channel: 2
+    trigger: event
+actions:
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.event.data.type == 'KEY_PRESS_SHORT' }}"
+        sequence:
+          - target:
+              entity_id: light.light_office
+            action: light.toggle
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.event.data.type == 'KEY_PRESS_LONG' }}"
+        sequence:
+          - repeat:
+              while:
+                - condition: template
+                  value_template: |
+                    {{ trigger.event.data.type == 'KEY_PRESS_LONG' }}
+              sequence:
+                - data:
+                    entity_id: light.light_office
+                    brightness_step: 10
+                  action: light.turn_on
+                - delay: "0.2"
+mode: restart
+```
+
 ---
 
 ### Finding Your Device ID and Channels

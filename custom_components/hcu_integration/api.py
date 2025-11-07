@@ -147,7 +147,22 @@ class HcuApiClient:
         self._event_callback = callback
 
     def _handle_incoming_message(self, msg: dict[str, Any]) -> None:
-        """Route incoming WebSocket messages to appropriate handlers."""
+        """Route incoming WebSocket messages to appropriate handlers.
+
+        This method processes all incoming messages from the HCU WebSocket and routes
+        them to the appropriate handler based on message type:
+        - HMIP_SYSTEM_RESPONSE: Resolves pending request futures
+        - PLUGIN_*_REQUEST: Plugin lifecycle management
+        - Other messages: Passed to the event callback for processing
+
+        Args:
+            msg: The incoming message dictionary from the WebSocket.
+                 Expected to have 'type' and optionally 'id' fields.
+        """
+        if not isinstance(msg, dict):
+            _LOGGER.warning("Received non-dict message, ignoring: %s", type(msg).__name__)
+            return
+
         msg_type = msg.get("type")
         msg_id = msg.get("id")
 
@@ -155,6 +170,18 @@ class HcuApiClient:
             future = self._pending_requests.pop(msg_id)
             if not future.done():
                 response_body = msg.get("body", {})
+
+                # Validate response structure
+                if not isinstance(response_body, dict):
+                    _LOGGER.error(
+                        "Invalid HMIP_SYSTEM_RESPONSE body for request ID %s: expected dict",
+                        msg_id
+                    )
+                    future.set_exception(
+                        HcuApiError(f"Invalid response structure: {type(response_body).__name__}")
+                    )
+                    return
+
                 if response_body.get("code") != 200:
                     _LOGGER.error(
                         "HCU returned an error for request ID %s: %s", msg_id, response_body
@@ -168,6 +195,10 @@ class HcuApiClient:
             "CONFIG_TEMPLATE_REQUEST",
             "CONFIG_UPDATE_REQUEST",
         ):
+            if not msg_id:
+                _LOGGER.warning("Received %s without message ID, cannot respond", msg_type)
+                return
+
             _LOGGER.debug("Received %s: %s", msg_type, msg)
             handler_map = {
                 "PLUGIN_STATE_REQUEST": self._send_plugin_ready,
@@ -313,13 +344,44 @@ class HcuApiClient:
         await self._send_message(message)
 
     async def get_system_state(self) -> dict[str, Any]:
-        """Fetch the complete system state from the HCU."""
+        """Fetch the complete system state from the HCU.
+
+        Returns:
+            The complete system state dictionary containing:
+            - devices: Dict of device data indexed by device ID (SGTIN)
+            - groups: Dict of group data indexed by group ID
+            - home: Home-level configuration and status
+
+        Raises:
+            HcuApiError: If the API request fails or returns invalid data
+        """
         response_body = await self._send_hmip_request(
             path=API_PATHS["GET_SYSTEM_STATE"], timeout=30
         )
-        if response_body:
-            self._state = response_body
-            self._update_hcu_device_ids()
+
+        if not response_body:
+            _LOGGER.error("Received empty response from get_system_state")
+            return self._state
+
+        # Validate that the response has the expected structure
+        if not isinstance(response_body, dict):
+            _LOGGER.error(
+                "Invalid system state response: expected dict, got %s",
+                type(response_body).__name__
+            )
+            return self._state
+
+        # Ensure critical keys exist with proper defaults
+        if "devices" not in response_body:
+            _LOGGER.warning("System state missing 'devices' key, initializing empty dict")
+            response_body["devices"] = {}
+
+        if "groups" not in response_body:
+            _LOGGER.warning("System state missing 'groups' key, initializing empty dict")
+            response_body["groups"] = {}
+
+        self._state = response_body
+        self._update_hcu_device_ids()
         return self._state
 
     def get_device_by_address(self, address: str) -> dict[str, Any] | None:
@@ -334,12 +396,33 @@ class HcuApiClient:
         """
         Process push events from the HCU and update the local state cache.
 
+        This method handles three types of events from the HCU:
+        - DEVICE_CHANGED: Updates to device states and channels
+        - GROUP_CHANGED: Updates to group configurations
+        - HOME_CHANGED: Updates to home-level settings
+
+        For devices, partial updates are merged with existing data to preserve
+        channel information that wasn't included in the update.
+
+        Args:
+            events: Dictionary of event data from the HCU, where each event
+                    contains a pushEventType and associated data
+
         Returns:
             A set of device, group, or home IDs that were updated.
+            Empty set if no valid events were processed.
         """
         updated_ids = set()
 
+        if not isinstance(events, dict):
+            _LOGGER.warning("Invalid events parameter: expected dict, got %s", type(events).__name__)
+            return updated_ids
+
         for event in sorted(events.values(), key=lambda e: e.get("index", 0)):
+            if not isinstance(event, dict):
+                _LOGGER.debug("Skipping non-dict event: %s", event)
+                continue
+
             event_type = event.get("pushEventType")
             data_key, data = None, None
 
@@ -351,6 +434,17 @@ class HcuApiClient:
                 data_key, data = "home", event.get("home")
 
             if not data_key or not data:
+                if event_type:
+                    _LOGGER.debug(
+                        "Skipping event of type '%s' with missing or invalid data", event_type
+                    )
+                continue
+
+            # Validate that data has required 'id' field
+            if not isinstance(data, dict) or "id" not in data:
+                _LOGGER.warning(
+                    "Event type '%s' has invalid data structure (missing 'id' field)", event_type
+                )
                 continue
 
             data_id = data["id"]

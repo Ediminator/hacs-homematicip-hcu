@@ -79,13 +79,12 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, E
                 self._attr_has_entity_name = False
             else:
                 # Main entity on an unlabeled channel (e.g., FROLL, PSM-2)
-                # Use device name only by setting name to None and has_entity_name to True.
-                # This prevents HA from falling back to displaying the unique_id.
-                # (e.g., "HmIP-PSM-2")
-                # For unlabeled channels, the prefix will be applied to the device name automatically
-                self._attr_name = None
+                # Use the device's label or model type as the base name.
+                # Setting has_entity_name to True makes it a standalone entity name.
+                # The prefix will be applied by the logic below.
+                # (e.g., "HmIP-PSM-2" or "House1 HmIP-PSM-2" if prefixed)
+                base_name = self._device.get("label") or self._device.get("modelType")
                 self._attr_has_entity_name = True
-                return
 
         # Apply prefix to base name (only if base_name is not None)
         if base_name is not None:

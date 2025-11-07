@@ -1,5 +1,5 @@
 # custom_components/hcu_integration/event.py
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Protocol
 
 from homeassistant.components.event import (
     EventDeviceClass,
@@ -15,6 +15,21 @@ from .api import HcuApiClient
 
 if TYPE_CHECKING:
     from . import HcuCoordinator
+
+
+class TriggerableEvent(Protocol):
+    """Protocol for event entities that can be triggered by the coordinator.
+
+    Event entities implementing this protocol can be registered with the
+    coordinator and triggered generically without type-specific logic.
+    """
+
+    _device_id: str
+    _channel_index_str: str
+
+    def handle_trigger(self) -> None:
+        """Handle an event trigger from the coordinator."""
+        ...
 
 
 async def async_setup_entry(
@@ -54,6 +69,6 @@ class HcuDoorbellEvent(HcuBaseEntity, EventEntity):
         self._attr_unique_id = f"{self._device_id}_{self._channel_index_str}_doorbell_event"
 
     @callback
-    def _handle_doorbell_press(self) -> None:
-        """Handle a doorbell press event."""
+    def handle_trigger(self) -> None:
+        """Handle an event trigger from the coordinator."""
         self._trigger_event("press")

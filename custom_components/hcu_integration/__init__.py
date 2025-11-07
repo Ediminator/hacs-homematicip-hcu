@@ -105,11 +105,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass, client, entry, coordinator
     )
 
-    # Build doorbell event entity lookup dictionary for efficient O(1) access
-    coordinator._doorbell_events = {
+    # Build event entity lookup dictionary for efficient O(1) access
+    # Register all event entities that implement the TriggerableEvent protocol
+    coordinator._event_entities = {
         (event_entity._device_id, event_entity._channel_index_str): event_entity
         for event_entity in coordinator.entities.get(Platform.EVENT, [])
-        if isinstance(event_entity, event.HcuDoorbellEvent)
+        if hasattr(event_entity, "handle_trigger")
     }
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
@@ -319,7 +320,7 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
         self.client = client
         self.entry = entry
         self.entities: dict[Platform, list] = {}
-        self._doorbell_events: dict[tuple[str, str], event.HcuDoorbellEvent] = {}  # Maps (device_id, channel_idx) to doorbell event entity
+        self._event_entities: dict[tuple[str, str], event.TriggerableEvent] = {}  # Maps (device_id, channel_idx) to triggerable event entity
         self._connected_event = asyncio.Event()
 
     async def async_setup(self) -> bool:
@@ -411,11 +412,15 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
             },
         )
 
-    def _trigger_doorbell_event(self, device_id: str, channel_idx: str) -> None:
-        """Trigger the doorbell event entity for a specific device/channel."""
+    def _trigger_event_entity(self, device_id: str, channel_idx: str) -> None:
+        """Trigger an event entity for a specific device/channel.
+
+        Uses the TriggerableEvent protocol to support any event entity type
+        without coordinator needing to know specific implementation details.
+        """
         # Use O(1) dictionary lookup
         key = (device_id, channel_idx)
-        entity = self._doorbell_events.get(key)
+        entity = self._event_entities.get(key)
 
         # Fallback: search entity list if not in dictionary (race condition during startup)
         if not entity:
@@ -423,7 +428,7 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
                 (
                     event_entity
                     for event_entity in self.entities.get(Platform.EVENT, [])
-                    if isinstance(event_entity, event.HcuDoorbellEvent)
+                    if hasattr(event_entity, "handle_trigger")
                     and event_entity._device_id == device_id
                     and event_entity._channel_index_str == channel_idx
                 ),
@@ -431,17 +436,17 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
             )
             if entity:
                 # Cache the entity to avoid repeated O(n) lookups
-                self._doorbell_events[key] = entity
+                self._event_entities[key] = entity
             else:
                 _LOGGER.warning(
-                    "Doorbell event entity not found for device=%s, channel=%s",
+                    "Event entity not found for device=%s, channel=%s",
                     device_id, channel_idx
                 )
                 return
 
-        entity._handle_doorbell_press()
+        entity.handle_trigger()
         _LOGGER.debug(
-            "Triggered doorbell event entity for device=%s, channel=%s",
+            "Triggered event entity for device=%s, channel=%s",
             device_id, channel_idx
         )
 
@@ -519,9 +524,9 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
                 if should_fire:
                     channel_type = channel.get("functionalChannelType")
 
-                    # Trigger doorbell event entity for doorbell channels, otherwise fire button event
+                    # Trigger event entity for doorbell channels, otherwise fire button event
                     if channel_type == CHANNEL_TYPE_MULTI_MODE_INPUT_TRANSMITTER:
-                        self._trigger_doorbell_event(dev_id, ch_idx)
+                        self._trigger_event_entity(dev_id, ch_idx)
                         event_label = "Doorbell press"
                     else:
                         self._fire_button_event(dev_id, ch_idx, "press")

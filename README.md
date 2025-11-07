@@ -41,10 +41,6 @@ This integration connects directly to your HCU's local API, providing real-time 
 - **Homematic IP Home Control Unit (HCU)** with firmware 1.x or later
 - **Local network access** to your HCU
 
-**Compatible HCU Models:**
-- HmIP-HAP (Homematic IP Access Point)
-- HmIP-HCU-1 (Homematic IP Home Control Unit)
-
 ---
 
 ## 🚀 Installation

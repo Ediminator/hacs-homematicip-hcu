@@ -24,6 +24,7 @@ from . import (
 )
 from .api import HcuApiClient
 from .const import (
+    CHANNEL_TYPE_MULTI_MODE_INPUT_TRANSMITTER,
     DEACTIVATED_BY_DEFAULT_DEVICES,
     HMIP_CHANNEL_TYPE_TO_ENTITY,
     HMIP_FEATURE_TO_ENTITY,
@@ -96,9 +97,10 @@ async def async_discover_entities(
                         channel_mapping = HMIP_CHANNEL_TYPE_TO_ENTITY[base_channel_type]
                         break
 
-            # Create channel-based entities (lights, switches, covers, locks)
+            # Create channel-based entities (lights, switches, covers, locks, event)
             if channel_mapping:
-                if base_channel_type in EVENT_CHANNEL_TYPES:
+                # Skip EVENT_CHANNEL_TYPES except doorbell (which creates event entities)
+                if base_channel_type in EVENT_CHANNEL_TYPES and base_channel_type != CHANNEL_TYPE_MULTI_MODE_INPUT_TRANSMITTER:
                     continue
                 if is_unused_channel:
                     continue

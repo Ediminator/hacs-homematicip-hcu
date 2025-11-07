@@ -4,7 +4,7 @@ from __future__ import annotations
 import aiohttp
 import asyncio
 import logging
-from typing import cast
+from typing import Any, cast
 import random
 
 from homeassistant.config_entries import ConfigEntry
@@ -494,20 +494,18 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
                 if should_fire:
                     channel_type = channel.get("functionalChannelType")
 
-                    # Trigger doorbell event entity for doorbell channels
+                    # Trigger doorbell event entity for doorbell channels, otherwise fire button event
                     if channel_type == CHANNEL_TYPE_MULTI_MODE_INPUT_TRANSMITTER:
                         self._trigger_doorbell_event(dev_id, ch_idx)
-                        _LOGGER.debug(
-                            "Doorbell press detected via %s: device=%s, channel=%s",
-                            reason, dev_id, ch_idx
-                        )
+                        event_label = "Doorbell press"
                     else:
-                        # Fire regular button event for other event channels
                         self._fire_button_event(dev_id, ch_idx, "press")
-                        _LOGGER.debug(
-                            "Button press detected via %s: device=%s, channel=%s",
-                            reason, dev_id, ch_idx
-                        )
+                        event_label = "Button press"
+
+                    _LOGGER.debug(
+                        "%s detected via %s: device=%s, channel=%s",
+                        event_label, reason, dev_id, ch_idx
+                    )
 
     def _handle_event_message(self, message: dict) -> None:
         """Process incoming WebSocket event messages from the HCU."""

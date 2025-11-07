@@ -18,11 +18,15 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 - Error messages point directly to the configuration location in Home Assistant
 - Includes link to README documentation for additional help
 
-**Entity Prefix Applied to All Entities (PR #61 Critical Fix)**
+**Entity Prefix Applied to All Entities (PR #61 Critical Fixes)**
 - Fixed critical bug where entity prefix was not applied to main entities on unlabeled channels
 - Affected devices like HmIP-FROLL, HmIP-PSM-2, HmIP-BSM now correctly show prefix
-- Entity names now use device label or model type with prefix applied
+- Added fallback logic to ensure prefix is applied even when labels are missing:
+  - Device entities: Falls back to device label → model type → device ID
+  - Climate groups: Falls back to group label → group ID
+  - Cover groups: Falls back to group label → group ID
 - Example: With prefix "House1", device "HmIP-PSM-2" becomes "House1 HmIP-PSM-2"
+- Ensures prefix is applied to ALL entities without exception
 
 ### ✨ Enhancements
 

@@ -5,7 +5,7 @@ import logging
 from homeassistant.components.siren import SirenEntity, SirenEntityFeature
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .entity import HcuBaseEntity
@@ -50,14 +50,22 @@ class HcuSiren(HcuBaseEntity, SirenEntity):
         self._set_entity_name(channel_label=self._channel.get("label"))
 
         self._attr_unique_id = f"{self._device_id}_{self._channel_index}_siren"
+        self._attr_is_on = self._channel.get("on", False)
 
     @property
     def is_on(self) -> bool:
         """Return True if the siren is on."""
-        return self._channel.get("on", False)
+        return self._attr_is_on
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        self._attr_is_on = self._channel.get("on", False)
+        super()._handle_coordinator_update()
 
     async def _async_set_siren_state(self, turn_on: bool) -> None:
         """Set the state of the siren."""
+        self._attr_is_on = turn_on
         self._attr_assumed_state = True
         self.async_write_ha_state()
         try:

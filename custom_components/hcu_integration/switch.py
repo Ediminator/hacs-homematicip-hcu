@@ -5,7 +5,7 @@ import logging
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import HMIP_DEVICE_TYPE_TO_DEVICE_CLASS
@@ -53,13 +53,21 @@ class HcuSwitch(HcuBaseEntity, SwitchEntity):
 
         device_type = self._device.get("type")
         self._attr_device_class = HMIP_DEVICE_TYPE_TO_DEVICE_CLASS.get(device_type)
+        self._attr_is_on = self._channel.get("on", False)
 
     @property
     def is_on(self) -> bool:
-        return self._channel.get("on", False)
+        return self._attr_is_on
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        self._attr_is_on = self._channel.get("on", False)
+        super()._handle_coordinator_update()
 
     async def _async_set_switch_state(self, turn_on: bool) -> None:
         """Set the state of the switch."""
+        self._attr_is_on = turn_on
         self._attr_assumed_state = True
         self.async_write_ha_state()
         try:
@@ -113,13 +121,21 @@ class HcuWateringSwitch(HcuBaseEntity, SwitchEntity):
         self._set_entity_name(channel_label=self._channel.get("label"))
 
         self._attr_unique_id = f"{self._device_id}_{self._channel_index}_watering"
+        self._attr_is_on = self._channel.get("wateringActive", False)
 
     @property
     def is_on(self) -> bool:
-        return self._channel.get("wateringActive", False)
+        return self._attr_is_on
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        self._attr_is_on = self._channel.get("wateringActive", False)
+        super()._handle_coordinator_update()
 
     async def _async_set_watering_state(self, turn_on: bool) -> None:
         """Set the state of the watering switch."""
+        self._attr_is_on = turn_on
         self._attr_assumed_state = True
         self.async_write_ha_state()
         try:

@@ -112,8 +112,10 @@ class HcuLock(HcuBaseEntity, LockEntity):
                     _LOGGER.warning(
                         "Lock '%s' requires a PIN to function. "
                         "Please configure it: Settings → Devices & Services → "
-                        "Homematic IP Local (HCU) → CONFIGURE → Enter Authorization PIN.",
-                        self.name
+                        "Homematic IP Local (HCU) → CONFIGURE → Enter Authorization PIN. "
+                        "See %s for details.",
+                        self.name,
+                        DOCS_URL_LOCK_PIN_CONFIG,
                     )
                     
             else:

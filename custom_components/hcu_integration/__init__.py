@@ -426,6 +426,8 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
                 if isinstance(event_entity, HcuDoorbellEvent):
                     if event_entity._device_id == device_id and event_entity._channel_index_str == channel_idx:
                         entity = event_entity
+                        # Cache the entity to avoid repeated O(n) lookups
+                        self._doorbell_events[key] = entity
                         break
 
             if not entity:

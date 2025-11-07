@@ -432,6 +432,28 @@ HMIP_FEATURE_TO_ENTITY = {
         "device_class": SensorDeviceClass.CO2,
         "state_class": SensorStateClass.MEASUREMENT,
     },
+    "temperatureExternalOne": {
+        "class": "HcuTemperatureSensor",
+        "name": "Temperature External 1",
+        "unit": UnitOfTemperature.CELSIUS,
+        "device_class": SensorDeviceClass.TEMPERATURE,
+        "state_class": SensorStateClass.MEASUREMENT,
+    },
+    "temperatureExternalTwo": {
+        "class": "HcuTemperatureSensor",
+        "name": "Temperature External 2",
+        "unit": UnitOfTemperature.CELSIUS,
+        "device_class": SensorDeviceClass.TEMPERATURE,
+        "state_class": SensorStateClass.MEASUREMENT,
+    },
+    "temperatureExternalDelta": {
+        "class": "HcuGenericSensor",
+        "name": "Temperature Delta",
+        "unit": UnitOfTemperature.CELSIUS,
+        "device_class": SensorDeviceClass.TEMPERATURE,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "icon": "mdi:thermometer-chevron-up",
+    },
     # Binary Sensor Features
     "lowBat": {
         "class": "HcuBinarySensor",

@@ -265,7 +265,7 @@ Now that you've confirmed your buttons work, let's create automations!
    - Select **Template**
    - Template:
      ```jinja
-     {{ trigger.event.data.device_id == '3014F711A00048240995D6BC' and trigger.event.data.channel == 1 }}     
+     {{ trigger.event.data.device_id == '3014F711A00048240995D6BC' and trigger.event.data.channel == 1 }}
      ```
    - Replace the `device_id` and `channel` with your values!
 5. **Add Action:**

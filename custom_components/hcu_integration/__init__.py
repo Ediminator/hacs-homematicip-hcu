@@ -415,14 +415,31 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
 
     def _trigger_doorbell_event(self, device_id: str, channel_idx: str) -> None:
         """Trigger the doorbell event entity for a specific device/channel."""
-        # Use O(1) dictionary lookup instead of O(n) iteration
+        # Use O(1) dictionary lookup
         key = (device_id, channel_idx)
-        if entity := self._doorbell_events.get(key):
-            entity._handle_doorbell_press()
-            _LOGGER.debug(
-                "Triggered doorbell event entity for device=%s, channel=%s",
-                device_id, channel_idx
-            )
+        entity = self._doorbell_events.get(key)
+
+        # Fallback: search entity list if not in dictionary (race condition during startup)
+        if not entity:
+            from .event import HcuDoorbellEvent
+            for event_entity in self.entities.get(Platform.EVENT, []):
+                if isinstance(event_entity, HcuDoorbellEvent):
+                    if event_entity._device_id == device_id and event_entity._channel_index_str == channel_idx:
+                        entity = event_entity
+                        break
+
+            if not entity:
+                _LOGGER.warning(
+                    "Doorbell event entity not found for device=%s, channel=%s",
+                    device_id, channel_idx
+                )
+                return
+
+        entity._handle_doorbell_press()
+        _LOGGER.debug(
+            "Triggered doorbell event entity for device=%s, channel=%s",
+            device_id, channel_idx
+        )
 
     def _handle_device_channel_events(self, events: dict) -> None:
         """Handle DEVICE_CHANNEL_EVENT type events (stateless buttons).

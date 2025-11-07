@@ -51,7 +51,7 @@ class HcuDoorbellEvent(HcuBaseEntity, EventEntity):
         # Use channel label directly without feature name to avoid redundancy
         self._set_entity_name(channel_label=self._channel.get("label"))
 
-        self._attr_unique_id = f"{self._device_id}_{self._channel_index}_doorbell_event"
+        self._attr_unique_id = f"{self._device_id}_{self._channel_index_str}_doorbell_event"
 
     @callback
     def _handle_doorbell_press(self) -> None:

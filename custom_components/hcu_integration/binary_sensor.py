@@ -95,6 +95,19 @@ class HcuWindowBinarySensor(HcuBinarySensor):
         """
         return self._channel.get(self._feature) in ("OPEN", "TILTED")
 
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """
+        Return additional state attributes.
+
+        Provides the actual window state (OPEN/TILTED/CLOSED) as an attribute
+        so users can distinguish between open and tilted states in automations.
+        """
+        window_state = self._channel.get(self._feature)
+        return {
+            "window_state": window_state,
+        }
+
 
 class HcuSmokeBinarySensor(HcuBinarySensor):
     """
@@ -132,12 +145,12 @@ class HcuVacationModeBinarySensor(HcuHomeBaseEntity, BinarySensorEntity):
 
     PLATFORM = Platform.BINARY_SENSOR
     _attr_has_entity_name = False
-    _attr_name = "Vacation Mode"
     _attr_icon = "mdi:palm-tree"
 
     def __init__(self, coordinator: "HcuCoordinator", client: HcuApiClient):
         """Initialize the Vacation Mode sensor."""
         super().__init__(coordinator, client)
+        self._attr_name = self._apply_prefix("Vacation Mode")
         self._attr_unique_id = f"{self._hcu_device_id}_vacation_mode"
         self._update_attributes()
 

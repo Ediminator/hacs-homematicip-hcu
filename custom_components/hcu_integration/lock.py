@@ -9,7 +9,7 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import CONF_PIN
+from .const import CONF_PIN, DOCS_URL_LOCK_PIN_CONFIG
 from .entity import HcuBaseEntity
 from .api import HcuApiClient, HcuApiError
 
@@ -95,19 +95,27 @@ class HcuLock(HcuBaseEntity, LockEntity):
             # Parse the error to check if it's a PIN issue
             if "INVALID_AUTHORIZATION_PIN" in error_str:
                 _LOGGER.error(
-                    "Invalid or missing PIN for lock '%s'. Please configure the correct PIN in integration settings.",
+                    "Invalid or missing PIN for lock '%s'. "
+                    "To configure the PIN: Go to Settings → Devices & Services → "
+                    "Homematic IP Local (HCU) → CONFIGURE → Enter your door lock's Authorization PIN. "
+                    "See %s for details.",
                     self.name,
+                    DOCS_URL_LOCK_PIN_CONFIG,
                 )
                 self._pin_required = True
-                
+
                 # Only trigger reauth if we already have a PIN configured (meaning it's wrong)
                 # If no PIN is configured, user will see the attribute and can add it
                 if pin:
                     self._config_entry.async_start_reauth(self.hass)
                 else:
                     _LOGGER.warning(
-                        "Lock '%s' requires a PIN. Please reconfigure the integration to add the PIN.",
-                        self.name
+                        "Lock '%s' requires a PIN to function. "
+                        "Please configure it: Settings → Devices & Services → "
+                        "Homematic IP Local (HCU) → CONFIGURE → Enter Authorization PIN. "
+                        "See %s for details.",
+                        self.name,
+                        DOCS_URL_LOCK_PIN_CONFIG,
                     )
                     
             else:

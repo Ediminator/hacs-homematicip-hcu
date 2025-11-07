@@ -4,6 +4,62 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 
 ---
 
+## Version 1.10.0 - 2025-11-07
+
+### 🐛 Bug Fixes
+
+**Window Sensor State Attribute (Issue #48)**
+- HmIP-SRH window sensors now expose the actual window state ("OPEN", "TILTED", or "CLOSED") as a state attribute
+- Users can now distinguish between tilted and fully open windows in automations
+- Binary sensor still shows on/off (on for both OPEN and TILTED), but the `window_state` attribute provides the precise state
+
+**Improved Lock PIN Error Messages (Issue #30)**
+- Door lock PIN configuration errors now include detailed step-by-step instructions
+- Error messages point directly to the configuration location in Home Assistant
+- Includes link to README documentation for additional help
+
+**Entity Prefix Applied to All Entities (PR #61 Critical Fixes)**
+- Fixed critical bug where entity prefix was not applied to main entities on unlabeled channels
+- Affected devices like HmIP-FROLL, HmIP-PSM-2, HmIP-BSM now correctly show prefix
+- Added fallback logic to ensure prefix is applied even when labels are missing:
+  - Device entities: Falls back to device label → model type → device ID
+  - Climate groups: Falls back to group label → group ID
+  - Cover groups: Falls back to group label → group ID
+- Example: With prefix "House1", device "HmIP-PSM-2" becomes "House1 HmIP-PSM-2"
+- Ensures prefix is applied to ALL entities without exception
+
+### ✨ Enhancements
+
+**Entity Name Prefix for Multi-Home Setups (Issue #43)**
+- Added optional entity name prefix during integration setup
+- Perfect for users with multiple HCU instances (e.g., multiple houses)
+- Prefix is applied to all entity names (e.g., "House1 Living Room")
+- Helps avoid naming conflicts and improves organization
+- Configured in Settings → Devices & Services → Add Integration → Enter optional prefix
+
+### 🔧 Code Quality Improvements
+
+**Refactored Entity Prefix Logic (PR #61 Feedback)**
+- Created `HcuEntityPrefixMixin` to eliminate code duplication across base entity classes
+- Added `_apply_prefix()` helper method to centralize prefix application logic
+- Consolidated prefix application in `_set_entity_name` method (DRY principle)
+- Updated all entity classes to use the helper method (alarm_control_panel, binary_sensor, climate, cover, sensor)
+- Removed redundant None check in `_set_entity_name` method
+- Moved documentation URL to constant (`DOCS_URL_LOCK_PIN_CONFIG`) for better maintainability
+- Improved code clarity and eliminated repetitive prefix logic across 6 files
+
+### 📝 Documentation
+
+**Issue #20 Closure**
+- Confirmed that HmIP-WGS and HmIP-WRC6 button event issues were fixed in v1.8.1
+- Created comprehensive closure documentation with testing instructions
+
+**Issue #55 Investigation**
+- Created diagnostics request for HmIP-BSM energy counter issue
+- Requires user diagnostics file to determine root cause
+
+---
+
 ## Version 1.9.0 - 2025-11-07
 
 ### 🐛 Bug Fixes

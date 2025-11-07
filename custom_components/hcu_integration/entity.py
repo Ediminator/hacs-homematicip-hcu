@@ -5,14 +5,31 @@ from typing import TYPE_CHECKING, Any
 from homeassistant.helpers.entity import DeviceInfo, Entity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN
+from .const import DOMAIN, CONF_ENTITY_PREFIX
 from .api import HcuApiClient
 
 if TYPE_CHECKING:
     from . import HcuCoordinator
 
 
-class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], Entity):
+class HcuEntityPrefixMixin:
+    """Mixin to provide entity prefix property for all HCU entities."""
+
+    coordinator: "HcuCoordinator"  # Type hint for the coordinator
+
+    @property
+    def _entity_prefix(self) -> str:
+        """Get the entity name prefix from config entry."""
+        return self.coordinator.config_entry.data.get(CONF_ENTITY_PREFIX, "")
+
+    def _apply_prefix(self, base_name: str) -> str:
+        """Apply entity prefix to a base name."""
+        if prefix := self._entity_prefix:
+            return f"{prefix} {base_name}"
+        return base_name
+
+
+class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, Entity):
     """Base class for entities tied to a specific Homematic IP device channel."""
 
     _attr_should_poll = False
@@ -42,33 +59,40 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], Entity):
         Set the entity name based on the channel label and feature.
 
         This central helper ensures consistent naming across all platforms.
+        Applies entity prefix if configured for multi-home setups.
         """
+        base_name: str
+
         if feature_name:
             # This is a "feature" entity (sensor, binary_sensor, button)
             if channel_label:
                 # Sensor on a labeled channel: "Channel Label Feature Name"
                 # (e.g., "Living Room Thermostat Temperature")
-                self._attr_name = f"{channel_label} {feature_name}"
+                base_name = f"{channel_label} {feature_name}"
                 self._attr_has_entity_name = False
             else:
                 # Sensor on an unlabeled channel: "Feature Name"
                 # (e.g., "Low Battery" on a device)
-                self._attr_name = feature_name
+                base_name = feature_name
                 self._attr_has_entity_name = True
         else:
             # This is a "main" entity (switch, light, cover, lock)
             if channel_label:
                 # Main entity on a labeled channel: "Channel Label"
                 # (e.g., "Ceiling Light")
-                self._attr_name = channel_label
+                base_name = channel_label
                 self._attr_has_entity_name = False
             else:
                 # Main entity on an unlabeled channel (e.g., FROLL, PSM-2)
-                # Use device name only by setting name to None and has_entity_name to True.
-                # This prevents HA from falling back to displaying the unique_id.
-                # (e.g., "HmIP-PSM-2")
-                self._attr_name = None
+                # Use the device's label, model type, or device ID as fallback.
+                # Setting has_entity_name to True makes it a standalone entity name.
+                # The prefix will be applied by the logic below.
+                # (e.g., "HmIP-PSM-2" or "House1 HmIP-PSM-2" if prefixed)
+                base_name = self._device.get("label") or self._device.get("modelType") or self._device_id
                 self._attr_has_entity_name = True
+
+        # Apply prefix to base name
+        self._attr_name = self._apply_prefix(base_name)
 
     @property
     def _device(self) -> dict[str, Any]:
@@ -124,7 +148,7 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], Entity):
             self.async_write_ha_state()
 
 
-class HcuGroupBaseEntity(CoordinatorEntity["HcuCoordinator"], Entity):
+class HcuGroupBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, Entity):
     """Base class for entities that represent a Homematic IP group."""
 
     _attr_should_poll = False
@@ -175,7 +199,7 @@ class HcuGroupBaseEntity(CoordinatorEntity["HcuCoordinator"], Entity):
             self.async_write_ha_state()
 
 
-class HcuHomeBaseEntity(CoordinatorEntity["HcuCoordinator"], Entity):
+class HcuHomeBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, Entity):
     """Base class for entities tied to the global 'home' object."""
 
     _attr_should_poll = False

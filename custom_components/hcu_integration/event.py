@@ -59,4 +59,3 @@ class HcuDoorbellEvent(HcuBaseEntity, EventEntity):
     def _handle_doorbell_press(self) -> None:
         """Handle a doorbell press event."""
         self._trigger_event("press")
-        self.async_write_ha_state()

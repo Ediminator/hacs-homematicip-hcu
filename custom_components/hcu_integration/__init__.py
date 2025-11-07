@@ -48,6 +48,7 @@ from .const import (
     ATTR_END_TIME,
     EVENT_CHANNEL_TYPES,
     DEVICE_CHANNEL_EVENT_TYPES,
+    CHANNEL_TYPE_MULTI_MODE_INPUT_TRANSMITTER,
 )
 from .discovery import async_discover_entities
 
@@ -102,6 +103,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     coordinator.entities = await async_discover_entities(
         hass, client, entry, coordinator
     )
+
+    # Build doorbell event entity lookup dictionary for efficient O(1) access
+    for event_entity in coordinator.entities.get(Platform.EVENT, []):
+        if hasattr(event_entity, "_device_id") and hasattr(event_entity, "_channel_index_str"):
+            key = (event_entity._device_id, event_entity._channel_index_str)
+            coordinator._doorbell_events[key] = event_entity
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
@@ -310,6 +317,7 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
         self.client = client
         self.entry = entry
         self.entities: dict[Platform, list] = {}
+        self._doorbell_events: dict[tuple[str, str], Any] = {}  # Maps (device_id, channel_idx) to event entity
         self._connected_event = asyncio.Event()
 
     async def async_setup(self) -> bool:
@@ -403,20 +411,14 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
 
     def _trigger_doorbell_event(self, device_id: str, channel_idx: str) -> None:
         """Trigger the doorbell event entity for a specific device/channel."""
-        # Find the doorbell event entity for this device and channel
-        for entity in self.entities.get(Platform.EVENT, []):
-            if (
-                hasattr(entity, "_device_id") and
-                hasattr(entity, "_channel_index_str") and
-                entity._device_id == device_id and
-                entity._channel_index_str == channel_idx
-            ):
-                entity._handle_doorbell_press()
-                _LOGGER.debug(
-                    "Triggered doorbell event entity for device=%s, channel=%s",
-                    device_id, channel_idx
-                )
-                return
+        # Use O(1) dictionary lookup instead of O(n) iteration
+        key = (device_id, channel_idx)
+        if entity := self._doorbell_events.get(key):
+            entity._handle_doorbell_press()
+            _LOGGER.debug(
+                "Triggered doorbell event entity for device=%s, channel=%s",
+                device_id, channel_idx
+            )
 
     def _handle_device_channel_events(self, events: dict) -> None:
         """Handle DEVICE_CHANNEL_EVENT type events (stateless buttons).
@@ -493,7 +495,7 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
                     channel_type = channel.get("functionalChannelType")
 
                     # Trigger doorbell event entity for doorbell channels
-                    if channel_type == "MULTI_MODE_INPUT_TRANSMITTER":
+                    if channel_type == CHANNEL_TYPE_MULTI_MODE_INPUT_TRANSMITTER:
                         self._trigger_doorbell_event(dev_id, ch_idx)
                         _LOGGER.debug(
                             "Doorbell press detected via %s: device=%s, channel=%s",

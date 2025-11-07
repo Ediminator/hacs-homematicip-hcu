@@ -109,10 +109,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     # Build doorbell event entity lookup dictionary for efficient O(1) access
     from .event import HcuDoorbellEvent
-    for event_entity in coordinator.entities.get(Platform.EVENT, []):
-        if isinstance(event_entity, HcuDoorbellEvent):
-            key = (event_entity._device_id, event_entity._channel_index_str)
-            coordinator._doorbell_events[key] = event_entity
+    coordinator._doorbell_events = {
+        (event_entity._device_id, event_entity._channel_index_str): event_entity
+        for event_entity in coordinator.entities.get(Platform.EVENT, [])
+        if isinstance(event_entity, HcuDoorbellEvent)
+    }
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 

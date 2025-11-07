@@ -69,6 +69,7 @@ class SwitchStateMixin:
         except (HcuApiError, ConnectionError) as err:
             action = "on" if turn_on else "off"
             _LOGGER.error("Failed to turn %s %s %s: %s", action, entity_type, self.name, err)
+            self._attr_is_on = not turn_on  # Revert to previous state
             self._attr_assumed_state = False
             self.async_write_ha_state()  # type: ignore[attr-defined]
 

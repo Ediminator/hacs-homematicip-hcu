@@ -49,6 +49,9 @@ DEFAULT_COMFORT_TEMPERATURE = 21.0
 DEFAULT_MIN_TEMP = 5.0
 DEFAULT_MAX_TEMP = 30.0
 
+# --- Documentation URLs ---
+DOCS_URL_LOCK_PIN_CONFIG = "https://github.com/Ediminator/hacs-homematicip-hcu#step-4-configure-door-lock-pin-optional"
+
 # --- API and Plugin Constants ---
 PLUGIN_ID = "de.homeassistant.hcu.integration"
 PLUGIN_FRIENDLY_NAME = {

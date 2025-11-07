@@ -9,7 +9,7 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import CONF_PIN
+from .const import CONF_PIN, DOCS_URL_LOCK_PIN_CONFIG
 from .entity import HcuBaseEntity
 from .api import HcuApiClient, HcuApiError
 
@@ -98,8 +98,9 @@ class HcuLock(HcuBaseEntity, LockEntity):
                     "Invalid or missing PIN for lock '%s'. "
                     "To configure the PIN: Go to Settings → Devices & Services → "
                     "Homematic IP Local (HCU) → CONFIGURE → Enter your door lock's Authorization PIN. "
-                    "See https://github.com/Ediminator/hacs-homematicip-hcu#step-4-configure-door-lock-pin-optional for details.",
+                    "See %s for details.",
                     self.name,
+                    DOCS_URL_LOCK_PIN_CONFIG,
                 )
                 self._pin_required = True
 

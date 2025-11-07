@@ -12,7 +12,18 @@ if TYPE_CHECKING:
     from . import HcuCoordinator
 
 
-class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], Entity):
+class HcuEntityPrefixMixin:
+    """Mixin to provide entity prefix property for all HCU entities."""
+
+    coordinator: "HcuCoordinator"  # Type hint for the coordinator
+
+    @property
+    def _entity_prefix(self) -> str:
+        """Get the entity name prefix from config entry."""
+        return self.coordinator.config_entry.data.get(CONF_ENTITY_PREFIX, "")
+
+
+class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, Entity):
     """Base class for entities tied to a specific Homematic IP device channel."""
 
     _attr_should_poll = False
@@ -33,11 +44,6 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], Entity):
         self._channel_index = int(channel_index)
         self._attr_assumed_state = False
 
-    @property
-    def _entity_prefix(self) -> str:
-        """Get the entity name prefix from config entry."""
-        return self.coordinator.config_entry.data.get(CONF_ENTITY_PREFIX, "")
-
     def _set_entity_name(
         self,
         channel_label: str | None = None,
@@ -50,6 +56,7 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], Entity):
         Applies entity prefix if configured for multi-home setups.
         """
         prefix = self._entity_prefix
+        base_name: str | None = None
 
         if feature_name:
             # This is a "feature" entity (sensor, binary_sensor, button)
@@ -57,19 +64,18 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], Entity):
                 # Sensor on a labeled channel: "Channel Label Feature Name"
                 # (e.g., "Living Room Thermostat Temperature")
                 base_name = f"{channel_label} {feature_name}"
-                self._attr_name = f"{prefix} {base_name}" if prefix else base_name
                 self._attr_has_entity_name = False
             else:
                 # Sensor on an unlabeled channel: "Feature Name"
                 # (e.g., "Low Battery" on a device)
-                self._attr_name = f"{prefix} {feature_name}" if prefix else feature_name
+                base_name = feature_name
                 self._attr_has_entity_name = True
         else:
             # This is a "main" entity (switch, light, cover, lock)
             if channel_label:
                 # Main entity on a labeled channel: "Channel Label"
                 # (e.g., "Ceiling Light")
-                self._attr_name = f"{prefix} {channel_label}" if prefix else channel_label
+                base_name = channel_label
                 self._attr_has_entity_name = False
             else:
                 # Main entity on an unlabeled channel (e.g., FROLL, PSM-2)
@@ -79,6 +85,11 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], Entity):
                 # For unlabeled channels, the prefix will be applied to the device name automatically
                 self._attr_name = None
                 self._attr_has_entity_name = True
+                return
+
+        # Apply prefix to base name (only if base_name is not None)
+        if base_name is not None:
+            self._attr_name = f"{prefix} {base_name}" if prefix else base_name
 
     @property
     def _device(self) -> dict[str, Any]:
@@ -134,7 +145,7 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], Entity):
             self.async_write_ha_state()
 
 
-class HcuGroupBaseEntity(CoordinatorEntity["HcuCoordinator"], Entity):
+class HcuGroupBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, Entity):
     """Base class for entities that represent a Homematic IP group."""
 
     _attr_should_poll = False
@@ -151,11 +162,6 @@ class HcuGroupBaseEntity(CoordinatorEntity["HcuCoordinator"], Entity):
         self._client = client
         self._group_id = group_data["id"]
         self._attr_assumed_state = False
-
-    @property
-    def _entity_prefix(self) -> str:
-        """Get the entity name prefix from config entry."""
-        return self.coordinator.config_entry.data.get(CONF_ENTITY_PREFIX, "")
 
     @property
     def _group(self) -> dict[str, Any]:
@@ -190,7 +196,7 @@ class HcuGroupBaseEntity(CoordinatorEntity["HcuCoordinator"], Entity):
             self.async_write_ha_state()
 
 
-class HcuHomeBaseEntity(CoordinatorEntity["HcuCoordinator"], Entity):
+class HcuHomeBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, Entity):
     """Base class for entities tied to the global 'home' object."""
 
     _attr_should_poll = False
@@ -207,11 +213,6 @@ class HcuHomeBaseEntity(CoordinatorEntity["HcuCoordinator"], Entity):
         self._hcu_device_id = self._client.hcu_device_id
         self._home_uuid = self._client.state.get("home", {}).get("id")
         self._attr_assumed_state = False
-
-    @property
-    def _entity_prefix(self) -> str:
-        """Get the entity name prefix from config entry."""
-        return self.coordinator.config_entry.data.get(CONF_ENTITY_PREFIX, "")
 
     @property
     def _home(self) -> dict[str, Any]:

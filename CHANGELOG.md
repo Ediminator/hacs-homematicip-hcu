@@ -27,6 +27,14 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 - Helps avoid naming conflicts and improves organization
 - Configured in Settings → Devices & Services → Add Integration → Enter optional prefix
 
+### 🔧 Code Quality Improvements
+
+**Refactored Entity Prefix Logic (PR #61 Feedback)**
+- Created `HcuEntityPrefixMixin` to eliminate code duplication across base entity classes
+- Consolidated prefix application logic in `_set_entity_name` method (DRY principle)
+- Moved documentation URL to constant (`DOCS_URL_LOCK_PIN_CONFIG`) for better maintainability
+- Improved code clarity and reduced repetition
+
 ### 📝 Documentation
 
 **Issue #20 Closure**

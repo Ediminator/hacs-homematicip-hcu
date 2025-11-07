@@ -150,8 +150,7 @@ class HcuVacationModeBinarySensor(HcuHomeBaseEntity, BinarySensorEntity):
     def __init__(self, coordinator: "HcuCoordinator", client: HcuApiClient):
         """Initialize the Vacation Mode sensor."""
         super().__init__(coordinator, client)
-        prefix = self._entity_prefix
-        self._attr_name = f"{prefix} Vacation Mode" if prefix else "Vacation Mode"
+        self._attr_name = self._apply_prefix("Vacation Mode")
         self._attr_unique_id = f"{self._hcu_device_id}_vacation_mode"
         self._update_attributes()
 

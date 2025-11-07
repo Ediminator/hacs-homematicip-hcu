@@ -41,9 +41,12 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 
 **Refactored Entity Prefix Logic (PR #61 Feedback)**
 - Created `HcuEntityPrefixMixin` to eliminate code duplication across base entity classes
-- Consolidated prefix application logic in `_set_entity_name` method (DRY principle)
+- Added `_apply_prefix()` helper method to centralize prefix application logic
+- Consolidated prefix application in `_set_entity_name` method (DRY principle)
+- Updated all entity classes to use the helper method (alarm_control_panel, binary_sensor, climate, cover, sensor)
+- Removed redundant None check in `_set_entity_name` method
 - Moved documentation URL to constant (`DOCS_URL_LOCK_PIN_CONFIG`) for better maintainability
-- Improved code clarity and reduced repetition
+- Improved code clarity and eliminated repetitive prefix logic across 6 files
 
 ### 📝 Documentation
 

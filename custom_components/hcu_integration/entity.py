@@ -22,6 +22,12 @@ class HcuEntityPrefixMixin:
         """Get the entity name prefix from config entry."""
         return self.coordinator.config_entry.data.get(CONF_ENTITY_PREFIX, "")
 
+    def _apply_prefix(self, base_name: str) -> str:
+        """Apply entity prefix to a base name."""
+        if prefix := self._entity_prefix:
+            return f"{prefix} {base_name}"
+        return base_name
+
 
 class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, Entity):
     """Base class for entities tied to a specific Homematic IP device channel."""
@@ -55,8 +61,7 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, E
         This central helper ensures consistent naming across all platforms.
         Applies entity prefix if configured for multi-home setups.
         """
-        prefix = self._entity_prefix
-        base_name: str | None = None
+        base_name: str
 
         if feature_name:
             # This is a "feature" entity (sensor, binary_sensor, button)
@@ -86,9 +91,8 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, E
                 base_name = self._device.get("label") or self._device.get("modelType") or self._device_id
                 self._attr_has_entity_name = True
 
-        # Apply prefix to base name (only if base_name is not None)
-        if base_name is not None:
-            self._attr_name = f"{prefix} {base_name}" if prefix else base_name
+        # Apply prefix to base name
+        self._attr_name = self._apply_prefix(base_name)
 
     @property
     def _device(self) -> dict[str, Any]:

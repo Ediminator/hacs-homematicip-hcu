@@ -80,8 +80,9 @@ class HcuApiClient:
 
     def _update_hcu_device_ids(self) -> None:
         """Identify devices representing the HCU to correctly associate entities."""
-        primary_id = self.state.get("home", {}).get("accessPointId")
+        access_point_id = self.state.get("home", {}).get("accessPointId")
 
+        # Collect all access point type devices (HCU, HAP, DRAP, etc.)
         hcu_ids = {
             device_id
             for device_id, device_data in self.state.get("devices", {}).items()
@@ -96,15 +97,33 @@ class HcuApiClient:
                 if device_data.get("modelType") in HCU_MODEL_TYPES
             }
 
-        if primary_id:
-            hcu_ids.add(primary_id)
+        if access_point_id:
+            hcu_ids.add(access_point_id)
 
         self._hcu_device_ids = hcu_ids
 
-        if primary_id:
-            self._primary_hcu_device_id = primary_id
+        # Prioritize actual HCU models (HmIP-HCU-1, HmIP-HCU1-A) over auxiliary access points
+        # This ensures home-level entities (alarm, vacation) link to the real HCU, not HAP/DRAP
+        # The prioritization order is: actual HCU models -> accessPointId from home state -> any identified HCU-like device.
+        # Rationale: In multi-access-point setups, home.accessPointId may point to an auxiliary HAP/DRAP
+        # instead of the main HCU, causing incorrect device associations. By explicitly prioritizing
+        # actual HCU model types, we ensure the true central controller is always the primary device.
+        devices = self.state.get("devices", {})
+        primary_hcu_candidates = sorted([
+            device_id
+            for device_id in hcu_ids
+            if devices.get(device_id, {}).get("modelType") in HCU_MODEL_TYPES
+        ])
+
+        if primary_hcu_candidates:
+            # Use the actual HCU as primary (deterministically select first after sorting)
+            self._primary_hcu_device_id = primary_hcu_candidates[0]
+        elif access_point_id:
+            # Fallback to home.accessPointId if no HCU model found
+            self._primary_hcu_device_id = access_point_id
         elif hcu_ids:
-            self._primary_hcu_device_id = next(iter(hcu_ids), None)
+            # Last resort: pick any access point (sort for deterministic selection)
+            self._primary_hcu_device_id = sorted(hcu_ids)[0]
         else:
             self._primary_hcu_device_id = None
 

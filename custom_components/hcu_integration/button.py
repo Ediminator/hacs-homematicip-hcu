@@ -70,3 +70,37 @@ class HcuResetEnergyButton(HcuBaseEntity, ButtonEntity):
             _LOGGER.error(
                 "Error resetting energy counter for %s: %s", self.entity_id, err
             )
+
+
+class HcuDoorOpenerButton(HcuBaseEntity, ButtonEntity):
+    """Representation of a button to trigger a door opener (e.g., HmIP-FDC)."""
+
+    PLATFORM = Platform.BUTTON
+    _attr_icon = "mdi:door"
+
+    def __init__(
+        self,
+        coordinator: "HcuCoordinator",
+        client: HcuApiClient,
+        device_data: dict,
+        channel_index: str,
+    ):
+        """Initialize the door opener button."""
+        super().__init__(coordinator, client, device_data, channel_index)
+
+        # Set entity name using the centralized naming helper
+        self._set_entity_name(channel_label=self._channel.get("label"))
+
+        self._attr_unique_id = f"{self._device_id}_{self._channel_index}_open"
+
+    async def async_press(self) -> None:
+        """Trigger the door opener (sends 1s pulse to open door)."""
+        _LOGGER.info("Triggering door opener for %s", self.entity_id)
+        try:
+            await self._client.async_send_door_command(
+                self._device_id, self._channel_index, "OPEN"
+            )
+        except (HcuApiError, ConnectionError) as err:
+            _LOGGER.error(
+                "Error triggering door opener for %s: %s", self.entity_id, err
+            )

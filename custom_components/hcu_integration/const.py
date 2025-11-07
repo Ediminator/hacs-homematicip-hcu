@@ -34,6 +34,7 @@ PLATFORMS: list[Platform] = [
     Platform.LIGHT,
     Platform.LOCK,
     Platform.SENSOR,
+    Platform.SIREN,
     Platform.SWITCH,
 ]
 
@@ -131,7 +132,7 @@ HCU_DEVICE_TYPES = {
     "ACCESS_POINT",
     "WIRED_DIN_RAIL_ACCESS_POINT",
 }
-HCU_MODEL_TYPES = {"HmIP-HAP", "HmIP-HCU-1"}
+HCU_MODEL_TYPES = {"HmIP-HCU-1", "HmIP-HCU1-A"}
 
 DEACTIVATED_BY_DEFAULT_DEVICES = {
     "FLOOR_TERMINAL_BLOCK_12",
@@ -561,7 +562,7 @@ HMIP_CHANNEL_TYPE_TO_ENTITY = {
     "NOTIFICATION_LIGHT_CHANNEL": {"class": "HcuLight"},
     "NOTIFICATION_MP3_SOUND_CHANNEL": {"class": "HcuNotificationLight"},
     "BACKLIGHT_CHANNEL": {"class": "HcuLight"},
-    "ALARM_SIREN_CHANNEL": {"class": "HcuSwitch"},
+    "ALARM_SIREN_CHANNEL": {"class": "HcuSiren"},
     "SWITCH_CHANNEL": {"class": "HcuSwitch"},
     "SWITCH_MEASURING_CHANNEL": {"class": "HcuSwitch"},
     "WIRED_SWITCH_CHANNEL": {"class": "HcuSwitch"},
@@ -573,6 +574,7 @@ HMIP_CHANNEL_TYPE_TO_ENTITY = {
     "BLIND_CHANNEL": {"class": "HcuCover"},
     "GARAGE_DOOR_CHANNEL": {"class": "HcuGarageDoorCover"},
     "DOOR_CHANNEL": {"class": "HcuGarageDoorCover"},
+    "DOOR_SWITCH_CHANNEL": {"class": "HcuDoorOpenerButton"},
     "DOOR_LOCK_CHANNEL": {"class": "HcuLock"},
     "LIGHT_SENSOR_CHANNEL": None,
     "MOTION_DETECTION_CHANNEL": None,

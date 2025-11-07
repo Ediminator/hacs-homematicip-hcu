@@ -207,13 +207,22 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
 
         self._attr_assumed_state = True
         self._attr_target_temperature = temperature
-        self._attr_hvac_mode = (
-            HVACMode.HEAT if temperature > self.min_temp else HVACMode.OFF
-        )
+
+        # Only update HVAC mode if we're explicitly turning heating off (temp at minimum)
+        # or if we're not in AUTO mode (to avoid disrupting scheduled operation)
+        if temperature <= self.min_temp:
+            self._attr_hvac_mode = HVACMode.OFF
+        elif self._attr_hvac_mode not in (HVACMode.AUTO, HVACMode.HEAT):
+            self._attr_hvac_mode = HVACMode.HEAT
+
         self.async_write_ha_state()
 
-        if self._group.get("controlMode") != "MANUAL":
-            await self._client.async_set_group_control_mode(self._group_id, "MANUAL")
+        # Only switch to MANUAL control mode if we're in HEAT mode (manual operation)
+        # If in AUTO mode, keep AUTO and let the setpoint be a temporary override
+        # that will revert at the next scheduled temperature change
+        if self._attr_hvac_mode == HVACMode.HEAT:
+            if self._group.get("controlMode") != "MANUAL":
+                await self._client.async_set_group_control_mode(self._group_id, "MANUAL")
 
         await self._client.async_set_group_setpoint_temperature(
             self._group_id, temperature

@@ -18,6 +18,7 @@ from . import (
     light,
     lock,
     sensor,
+    siren,
     switch,
 )
 from .api import HcuApiClient
@@ -53,6 +54,7 @@ async def async_discover_entities(
     class_module_map = {
         "HcuLight": light,
         "HcuNotificationLight": light,
+        "HcuSiren": siren,
         "HcuSwitch": switch,
         "HcuWateringSwitch": switch,
         "HcuCover": cover,
@@ -60,6 +62,7 @@ async def async_discover_entities(
         "HcuCoverGroup": cover,
         "HcuLock": lock,
         "HcuResetEnergyButton": button,
+        "HcuDoorOpenerButton": button,
         "HcuGenericSensor": sensor,
         "HcuTemperatureSensor": sensor,
         "HcuHomeSensor": sensor,

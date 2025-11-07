@@ -4,6 +4,53 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 
 ---
 
+## Version 1.11.0 - 2025-11-07
+
+### 🐛 Bug Fixes
+
+**HCU Device Registration in Multi-Access-Point Setups (Issue #42)**
+- Fixed critical issue where the actual HCU device was missing from device registry in setups with multiple access points (HCU + HAP + DRAP)
+- Home-level entities (vacation mode, alarm) are now correctly assigned to the HCU device instead of auxiliary access points
+- Updated logic to prioritize actual HCU models (HmIP-HCU-1, HmIP-HCU1-A) when determining the primary device
+- HAP and DRAP are now properly recognized as auxiliary access points connected to the main HCU
+- Devices that were incorrectly associated with HAP now correctly show as children of the HCU
+
+**Heating Group Auto Mode Preservation (Issue #35)**
+- Fixed behavior where manually adjusting temperature switched from AUTO to MANUAL mode permanently
+- Temperature adjustments in AUTO mode now create temporary overrides that automatically revert at the next scheduled temperature change
+- Matches the original Homematic IP app behavior - users can adjust temperature without disrupting heating schedules
+- System automatically resumes scheduled operation at the next programmed time
+- Manual temperature adjustments in AUTO mode no longer force the system into MANUAL mode unless explicitly set to HEAT
+
+**Alarm Siren Device Classification (Issue #50)**
+- HmIP-ASIR2 alarm siren now properly classified as siren entity instead of switch
+- Users can now use `siren.turn_on` and `siren.turn_off` services
+- Added new siren platform with proper entity features
+- Created `HcuSiren` class for alarm siren devices
+
+### ✨ Enhancements
+
+**Door Opener Button for HmIP-FDC (Issue #41)**
+- Added button entity to trigger door opener on HmIP-FDC (Full Flush Door Controller)
+- Creates "Open Door" button that sends 1-second pulse to open door
+- Provides the primary functionality that was missing from this device
+- Matches functionality available in the Homematic IP app
+
+**HmIP-RC8 Button Events (Issue #33)**
+- Confirmed HmIP-RC8 button events are working correctly (supported since v1.8.1)
+- `SINGLE_KEY_CHANNEL` is included in event handling
+- Added documentation for proper automation configuration (channel numbers should not be quoted)
+
+### 🔧 Technical Improvements
+
+- Added Platform.SIREN to platforms list
+- Updated HCU_MODEL_TYPES to correctly identify actual HCU devices (removed HmIP-HAP as it's an auxiliary access point)
+- Enhanced device identification logic with proper fallback hierarchy
+- Refactored turn_on/turn_off methods to eliminate code duplication (DRY principle)
+- Added deterministic sorting for consistent primary HCU selection across restarts
+
+---
+
 ## Version 1.10.0 - 2025-11-07
 
 ### 🐛 Bug Fixes

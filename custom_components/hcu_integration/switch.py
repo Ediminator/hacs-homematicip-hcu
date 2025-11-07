@@ -1,21 +1,18 @@
 # custom_components/hcu_integration/switch.py
 from typing import TYPE_CHECKING, Any
-import logging
 
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import HMIP_DEVICE_TYPE_TO_DEVICE_CLASS
-from .entity import HcuBaseEntity
-from .api import HcuApiClient, HcuApiError
+from .entity import HcuBaseEntity, SwitchStateMixin
+from .api import HcuApiClient
 
 if TYPE_CHECKING:
     from . import HcuCoordinator
-
-_LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
@@ -31,7 +28,7 @@ async def async_setup_entry(
         async_add_entities(entities)
 
 
-class HcuSwitch(HcuBaseEntity, SwitchEntity):
+class HcuSwitch(SwitchStateMixin, HcuBaseEntity, SwitchEntity):
     """Representation of a standard Homematic IP HCU switch."""
 
     PLATFORM = Platform.SWITCH
@@ -42,47 +39,37 @@ class HcuSwitch(HcuBaseEntity, SwitchEntity):
         client: HcuApiClient,
         device_data: dict,
         channel_index: str,
-        **kwargs: Any,
     ):
         super().__init__(coordinator, client, device_data, channel_index)
 
-        # REFACTOR: Correctly call the centralized naming helper.
         self._set_entity_name(channel_label=self._channel.get("label"))
 
         self._attr_unique_id = f"{self._device_id}_{self._channel_index}_on"
 
         device_type = self._device.get("type")
         self._attr_device_class = HMIP_DEVICE_TYPE_TO_DEVICE_CLASS.get(device_type)
+        self._init_switch_state()
 
-    @property
-    def is_on(self) -> bool:
-        return self._channel.get("on", False)
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        self._sync_switch_state_from_coordinator()
+        super()._handle_coordinator_update()
+
+    async def _call_switch_api(self, turn_on: bool) -> None:
+        """Call the API to set the switch state."""
+        on_level = 1.0 if turn_on else 0.0
+        await self._client.async_set_switch_state(
+            self._device_id, self._channel_index, turn_on, on_level=on_level
+        )
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the switch on."""
-        self._attr_assumed_state = True
-        self.async_write_ha_state()
-        try:
-            await self._client.async_set_switch_state(
-                self._device_id, self._channel_index, True, on_level=1.0
-            )
-        except (HcuApiError, ConnectionError) as err:
-            _LOGGER.error("Failed to turn on switch %s: %s", self.name, err)
-            self._attr_assumed_state = False
-            self.async_write_ha_state()
+        await self._async_set_optimistic_state(True, "switch")
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the switch off."""
-        self._attr_assumed_state = True
-        self.async_write_ha_state()
-        try:
-            await self._client.async_set_switch_state(
-                self._device_id, self._channel_index, False, on_level=0.0
-            )
-        except (HcuApiError, ConnectionError) as err:
-            _LOGGER.error("Failed to turn off switch %s: %s", self.name, err)
-            self._attr_assumed_state = False
-            self.async_write_ha_state()
+        await self._async_set_optimistic_state(False, "switch")
 
     async def async_play_sound(
         self, sound_file: str, volume: float, duration: float
@@ -97,11 +84,12 @@ class HcuSwitch(HcuBaseEntity, SwitchEntity):
         )
 
 
-class HcuWateringSwitch(HcuBaseEntity, SwitchEntity):
+class HcuWateringSwitch(SwitchStateMixin, HcuBaseEntity, SwitchEntity):
     """Representation of a Homematic IP HCU watering controller."""
 
     PLATFORM = Platform.SWITCH
     _attr_icon = "mdi:water"
+    _state_channel_key = "wateringActive"
 
     def __init__(
         self,
@@ -109,41 +97,30 @@ class HcuWateringSwitch(HcuBaseEntity, SwitchEntity):
         client: HcuApiClient,
         device_data: dict,
         channel_index: str,
-        **kwargs: Any,
     ):
         super().__init__(coordinator, client, device_data, channel_index)
 
-        # REFACTOR: Correctly call the centralized naming helper.
         self._set_entity_name(channel_label=self._channel.get("label"))
 
         self._attr_unique_id = f"{self._device_id}_{self._channel_index}_watering"
+        self._init_switch_state()
 
-    @property
-    def is_on(self) -> bool:
-        return self._channel.get("wateringActive", False)
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        self._sync_switch_state_from_coordinator()
+        super()._handle_coordinator_update()
+
+    async def _call_switch_api(self, turn_on: bool) -> None:
+        """Call the API to set the watering switch state."""
+        await self._client.async_set_watering_switch_state(
+            self._device_id, self._channel_index, turn_on
+        )
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the watering on."""
-        self._attr_assumed_state = True
-        self.async_write_ha_state()
-        try:
-            await self._client.async_set_watering_switch_state(
-                self._device_id, self._channel_index, True
-            )
-        except (HcuApiError, ConnectionError) as err:
-            _LOGGER.error("Failed to turn on watering switch %s: %s", self.name, err)
-            self._attr_assumed_state = False
-            self.async_write_ha_state()
+        await self._async_set_optimistic_state(True, "watering switch")
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the watering off."""
-        self._attr_assumed_state = True
-        self.async_write_ha_state()
-        try:
-            await self._client.async_set_watering_switch_state(
-                self._device_id, self._channel_index, False
-            )
-        except (HcuApiError, ConnectionError) as err:
-            _LOGGER.error("Failed to turn off watering switch %s: %s", self.name, err)
-            self._attr_assumed_state = False
-            self.async_write_ha_state()
+        await self._async_set_optimistic_state(False, "watering switch")

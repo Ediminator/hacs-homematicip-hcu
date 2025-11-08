@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.light import (
     ATTR_BRIGHTNESS,
@@ -272,7 +272,7 @@ class HcuLightGroup(SwitchingGroupMixin, HcuGroupBaseEntity, LightEntity):
         self,
         coordinator: "HcuCoordinator",
         client: HcuApiClient,
-        group_data: dict,
+        group_data: dict[str, Any],
     ):
         """Initialize the HCU light group."""
         super().__init__(coordinator, client, group_data)

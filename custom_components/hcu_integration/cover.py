@@ -211,7 +211,7 @@ class HcuCoverGroup(HcuGroupBaseEntity, CoverEntity):
         self,
         coordinator: "HcuCoordinator",
         client: HcuApiClient,
-        group_data: dict,
+        group_data: dict[str, Any],
         **kwargs: Any,
     ):
         """Initialize the HCU Cover group."""

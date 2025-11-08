@@ -205,6 +205,7 @@ class HcuCoverGroup(HcuGroupBaseEntity, CoverEntity):
     """Representation of an HCU Cover (shutter or blind) group."""
 
     PLATFORM = Platform.COVER
+    _attr_has_entity_name = False
 
     def __init__(
         self,

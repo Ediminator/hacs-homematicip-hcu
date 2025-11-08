@@ -14,6 +14,12 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 - Root cause: Missing `_attr_has_entity_name = False` flag caused Home Assistant to combine device name with entity name
 - Users will see correct single names after restarting Home Assistant
 
+**Auto-Created Meta Groups**
+- Integration now skips auto-created meta groups for SWITCHING and LIGHT types
+- These groups are automatically created by HCU for rooms and were causing unexpected/redundant entities
+- User-created functional groups (without `metaGroupId`) are still discovered and created
+- Significantly reduces entity clutter from unwanted auto-generated groups
+
 ---
 
 ## Version 1.12.0 - 2025-11-08

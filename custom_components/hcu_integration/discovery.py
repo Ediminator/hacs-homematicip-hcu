@@ -179,16 +179,15 @@ async def async_discover_entities(
     for group_data in state.get("groups", {}).values():
         group_type = group_data.get("type")
         if mapping := group_type_mapping.get(group_type):
-            # Skip SWITCHING and LIGHT groups with only one device
-            # These are auto-created by HCU but provide no value over the individual entity
+            # Skip auto-created meta groups for SWITCHING and LIGHT
+            # These are created automatically by HCU for rooms and provide unexpected entities
+            # User-created functional groups don't have metaGroupId and will still be discovered
             if group_type in ("SWITCHING", "LIGHT"):
-                group_channels = group_data.get("groupChannels", [])
-                if len(group_channels) <= 1:
+                if "metaGroupId" in group_data:
                     _LOGGER.debug(
-                        "Skipping single-device %s group '%s' (only %d device)",
+                        "Skipping auto-created meta %s group '%s'",
                         group_type,
-                        group_data.get("label", group_data.get("id")),
-                        len(group_channels)
+                        group_data.get("label", group_data.get("id"))
                     )
                     continue
 

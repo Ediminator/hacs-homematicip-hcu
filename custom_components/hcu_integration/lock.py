@@ -69,14 +69,9 @@ class HcuLock(HcuBaseEntity, LockEntity):
     @property
     def is_locking(self) -> bool | None:
         """Return true if the lock is locking."""
-        # Check motorState field (if available)
+        # Check motorState field (confirmed to exist on HmIP-DLD channel 1)
         motor_state = self._channel.get("motorState")
         if motor_state == "LOCKING":
-            return True
-
-        # Check activityState field (alternative field name)
-        activity_state = self._channel.get("activityState")
-        if activity_state == "LOCKING":
             return True
 
         # Check if lockState is transitioning to LOCKED
@@ -89,14 +84,9 @@ class HcuLock(HcuBaseEntity, LockEntity):
     @property
     def is_unlocking(self) -> bool | None:
         """Return true if the lock is unlocking."""
-        # Check motorState field (if available)
+        # Check motorState field (confirmed to exist on HmIP-DLD channel 1)
         motor_state = self._channel.get("motorState")
         if motor_state == "UNLOCKING":
-            return True
-
-        # Check activityState field (alternative field name)
-        activity_state = self._channel.get("activityState")
-        if activity_state == "UNLOCKING":
             return True
 
         # Check if lockState is transitioning to UNLOCKED
@@ -109,7 +99,14 @@ class HcuLock(HcuBaseEntity, LockEntity):
     @property
     def is_jammed(self) -> bool | None:
         """Return true if the lock is jammed (incomplete locking)."""
-        # Check motorState for jammed condition
+        # Check lockJammed on channel 0 (DEVICE_OPERATIONLOCK)
+        # This is the actual field name on HmIP-DLD firmware 1.4.12+
+        device_channel = self._device.get("functionalChannels", {}).get("0", {})
+        lock_jammed = device_channel.get("lockJammed")
+        if lock_jammed is True:
+            return True
+
+        # Check motorState for jammed condition (in case it's reported there)
         motor_state = self._channel.get("motorState")
         if motor_state == "JAMMED":
             return True
@@ -119,29 +116,14 @@ class HcuLock(HcuBaseEntity, LockEntity):
         if lock_state == "JAMMED":
             return True
 
-        # Check for ERROR_JAMMED field (available on some firmware versions)
-        error_jammed = self._channel.get("errorJammed")
-        if error_jammed is True:
-            return True
-
-        # Check sabotage field as potential jam indicator
-        sabotage = self._channel.get("sabotage")
-        if sabotage is True:
-            return True
-
         return None
 
     @property
     def is_opening(self) -> bool | None:
         """Return true if the lock is opening."""
-        # Check motorState field (if available)
+        # Check motorState field (confirmed to exist on HmIP-DLD channel 1)
         motor_state = self._channel.get("motorState")
         if motor_state == "OPENING":
-            return True
-
-        # Check activityState field (alternative field name)
-        activity_state = self._channel.get("activityState")
-        if activity_state == "OPENING":
             return True
 
         # Check if lockState is transitioning to OPEN
@@ -164,28 +146,25 @@ class HcuLock(HcuBaseEntity, LockEntity):
         if self._pin_required is not None:
             attrs["pin_required"] = self._pin_required
 
-        # Expose motor/activity state for diagnostics
+        # Expose motorState for diagnostics (confirmed to exist on HmIP-DLD)
         motor_state = self._channel.get("motorState")
         if motor_state is not None:
             attrs["motor_state"] = motor_state
 
-        activity_state = self._channel.get("activityState")
-        if activity_state is not None:
-            attrs["activity_state"] = activity_state
+        # Expose lockJammed from channel 0 (DEVICE_OPERATIONLOCK)
+        device_channel = self._device.get("functionalChannels", {}).get("0", {})
+        lock_jammed = device_channel.get("lockJammed")
+        if lock_jammed is not None:
+            attrs["lock_jammed"] = lock_jammed
 
-        # Expose lock target level if available
-        lock_target_level = self._channel.get("lockTargetLevel")
-        if lock_target_level is not None:
-            attrs["lock_target_level"] = lock_target_level
+        # Expose auto relock configuration
+        auto_relock_enabled = self._channel.get("autoRelockEnabled")
+        if auto_relock_enabled is not None:
+            attrs["auto_relock_enabled"] = auto_relock_enabled
 
-        # Expose error/sabotage states
-        error_jammed = self._channel.get("errorJammed")
-        if error_jammed is not None:
-            attrs["error_jammed"] = error_jammed
-
-        sabotage = self._channel.get("sabotage")
-        if sabotage is not None:
-            attrs["sabotage"] = sabotage
+        auto_relock_delay = self._channel.get("autoRelockDelay")
+        if auto_relock_delay is not None:
+            attrs["auto_relock_delay"] = auto_relock_delay
 
         return attrs
 

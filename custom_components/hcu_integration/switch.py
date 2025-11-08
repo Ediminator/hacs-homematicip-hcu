@@ -8,7 +8,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import HMIP_DEVICE_TYPE_TO_DEVICE_CLASS
-from .entity import HcuBaseEntity, SwitchStateMixin
+from .entity import HcuBaseEntity, HcuGroupBaseEntity, SwitchStateMixin
 from .api import HcuApiClient
 
 if TYPE_CHECKING:
@@ -124,3 +124,37 @@ class HcuWateringSwitch(SwitchStateMixin, HcuBaseEntity, SwitchEntity):
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the watering off."""
         await self._async_set_optimistic_state(False, "watering switch")
+
+
+class HcuSwitchGroup(HcuGroupBaseEntity, SwitchEntity):
+    """Representation of a Homematic IP HCU switching group."""
+
+    PLATFORM = Platform.SWITCH
+    _attr_has_entity_name = False
+
+    def __init__(
+        self,
+        coordinator: "HcuCoordinator",
+        client: HcuApiClient,
+        group_data: dict[str, Any],
+    ):
+        """Initialize the HCU switch group."""
+        super().__init__(coordinator, client, group_data)
+        label = self._group.get("label") or self._group_id
+        self._attr_name = self._apply_prefix(label)
+        self._attr_unique_id = self._group_id
+
+    @property
+    def is_on(self) -> bool | None:
+        """Return true if the switch group is on."""
+        return self._group.get("on")
+
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        """Turn the switch group on."""
+        self._attr_assumed_state = True
+        await self._client.async_set_switching_group_state(self._group_id, True)
+
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        """Turn the switch group off."""
+        self._attr_assumed_state = True
+        await self._client.async_set_switching_group_state(self._group_id, False)

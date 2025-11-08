@@ -19,7 +19,7 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .entity import HcuBaseEntity
+from .entity import HcuBaseEntity, HcuGroupBaseEntity
 from .api import HcuApiClient
 
 if TYPE_CHECKING:
@@ -261,3 +261,41 @@ class HcuNotificationLight(HcuBaseEntity, LightEntity):
             volume=volume,
             duration=duration,
         )
+
+
+class HcuLightGroup(HcuGroupBaseEntity, LightEntity):
+    """Representation of a Homematic IP HCU light group."""
+
+    PLATFORM = Platform.LIGHT
+    _attr_has_entity_name = False
+
+    def __init__(
+        self,
+        coordinator: "HcuCoordinator",
+        client: HcuApiClient,
+        group_data: dict,
+    ):
+        """Initialize the HCU light group."""
+        super().__init__(coordinator, client, group_data)
+        label = self._group.get("label") or self._group_id
+        self._attr_name = self._apply_prefix(label)
+        self._attr_unique_id = self._group_id
+
+        # Light groups typically only support on/off for the group
+        self._attr_supported_color_modes = {ColorMode.ONOFF}
+        self._attr_color_mode = ColorMode.ONOFF
+
+    @property
+    def is_on(self) -> bool | None:
+        """Return true if the light group is on."""
+        return self._group.get("on")
+
+    async def async_turn_on(self, **kwargs) -> None:
+        """Turn the light group on."""
+        self._attr_assumed_state = True
+        await self._client.async_set_switching_group_state(self._group_id, True)
+
+    async def async_turn_off(self, **kwargs) -> None:
+        """Turn the light group off."""
+        self._attr_assumed_state = True
+        await self._client.async_set_switching_group_state(self._group_id, False)

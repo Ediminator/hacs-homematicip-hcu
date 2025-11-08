@@ -56,9 +56,11 @@ async def async_discover_entities(
     class_module_map = {
         "HcuLight": light,
         "HcuNotificationLight": light,
+        "HcuLightGroup": light,
         "HcuSiren": siren,
         "HcuSwitch": switch,
         "HcuWateringSwitch": switch,
+        "HcuSwitchGroup": switch,
         "HcuCover": cover,
         "HcuGarageDoorCover": cover,
         "HcuCoverGroup": cover,
@@ -168,15 +170,24 @@ async def async_discover_entities(
                     except (AttributeError, TypeError) as e:
                         _LOGGER.error("Failed to create entity for feature %s (%s): %s", feature, class_name, e)
 
-    # Create group entities (heating and shutter groups)
+    # Create group entities (heating, shutter, switching, and light groups)
     for group_data in state.get("groups", {}).values():
-        if group_data.get("type") == "HEATING":
+        group_type = group_data.get("type")
+        if group_type == "HEATING":
             entities[Platform.CLIMATE].append(
                 climate.HcuClimate(coordinator, client, group_data, config_entry)
             )
-        elif group_data.get("type") == "SHUTTER":
+        elif group_type == "SHUTTER":
             entities[Platform.COVER].append(
                 cover.HcuCoverGroup(coordinator, client, group_data)
+            )
+        elif group_type == "SWITCHING":
+            entities[Platform.SWITCH].append(
+                switch.HcuSwitchGroup(coordinator, client, group_data)
+            )
+        elif group_type == "LIGHT":
+            entities[Platform.LIGHT].append(
+                light.HcuLightGroup(coordinator, client, group_data)
             )
 
     # Create home-level entities (alarm panel, vacation mode sensor, home sensors)

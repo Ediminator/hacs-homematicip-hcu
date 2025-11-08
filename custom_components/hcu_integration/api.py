@@ -625,6 +625,14 @@ class HcuApiClient:
             {"temperature": temperature, "endTime": end_time},
         )
 
+    async def async_set_switching_group_state(self, group_id: str, on: bool) -> None:
+        """Set the on/off state for a switching group."""
+        await self.async_group_control(
+            API_PATHS["SET_SWITCHING_GROUP_STATE"],
+            group_id,
+            {"on": on},
+        )
+
     async def disconnect(self) -> None:
         """Close the WebSocket connection gracefully."""
         if self.is_connected and self._websocket:

@@ -16,10 +16,10 @@ from homeassistant.components.light import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .entity import HcuBaseEntity, HcuGroupBaseEntity
+from .entity import HcuBaseEntity, HcuGroupBaseEntity, SwitchingGroupMixin
 from .api import HcuApiClient
 
 if TYPE_CHECKING:
@@ -263,7 +263,7 @@ class HcuNotificationLight(HcuBaseEntity, LightEntity):
         )
 
 
-class HcuLightGroup(HcuGroupBaseEntity, LightEntity):
+class HcuLightGroup(SwitchingGroupMixin, HcuGroupBaseEntity, LightEntity):
     """Representation of a Homematic IP HCU light group."""
 
     PLATFORM = Platform.LIGHT
@@ -284,18 +284,18 @@ class HcuLightGroup(HcuGroupBaseEntity, LightEntity):
         # Light groups typically only support on/off for the group
         self._attr_supported_color_modes = {ColorMode.ONOFF}
         self._attr_color_mode = ColorMode.ONOFF
+        self._init_switching_group_state(group_data)
 
-    @property
-    def is_on(self) -> bool | None:
-        """Return true if the light group is on."""
-        return self._group.get("on")
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        self._sync_switching_group_state()
+        super()._handle_coordinator_update()
 
     async def async_turn_on(self, **kwargs) -> None:
         """Turn the light group on."""
-        self._attr_assumed_state = True
-        await self._client.async_set_switching_group_state(self._group_id, True)
+        await self._async_set_switching_group_state(True)
 
     async def async_turn_off(self, **kwargs) -> None:
         """Turn the light group off."""
-        self._attr_assumed_state = True
-        await self._client.async_set_switching_group_state(self._group_id, False)
+        await self._async_set_switching_group_state(False)

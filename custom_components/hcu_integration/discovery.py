@@ -170,24 +170,21 @@ async def async_discover_entities(
                     except (AttributeError, TypeError) as e:
                         _LOGGER.error("Failed to create entity for feature %s (%s): %s", feature, class_name, e)
 
-    # Create group entities (heating, shutter, switching, and light groups)
+    # Create group entities using type mapping
+    # Maps group type to (platform, entity_class, extra_kwargs)
+    group_type_mapping = {
+        "HEATING": (Platform.CLIMATE, climate.HcuClimate, {"config_entry": config_entry}),
+        "SHUTTER": (Platform.COVER, cover.HcuCoverGroup, {}),
+        "SWITCHING": (Platform.SWITCH, switch.HcuSwitchGroup, {}),
+        "LIGHT": (Platform.LIGHT, light.HcuLightGroup, {}),
+    }
+
     for group_data in state.get("groups", {}).values():
         group_type = group_data.get("type")
-        if group_type == "HEATING":
-            entities[Platform.CLIMATE].append(
-                climate.HcuClimate(coordinator, client, group_data, config_entry)
-            )
-        elif group_type == "SHUTTER":
-            entities[Platform.COVER].append(
-                cover.HcuCoverGroup(coordinator, client, group_data)
-            )
-        elif group_type == "SWITCHING":
-            entities[Platform.SWITCH].append(
-                switch.HcuSwitchGroup(coordinator, client, group_data)
-            )
-        elif group_type == "LIGHT":
-            entities[Platform.LIGHT].append(
-                light.HcuLightGroup(coordinator, client, group_data)
+        if mapping := group_type_mapping.get(group_type):
+            platform, entity_class, extra_kwargs = mapping
+            entities[platform].append(
+                entity_class(coordinator, client, group_data, **extra_kwargs)
             )
 
     # Create home-level entities (alarm panel, vacation mode sensor, home sensors)

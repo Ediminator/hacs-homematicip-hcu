@@ -244,6 +244,35 @@ class HcuGroupBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMix
             self.async_write_ha_state()
 
 
+class SwitchingGroupMixin:
+    """Mixin for group entities that support on/off switching (switch and light groups).
+
+    This mixin provides common state management logic for groups that use the
+    /hmip/group/switching/setState API endpoint.
+    """
+
+    _attr_is_on: bool | None
+    _group_id: str
+    _client: HcuApiClient
+
+    def _init_switching_group_state(self, group_data: dict[str, Any]) -> None:
+        """Initialize switching group state from group data."""
+        self._attr_is_on = group_data.get("on")
+
+    @callback
+    def _sync_switching_group_state(self) -> None:
+        """Sync state from coordinator data."""
+        # Access _group through the group entity interface
+        self._attr_is_on = getattr(self, "_group", {}).get("on")
+
+    async def _async_set_switching_group_state(self, turn_on: bool) -> None:
+        """Set switching group state with optimistic update."""
+        self._attr_is_on = turn_on
+        # async_write_ha_state is available from Entity base class
+        getattr(self, "async_write_ha_state")()
+        await self._client.async_set_switching_group_state(self._group_id, turn_on)
+
+
 class HcuHomeBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, Entity):
     """Base class for entities tied to the global 'home' object."""
 

@@ -179,6 +179,19 @@ async def async_discover_entities(
     for group_data in state.get("groups", {}).values():
         group_type = group_data.get("type")
         if mapping := group_type_mapping.get(group_type):
+            # Skip SWITCHING and LIGHT groups with only one device
+            # These are auto-created by HCU but provide no value over the individual entity
+            if group_type in ("SWITCHING", "LIGHT"):
+                group_channels = group_data.get("groupChannels", [])
+                if len(group_channels) <= 1:
+                    _LOGGER.debug(
+                        "Skipping single-device %s group '%s' (only %d device)",
+                        group_type,
+                        group_data.get("label", group_data.get("id")),
+                        len(group_channels)
+                    )
+                    continue
+
             platform, entity_class, extra_kwargs = mapping
             entities[platform].append(
                 entity_class(coordinator, client, group_data, **extra_kwargs)

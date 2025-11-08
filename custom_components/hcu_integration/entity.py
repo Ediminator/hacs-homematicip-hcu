@@ -298,6 +298,8 @@ class HcuSwitchingGroupBase(SwitchingGroupMixin, HcuGroupBaseEntity):
     to customize platform-specific attributes.
     """
 
+    _attr_has_entity_name = False
+
     def __init__(
         self,
         coordinator: "HcuCoordinator",

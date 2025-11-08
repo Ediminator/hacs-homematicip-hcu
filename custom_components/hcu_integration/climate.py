@@ -51,6 +51,7 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
     """Representation of a Homematic IP HCU heating group."""
 
     PLATFORM = Platform.CLIMATE
+    _attr_has_entity_name = False
     _attr_hvac_modes = [HVACMode.AUTO, HVACMode.HEAT, HVACMode.OFF]
     _attr_temperature_unit = UnitOfTemperature.CELSIUS
     _attr_supported_features = (

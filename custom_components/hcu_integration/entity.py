@@ -264,7 +264,7 @@ class SwitchingGroupMixin:
     def _sync_switching_group_state(self) -> None:
         """Sync state from coordinator data."""
         # Access _group through the group entity interface
-        self._attr_is_on = getattr(self, "_group", {}).get("on")
+        self._attr_is_on = self._group.get("on")  # type: ignore[attr-defined]
 
     async def _async_set_switching_group_state(self, turn_on: bool) -> None:
         """Set switching group state with optimistic update and error handling."""
@@ -275,7 +275,7 @@ class SwitchingGroupMixin:
         self._attr_is_on = turn_on
         self._attr_assumed_state = True
         # async_write_ha_state is available from Entity base class
-        getattr(self, "async_write_ha_state")()
+        self.async_write_ha_state()  # type: ignore[attr-defined]
 
         try:
             await self._client.async_set_switching_group_state(self._group_id, turn_on)
@@ -283,7 +283,7 @@ class SwitchingGroupMixin:
             # Revert to previous state on error
             self._attr_is_on = previous_state
             self._attr_assumed_state = False
-            getattr(self, "async_write_ha_state")()
+            self.async_write_ha_state()  # type: ignore[attr-defined]
             _LOGGER.error(
                 "Failed to set switching group %s state to %s: %s",
                 self._group_id, turn_on, err

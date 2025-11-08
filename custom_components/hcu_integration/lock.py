@@ -166,6 +166,21 @@ class HcuLock(HcuBaseEntity, LockEntity):
         if auto_relock_delay is not None:
             attrs["auto_relock_delay"] = auto_relock_delay
 
+        # Check access authorization channels for diagnostic purposes
+        # Helps users understand if the plugin has permission to control the lock
+        channels = self._device.get("functionalChannels", {})
+        authorized_channels = []
+        for ch_id, ch_data in channels.items():
+            if ch_data.get("functionalChannelType") == "ACCESS_AUTHORIZATION_CHANNEL":
+                if ch_data.get("authorized") is True:
+                    authorized_channels.append(ch_id)
+
+        if authorized_channels:
+            attrs["authorized_access_channels"] = authorized_channels
+            attrs["has_access_authorization"] = True
+        else:
+            attrs["has_access_authorization"] = False
+
         return attrs
 
     async def _set_lock_state(self, state: str) -> None:
@@ -219,6 +234,23 @@ class HcuLock(HcuBaseEntity, LockEntity):
                         self.name,
                         DOCS_URL_LOCK_PIN_CONFIG,
                     )
+
+            # Check for access denied / permission errors
+            elif "ACCESS_DENIED" in error_str or "INVALID_REQUEST" in error_str or "no permission" in error_str.lower():
+                _LOGGER.error(
+                    "Access denied for lock '%s'. The Home Assistant Integration plugin user "
+                    "does not have permission to control this lock. "
+                    "\n\nTo fix this issue:\n"
+                    "1. Open the HomematicIP app on your phone\n"
+                    "2. Go to Settings → Access Control → Access Profiles\n"
+                    "3. Select or create an access profile for this lock\n"
+                    "4. Try to add 'Home Assistant Integration' user to the profile\n"
+                    "\nKNOWN LIMITATION: The plugin user may appear grayed out or expired in the app. "
+                    "This is a known issue with the HCU firmware. The integration has properly registered with the HCU, "
+                    "but the HomematicIP app may not allow assigning it to access profiles. "
+                    "\nPlease check the 'has_access_authorization' attribute to verify authorization status.",
+                    self.name,
+                )
 
             # Check for motor jam errors
             elif "JAMMED" in error_str or "JAM" in error_str:

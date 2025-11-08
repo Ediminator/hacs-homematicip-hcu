@@ -149,6 +149,7 @@ DEACTIVATED_BY_DEFAULT_DEVICES = {
     "WIRED_DIN_RAIL_BLIND_4",
     "WIRED_DIN_RAIL_DIMMER_3",
     "OPEN_COLLECTOR_MODULE_8",
+    "DIGITAL_RADIO_INPUT_32",  # HmIP-DRI32 - Input-only device
 }
 
 # --- Entity Mapping Dictionaries ---
@@ -172,6 +173,7 @@ HMIP_DEVICE_TYPE_TO_DEVICE_CLASS = {
     "WIRED_DIN_RAIL_DIMMER_3": None,
     "BRAND_DIMMER": None,
     "OPEN_COLLECTOR_MODULE_8": SwitchDeviceClass.SWITCH,
+    "DIGITAL_RADIO_INPUT_32": None,  # HmIP-DRI32 - Input-only device with 32 channels
     "DIN_RAIL_SWITCH_1": SwitchDeviceClass.SWITCH,
     "FLUSH_MOUNT_DIMMER": None,
     "CONTACT_INTERFACE_6": None,

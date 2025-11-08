@@ -44,6 +44,7 @@ CONF_PIN = "pin"
 CONF_AUTH_PORT = "auth_port"
 CONF_WEBSOCKET_PORT = "websocket_port"
 CONF_ENTITY_PREFIX = "entity_prefix"
+CONF_PLATFORM_OVERRIDES = "platform_overrides"  # Dict mapping entity unique_id to platform override
 DEFAULT_HCU_AUTH_PORT = 6969
 DEFAULT_HCU_WEBSOCKET_PORT = 9001
 CONF_COMFORT_TEMPERATURE = "comfort_temperature"

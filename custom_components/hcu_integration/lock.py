@@ -69,117 +69,69 @@ class HcuLock(HcuBaseEntity, LockEntity):
     @property
     def is_locking(self) -> bool | None:
         """Return true if the lock is locking."""
-        # Check motorState field (confirmed to exist on HmIP-DLD channel 1)
-        motor_state = self._channel.get("motorState")
-        if motor_state == "LOCKING":
-            return True
-
-        # Check if lockState is transitioning to LOCKED
-        lock_state = self._channel.get("lockState")
-        if lock_state == "LOCKING":
-            return True
-
-        return None
+        # Check motorState or lockState fields (confirmed to exist on HmIP-DLD channel 1)
+        return True if self._channel.get("motorState") == "LOCKING" or self._channel.get("lockState") == "LOCKING" else None
 
     @property
     def is_unlocking(self) -> bool | None:
         """Return true if the lock is unlocking."""
-        # Check motorState field (confirmed to exist on HmIP-DLD channel 1)
-        motor_state = self._channel.get("motorState")
-        if motor_state == "UNLOCKING":
-            return True
-
-        # Check if lockState is transitioning to UNLOCKED
-        lock_state = self._channel.get("lockState")
-        if lock_state == "UNLOCKING":
-            return True
-
-        return None
+        # Check motorState or lockState fields (confirmed to exist on HmIP-DLD channel 1)
+        return True if self._channel.get("motorState") == "UNLOCKING" or self._channel.get("lockState") == "UNLOCKING" else None
 
     @property
     def is_jammed(self) -> bool | None:
         """Return true if the lock is jammed (incomplete locking)."""
-        # Check lockJammed on channel 0 (DEVICE_OPERATIONLOCK)
-        # This is the actual field name on HmIP-DLD firmware 1.4.12+
+        # Check lockJammed on channel 0 (DEVICE_OPERATIONLOCK) - HmIP-DLD firmware 1.4.12+
+        # Also check motorState and lockState for jammed condition
         device_channel = self._device.get("functionalChannels", {}).get("0", {})
-        lock_jammed = device_channel.get("lockJammed")
-        if lock_jammed is True:
-            return True
-
-        # Check motorState for jammed condition (in case it's reported there)
-        motor_state = self._channel.get("motorState")
-        if motor_state == "JAMMED":
-            return True
-
-        # Check lockState for jammed condition
-        lock_state = self._channel.get("lockState")
-        if lock_state == "JAMMED":
-            return True
-
-        return None
+        return True if (
+            device_channel.get("lockJammed") is True
+            or self._channel.get("motorState") == "JAMMED"
+            or self._channel.get("lockState") == "JAMMED"
+        ) else None
 
     @property
     def is_opening(self) -> bool | None:
         """Return true if the lock is opening."""
-        # Check motorState field (confirmed to exist on HmIP-DLD channel 1)
-        motor_state = self._channel.get("motorState")
-        if motor_state == "OPENING":
-            return True
-
-        # Check if lockState is transitioning to OPEN
-        lock_state = self._channel.get("lockState")
-        if lock_state == "OPENING":
-            return True
-
-        return None
+        # Check motorState or lockState fields (confirmed to exist on HmIP-DLD channel 1)
+        return True if self._channel.get("motorState") == "OPENING" or self._channel.get("lockState") == "OPENING" else None
 
     @property
     def extra_state_attributes(self) -> dict:
         """Return additional state attributes."""
-        attrs = {}
+        attrs = {
+            "pin_configured": bool(self._config_entry.data.get(CONF_PIN)),
+        }
 
-        # Indicate PIN status
-        pin_configured = bool(self._config_entry.data.get(CONF_PIN))
-        attrs["pin_configured"] = pin_configured
-
-        # If we've determined this lock requires a PIN, indicate that
+        # Add PIN requirement status if determined
         if self._pin_required is not None:
             attrs["pin_required"] = self._pin_required
 
-        # Expose motorState for diagnostics (confirmed to exist on HmIP-DLD)
-        motor_state = self._channel.get("motorState")
-        if motor_state is not None:
-            attrs["motor_state"] = motor_state
+        # Expose channel 1 fields for diagnostics (confirmed to exist on HmIP-DLD)
+        channel_fields = {
+            "motor_state": self._channel.get("motorState"),
+            "auto_relock_enabled": self._channel.get("autoRelockEnabled"),
+            "auto_relock_delay": self._channel.get("autoRelockDelay"),
+        }
+        attrs.update({k: v for k, v in channel_fields.items() if v is not None})
 
         # Expose lockJammed from channel 0 (DEVICE_OPERATIONLOCK)
         device_channel = self._device.get("functionalChannels", {}).get("0", {})
-        lock_jammed = device_channel.get("lockJammed")
-        if lock_jammed is not None:
+        if (lock_jammed := device_channel.get("lockJammed")) is not None:
             attrs["lock_jammed"] = lock_jammed
-
-        # Expose auto relock configuration
-        auto_relock_enabled = self._channel.get("autoRelockEnabled")
-        if auto_relock_enabled is not None:
-            attrs["auto_relock_enabled"] = auto_relock_enabled
-
-        auto_relock_delay = self._channel.get("autoRelockDelay")
-        if auto_relock_delay is not None:
-            attrs["auto_relock_delay"] = auto_relock_delay
 
         # Check access authorization channels for diagnostic purposes
         # Helps users understand if the plugin has permission to control the lock
-        channels = self._device.get("functionalChannels", {})
-        authorized_channels = []
-        for ch_id, ch_data in channels.items():
-            if ch_data.get("functionalChannelType") == "ACCESS_AUTHORIZATION_CHANNEL":
-                if ch_data.get("authorized") is True:
-                    authorized_channels.append(ch_id)
+        authorized_channels = [
+            ch_id
+            for ch_id, ch_data in self._device.get("functionalChannels", {}).items()
+            if ch_data.get("functionalChannelType") == "ACCESS_AUTHORIZATION_CHANNEL"
+            and ch_data.get("authorized") is True
+        ]
 
+        attrs["has_access_authorization"] = bool(authorized_channels)
         if authorized_channels:
             attrs["authorized_access_channels"] = authorized_channels
-            attrs["has_access_authorization"] = True
-        else:
-            attrs["has_access_authorization"] = False
 
         return attrs
 

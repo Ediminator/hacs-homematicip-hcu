@@ -53,7 +53,6 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
     PLATFORM = Platform.CLIMATE
     _attr_hvac_modes = [HVACMode.AUTO, HVACMode.HEAT, HVACMode.OFF]
     _attr_temperature_unit = UnitOfTemperature.CELSIUS
-    _attr_has_entity_name = False
     _attr_supported_features = (
         ClimateEntityFeature.TARGET_TEMPERATURE | ClimateEntityFeature.PRESET_MODE
     )
@@ -62,7 +61,7 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
         self,
         coordinator: "HcuCoordinator",
         client: HcuApiClient,
-        group_data: dict,
+        group_data: dict[str, Any],
         config_entry: ConfigEntry,
     ) -> None:
         """Initialize the HCU Climate entity."""

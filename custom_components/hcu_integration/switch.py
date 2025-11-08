@@ -8,7 +8,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import HMIP_DEVICE_TYPE_TO_DEVICE_CLASS
-from .entity import HcuBaseEntity, SwitchStateMixin
+from .entity import HcuBaseEntity, SwitchStateMixin, HcuSwitchingGroupBase
 from .api import HcuApiClient
 
 if TYPE_CHECKING:
@@ -124,3 +124,9 @@ class HcuWateringSwitch(SwitchStateMixin, HcuBaseEntity, SwitchEntity):
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the watering off."""
         await self._async_set_optimistic_state(False, "watering switch")
+
+
+class HcuSwitchGroup(HcuSwitchingGroupBase, SwitchEntity):
+    """Representation of a Homematic IP HCU switching group."""
+
+    PLATFORM = Platform.SWITCH

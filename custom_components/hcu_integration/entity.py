@@ -244,6 +244,88 @@ class HcuGroupBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMix
             self.async_write_ha_state()
 
 
+class SwitchingGroupMixin:
+    """Mixin for group entities that support on/off switching (switch and light groups).
+
+    This mixin provides common state management logic for groups that use the
+    /hmip/group/switching/setState API endpoint.
+    """
+
+    _attr_is_on: bool | None
+    _attr_assumed_state: bool
+    _group_id: str
+    _client: HcuApiClient
+
+    def _init_switching_group_state(self, group_data: dict[str, Any]) -> None:
+        """Initialize switching group state from group data."""
+        self._attr_is_on = group_data.get("on")
+
+    @callback
+    def _sync_switching_group_state(self) -> None:
+        """Sync state from coordinator data."""
+        # Access _group through the group entity interface
+        self._attr_is_on = self._group.get("on")  # type: ignore[attr-defined]
+
+    async def _async_set_switching_group_state(self, turn_on: bool) -> None:
+        """Set switching group state with optimistic update and error handling."""
+        # Store previous state for rollback on error
+        previous_state = self._attr_is_on
+
+        # Optimistic update
+        self._attr_is_on = turn_on
+        self._attr_assumed_state = True
+        # async_write_ha_state is available from Entity base class
+        self.async_write_ha_state()  # type: ignore[attr-defined]
+
+        try:
+            await self._client.async_set_switching_group_state(self._group_id, turn_on)
+        except (HcuApiError, ConnectionError) as err:
+            # Revert to previous state on error
+            self._attr_is_on = previous_state
+            self._attr_assumed_state = False
+            self.async_write_ha_state()  # type: ignore[attr-defined]
+            _LOGGER.error(
+                "Failed to set switching group %s state to %s: %s",
+                self._group_id, turn_on, err
+            )
+
+
+class HcuSwitchingGroupBase(SwitchingGroupMixin, HcuGroupBaseEntity):
+    """Base class for switching group entities (switch and light groups).
+
+    This class consolidates the shared implementation for both HcuSwitchGroup
+    and HcuLightGroup, eliminating code duplication while allowing subclasses
+    to customize platform-specific attributes.
+    """
+
+    def __init__(
+        self,
+        coordinator: "HcuCoordinator",
+        client: HcuApiClient,
+        group_data: dict[str, Any],
+    ) -> None:
+        """Initialize the switching group base."""
+        super().__init__(coordinator, client, group_data)
+        label = self._group.get("label") or self._group_id
+        self._attr_name = self._apply_prefix(label)
+        self._attr_unique_id = self._group_id
+        self._init_switching_group_state(group_data)
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        self._sync_switching_group_state()
+        super()._handle_coordinator_update()
+
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        """Turn the group on."""
+        await self._async_set_switching_group_state(True)
+
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        """Turn the group off."""
+        await self._async_set_switching_group_state(False)
+
+
 class HcuHomeBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, Entity):
     """Base class for entities tied to the global 'home' object."""
 

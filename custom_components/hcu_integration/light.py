@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.light import (
     ATTR_BRIGHTNESS,
@@ -16,10 +16,10 @@ from homeassistant.components.light import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .entity import HcuBaseEntity
+from .entity import HcuBaseEntity, HcuSwitchingGroupBase
 from .api import HcuApiClient
 
 if TYPE_CHECKING:
@@ -261,3 +261,22 @@ class HcuNotificationLight(HcuBaseEntity, LightEntity):
             volume=volume,
             duration=duration,
         )
+
+
+class HcuLightGroup(HcuSwitchingGroupBase, LightEntity):
+    """Representation of a Homematic IP HCU light group."""
+
+    PLATFORM = Platform.LIGHT
+
+    def __init__(
+        self,
+        coordinator: "HcuCoordinator",
+        client: HcuApiClient,
+        group_data: dict[str, Any],
+    ) -> None:
+        """Initialize the HCU light group."""
+        super().__init__(coordinator, client, group_data)
+
+        # Light groups typically only support on/off for the group
+        self._attr_supported_color_modes = {ColorMode.ONOFF}
+        self._attr_color_mode = ColorMode.ONOFF

@@ -127,6 +127,7 @@ API_PATHS = {
     "SET_GROUP_SHUTTER_LEVEL": "/hmip/group/switching/setPrimaryShadingLevel",
     "SET_GROUP_SLATS_LEVEL": "/hmip/group/switching/setSecondaryShadingLevel",
     "STOP_GROUP_COVER": "/hmip/group/switching/stop",
+    "SET_SWITCHING_GROUP_STATE": "/hmip/group/switching/setState",
 }
 
 # --- Device Identification Constants ---

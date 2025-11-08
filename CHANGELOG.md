@@ -4,6 +4,36 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 
 ---
 
+## Version 1.12.0 - 2025-11-08
+
+### ✨ Enhancements
+
+**SWITCHING and LIGHT Group Entity Support (Issue #44)**
+- Added support for SWITCHING group entities that control multiple switches together
+- Added support for LIGHT group entities that control multiple lights together
+- Achieves feature parity with the official Homematic IP cloud integration for these group types
+- Groups are automatically discovered from HCU configuration and appear as switch/light entities in Home Assistant
+- Example: A "Living Room Lights" group can now control all living room lights with a single on/off toggle
+- Groups use the `/hmip/group/switching/setState` API endpoint for synchronized control
+
+### 🔧 Technical Improvements
+
+**Clean Architecture for Group Entities**
+- Created `HcuSwitchingGroupBase` base class to eliminate code duplication between switch and light groups
+- Implemented `SwitchingGroupMixin` for shared state management logic (optimistic updates, error handling)
+- Optimistic state updates provide instant UI feedback before API confirmation
+- Robust error handling with automatic state rollback if API calls fail
+- Dictionary-based discovery mapping in `discovery.py` for scalable group type handling
+- Consistent type hints across all group entity classes (`dict[str, Any]`)
+- Removed unused group entity mappings from `class_module_map` for clearer discovery flow
+
+**Code Quality**
+- Reduced code duplication by ~50 lines through base class consolidation
+- Direct attribute access instead of `getattr()` for improved code clarity
+- Consistent entity naming pattern across all group types
+
+---
+
 ## Version 1.11.0 - 2025-11-07
 
 ### 🐛 Bug Fixes

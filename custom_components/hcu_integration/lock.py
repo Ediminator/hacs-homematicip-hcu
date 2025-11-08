@@ -69,32 +69,60 @@ class HcuLock(HcuBaseEntity, LockEntity):
     @property
     def is_locking(self) -> bool | None:
         """Return true if the lock is locking."""
-        # Check motorState or lockState fields (confirmed to exist on HmIP-DLD channel 1)
-        return True if self._channel.get("motorState") == "LOCKING" or self._channel.get("lockState") == "LOCKING" else None
+        motor_state = self._channel.get("motorState")
+        lock_state = self._channel.get("lockState")
+
+        # Return None only if we truly don't know the state (fields are missing)
+        if motor_state is None and lock_state is None:
+            return None
+
+        # Return True/False based on actual state comparison
+        return motor_state == "LOCKING" or lock_state == "LOCKING"
 
     @property
     def is_unlocking(self) -> bool | None:
         """Return true if the lock is unlocking."""
-        # Check motorState or lockState fields (confirmed to exist on HmIP-DLD channel 1)
-        return True if self._channel.get("motorState") == "UNLOCKING" or self._channel.get("lockState") == "UNLOCKING" else None
+        motor_state = self._channel.get("motorState")
+        lock_state = self._channel.get("lockState")
+
+        # Return None only if we truly don't know the state (fields are missing)
+        if motor_state is None and lock_state is None:
+            return None
+
+        # Return True/False based on actual state comparison
+        return motor_state == "UNLOCKING" or lock_state == "UNLOCKING"
 
     @property
     def is_jammed(self) -> bool | None:
         """Return true if the lock is jammed (incomplete locking)."""
-        # Check lockJammed on channel 0 (DEVICE_OPERATIONLOCK) - HmIP-DLD firmware 1.4.12+
-        # Also check motorState and lockState for jammed condition
         device_channel = self._device.get("functionalChannels", {}).get("0", {})
-        return True if (
-            device_channel.get("lockJammed") is True
-            or self._channel.get("motorState") == "JAMMED"
-            or self._channel.get("lockState") == "JAMMED"
-        ) else None
+        lock_jammed = device_channel.get("lockJammed")
+        motor_state = self._channel.get("motorState")
+        lock_state = self._channel.get("lockState")
+
+        # Return None only if we truly don't know the jam state (all fields are missing)
+        if lock_jammed is None and motor_state is None and lock_state is None:
+            return None
+
+        # Return True/False based on actual state comparison
+        return (
+            lock_jammed is True
+            or motor_state == "JAMMED"
+            or lock_state == "JAMMED"
+        )
 
     @property
     def is_opening(self) -> bool | None:
         """Return true if the lock is opening."""
-        # Check motorState or lockState fields (confirmed to exist on HmIP-DLD channel 1)
-        return True if self._channel.get("motorState") == "OPENING" or self._channel.get("lockState") == "OPENING" else None
+        motor_state = self._channel.get("motorState")
+        lock_state = self._channel.get("lockState")
+
+        # Return None only if we truly don't know the state (fields are missing)
+        if motor_state is None and lock_state is None:
+            return None
+
+        # Return True/False based on actual state comparison
+        return motor_state == "OPENING" or lock_state == "OPENING"
 
     @property
     def extra_state_attributes(self) -> dict:

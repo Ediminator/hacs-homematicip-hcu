@@ -4,6 +4,18 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 
 ---
 
+## Version 1.12.1 - 2025-11-08
+
+### 🐛 Bug Fixes
+
+**Duplicate Group Entity Names**
+- Fixed issue where group entity names were displayed twice (e.g., "Wohnzimmer Wohnzimmer")
+- Affected heating groups (HcuClimate), cover groups (HcuCoverGroup), and switching/light groups
+- Root cause: Missing `_attr_has_entity_name = False` flag caused Home Assistant to combine device name with entity name
+- Users will see correct single names after restarting Home Assistant
+
+---
+
 ## Version 1.12.0 - 2025-11-08
 
 ### ✨ Enhancements

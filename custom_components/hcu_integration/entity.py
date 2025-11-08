@@ -252,6 +252,7 @@ class SwitchingGroupMixin:
     """
 
     _attr_is_on: bool | None
+    _attr_assumed_state: bool
     _group_id: str
     _client: HcuApiClient
 
@@ -266,11 +267,27 @@ class SwitchingGroupMixin:
         self._attr_is_on = getattr(self, "_group", {}).get("on")
 
     async def _async_set_switching_group_state(self, turn_on: bool) -> None:
-        """Set switching group state with optimistic update."""
+        """Set switching group state with optimistic update and error handling."""
+        # Store previous state for rollback on error
+        previous_state = self._attr_is_on
+
+        # Optimistic update
         self._attr_is_on = turn_on
+        self._attr_assumed_state = True
         # async_write_ha_state is available from Entity base class
         getattr(self, "async_write_ha_state")()
-        await self._client.async_set_switching_group_state(self._group_id, turn_on)
+
+        try:
+            await self._client.async_set_switching_group_state(self._group_id, turn_on)
+        except (HcuApiError, ConnectionError) as err:
+            # Revert to previous state on error
+            self._attr_is_on = previous_state
+            self._attr_assumed_state = False
+            getattr(self, "async_write_ha_state")()
+            _LOGGER.error(
+                "Failed to set switching group %s state to %s: %s",
+                self._group_id, turn_on, err
+            )
 
 
 class HcuHomeBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, Entity):

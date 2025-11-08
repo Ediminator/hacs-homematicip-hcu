@@ -267,7 +267,6 @@ class HcuLightGroup(SwitchingGroupMixin, HcuGroupBaseEntity, LightEntity):
     """Representation of a Homematic IP HCU light group."""
 
     PLATFORM = Platform.LIGHT
-    _attr_has_entity_name = False
 
     def __init__(
         self,

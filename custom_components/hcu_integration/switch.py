@@ -130,7 +130,6 @@ class HcuSwitchGroup(SwitchingGroupMixin, HcuGroupBaseEntity, SwitchEntity):
     """Representation of a Homematic IP HCU switching group."""
 
     PLATFORM = Platform.SWITCH
-    _attr_has_entity_name = False
 
     def __init__(
         self,

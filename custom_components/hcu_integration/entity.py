@@ -197,7 +197,7 @@ class HcuGroupBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMix
     """Base class for entities that represent a Homematic IP group."""
 
     _attr_should_poll = False
-    _attr_has_entity_name = True
+    _attr_has_entity_name = False
 
     def __init__(
         self,
@@ -210,6 +210,11 @@ class HcuGroupBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMix
         self._client = client
         self._group_id = group_data["id"]
         self._attr_assumed_state = False
+
+        # Centralized naming logic for all group entities
+        label = group_data.get("label") or self._group_id
+        self._attr_name = self._apply_prefix(label)
+        self._attr_unique_id = self._group_id
 
     @property
     def _group(self) -> dict[str, Any]:
@@ -306,9 +311,6 @@ class HcuSwitchingGroupBase(SwitchingGroupMixin, HcuGroupBaseEntity):
     ) -> None:
         """Initialize the switching group base."""
         super().__init__(coordinator, client, group_data)
-        label = self._group.get("label") or self._group_id
-        self._attr_name = self._apply_prefix(label)
-        self._attr_unique_id = self._group_id
         self._init_switching_group_state(group_data)
 
     @callback

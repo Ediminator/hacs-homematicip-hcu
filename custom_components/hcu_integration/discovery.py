@@ -179,6 +179,18 @@ async def async_discover_entities(
     for group_data in state.get("groups", {}).values():
         group_type = group_data.get("type")
         if mapping := group_type_mapping.get(group_type):
+            # Skip auto-created meta groups for SWITCHING and LIGHT
+            # These are created automatically by HCU for rooms and provide unexpected entities
+            # User-created functional groups don't have metaGroupId and will still be discovered
+            if group_type in ("SWITCHING", "LIGHT"):
+                if "metaGroupId" in group_data:
+                    _LOGGER.debug(
+                        "Skipping auto-created meta %s group '%s'",
+                        group_type,
+                        group_data.get("label", group_data.get("id"))
+                    )
+                    continue
+
             platform, entity_class, extra_kwargs = mapping
             entities[platform].append(
                 entity_class(coordinator, client, group_data, **extra_kwargs)

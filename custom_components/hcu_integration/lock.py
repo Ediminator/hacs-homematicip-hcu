@@ -50,9 +50,16 @@ class HcuLock(HcuBaseEntity, LockEntity):
         self._config_entry = config_entry
         self._set_entity_name(channel_label=self._channel.get("label"))
         self._attr_unique_id = f"{self._device_id}_{self._channel_index}_lock"
-        
+
         # Track if this specific lock has determined it requires a PIN
         self._pin_required: bool | None = None
+
+        # Log available channel data fields for diagnostics
+        _LOGGER.debug(
+            "Lock '%s' initialized with channel data fields: %s",
+            self._attr_unique_id,
+            list(self._channel.keys())
+        )
 
     @property
     def is_locked(self) -> bool:
@@ -60,24 +67,138 @@ class HcuLock(HcuBaseEntity, LockEntity):
         return self._channel.get("lockState") == "LOCKED"
 
     @property
+    def is_locking(self) -> bool | None:
+        """Return true if the lock is locking."""
+        # Check motorState field (if available)
+        motor_state = self._channel.get("motorState")
+        if motor_state == "LOCKING":
+            return True
+
+        # Check activityState field (alternative field name)
+        activity_state = self._channel.get("activityState")
+        if activity_state == "LOCKING":
+            return True
+
+        # Check if lockState is transitioning to LOCKED
+        lock_state = self._channel.get("lockState")
+        if lock_state == "LOCKING":
+            return True
+
+        return None
+
+    @property
+    def is_unlocking(self) -> bool | None:
+        """Return true if the lock is unlocking."""
+        # Check motorState field (if available)
+        motor_state = self._channel.get("motorState")
+        if motor_state == "UNLOCKING":
+            return True
+
+        # Check activityState field (alternative field name)
+        activity_state = self._channel.get("activityState")
+        if activity_state == "UNLOCKING":
+            return True
+
+        # Check if lockState is transitioning to UNLOCKED
+        lock_state = self._channel.get("lockState")
+        if lock_state == "UNLOCKING":
+            return True
+
+        return None
+
+    @property
+    def is_jammed(self) -> bool | None:
+        """Return true if the lock is jammed (incomplete locking)."""
+        # Check motorState for jammed condition
+        motor_state = self._channel.get("motorState")
+        if motor_state == "JAMMED":
+            return True
+
+        # Check lockState for jammed condition
+        lock_state = self._channel.get("lockState")
+        if lock_state == "JAMMED":
+            return True
+
+        # Check for ERROR_JAMMED field (available on some firmware versions)
+        error_jammed = self._channel.get("errorJammed")
+        if error_jammed is True:
+            return True
+
+        # Check sabotage field as potential jam indicator
+        sabotage = self._channel.get("sabotage")
+        if sabotage is True:
+            return True
+
+        return None
+
+    @property
+    def is_opening(self) -> bool | None:
+        """Return true if the lock is opening."""
+        # Check motorState field (if available)
+        motor_state = self._channel.get("motorState")
+        if motor_state == "OPENING":
+            return True
+
+        # Check activityState field (alternative field name)
+        activity_state = self._channel.get("activityState")
+        if activity_state == "OPENING":
+            return True
+
+        # Check if lockState is transitioning to OPEN
+        lock_state = self._channel.get("lockState")
+        if lock_state == "OPENING":
+            return True
+
+        return None
+
+    @property
     def extra_state_attributes(self) -> dict:
         """Return additional state attributes."""
         attrs = {}
-        
+
         # Indicate PIN status
         pin_configured = bool(self._config_entry.data.get(CONF_PIN))
         attrs["pin_configured"] = pin_configured
-        
+
         # If we've determined this lock requires a PIN, indicate that
         if self._pin_required is not None:
             attrs["pin_required"] = self._pin_required
-            
+
+        # Expose motor/activity state for diagnostics
+        motor_state = self._channel.get("motorState")
+        if motor_state is not None:
+            attrs["motor_state"] = motor_state
+
+        activity_state = self._channel.get("activityState")
+        if activity_state is not None:
+            attrs["activity_state"] = activity_state
+
+        # Expose lock target level if available
+        lock_target_level = self._channel.get("lockTargetLevel")
+        if lock_target_level is not None:
+            attrs["lock_target_level"] = lock_target_level
+
+        # Expose error/sabotage states
+        error_jammed = self._channel.get("errorJammed")
+        if error_jammed is not None:
+            attrs["error_jammed"] = error_jammed
+
+        sabotage = self._channel.get("sabotage")
+        if sabotage is not None:
+            attrs["sabotage"] = sabotage
+
         return attrs
 
     async def _set_lock_state(self, state: str) -> None:
         """Send the command to set the lock state."""
         pin = self._config_entry.data.get(CONF_PIN)
-        
+
+        _LOGGER.debug(
+            "Setting lock state for '%s' to %s (channel: %s, device: %s)",
+            self.name, state, self._channel_index, self._device_id
+        )
+
+        # Use optimistic state updates for immediate UI feedback
         self._attr_assumed_state = True
         self.async_write_ha_state()
 
@@ -85,13 +206,15 @@ class HcuLock(HcuBaseEntity, LockEntity):
             await self._client.async_set_lock_state(
                 self._device_id, self._channel_index, state=state, pin=pin
             )
+            _LOGGER.debug("Successfully sent lock state command for '%s'", self.name)
+
             # If successful and we used no PIN, mark this lock as not requiring one
             if not pin and self._pin_required is None:
                 self._pin_required = False
-                
+
         except HcuApiError as err:
             error_str = str(err)
-            
+
             # Parse the error to check if it's a PIN issue
             if "INVALID_AUTHORIZATION_PIN" in error_str:
                 _LOGGER.error(
@@ -117,17 +240,28 @@ class HcuLock(HcuBaseEntity, LockEntity):
                         self.name,
                         DOCS_URL_LOCK_PIN_CONFIG,
                     )
-                    
+
+            # Check for motor jam errors
+            elif "JAMMED" in error_str or "JAM" in error_str:
+                _LOGGER.error(
+                    "Lock '%s' is jammed and cannot complete the operation. "
+                    "Check the lock mechanism for obstructions.",
+                    self.name,
+                )
+
             else:
                 _LOGGER.error("Failed to set lock state for %s: %s", self.name, err)
-                
+
         except ConnectionError as err:
             _LOGGER.error(
                 "Connection failed while setting lock state for %s: %s", self.name, err
             )
+
         finally:
-            # Reset assumed state to let coordinator update provide actual state
-            pass
+            # Reset assumed state to let coordinator updates provide actual state
+            # The coordinator will update the entity state based on WebSocket events
+            self._attr_assumed_state = False
+            self.async_write_ha_state()
 
     async def async_lock(self, **kwargs) -> None:
         """Lock the door."""

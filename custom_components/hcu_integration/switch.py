@@ -8,7 +8,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import HMIP_DEVICE_TYPE_TO_DEVICE_CLASS
-from .entity import HcuBaseEntity, HcuGroupBaseEntity, SwitchStateMixin, SwitchingGroupMixin
+from .entity import HcuBaseEntity, SwitchStateMixin, HcuSwitchingGroupBase
 from .api import HcuApiClient
 
 if TYPE_CHECKING:
@@ -126,34 +126,7 @@ class HcuWateringSwitch(SwitchStateMixin, HcuBaseEntity, SwitchEntity):
         await self._async_set_optimistic_state(False, "watering switch")
 
 
-class HcuSwitchGroup(SwitchingGroupMixin, HcuGroupBaseEntity, SwitchEntity):
+class HcuSwitchGroup(HcuSwitchingGroupBase, SwitchEntity):
     """Representation of a Homematic IP HCU switching group."""
 
     PLATFORM = Platform.SWITCH
-
-    def __init__(
-        self,
-        coordinator: "HcuCoordinator",
-        client: HcuApiClient,
-        group_data: dict[str, Any],
-    ):
-        """Initialize the HCU switch group."""
-        super().__init__(coordinator, client, group_data)
-        label = self._group.get("label") or self._group_id
-        self._attr_name = self._apply_prefix(label)
-        self._attr_unique_id = self._group_id
-        self._init_switching_group_state(group_data)
-
-    @callback
-    def _handle_coordinator_update(self) -> None:
-        """Handle updated data from the coordinator."""
-        self._sync_switching_group_state()
-        super()._handle_coordinator_update()
-
-    async def async_turn_on(self, **kwargs: Any) -> None:
-        """Turn the switch group on."""
-        await self._async_set_switching_group_state(True)
-
-    async def async_turn_off(self, **kwargs: Any) -> None:
-        """Turn the switch group off."""
-        await self._async_set_switching_group_state(False)

@@ -290,6 +290,42 @@ class SwitchingGroupMixin:
             )
 
 
+class HcuSwitchingGroupBase(SwitchingGroupMixin, HcuGroupBaseEntity):
+    """Base class for switching group entities (switch and light groups).
+
+    This class consolidates the shared implementation for both HcuSwitchGroup
+    and HcuLightGroup, eliminating code duplication while allowing subclasses
+    to customize platform-specific attributes.
+    """
+
+    def __init__(
+        self,
+        coordinator: "HcuCoordinator",
+        client: HcuApiClient,
+        group_data: dict[str, Any],
+    ) -> None:
+        """Initialize the switching group base."""
+        super().__init__(coordinator, client, group_data)
+        label = self._group.get("label") or self._group_id
+        self._attr_name = self._apply_prefix(label)
+        self._attr_unique_id = self._group_id
+        self._init_switching_group_state(group_data)
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        self._sync_switching_group_state()
+        super()._handle_coordinator_update()
+
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        """Turn the group on."""
+        await self._async_set_switching_group_state(True)
+
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        """Turn the group off."""
+        await self._async_set_switching_group_state(False)
+
+
 class HcuHomeBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, Entity):
     """Base class for entities tied to the global 'home' object."""
 

@@ -28,6 +28,7 @@ from .const import (
     CONF_AUTH_PORT,
     CONF_WEBSOCKET_PORT,
     CONF_ENTITY_PREFIX,
+    CONF_PLATFORM_OVERRIDES,
     ATTR_END_TIME,
 )
 from .util import create_unverified_ssl_context

@@ -44,6 +44,7 @@ CONF_PIN = "pin"
 CONF_AUTH_PORT = "auth_port"
 CONF_WEBSOCKET_PORT = "websocket_port"
 CONF_ENTITY_PREFIX = "entity_prefix"
+CONF_PLATFORM_OVERRIDES = "platform_overrides"  # Dict mapping entity unique_id to platform override
 DEFAULT_HCU_AUTH_PORT = 6969
 DEFAULT_HCU_WEBSOCKET_PORT = 9001
 CONF_COMFORT_TEMPERATURE = "comfort_temperature"
@@ -149,6 +150,7 @@ DEACTIVATED_BY_DEFAULT_DEVICES = {
     "WIRED_DIN_RAIL_BLIND_4",
     "WIRED_DIN_RAIL_DIMMER_3",
     "OPEN_COLLECTOR_MODULE_8",
+    "DIGITAL_RADIO_INPUT_32",  # HmIP-DRI32 - Input-only device
 }
 
 # --- Entity Mapping Dictionaries ---
@@ -172,6 +174,7 @@ HMIP_DEVICE_TYPE_TO_DEVICE_CLASS = {
     "WIRED_DIN_RAIL_DIMMER_3": None,
     "BRAND_DIMMER": None,
     "OPEN_COLLECTOR_MODULE_8": SwitchDeviceClass.SWITCH,
+    "DIGITAL_RADIO_INPUT_32": None,  # HmIP-DRI32 - Input-only device with 32 channels
     "DIN_RAIL_SWITCH_1": SwitchDeviceClass.SWITCH,
     "FLUSH_MOUNT_DIMMER": None,
     "CONTACT_INTERFACE_6": None,

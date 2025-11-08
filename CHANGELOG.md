@@ -4,6 +4,26 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 
 ---
 
+## Version 1.13.0 - 2025-11-08
+
+### ✨ New Device Support
+
+**HmIP-DRI32 Wired Input Actuator (Issue #31)**
+- Added support for HmIP-DRI32 (32-channel digital radio input actuator)
+- All 32 input channels now properly discovered
+- Button press events fire via `hcu_integration_event`
+- Contact state binary sensors created for all channels
+- Device disabled by default (input-only device with many channels)
+
+### 🔧 Technical Improvements
+
+**Platform Override Infrastructure (Issue #38 - Partial)**
+- Added `CONF_PLATFORM_OVERRIDES` configuration constant
+- Lays groundwork for future light/switch toggle feature
+- Full UI implementation deferred to future release
+
+---
+
 ## Version 1.12.1 - 2025-11-08
 
 ### 🐛 Bug Fixes

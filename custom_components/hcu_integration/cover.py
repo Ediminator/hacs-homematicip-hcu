@@ -205,7 +205,6 @@ class HcuCoverGroup(HcuGroupBaseEntity, CoverEntity):
     """Representation of an HCU Cover (shutter or blind) group."""
 
     PLATFORM = Platform.COVER
-    _attr_has_entity_name = False
 
     def __init__(
         self,
@@ -216,9 +215,6 @@ class HcuCoverGroup(HcuGroupBaseEntity, CoverEntity):
     ):
         """Initialize the HCU Cover group."""
         super().__init__(coordinator, client, group_data)
-        label = self._group.get("label") or self._group_id
-        self._attr_name = self._apply_prefix(label)
-        self._attr_unique_id = self._group_id
 
         self._attr_supported_features = (
             CoverEntityFeature.OPEN

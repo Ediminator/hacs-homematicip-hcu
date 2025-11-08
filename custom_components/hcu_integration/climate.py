@@ -51,7 +51,6 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
     """Representation of a Homematic IP HCU heating group."""
 
     PLATFORM = Platform.CLIMATE
-    _attr_has_entity_name = False
     _attr_hvac_modes = [HVACMode.AUTO, HVACMode.HEAT, HVACMode.OFF]
     _attr_temperature_unit = UnitOfTemperature.CELSIUS
     _attr_supported_features = (
@@ -67,9 +66,6 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
     ) -> None:
         """Initialize the HCU Climate entity."""
         super().__init__(coordinator, client, group_data)
-        label = self._group.get("label") or self._group_id
-        self._attr_name = self._apply_prefix(label)
-        self._attr_unique_id = self._group_id
         self._config_entry = config_entry
         self._default_profile_name = "Standard"
         self._default_profile_index = "PROFILE_1"

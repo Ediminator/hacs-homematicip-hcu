@@ -96,7 +96,7 @@ class HcuLight(HcuBaseEntity, LightEntity):
         self._attr_supported_color_modes = supported_modes
 
         # Add transition support for all dimmable modes (HS, COLOR_TEMP, BRIGHTNESS)
-        if "dimLevel" in self._channel and ColorMode.ONOFF not in supported_modes:
+        if "dimLevel" in self._channel:
             self._attr_supported_features |= LightEntityFeature.TRANSITION
 
     @property

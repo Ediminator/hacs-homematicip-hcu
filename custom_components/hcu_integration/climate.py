@@ -148,7 +148,7 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
             self._attr_preset_mode = PRESET_BOOST
         elif heating_home.get("absenceType") == "PERMANENT":
             self._attr_preset_mode = PRESET_ECO
-        elif self._group.get("partyMode") == "ACTIVE":
+        elif self._group.get("partyMode"):
             self._attr_preset_mode = PRESET_PARTY
         else:
             active_profile_index = self._group.get("activeProfile")

@@ -107,6 +107,7 @@ API_PATHS = {
     "SET_HUE": "/hmip/device/control/setHueSaturationDimLevel",
     "SET_SIMPLE_RGB_COLOR_STATE": "/hmip/device/control/setSimpleRGBColorState",
     "SET_SHUTTER_LEVEL": "/hmip/device/control/setShutterLevel",
+    "SET_PRIMARY_SHADING_LEVEL": "/hmip/device/control/setPrimaryShadingLevel",  # For SHADING_CHANNEL devices (e.g., HmIP-HDM1)
     "SET_SLATS_LEVEL": "/hmip/device/control/setSlatsLevel",
     "STOP_COVER": "/hmip/device/control/stop",
     "SEND_DOOR_COMMAND": "/hmip/device/control/sendDoorCommand",

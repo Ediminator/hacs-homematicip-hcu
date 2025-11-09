@@ -157,6 +157,7 @@ DEACTIVATED_BY_DEFAULT_DEVICES = {
 # --- Entity Mapping Dictionaries ---
 HMIP_DEVICE_TYPE_TO_DEVICE_CLASS = {
     "BLIND_ACTUATOR": CoverDeviceClass.BLIND,
+    "BLIND_MODULE": CoverDeviceClass.BLIND,  # HmIP-HDM1 HunterDouglas
     "BRAND_BLIND": CoverDeviceClass.BLIND,
     "HUNTER_DOUGLAS_BLIND": CoverDeviceClass.BLIND,
     "GARAGE_DOOR_CONTROLLER": CoverDeviceClass.GARAGE,
@@ -590,6 +591,7 @@ HMIP_CHANNEL_TYPE_TO_ENTITY = {
     "SHUTTER_CHANNEL": {"class": "HcuCover"},
     "BLIND_CHANNEL": {"class": "HcuCover"},
     "BRAND_BLIND_CHANNEL": {"class": "HcuCover"},  # For HmIP-HDM1 HunterDouglas blinds
+    "SHADING_CHANNEL": {"class": "HcuCover"},  # For HmIP-HDM1 HunterDouglas shading actuators
     "GARAGE_DOOR_CHANNEL": {"class": "HcuGarageDoorCover"},
     "DOOR_CHANNEL": {"class": "HcuGarageDoorCover"},
     "DOOR_SWITCH_CHANNEL": {"class": "HcuDoorOpenerButton"},

@@ -531,6 +531,10 @@ class HcuApiClient:
     async def async_set_shutter_level(self, device_id: str, channel_index: int, shutter_level: float) -> None:
         await self.async_device_control(API_PATHS["SET_SHUTTER_LEVEL"], device_id, channel_index, {"shutterLevel": shutter_level})
 
+    async def async_set_primary_shading_level(self, device_id: str, channel_index: int, shading_level: float) -> None:
+        """Set primary shading level for SHADING_CHANNEL devices (e.g., HmIP-HDM1)."""
+        await self.async_device_control(API_PATHS["SET_SHUTTER_LEVEL"], device_id, channel_index, {"primaryShadingLevel": shading_level})
+
     async def async_set_slats_level(self, device_id: str, channel_index: int, slats_level: float) -> None:
         await self.async_device_control(API_PATHS["SET_SLATS_LEVEL"], device_id, channel_index, {"slatsLevel": slats_level})
 

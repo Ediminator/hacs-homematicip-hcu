@@ -15,7 +15,12 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .entity import HcuBaseEntity, SwitchStateMixin
 from .api import HcuApiClient, HcuApiError
-from .const import HMIP_SIREN_TONES, DEFAULT_SIREN_TONE, DEFAULT_SIREN_DURATION
+from .const import (
+    HMIP_SIREN_TONES,
+    DEFAULT_SIREN_TONE,
+    DEFAULT_SIREN_DURATION,
+    HMIP_CHANNEL_KEY_ACOUSTIC_ALARM_ACTIVE,
+)
 
 if TYPE_CHECKING:
     from . import HcuCoordinator
@@ -42,7 +47,7 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
     PLATFORM = Platform.SIREN
 
     # Alarm sirens use 'acousticAlarmActive' instead of 'on' for state
-    _state_channel_key = "acousticAlarmActive"
+    _state_channel_key = HMIP_CHANNEL_KEY_ACOUSTIC_ALARM_ACTIVE
 
     _attr_supported_features = (
         SirenEntityFeature.TURN_ON

@@ -136,7 +136,7 @@ class HcuLight(HcuBaseEntity, LightEntity):
         if sat < 20:
             return "WHITE"
 
-        # Map hue ranges to colors (7 colors: RED, YELLOW, GREEN, TURQUOISE, BLUE, PURPLE)
+        # Map hue ranges to 7 colors: WHITE, RED, YELLOW, GREEN, TURQUOISE, BLUE, PURPLE
         if hue < 30 or hue >= 330:
             return "RED"
         elif 30 <= hue < 90:

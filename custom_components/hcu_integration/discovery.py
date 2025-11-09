@@ -37,6 +37,12 @@ if TYPE_CHECKING:
 
 _LOGGER = logging.getLogger(__name__)
 
+# Mapping for window state text sensor (complements binary sensor)
+_WINDOW_STATE_SENSOR_MAPPING = {
+    "name": "Window State",
+    "icon": "mdi:window-open-variant",
+}
+
 
 async def async_discover_entities(
     hass: HomeAssistant,
@@ -168,13 +174,9 @@ async def async_discover_entities(
 
                         # Add text sensor for window state (complements binary sensor)
                         if feature == "windowState":
-                            state_sensor_mapping = {
-                                "name": "Window State",
-                                "icon": "mdi:window-open-variant",
-                            }
                             entities[Platform.SENSOR].append(
                                 sensor.HcuWindowStateSensor(
-                                    coordinator, client, device_data, channel_index, feature, state_sensor_mapping
+                                    coordinator, client, device_data, channel_index, feature, _WINDOW_STATE_SENSOR_MAPPING
                                 )
                             )
                     except (AttributeError, TypeError) as e:

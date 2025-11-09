@@ -21,7 +21,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .entity import HcuBaseEntity, HcuSwitchingGroupBase
 from .api import HcuApiClient
-from .const import HMIP_RGB_COLOR_MAP
+from .const import HMIP_RGB_COLOR_MAP, API_PATHS
 
 if TYPE_CHECKING:
     from . import HcuCoordinator
@@ -163,7 +163,7 @@ class HcuLight(HcuBaseEntity, LightEntity):
             if self._has_simple_rgb:
                 rgb_color = self._hs_to_simple_rgb(hs_color)
                 await self._client.async_device_control(
-                    "/hmip/device/control/setRgbDimLevel",
+                    API_PATHS["SET_RGB_DIM_LEVEL"],
                     self._device_id,
                     self._channel_index,
                     {"simpleRGBColorState": rgb_color, "dimLevel": dim_level}

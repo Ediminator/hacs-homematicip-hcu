@@ -105,6 +105,7 @@ API_PATHS = {
     "SET_DIM_LEVEL": "/hmip/device/control/setDimLevel",
     "SET_COLOR_TEMP": "/hmip/device/control/setColorTemperatureDimLevel",
     "SET_HUE": "/hmip/device/control/setHueSaturationDimLevel",
+    "SET_RGB_DIM_LEVEL": "/hmip/device/control/setRgbDimLevel",
     "SET_SHUTTER_LEVEL": "/hmip/device/control/setShutterLevel",
     "SET_SLATS_LEVEL": "/hmip/device/control/setSlatsLevel",
     "STOP_COVER": "/hmip/device/control/stop",
@@ -619,7 +620,7 @@ HMIP_RGB_COLOR_MAP = {
 
 # Siren tone options for HmIP-ASIR2 and compatible devices
 # These acoustic signals can be used with the siren.turn_on service
-HMIP_SIREN_TONES = [
+HMIP_SIREN_TONES = frozenset({
     "FREQUENCY_RISING",
     "FREQUENCY_FALLING",
     "FREQUENCY_RISING_AND_FALLING",
@@ -632,13 +633,12 @@ HMIP_SIREN_TONES = [
     "FREQUENCY_LOWON_SHORTOFF_HIGH",
     "FREQUENCY_LOWON_LONGOFF",
     "FREQUENCY_LOWON_SHORTOFF",
-    "FREQUENCY_RISING_FALLING",
     "BATTERY_STATUS",
     "ARMED_STATUS",
     "EVENT_ON",
     "EVENT_OFF",
     "ERROR",
-]
+})
 
 # Default siren settings
 DEFAULT_SIREN_TONE = "FREQUENCY_RISING"

@@ -1,4 +1,5 @@
 # custom_components/hcu_integration/siren.py
+import logging
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.siren import (
@@ -18,6 +19,8 @@ from .const import HMIP_SIREN_TONES, DEFAULT_SIREN_TONE, DEFAULT_SIREN_DURATION
 
 if TYPE_CHECKING:
     from . import HcuCoordinator
+
+_LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
@@ -89,19 +92,39 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
         if tone not in HMIP_SIREN_TONES:
             tone = DEFAULT_SIREN_TONE
 
-        # Play the acoustic signal using the sound file API
-        # Volume is set to 1.0 (100%) for siren activation
-        await self._client.async_set_sound_file(
-            self._device_id,
-            self._channel_index,
-            sound_file=tone,
-            volume=1.0,
-            duration=duration,
-        )
+        # Set optimistic state immediately
+        self._attr_is_on = True
+        self._attr_assumed_state = True
+        self.async_write_ha_state()
 
-        # Update optimistic state
-        await self._async_set_optimistic_state(True, "siren")
+        try:
+            # Play the acoustic signal using the sound file API
+            # Volume is set to 1.0 (100%) for siren activation
+            await self._client.async_set_sound_file(
+                self._device_id,
+                self._channel_index,
+                sound_file=tone,
+                volume=1.0,
+                duration=duration,
+            )
+        except Exception as err:
+            # Revert state on error
+            _LOGGER.error("Failed to turn on siren %s: %s", self.name, err)
+            self._attr_is_on = False
+            self._attr_assumed_state = False
+            self.async_write_ha_state()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the siren off."""
-        await self._async_set_optimistic_state(False, "siren")
+        # Set optimistic state
+        self._attr_is_on = False
+        self._attr_assumed_state = True
+        self.async_write_ha_state()
+
+        try:
+            await self._call_switch_api(False)
+        except Exception as err:
+            _LOGGER.error("Failed to turn off siren %s: %s", self.name, err)
+            self._attr_is_on = True
+            self._attr_assumed_state = False
+            self.async_write_ha_state()

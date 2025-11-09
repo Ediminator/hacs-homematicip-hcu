@@ -15,6 +15,13 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.util import dt as dt_util
 
 from .api import HcuApiClient
+from .const import (
+    ABSENCE_TYPE_NOT_ABSENT,
+    ABSENCE_TYPE_PARTY,
+    ABSENCE_TYPE_PERIOD,
+    ABSENCE_TYPE_PERMANENT,
+    ABSENCE_TYPE_VACATION,
+)
 from .entity import HcuBaseEntity, HcuHomeBaseEntity
 
 if TYPE_CHECKING:
@@ -157,7 +164,7 @@ class HcuVacationModeBinarySensor(HcuHomeBaseEntity, BinarySensorEntity):
     @property
     def is_on(self) -> bool:
         """Return true if vacation mode is active."""
-        if self._attr_extra_state_attributes.get("type") != "VACATION":
+        if self._attr_extra_state_attributes.get("type") != ABSENCE_TYPE_VACATION:
             return False
 
         start_time = self._attr_extra_state_attributes.get("start_time")
@@ -195,21 +202,32 @@ class HcuVacationModeBinarySensor(HcuHomeBaseEntity, BinarySensorEntity):
                 _LOGGER.warning("Could not parse HCU %s time: %s", name, time_str)
                 return None
 
-        _start_time = _parse_hcu_datetime(heating_home.get("absenceStartTime"), "start")
-        _end_time = _parse_hcu_datetime(heating_home.get("absenceEndTime"), "end")
         _type = heating_home.get("absenceType")
 
-        if _type == "VACATION":
+        if _type in (ABSENCE_TYPE_PARTY, ABSENCE_TYPE_NOT_ABSENT):
+            # PARTY mode is not an absence, so reset all attributes.
+            self._attr_extra_state_attributes = {
+                "start_time": None,
+                "end_time": None,
+                "type": None,
+                "target_temperature": None,
+            }
+            return
+
+        # Handle other absence types.
+        _start_time = _parse_hcu_datetime(heating_home.get("absenceStartTime"), "start")
+        _end_time = _parse_hcu_datetime(heating_home.get("absenceEndTime"), "end")
+        _temp = None
+
+        if _type == ABSENCE_TYPE_VACATION:
             _temp = heating_home.get("lastVacationTemperature")
-        elif _type == "PERIOD" or _type == "PERMANENT":
+        elif _type in (ABSENCE_TYPE_PERIOD, ABSENCE_TYPE_PERMANENT):
             _temp = heating_home.get("ecoTemperature")
-        else:
-            _temp = None
 
         self._attr_extra_state_attributes = {
             "start_time": _start_time.isoformat() if _start_time else None,
             "end_time": _end_time.isoformat() if _end_time else None,
-            "type": _type if _type != "NOT_ABSENT" else None,
+            "type": _type,
             "target_temperature": _temp,
         }
 

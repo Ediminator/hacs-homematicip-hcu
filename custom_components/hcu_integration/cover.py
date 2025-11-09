@@ -55,8 +55,11 @@ class HcuCover(HcuBaseEntity, CoverEntity):
         device_type = self._device.get("type")
         self._attr_device_class = HMIP_DEVICE_TYPE_TO_DEVICE_CLASS.get(device_type)
 
-        # Detect which shading level property this device uses
-        self._uses_primary_shading = "primaryShadingLevel" in self._channel
+        # Store the appropriate API method based on which shading level property this device uses
+        if "primaryShadingLevel" in self._channel:
+            self._async_set_level = self._client.async_set_primary_shading_level
+        else:
+            self._async_set_level = self._client.async_set_shutter_level
 
         self._attr_supported_features = (
             CoverEntityFeature.OPEN
@@ -91,25 +94,11 @@ class HcuCover(HcuBaseEntity, CoverEntity):
 
     async def async_open_cover(self, **kwargs) -> None:
         self._attr_assumed_state = True
-        if self._uses_primary_shading:
-            await self._client.async_set_primary_shading_level(
-                self._device_id, self._channel_index, 0.0
-            )
-        else:
-            await self._client.async_set_shutter_level(
-                self._device_id, self._channel_index, 0.0
-            )
+        await self._async_set_level(self._device_id, self._channel_index, 0.0)
 
     async def async_close_cover(self, **kwargs) -> None:
         self._attr_assumed_state = True
-        if self._uses_primary_shading:
-            await self._client.async_set_primary_shading_level(
-                self._device_id, self._channel_index, 1.0
-            )
-        else:
-            await self._client.async_set_shutter_level(
-                self._device_id, self._channel_index, 1.0
-            )
+        await self._async_set_level(self._device_id, self._channel_index, 1.0)
 
     async def async_stop_cover(self, **kwargs) -> None:
         self._attr_assumed_state = True
@@ -119,14 +108,7 @@ class HcuCover(HcuBaseEntity, CoverEntity):
         position = kwargs[ATTR_POSITION]
         self._attr_assumed_state = True
         shutter_level = round((100 - position) / 100.0, 2)
-        if self._uses_primary_shading:
-            await self._client.async_set_primary_shading_level(
-                self._device_id, self._channel_index, shutter_level
-            )
-        else:
-            await self._client.async_set_shutter_level(
-                self._device_id, self._channel_index, shutter_level
-            )
+        await self._async_set_level(self._device_id, self._channel_index, shutter_level)
 
     async def async_set_cover_tilt_position(self, **kwargs) -> None:
         position = kwargs[ATTR_TILT_POSITION]

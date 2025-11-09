@@ -105,7 +105,7 @@ API_PATHS = {
     "SET_DIM_LEVEL": "/hmip/device/control/setDimLevel",
     "SET_COLOR_TEMP": "/hmip/device/control/setColorTemperatureDimLevel",
     "SET_HUE": "/hmip/device/control/setHueSaturationDimLevel",
-    "SET_RGB_DIM_LEVEL": "/hmip/device/control/setRgbDimLevel",
+    "SET_SIMPLE_RGB_COLOR_STATE": "/hmip/device/control/setSimpleRGBColorState",
     "SET_SHUTTER_LEVEL": "/hmip/device/control/setShutterLevel",
     "SET_SLATS_LEVEL": "/hmip/device/control/setSlatsLevel",
     "STOP_COVER": "/hmip/device/control/stop",
@@ -564,6 +564,11 @@ DEVICE_CHANNEL_EVENT_TYPES = frozenset({
     "KEY_PRESS_LONG",
     "KEY_PRESS_LONG_START",
     "KEY_PRESS_LONG_STOP",
+    # Some devices (e.g., HmIP-BSL KEY_CHANNEL) may use shorter event names
+    "PRESS_SHORT",
+    "PRESS_LONG",
+    "PRESS_LONG_START",
+    "PRESS_LONG_STOP",
 })
 
 HMIP_CHANNEL_TYPE_TO_ENTITY = {
@@ -606,16 +611,29 @@ HMIP_CHANNEL_TYPE_TO_ENTITY = {
     "PRESENCE_DETECTION_CHANNEL": None,
 }
 
-# RGB Color mappings for HmIP-MP3P (simpleRGBColorState to HS color)
+# --- Simple RGB Color State Constants ---
+# Color values for simpleRGBColorState (HmIP-BSL, HmIP-MP3P, etc.)
+HMIP_COLOR_BLACK = "BLACK"
+HMIP_COLOR_WHITE = "WHITE"
+HMIP_COLOR_RED = "RED"
+HMIP_COLOR_BLUE = "BLUE"
+HMIP_COLOR_GREEN = "GREEN"
+HMIP_COLOR_YELLOW = "YELLOW"
+HMIP_COLOR_PURPLE = "PURPLE"
+HMIP_COLOR_TURQUOISE = "TURQUOISE"
+HMIP_COLOR_ORANGE = "ORANGE"
+
+# RGB Color mappings for devices with simpleRGBColorState (e.g., HmIP-BSL backlight)
+# Maps simpleRGBColorState values to HS color tuples (hue, saturation)
 HMIP_RGB_COLOR_MAP = {
-    "BLACK": (0, 0),        # Off/Black
-    "BLUE": (240, 100),     # Blue
-    "GREEN": (120, 100),    # Green
-    "TURQUOISE": (180, 100), # Cyan/Turquoise
-    "RED": (0, 100),        # Red
-    "PURPLE": (300, 100),   # Purple/Magenta
-    "YELLOW": (60, 100),    # Yellow
-    "WHITE": (0, 0),        # White (will be handled separately with brightness)
+    HMIP_COLOR_BLACK: (0, 0),        # Off/Black
+    HMIP_COLOR_BLUE: (240, 100),     # Blue
+    HMIP_COLOR_GREEN: (120, 100),    # Green
+    HMIP_COLOR_TURQUOISE: (180, 100), # Cyan/Turquoise
+    HMIP_COLOR_RED: (0, 100),        # Red
+    HMIP_COLOR_PURPLE: (300, 100),   # Purple/Magenta
+    HMIP_COLOR_YELLOW: (60, 100),    # Yellow
+    HMIP_COLOR_WHITE: (0, 0),        # White (will be handled separately with brightness)
 }
 
 # Siren tone options for HmIP-ASIR2 and compatible devices
@@ -651,3 +669,5 @@ ABSENCE_TYPE_PERIOD = "PERIOD"
 ABSENCE_TYPE_PERMANENT = "PERMANENT"
 ABSENCE_TYPE_VACATION = "VACATION"
 
+# Siren channel state key
+HMIP_CHANNEL_KEY_ACOUSTIC_ALARM_ACTIVE = "acousticAlarmActive"

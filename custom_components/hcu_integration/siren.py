@@ -14,7 +14,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .entity import HcuBaseEntity, SwitchStateMixin
-from .api import HcuApiClient
+from .api import HcuApiClient, HcuApiError
 from .const import HMIP_SIREN_TONES, DEFAULT_SIREN_TONE, DEFAULT_SIREN_DURATION
 
 if TYPE_CHECKING:
@@ -66,8 +66,15 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
 
     @callback
     def _handle_coordinator_update(self) -> None:
-        """Handle updated data from the coordinator."""
-        self._sync_switch_state_from_coordinator()
+        """Handle updated data from the coordinator.
+
+        Don't sync state from coordinator when in assumed_state mode
+        (i.e., we just triggered the siren and are waiting for the sound to complete).
+        This prevents the coordinator from incorrectly reporting the siren as 'off'
+        while it's still playing the acoustic signal.
+        """
+        if not self._attr_assumed_state:
+            self._sync_switch_state_from_coordinator()
         super()._handle_coordinator_update()
 
     async def _call_switch_api(self, turn_on: bool) -> None:
@@ -113,12 +120,16 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
                 volume=1.0,
                 duration=duration,
             )
-        except Exception as err:
+            # API call succeeded - clear assumed_state to allow coordinator updates
+            self._attr_assumed_state = False
+            self.async_write_ha_state()
+        except (HcuApiError, ConnectionError) as err:
             # Revert state on error
             _LOGGER.error("Failed to turn on siren %s: %s", self.name, err)
             self._attr_is_on = False
             self._attr_assumed_state = False
             self.async_write_ha_state()
+            raise
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the siren off."""
@@ -129,8 +140,12 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
 
         try:
             await self._call_switch_api(False)
-        except Exception as err:
+            # API call succeeded - clear assumed_state to allow coordinator updates
+            self._attr_assumed_state = False
+            self.async_write_ha_state()
+        except (HcuApiError, ConnectionError) as err:
             _LOGGER.error("Failed to turn off siren %s: %s", self.name, err)
             self._attr_is_on = True
             self._attr_assumed_state = False
             self.async_write_ha_state()
+            raise

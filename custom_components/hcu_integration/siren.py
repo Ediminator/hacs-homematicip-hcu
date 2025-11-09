@@ -90,6 +90,12 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
 
         # Validate tone
         if tone not in HMIP_SIREN_TONES:
+            _LOGGER.warning(
+                "Invalid tone '%s' for siren %s. Using default tone '%s'.",
+                tone,
+                self.name,
+                DEFAULT_SIREN_TONE,
+            )
             tone = DEFAULT_SIREN_TONE
 
         # Set optimistic state immediately

@@ -158,3 +158,20 @@ class HcuTemperatureSensor(HcuGenericSensor):
         return self._channel.get("actualTemperature") or self._channel.get(
             "valveActualTemperature"
         )
+
+
+class HcuWindowStateSensor(HcuGenericSensor):
+    """
+    Representation of an HCU window state sensor (HmIP-SRH and similar).
+
+    This sensor shows the actual window state as its value: OPEN, TILTED, or CLOSED.
+    This complements the binary sensor which can only show on/off.
+    """
+
+    @property
+    def native_value(self) -> str | None:
+        """Return the window state: OPEN, TILTED, or CLOSED."""
+        state = self._channel.get(self._feature)
+        if state in ("OPEN", "TILTED", "CLOSED"):
+            return state.lower().capitalize()  # Convert to Title Case for display
+        return state

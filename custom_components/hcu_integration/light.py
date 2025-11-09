@@ -21,6 +21,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .entity import HcuBaseEntity, HcuSwitchingGroupBase
 from .api import HcuApiClient
+from .const import HMIP_RGB_COLOR_MAP, API_PATHS
 
 if TYPE_CHECKING:
     from . import HcuCoordinator
@@ -60,12 +61,15 @@ class HcuLight(HcuBaseEntity, LightEntity):
 
         # Determine supported color modes based on channel capabilities
         supported_modes = set()
-        
+
+        # Check for RGB color support (BSL backlight uses simpleRGBColorState)
+        self._has_simple_rgb = "simpleRGBColorState" in self._channel
+
         if "dimLevel" in self._channel:
             supported_modes.add(ColorMode.BRIGHTNESS)
             self._attr_supported_features |= LightEntityFeature.TRANSITION
 
-        if self._channel.get("hue") is not None:
+        if self._channel.get("hue") is not None or self._has_simple_rgb:
             supported_modes.add(ColorMode.HS)
         elif "colorTemperature" in self._channel:
             supported_modes.add(ColorMode.COLOR_TEMP)
@@ -110,11 +114,41 @@ class HcuLight(HcuBaseEntity, LightEntity):
     @property
     def hs_color(self) -> tuple[float, float] | None:
         """Return the hue and saturation."""
+        # For devices with simpleRGBColorState (e.g., BSL backlight)
+        if self._has_simple_rgb:
+            rgb_state = self._channel.get("simpleRGBColorState")
+            if rgb_state and rgb_state in HMIP_RGB_COLOR_MAP:
+                return HMIP_RGB_COLOR_MAP[rgb_state]
+            return None
+
+        # For devices with hue/saturation (e.g., RGBW lights)
         hue = self._channel.get("hue")
         saturation = self._channel.get("saturationLevel")
         if hue is None or saturation is None:
             return None
         return (float(hue), float(saturation) * 100)
+
+    def _hs_to_simple_rgb(self, hs_color: tuple[float, float]) -> str:
+        """Convert HS color to the closest Homematic IP simple RGB color."""
+        hue, sat = hs_color
+
+        # If saturation is very low, it's white
+        if sat < 20:
+            return "WHITE"
+
+        # Map hue ranges to 7 colors: WHITE, RED, YELLOW, GREEN, TURQUOISE, BLUE, PURPLE
+        if hue < 30 or hue >= 330:
+            return "RED"
+        elif 30 <= hue < 90:
+            return "YELLOW"
+        elif 90 <= hue < 150:
+            return "GREEN"
+        elif 150 <= hue < 210:
+            return "TURQUOISE"
+        elif 210 <= hue < 270:
+            return "BLUE"
+        else:  # 270 <= hue < 330
+            return "PURPLE"
 
     async def async_turn_on(self, **kwargs) -> None:
         """Turn the light on with optional color, temperature, or brightness adjustments."""
@@ -124,11 +158,23 @@ class HcuLight(HcuBaseEntity, LightEntity):
         # Handle color mode specific commands
         if ATTR_HS_COLOR in kwargs and ColorMode.HS in self.supported_color_modes:
             hs_color = kwargs[ATTR_HS_COLOR]
-            hue = int(hs_color[0])
-            saturation = hs_color[1] / 100.0
-            await self._client.async_set_hue_saturation(
-                self._device_id, self._channel_index, hue, saturation, dim_level, ramp_time
-            )
+
+            # For devices with simpleRGBColorState (e.g., BSL backlight)
+            if self._has_simple_rgb:
+                rgb_color = self._hs_to_simple_rgb(hs_color)
+                await self._client.async_device_control(
+                    API_PATHS["SET_RGB_DIM_LEVEL"],
+                    self._device_id,
+                    self._channel_index,
+                    {"simpleRGBColorState": rgb_color, "dimLevel": dim_level}
+                )
+            else:
+                # For devices with hue/saturation (e.g., RGBW lights)
+                hue = int(hs_color[0])
+                saturation = hs_color[1] / 100.0
+                await self._client.async_set_hue_saturation(
+                    self._device_id, self._channel_index, hue, saturation, dim_level, ramp_time
+                )
         elif ATTR_COLOR_TEMP_KELVIN in kwargs and ColorMode.COLOR_TEMP in self.supported_color_modes:
             color_temp = kwargs[ATTR_COLOR_TEMP_KELVIN]
             await self._client.async_set_color_temperature(

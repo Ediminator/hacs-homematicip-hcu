@@ -37,6 +37,12 @@ if TYPE_CHECKING:
 
 _LOGGER = logging.getLogger(__name__)
 
+# Mapping for window state text sensor (complements binary sensor)
+_WINDOW_STATE_SENSOR_MAPPING = {
+    "name": "Window State",
+    "icon": "mdi:window-open-variant",
+}
+
 
 async def async_discover_entities(
     hass: HomeAssistant,
@@ -68,6 +74,7 @@ async def async_discover_entities(
         "HcuGenericSensor": sensor,
         "HcuTemperatureSensor": sensor,
         "HcuHomeSensor": sensor,
+        "HcuWindowStateSensor": sensor,
         "HcuBinarySensor": binary_sensor,
         "HcuWindowBinarySensor": binary_sensor,
         "HcuSmokeBinarySensor": binary_sensor,
@@ -158,11 +165,19 @@ async def async_discover_entities(
                         entities[platform].append(
                             entity_class(coordinator, client, device_data, channel_index, feature, entity_mapping)
                         )
-                        
+
                         # Add reset button for energy counters
                         if feature == "energyCounter":
                             entities[Platform.BUTTON].append(
                                 button.HcuResetEnergyButton(coordinator, client, device_data, channel_index)
+                            )
+
+                        # Add text sensor for window state (complements binary sensor)
+                        if feature == "windowState":
+                            entities[Platform.SENSOR].append(
+                                sensor.HcuWindowStateSensor(
+                                    coordinator, client, device_data, channel_index, feature, _WINDOW_STATE_SENSOR_MAPPING
+                                )
                             )
                     except (AttributeError, TypeError) as e:
                         _LOGGER.error("Failed to create entity for feature %s (%s): %s", feature, class_name, e)

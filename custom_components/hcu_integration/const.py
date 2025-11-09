@@ -105,6 +105,7 @@ API_PATHS = {
     "SET_DIM_LEVEL": "/hmip/device/control/setDimLevel",
     "SET_COLOR_TEMP": "/hmip/device/control/setColorTemperatureDimLevel",
     "SET_HUE": "/hmip/device/control/setHueSaturationDimLevel",
+    "SET_RGB_DIM_LEVEL": "/hmip/device/control/setRgbDimLevel",
     "SET_SHUTTER_LEVEL": "/hmip/device/control/setShutterLevel",
     "SET_SLATS_LEVEL": "/hmip/device/control/setSlatsLevel",
     "STOP_COVER": "/hmip/device/control/stop",
@@ -555,6 +556,7 @@ EVENT_CHANNEL_TYPES = {
     "SINGLE_KEY_CHANNEL",
     "MULTI_MODE_INPUT_CHANNEL",
     CHANNEL_TYPE_MULTI_MODE_INPUT_TRANSMITTER,
+    "KEY_CHANNEL",  # For HmIP-BSL and similar devices with button inputs
 }
 
 DEVICE_CHANNEL_EVENT_TYPES = frozenset({
@@ -582,6 +584,7 @@ HMIP_CHANNEL_TYPE_TO_ENTITY = {
     "OPEN_COLLECTOR_CHANNEL_8": {"class": "HcuSwitch"},
     "SHUTTER_CHANNEL": {"class": "HcuCover"},
     "BLIND_CHANNEL": {"class": "HcuCover"},
+    "BRAND_BLIND_CHANNEL": {"class": "HcuCover"},  # For HmIP-HDM1 HunterDouglas blinds
     "GARAGE_DOOR_CHANNEL": {"class": "HcuGarageDoorCover"},
     "DOOR_CHANNEL": {"class": "HcuGarageDoorCover"},
     "DOOR_SWITCH_CHANNEL": {"class": "HcuDoorOpenerButton"},
@@ -614,3 +617,29 @@ HMIP_RGB_COLOR_MAP = {
     "YELLOW": (60, 100),    # Yellow
     "WHITE": (0, 0),        # White (will be handled separately with brightness)
 }
+
+# Siren tone options for HmIP-ASIR2 and compatible devices
+# These acoustic signals can be used with the siren.turn_on service
+HMIP_SIREN_TONES = frozenset({
+    "FREQUENCY_RISING",
+    "FREQUENCY_FALLING",
+    "FREQUENCY_RISING_AND_FALLING",
+    "FREQUENCY_ALTERNATING_LOW_HIGH",
+    "FREQUENCY_ALTERNATING_MID_HIGH",
+    "FREQUENCY_ALTERNATING_LOW_MID",
+    "FREQUENCY_HIGHON_LONGOFF",
+    "FREQUENCY_HIGHON_SHORTOFF",
+    "FREQUENCY_LOWON_LONGOFF_HIGH",
+    "FREQUENCY_LOWON_SHORTOFF_HIGH",
+    "FREQUENCY_LOWON_LONGOFF",
+    "FREQUENCY_LOWON_SHORTOFF",
+    "BATTERY_STATUS",
+    "ARMED_STATUS",
+    "EVENT_ON",
+    "EVENT_OFF",
+    "ERROR",
+})
+
+# Default siren settings
+DEFAULT_SIREN_TONE = "FREQUENCY_RISING"
+DEFAULT_SIREN_DURATION = 10.0  # seconds

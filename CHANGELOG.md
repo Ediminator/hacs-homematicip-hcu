@@ -4,6 +4,138 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 
 ---
 
+## Version 1.15.0 - 2025-11-09
+
+### 🪟 Window Sensor State Enhancement (HmIP-SRH)
+
+**Add Dedicated Window State Sensor (GitHub Issue #48)**
+
+The v1.10.0 fix for window state was incomplete - it only exposed the state as an attribute on a binary sensor. This release adds a proper text sensor that shows the actual window state.
+
+#### What Changed
+- **New Sensor Entity**: "Window State" sensor now displays "Open", "Tilted", or "Closed" as its main state value
+- **Binary Sensor Kept**: The existing binary sensor (on/off) remains for compatibility
+- **No More Hidden Attributes**: Users can now see the window state directly without checking attributes
+
+#### Why This Matters
+- **v1.10.0 limitation**: Window state (OPEN/TILTED/CLOSED) was only visible as an attribute on the binary sensor
+- **Binary sensors** can only show on/off in their main state, making the tilted state invisible in the UI
+- **User experience**: The new text sensor makes the state immediately visible in dashboards and automations
+
+#### Usage
+Both entities will now appear for HmIP-SRH devices:
+- **Binary Sensor**: "Window" - Shows on (open or tilted) / off (closed)
+- **Text Sensor**: "Window State" - Shows Open / Tilted / Closed
+
+Use the text sensor in automations that need to distinguish between open and tilted states:
+```yaml
+trigger:
+  - platform: state
+    entity_id: sensor.bedroom_window_window_state
+    to: "Tilted"
+```
+
+### 🔘 Switch Actuator Enhancements (HmIP-BSL)
+
+**Fix Button Event Detection (GitHub Issue #67)**
+
+Button presses on HmIP-BSL switch actuators now properly generate `hcu_integration_event` events.
+
+#### What Was Fixed
+- Added `KEY_CHANNEL` to `EVENT_CHANNEL_TYPES`
+- BSL button inputs (channels 1-2) now trigger events for automations
+- Supports all button press types: SHORT, LONG, LONG_START, LONG_STOP
+
+#### Usage
+Button events now work as documented:
+```yaml
+trigger:
+  - platform: event
+    event_type: hcu_integration_event
+    event_data:
+      device_id: "YOUR_BSL_DEVICE_ID"
+      channel: 1
+      type: "KEY_PRESS_SHORT"
+```
+
+**Add Full Color Support for Backlight (GitHub Issue #68)**
+
+The illuminated backlight on HmIP-BSL switches now supports all 7 colors instead of just white.
+
+#### Supported Colors
+- **White** (default)
+- **Blue**
+- **Green**
+- **Turquoise** (Light Blue)
+- **Red**
+- **Violet** (Purple)
+- **Yellow**
+
+#### How It Works
+- HcuLight entities now detect and handle `simpleRGBColorState`
+- Automatic color mapping from HS color picker to closest BSL color
+- Uses same RGB system as HmIP-MP3P notification lights
+
+#### Usage
+Set backlight color from UI or automation:
+```yaml
+service: light.turn_on
+target:
+  entity_id: light.bsl_switch_backlight
+data:
+  hs_color: [240, 100]  # Blue
+```
+
+**Technical Implementation:**
+- Added `_has_simple_rgb` detection in HcuLight.__init__
+- Enhanced `hs_color` property to read `simpleRGBColorState`
+- Added `_hs_to_simple_rgb()` color conversion method
+- Modified `async_turn_on()` to use `/hmip/device/control/setRgbDimLevel` API for RGB devices
+
+### 🔊 Siren Enhancements (HmIP-ASIR2)
+
+**Implement Tone and Duration Support for Alarm Sirens (GitHub Issue #73)**
+
+The HMIP-ASIR2 and compatible siren devices now properly support acoustic signal selection and duration control.
+
+#### New Siren Features
+- **Tone Selection** - Choose from 18 different acoustic signals:
+  - Frequency patterns (rising, falling, alternating, etc.)
+  - Status tones (battery, armed, event, error)
+  - Customizable alert sounds
+- **Duration Control** - Set alarm duration in seconds (default: 10s)
+- **Full Home Assistant Siren Integration** - Proper `siren.turn_on` service support with tone and duration parameters
+
+#### Usage Example
+```yaml
+service: siren.turn_on
+target:
+  entity_id: siren.alarm_siren
+data:
+  tone: "FREQUENCY_RISING"
+  duration: 30
+```
+
+**Technical Details:**
+- Added `HMIP_SIREN_TONES` constant with 18 available tones
+- Updated siren entity to support `SirenEntityFeature.TONES` and `SirenEntityFeature.DURATION`
+- Switched from switch API to sound file API for proper siren control
+- Default tone: `FREQUENCY_RISING`, default duration: 10 seconds
+
+### 🪟 Cover Device Support (HmIP-HDM1)
+
+**Add Support for HunterDouglas Blind Devices (GitHub Issue #64)**
+
+Added channel mapping for HmIP-HDM1 (HunterDouglas) roller blinds to properly expose cover entities.
+
+#### Changes
+- Added `BRAND_BLIND_CHANNEL` mapping for HunterDouglas and third-party blind devices
+- Ensures HDM1 devices appear as controllable covers in Home Assistant
+
+**Note:** This fix is based on device type analysis. If your HDM1 device still doesn't appear, please provide diagnostics via GitHub issue #64.
+
+---
+
 ## Version 1.14.0 - 2025-11-09
 
 ### 🔒 Door Lock Enhancements (HmIP-DLD)

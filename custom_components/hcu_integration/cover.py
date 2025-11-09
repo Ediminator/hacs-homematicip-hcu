@@ -55,11 +55,13 @@ class HcuCover(HcuBaseEntity, CoverEntity):
         device_type = self._device.get("type")
         self._attr_device_class = HMIP_DEVICE_TYPE_TO_DEVICE_CLASS.get(device_type)
 
-        # Store the appropriate API method based on which shading level property this device uses
+        # Store the appropriate API method and property name based on which shading level this device uses
         if "primaryShadingLevel" in self._channel:
             self._async_set_level = self._client.async_set_primary_shading_level
+            self._level_property = "primaryShadingLevel"
         else:
             self._async_set_level = self._client.async_set_shutter_level
+            self._level_property = "shutterLevel"
 
         self._attr_supported_features = (
             CoverEntityFeature.OPEN
@@ -76,8 +78,7 @@ class HcuCover(HcuBaseEntity, CoverEntity):
         Return current position of cover.
         Inverts and scales HCU's 0.0(open)-1.0(closed) to HA's 100(open)-0(closed).
         """
-        # Support both shutterLevel (standard covers) and primaryShadingLevel (SHADING_CHANNEL devices like HmIP-HDM1)
-        level = self._channel.get("shutterLevel") or self._channel.get("primaryShadingLevel")
+        level = self._channel.get(self._level_property)
         return int((1 - level) * 100) if level is not None else None
 
     @property

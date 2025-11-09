@@ -21,7 +21,19 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .entity import HcuBaseEntity, HcuSwitchingGroupBase
 from .api import HcuApiClient
-from .const import HMIP_RGB_COLOR_MAP, API_PATHS
+from .const import (
+    API_PATHS,
+    HMIP_RGB_COLOR_MAP,
+    HMIP_COLOR_BLACK,
+    HMIP_COLOR_WHITE,
+    HMIP_COLOR_RED,
+    HMIP_COLOR_BLUE,
+    HMIP_COLOR_GREEN,
+    HMIP_COLOR_YELLOW,
+    HMIP_COLOR_PURPLE,
+    HMIP_COLOR_TURQUOISE,
+    HMIP_COLOR_ORANGE,
+)
 
 if TYPE_CHECKING:
     from . import HcuCoordinator
@@ -134,21 +146,21 @@ class HcuLight(HcuBaseEntity, LightEntity):
 
         # If saturation is very low, it's white
         if sat < 20:
-            return "WHITE"
+            return HMIP_COLOR_WHITE
 
         # Map hue ranges to 7 colors: WHITE, RED, YELLOW, GREEN, TURQUOISE, BLUE, PURPLE
         if hue < 30 or hue >= 330:
-            return "RED"
+            return HMIP_COLOR_RED
         elif 30 <= hue < 90:
-            return "YELLOW"
+            return HMIP_COLOR_YELLOW
         elif 90 <= hue < 150:
-            return "GREEN"
+            return HMIP_COLOR_GREEN
         elif 150 <= hue < 210:
-            return "TURQUOISE"
+            return HMIP_COLOR_TURQUOISE
         elif 210 <= hue < 270:
-            return "BLUE"
+            return HMIP_COLOR_BLUE
         else:  # 270 <= hue < 330
-            return "PURPLE"
+            return HMIP_COLOR_PURPLE
 
     async def async_turn_on(self, **kwargs) -> None:
         """Turn the light on with optional color, temperature, or brightness adjustments."""
@@ -163,7 +175,7 @@ class HcuLight(HcuBaseEntity, LightEntity):
             if self._has_simple_rgb:
                 rgb_color = self._hs_to_simple_rgb(hs_color)
                 await self._client.async_device_control(
-                    API_PATHS["SET_RGB_DIM_LEVEL"],
+                    API_PATHS["SET_SIMPLE_RGB_COLOR_STATE"],
                     self._device_id,
                     self._channel_index,
                     {"simpleRGBColorState": rgb_color, "dimLevel": dim_level}
@@ -200,15 +212,15 @@ class HcuNotificationLight(HcuBaseEntity, LightEntity):
 
     # RGB color mappings for Homematic IP notification devices
     _COLOR_MAP = {
-        "BLACK": (0, 0, 0),
-        "BLUE": (240, 100, 50),
-        "GREEN": (120, 100, 50),
-        "TURQUOISE": (180, 100, 50),
-        "RED": (0, 100, 50),
-        "PURPLE": (300, 100, 50),
-        "YELLOW": (60, 100, 50),
-        "WHITE": (0, 0, 100),
-        "ORANGE": (30, 100, 50),
+        HMIP_COLOR_BLACK: (0, 0, 0),
+        HMIP_COLOR_BLUE: (240, 100, 50),
+        HMIP_COLOR_GREEN: (120, 100, 50),
+        HMIP_COLOR_TURQUOISE: (180, 100, 50),
+        HMIP_COLOR_RED: (0, 100, 50),
+        HMIP_COLOR_PURPLE: (300, 100, 50),
+        HMIP_COLOR_YELLOW: (60, 100, 50),
+        HMIP_COLOR_WHITE: (0, 0, 100),
+        HMIP_COLOR_ORANGE: (30, 100, 50),
     }
 
     def __init__(
@@ -228,7 +240,7 @@ class HcuNotificationLight(HcuBaseEntity, LightEntity):
     def is_on(self) -> bool:
         """Return True if the notification light is on."""
         rgb_state = self._channel.get("simpleRGBColorState")
-        return rgb_state is not None and rgb_state != "BLACK"
+        return rgb_state is not None and rgb_state != HMIP_COLOR_BLACK
 
     @property
     def brightness(self) -> int:
@@ -239,49 +251,49 @@ class HcuNotificationLight(HcuBaseEntity, LightEntity):
     def hs_color(self) -> tuple[float, float] | None:
         """Return the hue and saturation based on the current RGB color state."""
         rgb_state = self._channel.get("simpleRGBColorState")
-        if not rgb_state or rgb_state == "BLACK":
+        if not rgb_state or rgb_state == HMIP_COLOR_BLACK:
             return None
 
         if rgb_state in self._COLOR_MAP:
             h, s, _ = self._COLOR_MAP[rgb_state]
             return (float(h), float(s))
-        
+
         return None
 
     def _hs_to_simple_rgb(self, hs_color: tuple[float, float]) -> str:
         """Convert HS color to the closest Homematic IP simple RGB color."""
         hue, sat = hs_color
-        
+
         # If saturation is very low, it's white
         if sat < 20:
-            return "WHITE"
-        
+            return HMIP_COLOR_WHITE
+
         # Map hue ranges to colors
         if hue < 15 or hue >= 345:
-            return "RED"
+            return HMIP_COLOR_RED
         elif 15 <= hue < 45:
-            return "ORANGE"
+            return HMIP_COLOR_ORANGE
         elif 45 <= hue < 75:
-            return "YELLOW"
+            return HMIP_COLOR_YELLOW
         elif 75 <= hue < 165:
-            return "GREEN"
+            return HMIP_COLOR_GREEN
         elif 165 <= hue < 195:
-            return "TURQUOISE"
+            return HMIP_COLOR_TURQUOISE
         elif 195 <= hue < 270:
-            return "BLUE"
+            return HMIP_COLOR_BLUE
         else:  # 270 <= hue < 345
-            return "PURPLE"
+            return HMIP_COLOR_PURPLE
 
     async def async_turn_on(self, **kwargs) -> None:
         """Turn the notification light on."""
-        color = "WHITE"
-        
+        color = HMIP_COLOR_WHITE
+
         if ATTR_HS_COLOR in kwargs:
             hs_color = kwargs[ATTR_HS_COLOR]
             color = self._hs_to_simple_rgb(hs_color)
 
         await self._client.async_device_control(
-            "/hmip/device/control/setSimpleRGBColorState",
+            API_PATHS["SET_SIMPLE_RGB_COLOR_STATE"],
             self._device_id,
             self._channel_index,
             {"simpleRGBColorState": color}
@@ -290,10 +302,10 @@ class HcuNotificationLight(HcuBaseEntity, LightEntity):
     async def async_turn_off(self, **kwargs) -> None:
         """Turn the notification light off."""
         await self._client.async_device_control(
-            "/hmip/device/control/setSimpleRGBColorState",
+            API_PATHS["SET_SIMPLE_RGB_COLOR_STATE"],
             self._device_id,
             self._channel_index,
-            {"simpleRGBColorState": "BLACK"}
+            {"simpleRGBColorState": HMIP_COLOR_BLACK}
         )
 
     async def async_play_sound(

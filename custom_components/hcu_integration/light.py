@@ -21,7 +21,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .entity import HcuBaseEntity, HcuSwitchingGroupBase
 from .api import HcuApiClient
-from .const import HMIP_RGB_COLOR_MAP
+from .const import API_PATHS, HMIP_RGB_COLOR_MAP
 
 if TYPE_CHECKING:
     from . import HcuCoordinator
@@ -163,7 +163,7 @@ class HcuLight(HcuBaseEntity, LightEntity):
             if self._has_simple_rgb:
                 rgb_color = self._hs_to_simple_rgb(hs_color)
                 await self._client.async_device_control(
-                    "/hmip/device/control/setSimpleRGBColorState",
+                    API_PATHS["SET_SIMPLE_RGB_COLOR_STATE"],
                     self._device_id,
                     self._channel_index,
                     {"simpleRGBColorState": rgb_color, "dimLevel": dim_level}
@@ -281,7 +281,7 @@ class HcuNotificationLight(HcuBaseEntity, LightEntity):
             color = self._hs_to_simple_rgb(hs_color)
 
         await self._client.async_device_control(
-            "/hmip/device/control/setSimpleRGBColorState",
+            API_PATHS["SET_SIMPLE_RGB_COLOR_STATE"],
             self._device_id,
             self._channel_index,
             {"simpleRGBColorState": color}
@@ -290,7 +290,7 @@ class HcuNotificationLight(HcuBaseEntity, LightEntity):
     async def async_turn_off(self, **kwargs) -> None:
         """Turn the notification light off."""
         await self._client.async_device_control(
-            "/hmip/device/control/setSimpleRGBColorState",
+            API_PATHS["SET_SIMPLE_RGB_COLOR_STATE"],
             self._device_id,
             self._channel_index,
             {"simpleRGBColorState": "BLACK"}

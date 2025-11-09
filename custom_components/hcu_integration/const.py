@@ -105,6 +105,7 @@ API_PATHS = {
     "SET_DIM_LEVEL": "/hmip/device/control/setDimLevel",
     "SET_COLOR_TEMP": "/hmip/device/control/setColorTemperatureDimLevel",
     "SET_HUE": "/hmip/device/control/setHueSaturationDimLevel",
+    "SET_SIMPLE_RGB_COLOR_STATE": "/hmip/device/control/setSimpleRGBColorState",
     "SET_SHUTTER_LEVEL": "/hmip/device/control/setShutterLevel",
     "SET_SLATS_LEVEL": "/hmip/device/control/setSlatsLevel",
     "STOP_COVER": "/hmip/device/control/stop",

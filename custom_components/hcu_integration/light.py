@@ -76,6 +76,7 @@ class HcuLight(HcuBaseEntity, LightEntity):
 
         # Check for RGB color support (BSL backlight uses simpleRGBColorState)
         self._has_simple_rgb = "simpleRGBColorState" in self._channel
+        has_dim_level = "dimLevel" in self._channel
 
         # Check for color modes first (HS color takes precedence over simple brightness)
         if self._channel.get("hue") is not None or self._has_simple_rgb:
@@ -86,7 +87,7 @@ class HcuLight(HcuBaseEntity, LightEntity):
             supported_modes.add(ColorMode.COLOR_TEMP)
             self._attr_min_color_temp_kelvin = self._channel.get("minimalColorTemperature", 2000)
             self._attr_max_color_temp_kelvin = self._channel.get("maximumColorTemperature", 6500)
-        elif "dimLevel" in self._channel:
+        elif has_dim_level:
             # Only use BRIGHTNESS mode if no color mode is supported
             supported_modes.add(ColorMode.BRIGHTNESS)
         else:
@@ -96,7 +97,7 @@ class HcuLight(HcuBaseEntity, LightEntity):
         self._attr_supported_color_modes = supported_modes
 
         # Add transition support for all dimmable modes (HS, COLOR_TEMP, BRIGHTNESS)
-        if "dimLevel" in self._channel:
+        if has_dim_level:
             self._attr_supported_features |= LightEntityFeature.TRANSITION
 
     @property

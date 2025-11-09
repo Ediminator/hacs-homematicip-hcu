@@ -35,6 +35,63 @@ trigger:
     to: "Tilted"
 ```
 
+### 🔘 Switch Actuator Enhancements (HmIP-BSL)
+
+**Fix Button Event Detection (GitHub Issue #67)**
+
+Button presses on HmIP-BSL switch actuators now properly generate `hcu_integration_event` events.
+
+#### What Was Fixed
+- Added `KEY_CHANNEL` to `EVENT_CHANNEL_TYPES`
+- BSL button inputs (channels 1-2) now trigger events for automations
+- Supports all button press types: SHORT, LONG, LONG_START, LONG_STOP
+
+#### Usage
+Button events now work as documented:
+```yaml
+trigger:
+  - platform: event
+    event_type: hcu_integration_event
+    event_data:
+      device_id: "YOUR_BSL_DEVICE_ID"
+      channel: 1
+      type: "KEY_PRESS_SHORT"
+```
+
+**Add Full Color Support for Backlight (GitHub Issue #68)**
+
+The illuminated backlight on HmIP-BSL switches now supports all 7 colors instead of just white.
+
+#### Supported Colors
+- **White** (default)
+- **Blue**
+- **Green**
+- **Turquoise** (Light Blue)
+- **Red**
+- **Violet** (Purple)
+- **Yellow**
+
+#### How It Works
+- HcuLight entities now detect and handle `simpleRGBColorState`
+- Automatic color mapping from HS color picker to closest BSL color
+- Uses same RGB system as HmIP-MP3P notification lights
+
+#### Usage
+Set backlight color from UI or automation:
+```yaml
+service: light.turn_on
+target:
+  entity_id: light.bsl_switch_backlight
+data:
+  hs_color: [240, 100]  # Blue
+```
+
+**Technical Implementation:**
+- Added `_has_simple_rgb` detection in HcuLight.__init__
+- Enhanced `hs_color` property to read `simpleRGBColorState`
+- Added `_hs_to_simple_rgb()` color conversion method
+- Modified `async_turn_on()` to use `/hmip/device/control/setRgbDimLevel` API for RGB devices
+
 ### 🔊 Siren Enhancements (HmIP-ASIR2)
 
 **Implement Tone and Duration Support for Alarm Sirens (GitHub Issue #73)**

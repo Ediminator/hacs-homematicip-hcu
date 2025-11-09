@@ -4,6 +4,90 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 
 ---
 
+## Version 1.14.0 - 2025-11-09
+
+### 🔒 Door Lock Enhancements (HmIP-DLD)
+
+**Complete Implementation of Lock State Properties (GitHub Issue #30, PR #75)**
+
+This release significantly enhances the door lock integration by implementing missing state properties and diagnostic capabilities that were previously claimed but not implemented.
+
+#### New Lock State Properties
+- **`is_locking`** - Returns `True` when lock motor is actively locking
+- **`is_unlocking`** - Returns `True` when lock motor is actively unlocking
+- **`is_jammed`** - Returns `True` when lock mechanism is jammed
+- **`is_opening`** - Returns `True` when lock is opening the latch
+
+These properties enable:
+- Real-time lock operation status in Home Assistant UI
+- Automation triggers based on lock state (e.g., notify if jammed)
+- Better visual feedback during lock/unlock operations
+
+#### Enhanced Diagnostic Attributes
+
+New state attributes for troubleshooting:
+- **`motor_state`** - Current motor status ("STOPPED", "LOCKING", "UNLOCKING", "OPENING", "JAMMED")
+- **`lock_jammed`** - Boolean jam detection from device channel 0
+- **`auto_relock_enabled`** - Whether auto-relock is configured
+- **`auto_relock_delay`** - Auto-relock delay in seconds
+- **`has_access_authorization`** - Whether plugin has any access authorization
+- **`authorized_access_channels`** - List of authorized access profile channels
+
+#### Access Control Diagnostics & Error Messages
+
+**New Permission Error Detection:**
+- Detects `ACCESS_DENIED` and `INVALID_REQUEST` errors
+- Provides step-by-step instructions for fixing access control issues
+- Documents known HCU limitation where plugin user appears grayed out in HomematicIP app
+- Helps users diagnose authorization problems via state attributes
+
+**Improved Error Messages:**
+- Clear guidance for PIN configuration issues
+- Detailed instructions for access profile setup
+- Explanation of HCU firmware limitations
+- Links to documentation
+
+#### Technical Improvements
+
+**Accurate State Reporting:**
+- Fixed critical logic error where properties returned `None` for known states instead of `False`
+- `None` now correctly means "state unknown" (device offline/data missing)
+- `False` correctly means "we know it's not in this state"
+- `True` correctly means "we know it is in this state"
+- Improves UI rendering and automation reliability
+
+**Implementation Based on Real Device Data:**
+- Refined using actual HmIP-DLD diagnostic data (firmware 1.4.12)
+- Removed speculative field checks (`activityState`, `errorJammed`, `sabotage`) that don't exist on HmIP-DLD
+- Uses correct field names: `lockJammed` on channel 0, `motorState` and `lockState` on channel 1
+- Verified against `IOptionalFeatureDeviceErrorLockJammed` supported feature
+
+**Code Quality:**
+- Refactored for maintainability (reduced code duplication)
+- Dictionary comprehensions for cleaner attribute assignment
+- Proper `None` vs `False` semantics throughout
+- Clear inline documentation
+
+#### Known Limitations
+
+**HCU Access Control Issue (Issue #30):**
+The HomematicIP app may show the "Home Assistant Integration" plugin user as grayed out or expired, preventing assignment to access profiles. This is a known HCU firmware limitation, not an integration bug. The integration now:
+- Detects this situation and provides helpful error messages
+- Exposes `has_access_authorization` attribute for easy diagnosis
+- Explains the issue and workarounds in logs
+
+Users experiencing access control issues should:
+1. Check the `has_access_authorization` state attribute
+2. Follow error message instructions for access profile setup
+3. Monitor for HCU firmware updates that may fix this limitation
+
+#### References
+- GitHub Issue #30 - PIN and access control configuration
+- PR #75 - Complete door lock implementation
+- Diagnostic data from real HmIP-DLD devices (firmware 1.4.12)
+
+---
+
 ## Version 1.13.0 - 2025-11-08
 
 ### ✨ New Device Support

@@ -623,7 +623,8 @@ HMIP_COLOR_PURPLE = "PURPLE"
 HMIP_COLOR_TURQUOISE = "TURQUOISE"
 HMIP_COLOR_ORANGE = "ORANGE"
 
-# RGB Color mappings for HmIP-MP3P (simpleRGBColorState to HS color)
+# RGB Color mappings for devices with simpleRGBColorState (e.g., HmIP-BSL backlight)
+# Maps simpleRGBColorState values to HS color tuples (hue, saturation)
 HMIP_RGB_COLOR_MAP = {
     HMIP_COLOR_BLACK: (0, 0),        # Off/Black
     HMIP_COLOR_BLUE: (240, 100),     # Blue

@@ -84,6 +84,34 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
             self._device_id, self._channel_index, turn_on, on_level=on_level
         )
 
+    async def _async_execute_with_state_management(
+        self, target_state: bool, api_call: Any, action: str
+    ) -> None:
+        """Execute API call with optimistic state management and error handling.
+
+        Args:
+            target_state: The desired state (True for on, False for off)
+            api_call: Coroutine to execute for the API call
+            action: Action name for logging ("turn on" or "turn off")
+        """
+        # Set optimistic state immediately
+        self._attr_is_on = target_state
+        self._attr_assumed_state = True
+        self.async_write_ha_state()
+
+        try:
+            await api_call
+            # API call succeeded - clear assumed_state to allow coordinator updates
+            self._attr_assumed_state = False
+            self.async_write_ha_state()
+        except (HcuApiError, ConnectionError) as err:
+            # Revert state on error
+            _LOGGER.error("Failed to %s siren %s: %s", action, self.name, err)
+            self._attr_is_on = not target_state
+            self._attr_assumed_state = False
+            self.async_write_ha_state()
+            raise
+
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the siren on with optional tone and duration.
 
@@ -105,47 +133,24 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
             )
             tone = DEFAULT_SIREN_TONE
 
-        # Set optimistic state immediately
-        self._attr_is_on = True
-        self._attr_assumed_state = True
-        self.async_write_ha_state()
-
-        try:
-            # Play the acoustic signal using the sound file API
-            # Volume is set to 1.0 (100%) for siren activation
-            await self._client.async_set_sound_file(
+        # Play the acoustic signal using the sound file API
+        # Volume is set to 1.0 (100%) for siren activation
+        await self._async_execute_with_state_management(
+            target_state=True,
+            api_call=self._client.async_set_sound_file(
                 self._device_id,
                 self._channel_index,
                 sound_file=tone,
                 volume=1.0,
                 duration=duration,
-            )
-            # API call succeeded - clear assumed_state to allow coordinator updates
-            self._attr_assumed_state = False
-            self.async_write_ha_state()
-        except (HcuApiError, ConnectionError) as err:
-            # Revert state on error
-            _LOGGER.error("Failed to turn on siren %s: %s", self.name, err)
-            self._attr_is_on = False
-            self._attr_assumed_state = False
-            self.async_write_ha_state()
-            raise
+            ),
+            action="turn on",
+        )
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the siren off."""
-        # Set optimistic state
-        self._attr_is_on = False
-        self._attr_assumed_state = True
-        self.async_write_ha_state()
-
-        try:
-            await self._call_switch_api(False)
-            # API call succeeded - clear assumed_state to allow coordinator updates
-            self._attr_assumed_state = False
-            self.async_write_ha_state()
-        except (HcuApiError, ConnectionError) as err:
-            _LOGGER.error("Failed to turn off siren %s: %s", self.name, err)
-            self._attr_is_on = True
-            self._attr_assumed_state = False
-            self.async_write_ha_state()
-            raise
+        await self._async_execute_with_state_management(
+            target_state=False,
+            api_call=self._call_switch_api(False),
+            action="turn off",
+        )

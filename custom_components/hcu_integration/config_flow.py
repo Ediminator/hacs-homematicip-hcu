@@ -5,7 +5,7 @@ import aiohttp
 import asyncio
 import voluptuous as vol
 from typing import Any, TYPE_CHECKING
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from homeassistant.config_entries import ConfigEntry, ConfigFlow, OptionsFlow
 from homeassistant.const import CONF_HOST, CONF_TOKEN, ATTR_TEMPERATURE
@@ -455,6 +455,7 @@ class HcuOptionsFlowHandler(OptionsFlow):
                 _LOGGER.exception("Unexpected error activating vacation mode")
                 errors["base"] = "unknown"
 
+        default_end_time = datetime.now() + timedelta(days=7)
         default_temp = self.config_entry.options.get(
             CONF_COMFORT_TEMPERATURE, DEFAULT_COMFORT_TEMPERATURE
         )
@@ -467,7 +468,10 @@ class HcuOptionsFlowHandler(OptionsFlow):
                         ATTR_TEMPERATURE,
                         default=default_temp,
                     ): vol.All(vol.Coerce(float), vol.Range(min=5.0, max=30.0)),
-                    vol.Required(ATTR_END_TIME): selector.DateTimeSelector(),
+                    vol.Required(
+                        ATTR_END_TIME,
+                        default=default_end_time.strftime("%Y-%m-%d %H:%M"),
+                    ): selector.DateTimeSelector(),
                 }
             ),
             errors=errors,

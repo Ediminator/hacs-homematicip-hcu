@@ -582,6 +582,7 @@ HMIP_CHANNEL_TYPE_TO_ENTITY = {
     "OPEN_COLLECTOR_CHANNEL_8": {"class": "HcuSwitch"},
     "SHUTTER_CHANNEL": {"class": "HcuCover"},
     "BLIND_CHANNEL": {"class": "HcuCover"},
+    "BRAND_BLIND_CHANNEL": {"class": "HcuCover"},  # For HmIP-HDM1 HunterDouglas blinds
     "GARAGE_DOOR_CHANNEL": {"class": "HcuGarageDoorCover"},
     "DOOR_CHANNEL": {"class": "HcuGarageDoorCover"},
     "DOOR_SWITCH_CHANNEL": {"class": "HcuDoorOpenerButton"},
@@ -614,3 +615,30 @@ HMIP_RGB_COLOR_MAP = {
     "YELLOW": (60, 100),    # Yellow
     "WHITE": (0, 0),        # White (will be handled separately with brightness)
 }
+
+# Siren tone options for HmIP-ASIR2 and compatible devices
+# These acoustic signals can be used with the siren.turn_on service
+HMIP_SIREN_TONES = [
+    "FREQUENCY_RISING",
+    "FREQUENCY_FALLING",
+    "FREQUENCY_RISING_AND_FALLING",
+    "FREQUENCY_ALTERNATING_LOW_HIGH",
+    "FREQUENCY_ALTERNATING_MID_HIGH",
+    "FREQUENCY_ALTERNATING_LOW_MID",
+    "FREQUENCY_HIGHON_LONGOFF",
+    "FREQUENCY_HIGHON_SHORTOFF",
+    "FREQUENCY_LOWON_LONGOFF_HIGH",
+    "FREQUENCY_LOWON_SHORTOFF_HIGH",
+    "FREQUENCY_LOWON_LONGOFF",
+    "FREQUENCY_LOWON_SHORTOFF",
+    "FREQUENCY_RISING_FALLING",
+    "BATTERY_STATUS",
+    "ARMED_STATUS",
+    "EVENT_ON",
+    "EVENT_OFF",
+    "ERROR",
+]
+
+# Default siren settings
+DEFAULT_SIREN_TONE = "FREQUENCY_RISING"
+DEFAULT_SIREN_DURATION = 10.0  # seconds

@@ -1,7 +1,12 @@
 # custom_components/hcu_integration/siren.py
 from typing import TYPE_CHECKING, Any
 
-from homeassistant.components.siren import SirenEntity, SirenEntityFeature
+from homeassistant.components.siren import (
+    SirenEntity,
+    SirenEntityFeature,
+    ATTR_TONE,
+    ATTR_DURATION,
+)
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, callback
@@ -9,6 +14,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .entity import HcuBaseEntity, SwitchStateMixin
 from .api import HcuApiClient
+from .const import HMIP_SIREN_TONES, DEFAULT_SIREN_TONE, DEFAULT_SIREN_DURATION
 
 if TYPE_CHECKING:
     from . import HcuCoordinator
@@ -32,7 +38,12 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
 
     PLATFORM = Platform.SIREN
 
-    _attr_supported_features = SirenEntityFeature.TURN_ON | SirenEntityFeature.TURN_OFF
+    _attr_supported_features = (
+        SirenEntityFeature.TURN_ON
+        | SirenEntityFeature.TURN_OFF
+        | SirenEntityFeature.TONES
+        | SirenEntityFeature.DURATION
+    )
 
     def __init__(
         self,
@@ -47,6 +58,7 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
         self._set_entity_name(channel_label=self._channel.get("label"))
 
         self._attr_unique_id = f"{self._device_id}_{self._channel_index}_siren"
+        self._attr_available_tones = HMIP_SIREN_TONES
         self._init_switch_state()
 
     @callback
@@ -63,7 +75,31 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
         )
 
     async def async_turn_on(self, **kwargs: Any) -> None:
-        """Turn the siren on."""
+        """Turn the siren on with optional tone and duration.
+
+        Args:
+            **kwargs: Optional parameters including:
+                - tone: The acoustic signal to play (from HMIP_SIREN_TONES)
+                - duration: Duration in seconds (default: 10.0)
+        """
+        tone = kwargs.get(ATTR_TONE, DEFAULT_SIREN_TONE)
+        duration = kwargs.get(ATTR_DURATION, DEFAULT_SIREN_DURATION)
+
+        # Validate tone
+        if tone not in HMIP_SIREN_TONES:
+            tone = DEFAULT_SIREN_TONE
+
+        # Play the acoustic signal using the sound file API
+        # Volume is set to 1.0 (100%) for siren activation
+        await self._client.async_set_sound_file(
+            self._device_id,
+            self._channel_index,
+            sound_file=tone,
+            volume=1.0,
+            duration=duration,
+        )
+
+        # Update optimistic state
         await self._async_set_optimistic_state(True, "siren")
 
     async def async_turn_off(self, **kwargs: Any) -> None:

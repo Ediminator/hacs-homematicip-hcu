@@ -4,6 +4,52 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 
 ---
 
+## Version 1.15.0 - 2025-11-09
+
+### 🔊 Siren Enhancements (HmIP-ASIR2)
+
+**Implement Tone and Duration Support for Alarm Sirens (GitHub Issue #73)**
+
+The HMIP-ASIR2 and compatible siren devices now properly support acoustic signal selection and duration control.
+
+#### New Siren Features
+- **Tone Selection** - Choose from 18 different acoustic signals:
+  - Frequency patterns (rising, falling, alternating, etc.)
+  - Status tones (battery, armed, event, error)
+  - Customizable alert sounds
+- **Duration Control** - Set alarm duration in seconds (default: 10s)
+- **Full Home Assistant Siren Integration** - Proper `siren.turn_on` service support with tone and duration parameters
+
+#### Usage Example
+```yaml
+service: siren.turn_on
+target:
+  entity_id: siren.alarm_siren
+data:
+  tone: "FREQUENCY_RISING"
+  duration: 30
+```
+
+**Technical Details:**
+- Added `HMIP_SIREN_TONES` constant with 18 available tones
+- Updated siren entity to support `SirenEntityFeature.TONES` and `SirenEntityFeature.DURATION`
+- Switched from switch API to sound file API for proper siren control
+- Default tone: `FREQUENCY_RISING`, default duration: 10 seconds
+
+### 🪟 Cover Device Support (HmIP-HDM1)
+
+**Add Support for HunterDouglas Blind Devices (GitHub Issue #64)**
+
+Added channel mapping for HmIP-HDM1 (HunterDouglas) roller blinds to properly expose cover entities.
+
+#### Changes
+- Added `BRAND_BLIND_CHANNEL` mapping for HunterDouglas and third-party blind devices
+- Ensures HDM1 devices appear as controllable covers in Home Assistant
+
+**Note:** This fix is based on device type analysis. If your HDM1 device still doesn't appear, please provide diagnostics via GitHub issue #64.
+
+---
+
 ## Version 1.14.0 - 2025-11-09
 
 ### 🔒 Door Lock Enhancements (HmIP-DLD)

@@ -41,6 +41,9 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
 
     PLATFORM = Platform.SIREN
 
+    # Alarm sirens use 'acousticAlarmActive' instead of 'on' for state
+    _state_channel_key = "acousticAlarmActive"
+
     _attr_supported_features = (
         SirenEntityFeature.TURN_ON
         | SirenEntityFeature.TURN_OFF

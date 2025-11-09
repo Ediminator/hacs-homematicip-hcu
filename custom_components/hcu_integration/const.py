@@ -105,7 +105,6 @@ API_PATHS = {
     "SET_DIM_LEVEL": "/hmip/device/control/setDimLevel",
     "SET_COLOR_TEMP": "/hmip/device/control/setColorTemperatureDimLevel",
     "SET_HUE": "/hmip/device/control/setHueSaturationDimLevel",
-    "SET_RGB_DIM_LEVEL": "/hmip/device/control/setRgbDimLevel",
     "SET_SHUTTER_LEVEL": "/hmip/device/control/setShutterLevel",
     "SET_SLATS_LEVEL": "/hmip/device/control/setSlatsLevel",
     "STOP_COVER": "/hmip/device/control/stop",
@@ -564,6 +563,11 @@ DEVICE_CHANNEL_EVENT_TYPES = frozenset({
     "KEY_PRESS_LONG",
     "KEY_PRESS_LONG_START",
     "KEY_PRESS_LONG_STOP",
+    # Some devices (e.g., HmIP-BSL KEY_CHANNEL) may use shorter event names
+    "PRESS_SHORT",
+    "PRESS_LONG",
+    "PRESS_LONG_START",
+    "PRESS_LONG_STOP",
 })
 
 HMIP_CHANNEL_TYPE_TO_ENTITY = {

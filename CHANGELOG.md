@@ -6,6 +6,35 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 
 ## Version 1.15.0 - 2025-11-09
 
+### 🪟 Window Sensor State Enhancement (HmIP-SRH)
+
+**Add Dedicated Window State Sensor (GitHub Issue #48)**
+
+The v1.10.0 fix for window state was incomplete - it only exposed the state as an attribute on a binary sensor. This release adds a proper text sensor that shows the actual window state.
+
+#### What Changed
+- **New Sensor Entity**: "Window State" sensor now displays "Open", "Tilted", or "Closed" as its main state value
+- **Binary Sensor Kept**: The existing binary sensor (on/off) remains for compatibility
+- **No More Hidden Attributes**: Users can now see the window state directly without checking attributes
+
+#### Why This Matters
+- **v1.10.0 limitation**: Window state (OPEN/TILTED/CLOSED) was only visible as an attribute on the binary sensor
+- **Binary sensors** can only show on/off in their main state, making the tilted state invisible in the UI
+- **User experience**: The new text sensor makes the state immediately visible in dashboards and automations
+
+#### Usage
+Both entities will now appear for HmIP-SRH devices:
+- **Binary Sensor**: "Window" - Shows on (open or tilted) / off (closed)
+- **Text Sensor**: "Window State" - Shows Open / Tilted / Closed
+
+Use the text sensor in automations that need to distinguish between open and tilted states:
+```yaml
+trigger:
+  - platform: state
+    entity_id: sensor.bedroom_window_window_state
+    to: "Tilted"
+```
+
 ### 🔊 Siren Enhancements (HmIP-ASIR2)
 
 **Implement Tone and Duration Support for Alarm Sirens (GitHub Issue #73)**

@@ -14,19 +14,29 @@ Button presses on HmIP-BSL switch actuators now properly trigger `hcu_integratio
 
 #### What Was Fixed
 - Fixed `_extract_event_channels` to handle both `DEVICE_CHANGED` and `DEVICE_CHANNEL_EVENT` type events
+- Added detection for `SWITCH_CHANNEL` with `DOUBLE_INPUT_SWITCH` internal link configuration
+- Removed redundant channel type filtering in `_detect_timestamp_based_button_presses`
 - Ensured channel indices are properly converted to strings for consistency across the codebase
 - Fixed condition in `_handle_device_channel_events` to properly handle channel index 0
 - Enhanced debug logging to include event type for better troubleshooting
 
 #### Root Cause
-The `_extract_event_channels` method only extracted channels from `DEVICE_CHANGED` events, but HmIP-BSL sends `DEVICE_CHANNEL_EVENT` type events for button presses. This caused the channels to be excluded from event processing, preventing button events from firing.
+The HmIP-BSL uses `SWITCH_CHANNEL` with an `internalLinkConfiguration` of type `DOUBLE_INPUT_SWITCH` to expose physical button inputs, rather than dedicated `KEY_CHANNEL` channels. The event processing logic only handled standard event channel types (`KEY_CHANNEL`, `SWITCH_INPUT_CHANNEL`, etc.) and ignored `SWITCH_CHANNEL` entirely, preventing button events from being detected.
 
 #### Technical Details
-- `_extract_event_channels` now processes both event types:
-  - `DEVICE_CHANGED` - Contains full device data with functional channels
-  - `DEVICE_CHANNEL_EVENT` - Contains direct button press events (stateless)
+- `_extract_event_channels` now processes:
+  - Standard event channel types (`KEY_CHANNEL`, `SWITCH_INPUT_CHANNEL`, etc.)
+  - `SWITCH_CHANNEL` with `DOUBLE_INPUT_SWITCH` configuration (HmIP-BSL and similar devices)
+  - `DEVICE_CHANNEL_EVENT` type events for stateless button presses
+- `_detect_timestamp_based_button_presses` now processes any channel in the `event_channels` set, rather than filtering by `EVENT_CHANNEL_TYPES`
 - Channel indices are now consistently converted to strings to match the format used in device data structures
 - Changed validation from `not channel_idx` to `channel_idx is None` to correctly handle channel 0
+
+#### Device Structure
+The HmIP-BSL (BRAND_SWITCH_NOTIFICATION_LIGHT) has the following channel structure:
+- Channel 0: `DEVICE_BASE` (base device info)
+- Channel 1: `SWITCH_CHANNEL` with `DOUBLE_INPUT_SWITCH` configuration (physical buttons trigger events here)
+- Channel 2-3: `NOTIFICATION_LIGHT_CHANNEL` (button backlights)
 
 ---
 

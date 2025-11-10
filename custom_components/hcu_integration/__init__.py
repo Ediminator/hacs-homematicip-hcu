@@ -356,6 +356,15 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
 
         self._register_hcu_device()
 
+        # Force an initial update for all devices, groups, and the home object
+        # This ensures entities are marked available and not stuck in "restored" state
+        _LOGGER.debug("Forcing initial state refresh for all entities")
+        state = self.client.state
+        all_ids = state.get("devices", {}).keys() | state.get("groups", {}).keys()
+        if home_id := state.get("home", {}).get("id"):
+            all_ids.add(home_id)
+        self.async_set_updated_data(all_ids)
+
         return True
 
     def _register_hcu_device(self) -> None:

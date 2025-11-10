@@ -4,6 +4,124 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 
 ---
 
+## Version 1.15.4 - 2025-11-10
+
+This release includes critical bug fixes for siren entities, climate ECO mode, button events, and temperature sensors.
+
+### 🚨 Critical Siren Fix (HmIP-ASIR2) - Issue #82, PR #95
+
+**Fixed: Siren Entity Incorrectly Showing as Unavailable**
+
+HmIP-ASIR2 siren entities were showing as "unavailable" in Home Assistant despite devices being reachable and functioning normally.
+
+#### Root Cause
+The base entity's availability check included `if not self._channel`, which evaluates to `True` when channel data is an empty dict `{}`. Since empty dicts are falsy in Python, this caused false unavailability.
+
+ALARM_SIREN_CHANNEL behaves differently from other channel types:
+- Often has minimal/sparse data (only metadata fields like `functionalChannelType`, `groups`, `channelRole`)
+- May be omitted entirely from some HCU state updates
+- Doesn't require state fields when siren is inactive (no `acousticAlarmActive` field present)
+
+#### What Was Fixed
+- **Override `available` property**: Removed faulty `not self._channel` check that caused false unavailability
+- **Device reachability**: Availability now based solely on device reachability (`permanentlyReachable` flag or maintenance channel status)
+- **State synchronization fix**: Critical bug where siren remained stuck in "on" state when `acousticAlarmActive` field disappeared from updates
+- **Diagnostic logging**: Added comprehensive logging to troubleshoot availability issues
+- **Code quality**: Replaced magic strings with constants (`CHANNEL_TYPE_ALARM_SIREN`, `HMIP_CHANNEL_KEY_ACOUSTIC_ALARM_ACTIVE`)
+
+#### Impact
+- ✅ Siren entities remain available as long as device is reachable
+- ✅ Empty or missing channel data doesn't affect availability
+- ✅ State correctly updates to "off" when `acousticAlarmActive` field is missing
+- ✅ No more stuck "on" state issue
+- ✅ Reduced log noise during normal sparse updates
+
+### 🌡️ Temperature Sensor Fix (HmIP-STE2-PCB) - Issue #28, PR #90
+
+**Fixed: Missing Temperature Values for External Temperature Sensors**
+
+HmIP-STE2-PCB devices now properly report all three temperature values.
+
+#### What Was Fixed
+- **Added `TEMPERATURE_SENSOR_2_EXTERNAL_DELTA_CHANNEL`** to channel type mapping
+- **Fixed HcuTemperatureSensor class**: Changed from hardcoded field names to dynamic `_feature` attribute access
+- **Three temperature sensors now discovered**:
+  - `temperatureExternalOne` - First external sensor
+  - `temperatureExternalTwo` - Second external sensor
+  - `temperatureExternalDelta` - Temperature difference between sensors
+
+#### Root Cause
+The original implementation hardcoded specific temperature field names, causing external sensors to return no values. The sensor class now dynamically accesses the correct temperature field for each entity.
+
+### 🌡️ Climate ECO Mode Fix - PR #92
+
+**Fixed: Climate Preset Mode Not Updating for ECO Modes**
+
+Climate entities now correctly show "ECO" preset mode when ECO mode is activated globally.
+
+#### What Was Fixed
+- **Switched to INDOOR_CLIMATE functional group**: Fixed incorrect functional group lookup (was checking `HEATING` instead of `INDOOR_CLIMATE`)
+- **Support for PERIOD absence type**: Extended ECO mode recognition to include both `PERMANENT` and `PERIOD` absence types
+- **Added `ecoAllowed` validation**: ECO mode only activates when room permits it (thermostats can, underfloor heating cannot)
+- **Added absence type constants**: Introduced `ABSENCE_TYPE_PERIOD` and `ABSENCE_TYPE_PERMANENT` to replace magic strings
+
+#### Impact
+- ✅ Rooms with thermostats correctly display "ECO" preset when global ECO mode is active
+- ✅ Rooms with underfloor heating remain in "Standard" mode (as they cannot use ECO)
+- ✅ Preset mode attribute updates properly in Home Assistant UI
+
+### 🔘 Button Event Fix (HmIP-BSL) - Issues #91, #81, PR #93
+
+**Fixed: HmIP-BSL Button Events Not Firing**
+
+Button presses on HmIP-BSL switch actuators now properly trigger `hcu_integration_event` events for automations.
+
+#### Root Cause
+The integration incorrectly assumed HmIP-BSL devices used `KEY_CHANNEL` for buttons. In reality, these devices use `SWITCH_CHANNEL` with `DOUBLE_INPUT_SWITCH` configuration. The event extraction method also only processed `DEVICE_CHANGED` events, but HmIP-BSL sends `DEVICE_CHANNEL_EVENT` type events for button presses.
+
+#### What Was Fixed
+- **Corrected channel type detection**: Properly handle `SWITCH_CHANNEL` with dual input configuration
+- **Fixed event type handling**: Process both `DEVICE_CHANGED` and `DEVICE_CHANNEL_EVENT` events
+- **Button events now fire** for all press types: SHORT, LONG, LONG_START, LONG_STOP
+
+#### Device Structure
+HmIP-BSL (BRAND_SWITCH_NOTIFICATION_LIGHT) contains:
+- Channel 0: Device base configuration
+- Channel 1: Switch channel with dual input (physical buttons)
+- Channels 2-3: Notification light channels (button backlights)
+
+### 💡 Optical Signal Behavior Support (HmIP-BSL) - Issue #81, PR #93
+
+**Added: Visual Effect Support for HmIP-BSL Notification Lights**
+
+Notification light channels on HmIP-BSL devices now support configurable visual effects beyond simple on/off.
+
+#### New Visual Effects
+- **OFF** – No light
+- **ON** – Steady illumination
+- **BLINKING_MIDDLE** – Medium-speed blinking effect
+- **FLASH_MIDDLE** – Medium-speed flash effect
+- **BILLOWING_MIDDLE** – Medium-speed pulsing/breathing effect
+
+#### Usage
+Set visual effects independently or combine with color and brightness:
+```yaml
+service: light.turn_on
+target:
+  entity_id: light.bsl_switch_backlight
+data:
+  effect: "BLINKING_MIDDLE"
+  hs_color: [0, 100]  # Red
+  brightness: 255
+```
+
+#### Technical Implementation
+- Added `opticalSignalBehaviour` field support in HcuNotificationLight
+- Immutable `HMIP_OPTICAL_SIGNAL_BEHAVIOURS` constant with all available effects
+- Effect list exposed via `effect_list` attribute for Home Assistant UI
+
+---
+
 ## Version 1.15.0 - 2025-11-09
 
 ### 🪟 Window Sensor State Enhancement (HmIP-SRH)

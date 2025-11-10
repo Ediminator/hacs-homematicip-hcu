@@ -62,8 +62,8 @@ Without these mappings, the discovery logic skipped creating entities for these 
 
 - **Added rain counter sensors**: All three rain counter features now properly create precipitation sensors
   - Uses `UnitOfPrecipitationDepth.MILLIMETERS` with appropriate device class
-  - `totalRainCounter` and `todayRainCounter` use `TOTAL_INCREASING` state class
-  - `yesterdayRainCounter` uses `TOTAL` state class
+  - `totalRainCounter` uses `TOTAL_INCREASING` state class (cumulative total)
+  - `todayRainCounter` and `yesterdayRainCounter` use `TOTAL` state class (daily measurements)
 - **Added sunshine duration sensors**: All three sunshine duration features now properly create duration sensors
   - Uses `UnitOfTime.MINUTES` with duration device class
   - Proper state classes for total, today, and yesterday measurements

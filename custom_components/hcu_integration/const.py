@@ -57,6 +57,7 @@ DOCS_URL_LOCK_PIN_CONFIG = "https://github.com/Ediminator/hacs-homematicip-hcu#s
 
 # --- Channel Type Constants ---
 CHANNEL_TYPE_MULTI_MODE_INPUT_TRANSMITTER = "MULTI_MODE_INPUT_TRANSMITTER"
+CHANNEL_TYPE_ALARM_SIREN = "ALARM_SIREN_CHANNEL"
 
 # --- API and Plugin Constants ---
 PLUGIN_ID = "de.homeassistant.hcu.integration"

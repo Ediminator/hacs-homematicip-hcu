@@ -120,7 +120,7 @@ async def async_discover_entities(
 
                         # Log siren entity creation for debugging issue #82
                         if class_name == "HcuSiren":
-                            _LOGGER.info(
+                            _LOGGER.debug(
                                 "Creating siren entity: device=%s, channel=%s, type=%s, has_acousticAlarmActive=%s",
                                 device_data.get("id"),
                                 channel_index,

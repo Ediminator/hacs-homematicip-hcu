@@ -20,6 +20,7 @@ from .const import (
     DEFAULT_SIREN_TONE,
     DEFAULT_SIREN_DURATION,
     HMIP_CHANNEL_KEY_ACOUSTIC_ALARM_ACTIVE,
+    CHANNEL_TYPE_ALARM_SIREN,
 )
 
 if TYPE_CHECKING:
@@ -107,11 +108,12 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
         # This is normal - the HCU may not include the channel in every update.
         # We only check if the channel has the required functionalChannelType field.
         channel_type = self._channel.get("functionalChannelType")
-        if self._channel and channel_type != "ALARM_SIREN_CHANNEL":
+        if self._channel and channel_type != CHANNEL_TYPE_ALARM_SIREN:
             _LOGGER.warning(
-                "Siren %s: unexpected channel type '%s', expected 'ALARM_SIREN_CHANNEL'",
+                "Siren %s: unexpected channel type '%s', expected '%s'",
                 self._device_id,
-                channel_type
+                channel_type,
+                CHANNEL_TYPE_ALARM_SIREN
             )
 
         # Siren availability is based on device reachability, not channel data

@@ -16,6 +16,13 @@ The issue was caused by assigning the `HMIP_SIREN_TONES` `frozenset` directly to
 
 The attribute is now correctly converted from a `frozenset` to a `list` during the entity's initialization, resolving the serialization issue.
 
+**Fix Entities Stuck in "Unavailable" State After Startup**
+
+Fixed a bug where entities (especially battery-powered ones like sirens `HmIP-ASIR2` or weather sensors) could get stuck in an `unavailable` state with a `restored: true` attribute after a Home Assistant restart.
+
+- **Root Cause:** The integration would load the entity, which defaults to `unavailable` when restored. It would then wait for a *new* WebSocket event from the device to trigger its first state update. Battery-powered devices that don't change state often (e.g., a siren that isn't triggered) would never send this update, causing the entity to remain "unavailable" indefinitely, even though the coordinator's initial state fetch confirmed it was reachable.
+- **The Fix:** The coordinator now forces a state update for *all* discovered entities (devices, groups, and home) immediately after the initial `get_system_state()` call succeeds during startup. This ensures all entities refresh their availability and state from the coordinator's cache right away, moving them from the "restored" state to their correct (available) state without waiting for a push event.
+
 ---
 
 ## Version 1.15.5 - 2025-11-10

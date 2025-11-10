@@ -4,6 +4,44 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 
 ---
 
+## Unreleased
+
+### 🐛 Bug Fixes
+
+#### Fix Missing Entities for Weather Sensors and Other Devices - Issue #71
+
+**Fixed: Entities Disappearing After Updates (HmIP-SWO-PR Weather Sensor)**
+
+Weather sensor entities (HmIP-SWO-PR) and potentially other devices were showing as "unavailable" or missing after HCU updates.
+
+**Root Cause**
+
+The base entity's availability check included `if not self._channel`, which evaluates to `True` when channel data is an empty dict `{}`. This was introduced in commit 2d137f86 (Oct 17, 2025) as part of "Improved Entity Availability" changes.
+
+The problem:
+- When `self._channel` returns `{}` (empty dict), Python evaluates `not {}` as `True`
+- This caused entities to become unavailable even though devices were reachable
+- Many channels (weather sensors, sirens, etc.) have sparse data or are temporarily omitted from HCU updates
+- This is normal HCU behavior - channels don't need all state fields in every update
+
+**What Was Fixed**
+
+- **Removed faulty check**: Removed `not self._channel` from base `HcuBaseEntity.available` property
+- **Robust availability logic**: Availability now based solely on:
+  - Client connection status
+  - Device data presence (not channel data)
+  - Device reachability (permanentlyReachable flag or maintenance channel status)
+- **Updated siren override**: Simplified siren's `available` override to focus on diagnostic logging
+- **Documentation**: Added detailed comments explaining why channel data check is intentionally omitted
+
+**Impact**
+- ✅ Weather sensor entities (HmIP-SWO-PR) remain available with sparse channel data
+- ✅ All entities more resilient to temporary channel data omissions from HCU updates
+- ✅ Fixes the same root cause that affected sirens in issue #82
+- ✅ No more entities disappearing after integration updates
+
+---
+
 ## Version 1.15.4 - 2025-11-10
 
 This release includes critical bug fixes for siren entities, climate ECO mode, button events, and temperature sensors.

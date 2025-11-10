@@ -86,27 +86,15 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
     def available(self) -> bool:
         """Return True if the entity is available.
 
-        Override to handle sparse ALARM_SIREN_CHANNEL data and add diagnostic logging.
+        Override to add diagnostic logging for troubleshooting siren availability.
 
         ALARM_SIREN_CHANNEL often has minimal data (only metadata fields like
         functionalChannelType, groups, channelRole) or may be omitted entirely
         from HCU state updates. This is normal behavior - the channel doesn't
-        need state fields when the siren is inactive.
+        need state fields when the siren is inactive. The base class now properly
+        handles this by not checking for channel data presence.
         """
-        if not self._client.is_connected:
-            _LOGGER.debug("Siren %s unavailable: client not connected", self._device_id)
-            return False
-
-        if not self._device:
-            _LOGGER.warning(
-                "Siren %s unavailable: device data missing from state",
-                self._device_id
-            )
-            return False
-
-        # For ALARM_SIREN_CHANNEL, the channel data may be sparse or missing entirely.
-        # This is normal - the HCU may not include the channel in every update.
-        # Only log warning if channel type is present but incorrect (not during sparse updates).
+        # Validate channel type if present (diagnostic check only)
         channel_type = self._channel.get("functionalChannelType")
         if channel_type is not None and channel_type != CHANNEL_TYPE_ALARM_SIREN:
             _LOGGER.warning(
@@ -116,22 +104,22 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
                 CHANNEL_TYPE_ALARM_SIREN
             )
 
-        # Siren availability is based on device reachability, not channel data
-        # Check permanentlyReachable flag
-        if self._device.get("permanentlyReachable", False):
-            return True
+        # Call base implementation (which handles all availability logic correctly)
+        is_available = super().available
 
-        # For battery-powered devices, check maintenance channel reachability
-        maintenance_channel = self._device.get("functionalChannels", {}).get("0", {})
-        is_reachable = not maintenance_channel.get("unreach", False)
+        # Add diagnostic logging for unavailable states
+        if not is_available:
+            if not self._client.is_connected:
+                _LOGGER.debug("Siren %s unavailable: client not connected", self._device_id)
+            elif not self._device:
+                _LOGGER.warning("Siren %s unavailable: device data missing from state", self._device_id)
+            else:
+                _LOGGER.debug(
+                    "Siren %s unavailable: device unreachable (battery-powered device may be sleeping)",
+                    self._device_id
+                )
 
-        if not is_reachable:
-            _LOGGER.debug(
-                "Siren %s unavailable: device unreachable (battery-powered device may be sleeping)",
-                self._device_id
-            )
-
-        return is_reachable
+        return is_available
 
     def _sync_switch_state_from_coordinator(self) -> None:
         """Sync switch state from coordinator data with diagnostic logging.

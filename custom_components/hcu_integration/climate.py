@@ -19,6 +19,8 @@ from homeassistant.util import dt as dt_util
 
 from .api import HcuApiClient, HcuApiError
 from .const import (
+    ABSENCE_TYPE_PERIOD,
+    ABSENCE_TYPE_PERMANENT,
     CONF_COMFORT_TEMPERATURE,
     DEFAULT_COMFORT_TEMPERATURE,
     DEFAULT_MAX_TEMP,
@@ -136,9 +138,15 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
         heating_home = (
             self._client.state.get("home", {})
             .get("functionalHomes", {})
-            .get("HEATING", {})
+            .get("INDOOR_CLIMATE", {})
         )
-        if heating_home.get("absenceType") == "PERMANENT":
+
+        is_eco_mode_active = (
+            heating_home.get("absenceType") in (ABSENCE_TYPE_PERIOD, ABSENCE_TYPE_PERMANENT)
+            and self._group.get("ecoAllowed") is True
+        )
+        
+        if is_eco_mode_active:
             self._attr_target_temperature = heating_home.get("ecoTemperature")
         else:
             self._attr_target_temperature = self._group.get("setPointTemperature")
@@ -146,7 +154,7 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
         # Determine Preset Mode
         if self._group.get("boostMode"):
             self._attr_preset_mode = PRESET_BOOST
-        elif heating_home.get("absenceType") == "PERMANENT":
+        elif is_eco_mode_active:
             self._attr_preset_mode = PRESET_ECO
         elif self._group.get("partyMode"):
             self._attr_preset_mode = PRESET_PARTY

@@ -106,9 +106,9 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
 
         # For ALARM_SIREN_CHANNEL, the channel data may be sparse or missing entirely.
         # This is normal - the HCU may not include the channel in every update.
-        # We only check if the channel has the required functionalChannelType field.
+        # Only log warning if channel type is present but incorrect (not during sparse updates).
         channel_type = self._channel.get("functionalChannelType")
-        if self._channel and channel_type != CHANNEL_TYPE_ALARM_SIREN:
+        if channel_type is not None and channel_type != CHANNEL_TYPE_ALARM_SIREN:
             _LOGGER.warning(
                 "Siren %s: unexpected channel type '%s', expected '%s'",
                 self._device_id,

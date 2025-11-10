@@ -30,6 +30,7 @@ from .const import (
     HMIP_FEATURE_TO_ENTITY,
     PLATFORMS,
     EVENT_CHANNEL_TYPES,
+    HMIP_CHANNEL_KEY_ACOUSTIC_ALARM_ACTIVE,
 )
 
 if TYPE_CHECKING:
@@ -125,7 +126,7 @@ async def async_discover_entities(
                                 device_data.get("id"),
                                 channel_index,
                                 channel_type,
-                                "acousticAlarmActive" in channel_data
+                                HMIP_CHANNEL_KEY_ACOUSTIC_ALARM_ACTIVE in channel_data
                             )
 
                         entities[platform].append(

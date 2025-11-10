@@ -405,15 +405,11 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
             for ch_idx, ch_data in device_data.get("functionalChannels", {}).items():
                 channel_type = ch_data.get("functionalChannelType")
 
-                # Standard event channel types (KEY_CHANNEL, etc.)
-                if channel_type in EVENT_CHANNEL_TYPES:
-                    event_channels.add((device_id, ch_idx))
-                    continue
-
-                # Special case: SWITCH_CHANNEL with DOUBLE_INPUT_SWITCH configuration
-                # These are switches like HmIP-BSL that have physical button inputs
-                if (channel_type == "SWITCH_CHANNEL" and
-                    ch_data.get("internalLinkConfiguration", {}).get("internalLinkConfigurationType") == "DOUBLE_INPUT_SWITCH"):
+                # Standard event channel types (KEY_CHANNEL, etc.) or
+                # SWITCH_CHANNEL with DOUBLE_INPUT_SWITCH configuration (e.g., HmIP-BSL)
+                if (channel_type in EVENT_CHANNEL_TYPES or
+                    (channel_type == "SWITCH_CHANNEL" and
+                     ch_data.get("internalLinkConfiguration", {}).get("internalLinkConfigurationType") == "DOUBLE_INPUT_SWITCH")):
                     event_channels.add((device_id, ch_idx))
 
         return event_channels

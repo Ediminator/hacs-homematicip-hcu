@@ -642,13 +642,13 @@ HMIP_RGB_COLOR_MAP = {
 
 # Optical signal behavior values for HmIP-BSL and similar notification lights
 # These control visual effects like blinking, flashing, etc.
-HMIP_OPTICAL_SIGNAL_BEHAVIOURS = [
+HMIP_OPTICAL_SIGNAL_BEHAVIOURS = (
     "OFF",
     "ON",
     "BLINKING_MIDDLE",
     "FLASH_MIDDLE",
     "BILLOWING_MIDDLE",
-]
+)
 
 # Siren tone options for HmIP-ASIR2 and compatible devices
 # These acoustic signals can be used with the siren.turn_on service

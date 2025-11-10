@@ -107,7 +107,7 @@ class HcuLight(HcuBaseEntity, LightEntity):
         self._supports_optical_signal = optional_features.get("IFeatureOpticalSignalBehaviourState", False)
         if self._supports_optical_signal:
             self._attr_supported_features |= LightEntityFeature.EFFECT
-            self._attr_effect_list = HMIP_OPTICAL_SIGNAL_BEHAVIOURS
+            self._attr_effect_list = list(HMIP_OPTICAL_SIGNAL_BEHAVIOURS)
 
     @property
     def color_mode(self) -> ColorMode | str | None:
@@ -222,8 +222,8 @@ class HcuLight(HcuBaseEntity, LightEntity):
             await self._client.async_set_color_temperature(
                 self._device_id, self._channel_index, color_temp, dim_level, ramp_time
             )
-        elif effect and self._supports_optical_signal:
-            # Effect-only change (no color change)
+        elif effect and self._supports_optical_signal and self._has_simple_rgb:
+            # Effect-only change (no color change) for simpleRGBColorState devices
             # Include current color state and dimLevel when changing only the effect
             current_color = self._channel.get("simpleRGBColorState", HMIP_COLOR_WHITE)
             payload = {

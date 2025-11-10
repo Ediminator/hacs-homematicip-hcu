@@ -12,7 +12,37 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 
 Button presses on HmIP-BSL switch actuators now properly trigger `hcu_integration_event` events.
 
-#### What Was Fixed
+### ✨ New Features
+
+**Add Optical Signal Behavior Support for HmIP-BSL Notification Lights (GitHub Issue #81)**
+
+HmIP-BSL and similar notification lights now support visual effects (blinking, flashing, etc.) through Home Assistant's light effect feature.
+
+#### Supported Effects
+- **OFF** - No visual effect
+- **ON** - Solid light (default)
+- **BLINKING_MIDDLE** - Medium-speed blinking
+- **FLASH_MIDDLE** - Medium-speed flashing
+- **BILLOWING_MIDDLE** - Medium-speed billowing/pulsing effect
+
+#### How to Use
+Effects can be selected in the Home Assistant UI or via service calls:
+```yaml
+service: light.turn_on
+target:
+  entity_id: light.bsl_button_an
+data:
+  effect: "BLINKING_MIDDLE"
+  hs_color: [0, 100]  # Optional: Set color simultaneously
+```
+
+#### Technical Details
+- Automatically detects lights with `IFeatureOpticalSignalBehaviourState` support
+- Adds `EFFECT` feature to supported light features
+- Effects can be combined with color and brightness changes
+- Uses `/hmip/device/control/setSimpleRGBColorState` API endpoint with `opticalSignalBehaviour` parameter
+
+#### What Was Fixed (Button Events)
 - Added detection for `SWITCH_CHANNEL` with `DOUBLE_INPUT_SWITCH` internal link configuration
 - Removed redundant channel type filtering in `_detect_timestamp_based_button_presses`
 - Fixed condition in `_handle_device_channel_events` to properly handle channel index 0

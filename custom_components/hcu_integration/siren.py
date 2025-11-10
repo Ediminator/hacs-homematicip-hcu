@@ -70,7 +70,10 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
         self._set_entity_name(channel_label=self._channel.get("label"))
 
         self._attr_unique_id = f"{self._device_id}_{self._channel_index}_siren"
-        self._attr_available_tones = HMIP_SIREN_TONES
+        
+        # REFACTOR: Convert frozenset to list for JSON serialization
+        self._attr_available_tones = list(HMIP_SIREN_TONES)
+        
         self._init_switch_state()
 
         # Log diagnostic information for troubleshooting
@@ -195,7 +198,7 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
         duration = kwargs.get(ATTR_DURATION, DEFAULT_SIREN_DURATION)
 
         # Validate tone
-        if tone not in HMIP_SIREN_TONES:
+        if tone not in self.available_tones: # Use self.available_tones (the list) for validation
             _LOGGER.warning(
                 "Invalid tone '%s' for siren %s. Using default tone '%s'.",
                 tone,

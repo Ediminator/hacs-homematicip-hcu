@@ -405,15 +405,11 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
             for ch_idx, ch_data in device_data.get("functionalChannels", {}).items():
                 channel_type = ch_data.get("functionalChannelType")
 
-                # Check if this is a SWITCH_CHANNEL with DOUBLE_INPUT_SWITCH configuration
-                # These are switches like HmIP-BSL that have physical button inputs
-                is_double_input_switch = (
-                    channel_type == "SWITCH_CHANNEL" and
-                    ch_data.get("internalLinkConfiguration", {}).get("internalLinkConfigurationType") == "DOUBLE_INPUT_SWITCH"
-                )
-
-                # Standard event channel types or special SWITCH_CHANNEL with button inputs
-                if channel_type in EVENT_CHANNEL_TYPES or is_double_input_switch:
+                # Only process standard event channel types (KEY_CHANNEL, etc.)
+                # Note: SWITCH_CHANNEL with DOUBLE_INPUT_SWITCH should NOT be included here
+                # Those are relay outputs controlled by physical buttons, not button channels themselves
+                # Button events for those devices come via DEVICE_CHANNEL_EVENT WebSocket messages
+                if channel_type in EVENT_CHANNEL_TYPES:
                     event_channels.add((device_id, ch_idx))
 
         return event_channels

@@ -385,44 +385,36 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
         Returns a set of (device_id, channel_index) tuples for channels that
         are of EVENT_CHANNEL_TYPES and were updated in the events, or channels
         that have button input capabilities (e.g., SWITCH_CHANNEL with DOUBLE_INPUT_SWITCH).
+
+        Note: DEVICE_CHANNEL_EVENT type events are handled separately in
+        _handle_device_channel_events and should not be added here to avoid
+        duplicate event firing.
         """
         event_channels = set()
         for event in events.values():
-            push_event_type = event.get("pushEventType")
+            # Only process DEVICE_CHANGED events here
+            # DEVICE_CHANNEL_EVENT events are handled separately in _handle_device_channel_events
+            if event.get("pushEventType") != "DEVICE_CHANGED":
+                continue
 
-            # Handle DEVICE_CHANGED events (contains full device data)
-            if push_event_type == "DEVICE_CHANGED":
-                device_data = event.get("device", {})
-                device_id = device_data.get("id")
-                if not device_id:
+            device_data = event.get("device", {})
+            device_id = device_data.get("id")
+            if not device_id:
+                continue
+
+            for ch_idx, ch_data in device_data.get("functionalChannels", {}).items():
+                channel_type = ch_data.get("functionalChannelType")
+
+                # Standard event channel types (KEY_CHANNEL, etc.)
+                if channel_type in EVENT_CHANNEL_TYPES:
+                    event_channels.add((device_id, ch_idx))
                     continue
 
-                for ch_idx, ch_data in device_data.get("functionalChannels", {}).items():
-                    channel_type = ch_data.get("functionalChannelType")
-
-                    # Standard event channel types (KEY_CHANNEL, etc.)
-                    if channel_type in EVENT_CHANNEL_TYPES:
-                        event_channels.add((device_id, ch_idx))
-                        continue
-
-                    # Special case: SWITCH_CHANNEL with DOUBLE_INPUT_SWITCH configuration
-                    # These are switches like HmIP-BSL that have physical button inputs
-                    if channel_type == "SWITCH_CHANNEL":
-                        internal_link_config = ch_data.get("internalLinkConfiguration", {})
-                        config_type = internal_link_config.get("internalLinkConfigurationType")
-                        if config_type == "DOUBLE_INPUT_SWITCH":
-                            event_channels.add((device_id, ch_idx))
-
-            # Handle DEVICE_CHANNEL_EVENT events (stateless button presses)
-            # These events also need to be tracked for proper event processing
-            elif push_event_type == "DEVICE_CHANNEL_EVENT":
-                device_id = event.get("deviceId")
-                channel_idx = event.get("functionalChannelIndex")
-
-                if device_id and channel_idx is not None:
-                    # Convert channel index to string for consistency
-                    channel_idx_str = str(channel_idx)
-                    event_channels.add((device_id, channel_idx_str))
+                # Special case: SWITCH_CHANNEL with DOUBLE_INPUT_SWITCH configuration
+                # These are switches like HmIP-BSL that have physical button inputs
+                if (channel_type == "SWITCH_CHANNEL" and
+                    ch_data.get("internalLinkConfiguration", {}).get("internalLinkConfigurationType") == "DOUBLE_INPUT_SWITCH"):
+                    event_channels.add((device_id, ch_idx))
 
         return event_channels
 

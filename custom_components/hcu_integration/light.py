@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 from homeassistant.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_COLOR_TEMP_KELVIN,
+    ATTR_EFFECT,
     ATTR_HS_COLOR,
     ATTR_TRANSITION,
     ColorMode,
@@ -33,6 +34,7 @@ from .const import (
     HMIP_COLOR_PURPLE,
     HMIP_COLOR_TURQUOISE,
     HMIP_COLOR_ORANGE,
+    HMIP_OPTICAL_SIGNAL_BEHAVIOURS,
 )
 
 if TYPE_CHECKING:
@@ -100,6 +102,13 @@ class HcuLight(HcuBaseEntity, LightEntity):
         if has_dim_level:
             self._attr_supported_features |= LightEntityFeature.TRANSITION
 
+        # Check for optical signal behavior support (HmIP-BSL and similar devices)
+        optional_features = self._channel.get("supportedOptionalFeatures", {})
+        self._supports_optical_signal = optional_features.get("IFeatureOpticalSignalBehaviourState", False)
+        if self._supports_optical_signal:
+            self._attr_supported_features |= LightEntityFeature.EFFECT
+            self._attr_effect_list = list(HMIP_OPTICAL_SIGNAL_BEHAVIOURS)
+
     @property
     def color_mode(self) -> ColorMode | str | None:
         """Return the current active color mode."""
@@ -147,6 +156,13 @@ class HcuLight(HcuBaseEntity, LightEntity):
             return None
         return (float(hue), float(saturation) * 100)
 
+    @property
+    def effect(self) -> str | None:
+        """Return the current optical signal behavior effect."""
+        if self._supports_optical_signal:
+            return self._channel.get("opticalSignalBehaviour")
+        return None
+
     def _hs_to_simple_rgb(self, hs_color: tuple[float, float]) -> str:
         """Convert HS color to the closest Homematic IP simple RGB color."""
         hue, sat = hs_color
@@ -170,9 +186,10 @@ class HcuLight(HcuBaseEntity, LightEntity):
             return HMIP_COLOR_PURPLE
 
     async def async_turn_on(self, **kwargs) -> None:
-        """Turn the light on with optional color, temperature, or brightness adjustments."""
+        """Turn the light on with optional color, temperature, brightness, or effect adjustments."""
         dim_level = kwargs.get(ATTR_BRIGHTNESS, self.brightness or 255) / 255.0
         ramp_time = kwargs.get(ATTR_TRANSITION)
+        effect = kwargs.get(ATTR_EFFECT)
 
         # Handle color mode specific commands
         if ATTR_HS_COLOR in kwargs and ColorMode.HS in self.supported_color_modes:
@@ -181,11 +198,17 @@ class HcuLight(HcuBaseEntity, LightEntity):
             # For devices with simpleRGBColorState (e.g., BSL backlight)
             if self._has_simple_rgb:
                 rgb_color = self._hs_to_simple_rgb(hs_color)
+                payload = {"simpleRGBColorState": rgb_color, "dimLevel": dim_level}
+
+                # Add optical signal behavior if effect is specified
+                if effect and self._supports_optical_signal:
+                    payload["opticalSignalBehaviour"] = effect
+
                 await self._client.async_device_control(
                     API_PATHS["SET_SIMPLE_RGB_COLOR_STATE"],
                     self._device_id,
                     self._channel_index,
-                    {"simpleRGBColorState": rgb_color, "dimLevel": dim_level}
+                    payload
                 )
             else:
                 # For devices with hue/saturation (e.g., RGBW lights)
@@ -198,6 +221,21 @@ class HcuLight(HcuBaseEntity, LightEntity):
             color_temp = kwargs[ATTR_COLOR_TEMP_KELVIN]
             await self._client.async_set_color_temperature(
                 self._device_id, self._channel_index, color_temp, dim_level, ramp_time
+            )
+        elif effect and self._supports_optical_signal and self._has_simple_rgb:
+            # Effect-only change (no color change) for simpleRGBColorState devices
+            # Include current color state and dimLevel when changing only the effect
+            current_color = self._channel.get("simpleRGBColorState", HMIP_COLOR_WHITE)
+            payload = {
+                "simpleRGBColorState": current_color,
+                "dimLevel": dim_level,
+                "opticalSignalBehaviour": effect
+            }
+            await self._client.async_device_control(
+                API_PATHS["SET_SIMPLE_RGB_COLOR_STATE"],
+                self._device_id,
+                self._channel_index,
+                payload
             )
         else:
             await self._client.async_set_dim_level(

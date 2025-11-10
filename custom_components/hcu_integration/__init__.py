@@ -383,10 +383,17 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
         """Extract button channels that were updated in the events.
 
         Returns a set of (device_id, channel_index) tuples for channels that
-        are of EVENT_CHANNEL_TYPES and were updated in the events.
+        are of EVENT_CHANNEL_TYPES and were updated in the events, or channels
+        that have button input capabilities (e.g., SWITCH_CHANNEL with DOUBLE_INPUT_SWITCH).
+
+        Note: DEVICE_CHANNEL_EVENT type events are handled separately in
+        _handle_device_channel_events and should not be added here to avoid
+        duplicate event firing.
         """
         event_channels = set()
         for event in events.values():
+            # Only process DEVICE_CHANGED events here
+            # DEVICE_CHANNEL_EVENT events are handled separately in _handle_device_channel_events
             if event.get("pushEventType") != "DEVICE_CHANGED":
                 continue
 
@@ -396,7 +403,17 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
                 continue
 
             for ch_idx, ch_data in device_data.get("functionalChannels", {}).items():
-                if ch_data.get("functionalChannelType") in EVENT_CHANNEL_TYPES:
+                channel_type = ch_data.get("functionalChannelType")
+
+                # Check if this is a SWITCH_CHANNEL with DOUBLE_INPUT_SWITCH configuration
+                # These are switches like HmIP-BSL that have physical button inputs
+                is_double_input_switch = (
+                    channel_type == "SWITCH_CHANNEL" and
+                    ch_data.get("internalLinkConfiguration", {}).get("internalLinkConfigurationType") == "DOUBLE_INPUT_SWITCH"
+                )
+
+                # Standard event channel types or special SWITCH_CHANNEL with button inputs
+                if channel_type in EVENT_CHANNEL_TYPES or is_double_input_switch:
                     event_channels.add((device_id, ch_idx))
 
         return event_channels
@@ -454,7 +471,7 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
         """Handle DEVICE_CHANNEL_EVENT type events (stateless buttons).
 
         These events are fired by newer button devices that don't maintain state.
-        Examples: HmIP-WGS, HmIP-WRC6. The events contain direct button press
+        Examples: HmIP-WGS, HmIP-WRC6, HmIP-BSL. The events contain direct button press
         information without requiring timestamp comparison.
 
         Args:
@@ -471,14 +488,16 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
             channel_idx = event.get("functionalChannelIndex")
             event_type = event.get("channelEventType")
 
-            if not device_id or not channel_idx or not event_type:
+            if not device_id or channel_idx is None or not event_type:
                 _LOGGER.debug("Skipping incomplete device channel event: %s", event)
                 continue
 
-            self._fire_button_event(device_id, channel_idx, event_type)
+            # Convert channel index to string for consistency
+            channel_idx_str = str(channel_idx)
+            self._fire_button_event(device_id, channel_idx_str, event_type)
             _LOGGER.debug(
-                "Button press detected via device channel event: device=%s, channel=%s",
-                device_id, channel_idx
+                "Button press detected via device channel event: device=%s, channel=%s, type=%s",
+                device_id, channel_idx_str, event_type
             )
 
     def _should_fire_button_press(
@@ -501,18 +520,20 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
     def _detect_timestamp_based_button_presses(
         self, updated_ids: set[str], event_channels: set[tuple[str, str]], old_state: dict
     ) -> None:
-        """Detect button presses by comparing timestamps after state update."""
+        """Detect button presses by comparing timestamps after state update.
+
+        Processes channels that were identified as having button capabilities
+        (either standard event channels or special cases like SWITCH_CHANNEL
+        with DOUBLE_INPUT_SWITCH configuration).
+        """
         for dev_id in updated_ids:
             device = self.client.get_device_by_address(dev_id)
             if not device:
                 continue
 
             for ch_idx, channel in device.get("functionalChannels", {}).items():
-                # Only process event channel types
-                if channel.get("functionalChannelType") not in EVENT_CHANNEL_TYPES:
-                    continue
-
-                # Only process channels that were in the raw events
+                # Only process channels that were in the raw events and identified as button-capable
+                # event_channels already contains the filtered set from _extract_event_channels
                 if (dev_id, ch_idx) not in event_channels:
                     continue
 

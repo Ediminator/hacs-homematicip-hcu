@@ -40,6 +40,42 @@ The problem:
 - ✅ Fixes the same root cause that affected sirens in issue #82
 - ✅ No more entities disappearing after integration updates
 
+#### Add Missing Weather Sensor Entities - Issue #22
+
+**Fixed: Rain Counter and Sunshine Duration Sensors Not Created (HmIP-SWO-PL Weather Sensor Plus)**
+
+Weather sensor Plus devices (HmIP-SWO-PL) were missing entities for rain counters and sunshine duration, causing these sensors to show as "unavailable" with "restored: true" in diagnostics.
+
+**Root Cause**
+
+Feature mappings were missing from `const.py` for the following weather sensor fields:
+- `totalRainCounter` - Total accumulated rainfall
+- `todayRainCounter` - Today's rainfall
+- `yesterdayRainCounter` - Yesterday's rainfall
+- `totalSunshineDuration` - Total sunshine duration
+- `todaySunshineDuration` - Today's sunshine duration
+- `yesterdaySunshineDuration` - Yesterday's sunshine duration
+
+Without these mappings, the discovery logic skipped creating entities for these features even though the data was present in the HCU API.
+
+**What Was Fixed**
+
+- **Added rain counter sensors**: All three rain counter features now properly create precipitation sensors
+  - Uses `UnitOfPrecipitationDepth.MILLIMETERS` with appropriate device class
+  - `totalRainCounter` uses `TOTAL_INCREASING` state class (cumulative total)
+  - `todayRainCounter` and `yesterdayRainCounter` use `TOTAL` state class (daily measurements)
+- **Added sunshine duration sensors**: All three sunshine duration features now properly create duration sensors
+  - Uses `UnitOfTime.MINUTES` with duration device class
+  - Proper state classes for total, today, and yesterday measurements
+- **Proper icons**: Added weather-appropriate icons (weather-pouring, weather-rainy, weather-sunny, etc.)
+
+**Impact**
+- ✅ HmIP-SWO-PL devices now expose all 6 additional weather sensors
+- ✅ Rain counter sensors properly track daily and total precipitation
+- ✅ Sunshine duration sensors track daily and total sun exposure
+- ✅ Entities will be auto-discovered on next integration reload
+- ✅ Previously "unavailable" entities will become functional again
+
 ---
 
 ## Version 1.15.4 - 2025-11-10

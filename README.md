@@ -217,7 +217,7 @@ When a button is pressed, you'll see something like this:
 event_type: hcu_integration_event
 data:
   device_id: 3014F711A00048240995D6BC
-  channel: 1
+  channel: "1"
   type: KEY_PRESS_SHORT
 origin: LOCAL
 time_fired: 2025-10-26T10:30:45.123456+00:00
@@ -265,7 +265,7 @@ Now that you've confirmed your buttons work, let's create automations!
    - Select **Template**
    - Template:
      ```jinja
-     {{ trigger.event.data.device_id == '3014F711A00048240995D6BC' and trigger.event.data.channel == 1 }}
+     {{ trigger.event.data.device_id == '3014F711A00048240995D6BC' and trigger.event.data.channel == '1' }}
      ```
    - Replace the `device_id` and `channel` with your values!
 5. **Add Action:**
@@ -289,7 +289,7 @@ triggers:
   - event_type: hcu_integration_event
     event_data:
       device_id: 3014F711A00048240995D6BC
-      channel: 1
+      channel: "1"
     trigger: event
 actions:
   - target:
@@ -312,28 +312,28 @@ actions:
   - choose:
       - conditions:
           - condition: template
-            value_template: "{{ trigger.event.data.channel == 1 }}"
+            value_template: "{{ trigger.event.data.channel == '1' }}"
         sequence:
           - target:
               entity_id: light.kitchen_main
             action: light.turn_on
       - conditions:
           - condition: template
-            value_template: "{{ trigger.event.data.channel == 2 }}"
+            value_template: "{{ trigger.event.data.channel == '2' }}"
         sequence:
           - target:
               entity_id: light.kitchen_main
             action: light.turn_off
       - conditions:
           - condition: template
-            value_template: "{{ trigger.event.data.channel == 3 }}"
+            value_template: "{{ trigger.event.data.channel == '3' }}"
         sequence:
           - target:
               entity_id: light.kitchen_cabinet
             action: light.turn_on
       - conditions:
           - condition: template
-            value_template: "{{ trigger.event.data.channel == 4 }}"
+            value_template: "{{ trigger.event.data.channel == '4' }}"
         sequence:
           - target:
               entity_id: light.kitchen_cabinet
@@ -350,7 +350,7 @@ triggers:
   - event_type: hcu_integration_event
     event_data:
       device_id: 3014F711A00048240995D6BC
-      channel: 1
+      channel: "1"
     trigger: event
 actions:
   - if:
@@ -406,7 +406,7 @@ triggers:
   - event_type: hcu_integration_event
     event_data:
       device_id: 3014F711A00048240995D6BC
-      channel: 1
+      channel: "1"
     trigger: event
 actions:
   - choose:

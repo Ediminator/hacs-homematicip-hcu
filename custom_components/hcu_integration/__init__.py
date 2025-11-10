@@ -387,17 +387,29 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
         """
         event_channels = set()
         for event in events.values():
-            if event.get("pushEventType") != "DEVICE_CHANGED":
-                continue
+            push_event_type = event.get("pushEventType")
 
-            device_data = event.get("device", {})
-            device_id = device_data.get("id")
-            if not device_id:
-                continue
+            # Handle DEVICE_CHANGED events (contains full device data)
+            if push_event_type == "DEVICE_CHANGED":
+                device_data = event.get("device", {})
+                device_id = device_data.get("id")
+                if not device_id:
+                    continue
 
-            for ch_idx, ch_data in device_data.get("functionalChannels", {}).items():
-                if ch_data.get("functionalChannelType") in EVENT_CHANNEL_TYPES:
-                    event_channels.add((device_id, ch_idx))
+                for ch_idx, ch_data in device_data.get("functionalChannels", {}).items():
+                    if ch_data.get("functionalChannelType") in EVENT_CHANNEL_TYPES:
+                        event_channels.add((device_id, ch_idx))
+
+            # Handle DEVICE_CHANNEL_EVENT events (stateless button presses)
+            # These events also need to be tracked for proper event processing
+            elif push_event_type == "DEVICE_CHANNEL_EVENT":
+                device_id = event.get("deviceId")
+                channel_idx = event.get("functionalChannelIndex")
+
+                if device_id and channel_idx is not None:
+                    # Convert channel index to string for consistency
+                    channel_idx_str = str(channel_idx)
+                    event_channels.add((device_id, channel_idx_str))
 
         return event_channels
 
@@ -454,7 +466,7 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
         """Handle DEVICE_CHANNEL_EVENT type events (stateless buttons).
 
         These events are fired by newer button devices that don't maintain state.
-        Examples: HmIP-WGS, HmIP-WRC6. The events contain direct button press
+        Examples: HmIP-WGS, HmIP-WRC6, HmIP-BSL. The events contain direct button press
         information without requiring timestamp comparison.
 
         Args:
@@ -471,14 +483,16 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
             channel_idx = event.get("functionalChannelIndex")
             event_type = event.get("channelEventType")
 
-            if not device_id or not channel_idx or not event_type:
+            if not device_id or channel_idx is None or not event_type:
                 _LOGGER.debug("Skipping incomplete device channel event: %s", event)
                 continue
 
-            self._fire_button_event(device_id, channel_idx, event_type)
+            # Convert channel index to string for consistency
+            channel_idx_str = str(channel_idx)
+            self._fire_button_event(device_id, channel_idx_str, event_type)
             _LOGGER.debug(
-                "Button press detected via device channel event: device=%s, channel=%s",
-                device_id, channel_idx
+                "Button press detected via device channel event: device=%s, channel=%s, type=%s",
+                device_id, channel_idx_str, event_type
             )
 
     def _should_fire_button_press(

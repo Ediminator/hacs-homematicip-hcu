@@ -4,6 +4,32 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 
 ---
 
+## Version 1.15.4 - 2025-11-10
+
+### 🐛 Bug Fixes
+
+**Fixed HmIP-BSL Button Event Detection (GitHub Issue #91)**
+
+Button presses on HmIP-BSL switch actuators now properly trigger `hcu_integration_event` events.
+
+#### What Was Fixed
+- Fixed `_extract_event_channels` to handle both `DEVICE_CHANGED` and `DEVICE_CHANNEL_EVENT` type events
+- Ensured channel indices are properly converted to strings for consistency across the codebase
+- Fixed condition in `_handle_device_channel_events` to properly handle channel index 0
+- Enhanced debug logging to include event type for better troubleshooting
+
+#### Root Cause
+The `_extract_event_channels` method only extracted channels from `DEVICE_CHANGED` events, but HmIP-BSL sends `DEVICE_CHANNEL_EVENT` type events for button presses. This caused the channels to be excluded from event processing, preventing button events from firing.
+
+#### Technical Details
+- `_extract_event_channels` now processes both event types:
+  - `DEVICE_CHANGED` - Contains full device data with functional channels
+  - `DEVICE_CHANNEL_EVENT` - Contains direct button press events (stateless)
+- Channel indices are now consistently converted to strings to match the format used in device data structures
+- Changed validation from `not channel_idx` to `channel_idx is None` to correctly handle channel 0
+
+---
+
 ## Version 1.15.0 - 2025-11-09
 
 ### 🪟 Window Sensor State Enhancement (HmIP-SRH)

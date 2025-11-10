@@ -195,7 +195,7 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
         duration = kwargs.get(ATTR_DURATION, DEFAULT_SIREN_DURATION)
 
         # Validate tone
-        if tone not in self.available_tones: # Use self.available_tones (the list) for validation
+        if tone not in HMIP_SIREN_TONES:
             _LOGGER.warning(
                 "Invalid tone '%s' for siren %s. Using default tone '%s'.",
                 tone,

@@ -72,6 +72,69 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
         self._attr_available_tones = HMIP_SIREN_TONES
         self._init_switch_state()
 
+        # Log diagnostic information for troubleshooting
+        _LOGGER.debug(
+            "HcuSiren initialized: device=%s, channel=%s, has_acousticAlarmActive=%s, channel_type=%s",
+            self._device_id,
+            self._channel_index,
+            self._state_channel_key in self._channel,
+            self._channel.get("functionalChannelType"),
+        )
+
+    @property
+    def available(self) -> bool:
+        """Return True if the entity is available.
+
+        Override to add diagnostic logging for troubleshooting ASIR2 availability issues.
+        """
+        if not self._client.is_connected:
+            _LOGGER.debug("Siren %s unavailable: client not connected", self._device_id)
+            return False
+
+        if not self._device:
+            _LOGGER.warning(
+                "Siren %s unavailable: device data missing from state",
+                self._device_id
+            )
+            return False
+
+        if not self._channel:
+            _LOGGER.warning(
+                "Siren %s unavailable: channel %s data missing from device. Available channels: %s",
+                self._device_id,
+                self._channel_index,
+                list(self._device.get("functionalChannels", {}).keys())
+            )
+            return False
+
+        # Check permanentlyReachable flag
+        if self._device.get("permanentlyReachable", False):
+            return True
+
+        # For battery-powered devices, check maintenance channel reachability
+        maintenance_channel = self._device.get("functionalChannels", {}).get("0", {})
+        is_reachable = not maintenance_channel.get("unreach", False)
+
+        if not is_reachable:
+            _LOGGER.debug(
+                "Siren %s unavailable: device unreachable (battery-powered device may be sleeping)",
+                self._device_id
+            )
+
+        return is_reachable
+
+    def _sync_switch_state_from_coordinator(self) -> None:
+        """Sync switch state from coordinator data with additional error handling."""
+        if self._channel and self._state_channel_key in self._channel:
+            super()._sync_switch_state_from_coordinator()
+        else:
+            _LOGGER.debug(
+                "Siren %s: Cannot sync state - '%s' field missing from channel data. Channel keys: %s",
+                self._device_id,
+                self._state_channel_key,
+                list(self._channel.keys()) if self._channel else "channel data missing"
+            )
+
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator.

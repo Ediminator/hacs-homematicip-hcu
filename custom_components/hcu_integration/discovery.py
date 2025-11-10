@@ -117,6 +117,17 @@ async def async_discover_entities(
                         entity_class = getattr(module, class_name)
                         platform = getattr(entity_class, "PLATFORM")
                         init_kwargs = {"config_entry": config_entry} if base_channel_type == "DOOR_LOCK_CHANNEL" else {}
+
+                        # Log siren entity creation for debugging issue #82
+                        if class_name == "HcuSiren":
+                            _LOGGER.info(
+                                "Creating siren entity: device=%s, channel=%s, type=%s, has_acousticAlarmActive=%s",
+                                device_data.get("id"),
+                                channel_index,
+                                channel_type,
+                                "acousticAlarmActive" in channel_data
+                            )
+
                         entities[platform].append(
                             entity_class(coordinator, client, device_data, channel_index, **init_kwargs)
                         )

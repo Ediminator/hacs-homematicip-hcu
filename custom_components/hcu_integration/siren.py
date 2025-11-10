@@ -134,16 +134,18 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
         return is_reachable
 
     def _sync_switch_state_from_coordinator(self) -> None:
-        """Sync switch state from coordinator data with additional error handling."""
-        if self._channel and self._state_channel_key in self._channel:
-            super()._sync_switch_state_from_coordinator()
-        else:
+        """Sync switch state from coordinator data with diagnostic logging.
+
+        The parent implementation correctly defaults to False when acousticAlarmActive
+        is missing, which is the expected behavior for an inactive siren.
+        """
+        if self._state_channel_key not in self._channel:
             _LOGGER.debug(
-                "Siren %s: Cannot sync state - '%s' field missing from channel data. Channel keys: %s",
+                "Siren %s: '%s' field missing, defaulting to 'off'",
                 self._device_id,
                 self._state_channel_key,
-                list(self._channel.keys()) if self._channel else "channel data missing"
             )
+        super()._sync_switch_state_from_coordinator()
 
     @callback
     def _handle_coordinator_update(self) -> None:

@@ -4,6 +4,20 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 
 ---
 
+## Version 1.15.6 - 2025-11-10
+
+### 🐛 Bug Fixes
+
+**Fix Siren JSON Serialization Error (frozenset)**
+
+Fixed a `TypeError: Type is not JSON serializable: frozenset` error that occurred when Home Assistant tried to serialize the siren entity's state and attributes. This error appeared in the logs when the siren entity was loaded or updated.
+
+The issue was caused by assigning the `HMIP_SIREN_TONES` `frozenset` directly to the `_attr_available_tones` attribute in `siren.py`.
+
+The attribute is now correctly converted from a `frozenset` to a `list` during the entity's initialization, resolving the serialization issue.
+
+---
+
 ## Version 1.15.5 - 2025-11-10
 
 ### 🐛 Bug Fixes

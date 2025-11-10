@@ -383,17 +383,16 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
         """Extract button channels that were updated in the events.
 
         Returns a set of (device_id, channel_index) tuples for channels that
-        are of EVENT_CHANNEL_TYPES and were updated in the events, or channels
-        that have button input capabilities (e.g., SWITCH_CHANNEL with DOUBLE_INPUT_SWITCH).
+        have button input capabilities and were updated in DEVICE_CHANGED events.
 
-        Note: DEVICE_CHANNEL_EVENT type events are handled separately in
-        _handle_device_channel_events and should not be added here to avoid
-        duplicate event firing.
+        According to the Homematic IP Connect API, only DEVICE_CHANGED push events
+        exist (not DEVICE_CHANNEL_EVENT). Button presses are detected by monitoring
+        timestamp changes on button-capable channels (KEY_CHANNEL, etc.) that appear
+        in DEVICE_CHANGED events.
         """
         event_channels = set()
         for event in events.values():
-            # Only process DEVICE_CHANGED events here
-            # DEVICE_CHANNEL_EVENT events are handled separately in _handle_device_channel_events
+            # Only DEVICE_CHANGED events exist in the Connect API
             if event.get("pushEventType") != "DEVICE_CHANGED":
                 continue
 
@@ -402,13 +401,12 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
             if not device_id:
                 continue
 
+            # The event contains partial device/channel state for channels that changed
             for ch_idx, ch_data in device_data.get("functionalChannels", {}).items():
                 channel_type = ch_data.get("functionalChannelType")
 
-                # Only process standard event channel types (KEY_CHANNEL, etc.)
-                # Note: SWITCH_CHANNEL with DOUBLE_INPUT_SWITCH should NOT be included here
-                # Those are relay outputs controlled by physical buttons, not button channels themselves
-                # Button events for those devices come via DEVICE_CHANNEL_EVENT WebSocket messages
+                # Process standard event channel types (KEY_CHANNEL, etc.)
+                # These channels exist specifically for button input detection
                 if channel_type in EVENT_CHANNEL_TYPES:
                     event_channels.add((device_id, ch_idx))
 
@@ -462,39 +460,6 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
             "Triggered event entity for device=%s, channel=%s",
             device_id, channel_idx
         )
-
-    def _handle_device_channel_events(self, events: dict) -> None:
-        """Handle DEVICE_CHANNEL_EVENT type events (stateless buttons).
-
-        These events are fired by newer button devices that don't maintain state.
-        Examples: HmIP-WGS, HmIP-WRC6, HmIP-BSL. The events contain direct button press
-        information without requiring timestamp comparison.
-
-        Args:
-            events: Dictionary of event data from the HCU WebSocket message
-        """
-        for event in events.values():
-            if event.get("pushEventType") != "DEVICE_CHANNEL_EVENT":
-                continue
-
-            if event.get("channelEventType") not in DEVICE_CHANNEL_EVENT_TYPES:
-                continue
-
-            device_id = event.get("deviceId")
-            channel_idx = event.get("functionalChannelIndex")
-            event_type = event.get("channelEventType")
-
-            if not device_id or channel_idx is None or not event_type:
-                _LOGGER.debug("Skipping incomplete device channel event: %s", event)
-                continue
-
-            # Convert channel index to string for consistency
-            channel_idx_str = str(channel_idx)
-            self._fire_button_event(device_id, channel_idx_str, event_type)
-            _LOGGER.debug(
-                "Button press detected via device channel event: device=%s, channel=%s, type=%s",
-                device_id, channel_idx_str, event_type
-            )
 
     def _should_fire_button_press(
         self, new_timestamp: int | None, old_timestamp: int | None
@@ -555,16 +520,18 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
                     )
 
     def _handle_event_message(self, message: dict) -> None:
-        """Process incoming WebSocket event messages from the HCU."""
+        """Process incoming WebSocket event messages from the HCU.
+
+        According to the Homematic IP Connect API, all events come via HMIP_SYSTEM_EVENT
+        messages containing DEVICE_CHANGED push events. Button presses are detected by
+        monitoring timestamp changes on button-capable channels (KEY_CHANNEL, etc.).
+        """
         if message.get("type") != "HMIP_SYSTEM_EVENT":
             return
 
         events = message.get("body", {}).get("eventTransaction", {}).get("events", {})
         if not events:
             return
-
-        # Handle immediate stateless button events
-        self._handle_device_channel_events(events)
 
         # Extract which event channels were updated for timestamp-based detection
         event_channels = self._extract_event_channels(events)

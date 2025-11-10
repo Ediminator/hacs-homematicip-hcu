@@ -66,32 +66,6 @@ async def test_fire_button_event(coordinator: HcuCoordinator, hass: HomeAssistan
     assert event.data["type"] == "press"
 
 
-async def test_handle_device_channel_events(coordinator: HcuCoordinator, hass: HomeAssistant):
-    """Test handling DEVICE_CHANNEL_EVENT type events."""
-    events_fired = []
-
-    def capture_event(event):
-        events_fired.append(event)
-
-    hass.bus.async_listen(f"{DOMAIN}_event", capture_event)
-
-    events = {
-        "event1": {
-            "pushEventType": "DEVICE_CHANNEL_EVENT",
-            "channelEventType": "PRESS_SHORT",
-            "deviceId": "device1",
-            "functionalChannelIndex": "1",
-        },
-    }
-
-    coordinator._handle_device_channel_events(events)
-    await hass.async_block_till_done()
-
-    assert len(events_fired) == 1
-    event = events_fired[0]
-    assert event.data["device_id"] == "device1"
-    assert event.data["channel"] == "1"
-    assert event.data["type"] == "PRESS_SHORT"
 
 
 def test_should_fire_button_press_timestamp_changed(coordinator: HcuCoordinator):

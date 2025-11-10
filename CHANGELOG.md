@@ -12,7 +12,7 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 
 Button presses on HmIP-BSL switch actuators now properly trigger `hcu_integration_event` events.
 
-**CRITICAL FIX (Issue #98):** Removed incorrect DOUBLE_INPUT_SWITCH detection from timestamp-based event handling. Channel 1 on HmIP-BSL is the relay output, not a button input channel. Button events must come exclusively from DEVICE_CHANNEL_EVENT WebSocket messages to avoid false triggers from relay state changes.
+**CRITICAL FIX (Issue #98):** Corrected fundamental misunderstanding of the Homematic IP Connect API event system. The API only provides `DEVICE_CHANGED` push events (not `DEVICE_CHANNEL_EVENT`). Removed dead code that was checking for non-existent event types. Button events are now correctly detected via timestamp changes on `KEY_CHANNEL` and other event-capable channels within `DEVICE_CHANGED` events.
 
 ### ✨ New Features
 
@@ -45,34 +45,45 @@ data:
 - Uses `/hmip/device/control/setSimpleRGBColorState` API endpoint with `opticalSignalBehaviour` parameter
 
 #### What Was Fixed (Button Events)
-- **Issue #98:** Removed incorrect `SWITCH_CHANNEL` with `DOUBLE_INPUT_SWITCH` detection that was monitoring relay outputs instead of button inputs
-- Removed redundant channel type filtering in `_detect_timestamp_based_button_presses`
-- Fixed condition in `_handle_device_channel_events` to properly handle channel index 0
+- **Issue #98:** Corrected fundamental API misunderstanding - only `DEVICE_CHANGED` events exist, not `DEVICE_CHANNEL_EVENT`
+- Removed `_handle_device_channel_events()` function that checked for non-existent event types
+- Removed incorrect `SWITCH_CHANNEL` with `DOUBLE_INPUT_SWITCH` detection that was monitoring relay outputs
+- Updated all comments and documentation to reflect correct Connect API event flow
 - Enhanced debug logging to include event type for better troubleshooting
 - Ensured proper event handling separation to prevent duplicate event firing
 
 #### Root Cause
-The HmIP-BSL has a `SWITCH_CHANNEL` (channel 1) with `internalLinkConfiguration` type `DOUBLE_INPUT_SWITCH`, meaning two physical button inputs control one relay output. **Critical discovery:** Channel 1 is the relay OUTPUT, not button INPUT channels. The initial fix incorrectly treated this relay channel as a button event source, causing:
-1. Both buttons to report as "channel 1" (since both control the same relay)
-2. Light toggles to trigger button events (relay state changes were detected as button presses)
+Previous implementation was based on a fundamental misunderstanding of the Homematic IP Connect API:
 
-Button events for HmIP-BSL must come from DEVICE_CHANNEL_EVENT WebSocket messages only, not from timestamp-based monitoring of the relay channel.
+**Incorrect Assumptions:**
+- Believed `DEVICE_CHANNEL_EVENT` push events existed for stateless button presses
+- Implemented `_handle_device_channel_events()` to process these non-existent events
+- Code and comments claimed HmIP-BSL button events come via `DEVICE_CHANNEL_EVENT`
+
+**Actual Connect API Behavior (per official documentation):**
+1. Client registers for events via `hmip-system-events` header
+2. Server sends only `HMIP_SYSTEM_EVENT` messages with `DEVICE_CHANGED` push events
+3. Events contain partial device/channel state updates
+4. Client updates local cache by merging these partial updates
+
+**Why Button Events Failed:**
+- `_handle_device_channel_events()` waited for `DEVICE_CHANNEL_EVENT` that never arrives
+- Button presses on devices with `KEY_CHANNEL` entries weren't detected
+- Alternative DOUBLE_INPUT_SWITCH detection monitored relay outputs, causing false positives
 
 #### Technical Details
-- `_extract_event_channels` only processes standard event channel types (`KEY_CHANNEL`, `SWITCH_INPUT_CHANNEL`, etc.)
-- **Removed:** SWITCH_CHANNEL with DOUBLE_INPUT_SWITCH detection (was incorrectly monitoring relay outputs)
-- `DEVICE_CHANNEL_EVENT` events are handled exclusively in `_handle_device_channel_events`
-- HmIP-BSL button events work via DEVICE_CHANNEL_EVENT WebSocket messages, not timestamp comparison
-- `_detect_timestamp_based_button_presses` now processes any channel in the `event_channels` set, rather than filtering by `EVENT_CHANNEL_TYPES`
-- Channel indices are consistently converted to strings to match the format used in device data structures
-- Changed validation from `not channel_idx` to `channel_idx is None` to correctly handle channel 0
-- Simplified nested conditionals for better code readability
+- **Removed:** `_handle_device_channel_events()` function (checked for non-existent event type)
+- `_extract_event_channels()` now correctly processes only `DEVICE_CHANGED` events
+- Button detection works via timestamp comparison on `KEY_CHANNEL` and similar event channel types
+- All stateless and stateful button devices use the same timestamp-based detection mechanism
+- Updated documentation and comments throughout to reflect correct API behavior
 
 #### Device Structure
-The HmIP-BSL (BRAND_SWITCH_NOTIFICATION_LIGHT) has the following channel structure:
+The HmIP-BSL (BRAND_SWITCH_NOTIFICATION_LIGHT) device structure:
 - Channel 0: `DEVICE_BASE` (base device info)
-- Channel 1: `SWITCH_CHANNEL` with `DOUBLE_INPUT_SWITCH` configuration (physical buttons trigger events here)
-- Channel 2-3: `NOTIFICATION_LIGHT_CHANNEL` (button backlights)
+- Channel 1: `SWITCH_CHANNEL` with `DOUBLE_INPUT_SWITCH` configuration (relay output controlled by buttons)
+- Channel 2-3: `NOTIFICATION_LIGHT_CHANNEL` (button backlights with optical signal behavior support)
+- Button inputs: Exposed via `KEY_CHANNEL` entries (checked by event detection system)
 
 ---
 

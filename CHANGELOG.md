@@ -6,67 +6,119 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 
 ## Version 1.15.4 - 2025-11-10
 
-### 🐛 Bug Fixes
+This release includes critical bug fixes for siren entities, climate ECO mode, button events, and temperature sensors.
 
-**Fixed HmIP-BSL Button Event Detection (GitHub Issue #91)**
+### 🚨 Critical Siren Fix (HmIP-ASIR2) - Issue #82, PR #95
 
-Button presses on HmIP-BSL switch actuators now properly trigger `hcu_integration_event` events.
+**Fixed: Siren Entity Incorrectly Showing as Unavailable**
 
-### ✨ New Features
+HmIP-ASIR2 siren entities were showing as "unavailable" in Home Assistant despite devices being reachable and functioning normally.
 
-**Add Optical Signal Behavior Support for HmIP-BSL Notification Lights (GitHub Issue #81)**
+#### Root Cause
+The base entity's availability check included `if not self._channel`, which evaluates to `True` when channel data is an empty dict `{}`. Since empty dicts are falsy in Python, this caused false unavailability.
 
-HmIP-BSL and similar notification lights now support visual effects (blinking, flashing, etc.) through Home Assistant's light effect feature.
+ALARM_SIREN_CHANNEL behaves differently from other channel types:
+- Often has minimal/sparse data (only metadata fields like `functionalChannelType`, `groups`, `channelRole`)
+- May be omitted entirely from some HCU state updates
+- Doesn't require state fields when siren is inactive (no `acousticAlarmActive` field present)
 
-#### Supported Effects
-- **OFF** - No visual effect
-- **ON** - Solid light (default)
-- **BLINKING_MIDDLE** - Medium-speed blinking
-- **FLASH_MIDDLE** - Medium-speed flashing
-- **BILLOWING_MIDDLE** - Medium-speed billowing/pulsing effect
+#### What Was Fixed
+- **Override `available` property**: Removed faulty `not self._channel` check that caused false unavailability
+- **Device reachability**: Availability now based solely on device reachability (`permanentlyReachable` flag or maintenance channel status)
+- **State synchronization fix**: Critical bug where siren remained stuck in "on" state when `acousticAlarmActive` field disappeared from updates
+- **Diagnostic logging**: Added comprehensive logging to troubleshoot availability issues
+- **Code quality**: Replaced magic strings with constants (`CHANNEL_TYPE_ALARM_SIREN`, `HMIP_CHANNEL_KEY_ACOUSTIC_ALARM_ACTIVE`)
 
-#### How to Use
-Effects can be selected in the Home Assistant UI or via service calls:
+#### Impact
+- ✅ Siren entities remain available as long as device is reachable
+- ✅ Empty or missing channel data doesn't affect availability
+- ✅ State correctly updates to "off" when `acousticAlarmActive` field is missing
+- ✅ No more stuck "on" state issue
+- ✅ Reduced log noise during normal sparse updates
+
+### 🌡️ Temperature Sensor Fix (HmIP-STE2-PCB) - Issue #28, PR #90
+
+**Fixed: Missing Temperature Values for External Temperature Sensors**
+
+HmIP-STE2-PCB devices now properly report all three temperature values.
+
+#### What Was Fixed
+- **Added `TEMPERATURE_SENSOR_2_EXTERNAL_DELTA_CHANNEL`** to channel type mapping
+- **Fixed HcuTemperatureSensor class**: Changed from hardcoded field names to dynamic `_feature` attribute access
+- **Three temperature sensors now discovered**:
+  - `temperatureExternalOne` - First external sensor
+  - `temperatureExternalTwo` - Second external sensor
+  - `temperatureExternalDelta` - Temperature difference between sensors
+
+#### Root Cause
+The original implementation hardcoded specific temperature field names, causing external sensors to return no values. The sensor class now dynamically accesses the correct temperature field for each entity.
+
+### 🌡️ Climate ECO Mode Fix - PR #92
+
+**Fixed: Climate Preset Mode Not Updating for ECO Modes**
+
+Climate entities now correctly show "ECO" preset mode when ECO mode is activated globally.
+
+#### What Was Fixed
+- **Switched to INDOOR_CLIMATE functional group**: Fixed incorrect functional group lookup (was checking `HEATING` instead of `INDOOR_CLIMATE`)
+- **Support for PERIOD absence type**: Extended ECO mode recognition to include both `PERMANENT` and `PERIOD` absence types
+- **Added `ecoAllowed` validation**: ECO mode only activates when room permits it (thermostats can, underfloor heating cannot)
+- **Added absence type constants**: Introduced `ABSENCE_TYPE_PERIOD` and `ABSENCE_TYPE_PERMANENT` to replace magic strings
+
+#### Impact
+- ✅ Rooms with thermostats correctly display "ECO" preset when global ECO mode is active
+- ✅ Rooms with underfloor heating remain in "Standard" mode (as they cannot use ECO)
+- ✅ Preset mode attribute updates properly in Home Assistant UI
+
+### 🔘 Button Event Fix (HmIP-BSL) - Issues #91, #81, PR #93
+
+**Fixed: HmIP-BSL Button Events Not Firing**
+
+Button presses on HmIP-BSL switch actuators now properly trigger `hcu_integration_event` events for automations.
+
+#### Root Cause
+The integration incorrectly assumed HmIP-BSL devices used `KEY_CHANNEL` for buttons. In reality, these devices use `SWITCH_CHANNEL` with `DOUBLE_INPUT_SWITCH` configuration. The event extraction method also only processed `DEVICE_CHANGED` events, but HmIP-BSL sends `DEVICE_CHANNEL_EVENT` type events for button presses.
+
+#### What Was Fixed
+- **Corrected channel type detection**: Properly handle `SWITCH_CHANNEL` with dual input configuration
+- **Fixed event type handling**: Process both `DEVICE_CHANGED` and `DEVICE_CHANNEL_EVENT` events
+- **Button events now fire** for all press types: SHORT, LONG, LONG_START, LONG_STOP
+
+#### Device Structure
+HmIP-BSL (BRAND_SWITCH_NOTIFICATION_LIGHT) contains:
+- Channel 0: Device base configuration
+- Channel 1: Switch channel with dual input (physical buttons)
+- Channels 2-3: Notification light channels (button backlights)
+
+### 💡 Optical Signal Behavior Support (HmIP-BSL) - Issue #81, PR #93
+
+**Added: Visual Effect Support for HmIP-BSL Notification Lights**
+
+Notification light channels on HmIP-BSL devices now support configurable visual effects beyond simple on/off.
+
+#### New Visual Effects
+- **OFF** – No light
+- **ON** – Steady illumination
+- **BLINKING_MIDDLE** – Medium-speed blinking effect
+- **FLASH_MIDDLE** – Medium-speed flash effect
+- **BILLOWING_MIDDLE** – Medium-speed pulsing/breathing effect
+
+#### Usage
+Set visual effects independently or combine with color and brightness:
 ```yaml
 service: light.turn_on
 target:
-  entity_id: light.bsl_button_an
+  entity_id: light.bsl_switch_backlight
 data:
   effect: "BLINKING_MIDDLE"
-  hs_color: [0, 100]  # Optional: Set color simultaneously
+  hs_color: [0, 100]  # Red
+  brightness: 255
 ```
 
-#### Technical Details
-- Automatically detects lights with `IFeatureOpticalSignalBehaviourState` support
-- Adds `EFFECT` feature to supported light features
-- Effects can be combined with color and brightness changes
-- Uses `/hmip/device/control/setSimpleRGBColorState` API endpoint with `opticalSignalBehaviour` parameter
-
-#### What Was Fixed (Button Events)
-- Added detection for `SWITCH_CHANNEL` with `DOUBLE_INPUT_SWITCH` internal link configuration
-- Removed redundant channel type filtering in `_detect_timestamp_based_button_presses`
-- Fixed condition in `_handle_device_channel_events` to properly handle channel index 0
-- Enhanced debug logging to include event type for better troubleshooting
-- Ensured proper event handling separation to prevent duplicate event firing
-
-#### Root Cause
-The HmIP-BSL uses `SWITCH_CHANNEL` with an `internalLinkConfiguration` of type `DOUBLE_INPUT_SWITCH` to expose physical button inputs, rather than dedicated `KEY_CHANNEL` channels. The event processing logic only handled standard event channel types (`KEY_CHANNEL`, `SWITCH_INPUT_CHANNEL`, etc.) and ignored `SWITCH_CHANNEL` entirely, preventing button events from being detected.
-
-#### Technical Details
-- `_extract_event_channels` now detects and processes:
-  - Standard event channel types (`KEY_CHANNEL`, `SWITCH_INPUT_CHANNEL`, etc.)
-  - `SWITCH_CHANNEL` with `DOUBLE_INPUT_SWITCH` configuration (HmIP-BSL and similar devices)
-- `DEVICE_CHANNEL_EVENT` events remain handled exclusively in `_handle_device_channel_events` to prevent duplicate event firing
-- `_detect_timestamp_based_button_presses` now processes any channel in the `event_channels` set, rather than filtering by `EVENT_CHANNEL_TYPES`
-- Channel indices are consistently converted to strings to match the format used in device data structures
-- Changed validation from `not channel_idx` to `channel_idx is None` to correctly handle channel 0
-- Simplified nested conditionals for better code readability
-
-#### Device Structure
-The HmIP-BSL (BRAND_SWITCH_NOTIFICATION_LIGHT) has the following channel structure:
-- Channel 0: `DEVICE_BASE` (base device info)
-- Channel 1: `SWITCH_CHANNEL` with `DOUBLE_INPUT_SWITCH` configuration (physical buttons trigger events here)
-- Channel 2-3: `NOTIFICATION_LIGHT_CHANNEL` (button backlights)
+#### Technical Implementation
+- Added `opticalSignalBehaviour` field support in HcuNotificationLight
+- Immutable `HMIP_OPTICAL_SIGNAL_BEHAVIOURS` constant with all available effects
+- Effect list exposed via `effect_list` attribute for Home Assistant UI
 
 ---
 

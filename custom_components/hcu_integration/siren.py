@@ -20,6 +20,7 @@ from .const import (
     DEFAULT_SIREN_TONE,
     DEFAULT_SIREN_DURATION,
     HMIP_CHANNEL_KEY_ACOUSTIC_ALARM_ACTIVE,
+    CHANNEL_TYPE_ALARM_SIREN,
 )
 
 if TYPE_CHECKING:
@@ -71,6 +72,80 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
         self._attr_unique_id = f"{self._device_id}_{self._channel_index}_siren"
         self._attr_available_tones = HMIP_SIREN_TONES
         self._init_switch_state()
+
+        # Log diagnostic information for troubleshooting
+        _LOGGER.debug(
+            "HcuSiren initialized: device=%s, channel=%s, has_acousticAlarmActive=%s, channel_type=%s",
+            self._device_id,
+            self._channel_index,
+            self._state_channel_key in self._channel,
+            self._channel.get("functionalChannelType"),
+        )
+
+    @property
+    def available(self) -> bool:
+        """Return True if the entity is available.
+
+        Override to handle sparse ALARM_SIREN_CHANNEL data and add diagnostic logging.
+
+        ALARM_SIREN_CHANNEL often has minimal data (only metadata fields like
+        functionalChannelType, groups, channelRole) or may be omitted entirely
+        from HCU state updates. This is normal behavior - the channel doesn't
+        need state fields when the siren is inactive.
+        """
+        if not self._client.is_connected:
+            _LOGGER.debug("Siren %s unavailable: client not connected", self._device_id)
+            return False
+
+        if not self._device:
+            _LOGGER.warning(
+                "Siren %s unavailable: device data missing from state",
+                self._device_id
+            )
+            return False
+
+        # For ALARM_SIREN_CHANNEL, the channel data may be sparse or missing entirely.
+        # This is normal - the HCU may not include the channel in every update.
+        # Only log warning if channel type is present but incorrect (not during sparse updates).
+        channel_type = self._channel.get("functionalChannelType")
+        if channel_type is not None and channel_type != CHANNEL_TYPE_ALARM_SIREN:
+            _LOGGER.warning(
+                "Siren %s: unexpected channel type '%s', expected '%s'",
+                self._device_id,
+                channel_type,
+                CHANNEL_TYPE_ALARM_SIREN
+            )
+
+        # Siren availability is based on device reachability, not channel data
+        # Check permanentlyReachable flag
+        if self._device.get("permanentlyReachable", False):
+            return True
+
+        # For battery-powered devices, check maintenance channel reachability
+        maintenance_channel = self._device.get("functionalChannels", {}).get("0", {})
+        is_reachable = not maintenance_channel.get("unreach", False)
+
+        if not is_reachable:
+            _LOGGER.debug(
+                "Siren %s unavailable: device unreachable (battery-powered device may be sleeping)",
+                self._device_id
+            )
+
+        return is_reachable
+
+    def _sync_switch_state_from_coordinator(self) -> None:
+        """Sync switch state from coordinator data with diagnostic logging.
+
+        The parent implementation correctly defaults to False when acousticAlarmActive
+        is missing, which is the expected behavior for an inactive siren.
+        """
+        if self._state_channel_key not in self._channel:
+            _LOGGER.debug(
+                "Siren %s: '%s' field missing, defaulting to 'off'",
+                self._device_id,
+                self._state_channel_key,
+            )
+        super()._sync_switch_state_from_coordinator()
 
     @callback
     def _handle_coordinator_update(self) -> None:

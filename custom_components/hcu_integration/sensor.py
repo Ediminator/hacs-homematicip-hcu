@@ -147,17 +147,16 @@ class HcuGenericSensor(HcuBaseEntity, SensorEntity):
 class HcuTemperatureSensor(HcuGenericSensor):
     """
     Representation of an HCU temperature sensor.
-    This class is designed to handle temperature readings from both
-    wall-mounted thermostats (`actualTemperature`) and radiator thermostats
-    (`valveActualTemperature`).
+    This class is designed to handle temperature readings from thermostats
+    and external temperature sensors, using the feature attribute to determine
+    which temperature field to read (actualTemperature, valveActualTemperature,
+    temperatureExternalOne, temperatureExternalTwo, etc.).
     """
 
     @property
     def native_value(self) -> float | str | None:
-        """Return the temperature, checking both possible keys."""
-        return self._channel.get("actualTemperature") or self._channel.get(
-            "valveActualTemperature"
-        )
+        """Return the temperature value from the configured feature."""
+        return self._channel.get(self._feature)
 
 
 class HcuWindowStateSensor(HcuGenericSensor):

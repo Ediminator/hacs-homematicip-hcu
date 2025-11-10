@@ -4,6 +4,72 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 
 ---
 
+## Version 1.15.4 - 2025-11-10
+
+### 🐛 Bug Fixes
+
+**Fixed HmIP-BSL Button Event Detection (GitHub Issue #91)**
+
+Button presses on HmIP-BSL switch actuators now properly trigger `hcu_integration_event` events.
+
+### ✨ New Features
+
+**Add Optical Signal Behavior Support for HmIP-BSL Notification Lights (GitHub Issue #81)**
+
+HmIP-BSL and similar notification lights now support visual effects (blinking, flashing, etc.) through Home Assistant's light effect feature.
+
+#### Supported Effects
+- **OFF** - No visual effect
+- **ON** - Solid light (default)
+- **BLINKING_MIDDLE** - Medium-speed blinking
+- **FLASH_MIDDLE** - Medium-speed flashing
+- **BILLOWING_MIDDLE** - Medium-speed billowing/pulsing effect
+
+#### How to Use
+Effects can be selected in the Home Assistant UI or via service calls:
+```yaml
+service: light.turn_on
+target:
+  entity_id: light.bsl_button_an
+data:
+  effect: "BLINKING_MIDDLE"
+  hs_color: [0, 100]  # Optional: Set color simultaneously
+```
+
+#### Technical Details
+- Automatically detects lights with `IFeatureOpticalSignalBehaviourState` support
+- Adds `EFFECT` feature to supported light features
+- Effects can be combined with color and brightness changes
+- Uses `/hmip/device/control/setSimpleRGBColorState` API endpoint with `opticalSignalBehaviour` parameter
+
+#### What Was Fixed (Button Events)
+- Added detection for `SWITCH_CHANNEL` with `DOUBLE_INPUT_SWITCH` internal link configuration
+- Removed redundant channel type filtering in `_detect_timestamp_based_button_presses`
+- Fixed condition in `_handle_device_channel_events` to properly handle channel index 0
+- Enhanced debug logging to include event type for better troubleshooting
+- Ensured proper event handling separation to prevent duplicate event firing
+
+#### Root Cause
+The HmIP-BSL uses `SWITCH_CHANNEL` with an `internalLinkConfiguration` of type `DOUBLE_INPUT_SWITCH` to expose physical button inputs, rather than dedicated `KEY_CHANNEL` channels. The event processing logic only handled standard event channel types (`KEY_CHANNEL`, `SWITCH_INPUT_CHANNEL`, etc.) and ignored `SWITCH_CHANNEL` entirely, preventing button events from being detected.
+
+#### Technical Details
+- `_extract_event_channels` now detects and processes:
+  - Standard event channel types (`KEY_CHANNEL`, `SWITCH_INPUT_CHANNEL`, etc.)
+  - `SWITCH_CHANNEL` with `DOUBLE_INPUT_SWITCH` configuration (HmIP-BSL and similar devices)
+- `DEVICE_CHANNEL_EVENT` events remain handled exclusively in `_handle_device_channel_events` to prevent duplicate event firing
+- `_detect_timestamp_based_button_presses` now processes any channel in the `event_channels` set, rather than filtering by `EVENT_CHANNEL_TYPES`
+- Channel indices are consistently converted to strings to match the format used in device data structures
+- Changed validation from `not channel_idx` to `channel_idx is None` to correctly handle channel 0
+- Simplified nested conditionals for better code readability
+
+#### Device Structure
+The HmIP-BSL (BRAND_SWITCH_NOTIFICATION_LIGHT) has the following channel structure:
+- Channel 0: `DEVICE_BASE` (base device info)
+- Channel 1: `SWITCH_CHANNEL` with `DOUBLE_INPUT_SWITCH` configuration (physical buttons trigger events here)
+- Channel 2-3: `NOTIFICATION_LIGHT_CHANNEL` (button backlights)
+
+---
+
 ## Version 1.15.0 - 2025-11-09
 
 ### 🪟 Window Sensor State Enhancement (HmIP-SRH)

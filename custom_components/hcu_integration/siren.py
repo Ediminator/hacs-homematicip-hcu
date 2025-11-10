@@ -85,7 +85,12 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
     def available(self) -> bool:
         """Return True if the entity is available.
 
-        Override to add diagnostic logging for troubleshooting ASIR2 availability issues.
+        Override to handle sparse ALARM_SIREN_CHANNEL data and add diagnostic logging.
+
+        ALARM_SIREN_CHANNEL often has minimal data (only metadata fields like
+        functionalChannelType, groups, channelRole) or may be omitted entirely
+        from HCU state updates. This is normal behavior - the channel doesn't
+        need state fields when the siren is inactive.
         """
         if not self._client.is_connected:
             _LOGGER.debug("Siren %s unavailable: client not connected", self._device_id)
@@ -98,15 +103,18 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
             )
             return False
 
-        if not self._channel:
+        # For ALARM_SIREN_CHANNEL, the channel data may be sparse or missing entirely.
+        # This is normal - the HCU may not include the channel in every update.
+        # We only check if the channel has the required functionalChannelType field.
+        channel_type = self._channel.get("functionalChannelType")
+        if self._channel and channel_type != "ALARM_SIREN_CHANNEL":
             _LOGGER.warning(
-                "Siren %s unavailable: channel %s data missing from device. Available channels: %s",
+                "Siren %s: unexpected channel type '%s', expected 'ALARM_SIREN_CHANNEL'",
                 self._device_id,
-                self._channel_index,
-                list(self._device.get("functionalChannels", {}).keys())
+                channel_type
             )
-            return False
 
+        # Siren availability is based on device reachability, not channel data
         # Check permanentlyReachable flag
         if self._device.get("permanentlyReachable", False):
             return True

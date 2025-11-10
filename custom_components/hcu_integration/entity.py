@@ -171,8 +171,16 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, E
 
     @property
     def available(self) -> bool:
-        """Return True if the entity is available."""
-        if not self._client.is_connected or not self._device or not self._channel:
+        """Return True if the entity is available.
+
+        Note: We intentionally do NOT check 'not self._channel' here because:
+        - self._channel returns an empty dict {} when channel data is missing
+        - Empty dicts are falsy in Python, causing false unavailability
+        - Many channels may have sparse data or be temporarily omitted from HCU updates
+        - This is normal behavior for devices like weather sensors (HmIP-SWO-PR) and sirens
+        - Device reachability checks (permanentlyReachable and maintenance channel) are sufficient
+        """
+        if not self._client.is_connected or not self._device:
             return False
 
         # Devices that are permanently reachable (e.g., wired/powered devices)

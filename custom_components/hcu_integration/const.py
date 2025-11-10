@@ -14,8 +14,10 @@ from homeassistant.const import (
     UnitOfEnergy,
     UnitOfLength,
     UnitOfPower,
+    UnitOfPrecipitationDepth,
     UnitOfSpeed,
     UnitOfTemperature,
+    UnitOfTime,
     UnitOfVolume,
     UnitOfElectricPotential,
     UnitOfFrequency,
@@ -57,6 +59,7 @@ DOCS_URL_LOCK_PIN_CONFIG = "https://github.com/Ediminator/hacs-homematicip-hcu#s
 
 # --- Channel Type Constants ---
 CHANNEL_TYPE_MULTI_MODE_INPUT_TRANSMITTER = "MULTI_MODE_INPUT_TRANSMITTER"
+CHANNEL_TYPE_ALARM_SIREN = "ALARM_SIREN_CHANNEL"
 
 # --- API and Plugin Constants ---
 PLUGIN_ID = "de.homeassistant.hcu.integration"
@@ -352,6 +355,54 @@ HMIP_FEATURE_TO_ENTITY = {
         "icon": "mdi:weather-windy-variant",
         "state_class": SensorStateClass.MEASUREMENT,
         "entity_registry_enabled_default": False,
+    },
+    "totalRainCounter": {
+        "class": "HcuGenericSensor",
+        "name": "Total Rain",
+        "unit": UnitOfPrecipitationDepth.MILLIMETERS,
+        "device_class": SensorDeviceClass.PRECIPITATION,
+        "state_class": SensorStateClass.TOTAL_INCREASING,
+        "icon": "mdi:weather-pouring",
+    },
+    "todayRainCounter": {
+        "class": "HcuGenericSensor",
+        "name": "Today's Rain",
+        "unit": UnitOfPrecipitationDepth.MILLIMETERS,
+        "device_class": SensorDeviceClass.PRECIPITATION,
+        "state_class": SensorStateClass.TOTAL,
+        "icon": "mdi:weather-rainy",
+    },
+    "yesterdayRainCounter": {
+        "class": "HcuGenericSensor",
+        "name": "Yesterday's Rain",
+        "unit": UnitOfPrecipitationDepth.MILLIMETERS,
+        "device_class": SensorDeviceClass.PRECIPITATION,
+        "state_class": SensorStateClass.TOTAL,
+        "icon": "mdi:weather-rainy",
+    },
+    "totalSunshineDuration": {
+        "class": "HcuGenericSensor",
+        "name": "Total Sunshine Duration",
+        "unit": UnitOfTime.MINUTES,
+        "device_class": SensorDeviceClass.DURATION,
+        "state_class": SensorStateClass.TOTAL_INCREASING,
+        "icon": "mdi:weather-sunny",
+    },
+    "todaySunshineDuration": {
+        "class": "HcuGenericSensor",
+        "name": "Today's Sunshine Duration",
+        "unit": UnitOfTime.MINUTES,
+        "device_class": SensorDeviceClass.DURATION,
+        "state_class": SensorStateClass.TOTAL,
+        "icon": "mdi:weather-partly-cloudy",
+    },
+    "yesterdaySunshineDuration": {
+        "class": "HcuGenericSensor",
+        "name": "Yesterday's Sunshine Duration",
+        "unit": UnitOfTime.MINUTES,
+        "device_class": SensorDeviceClass.DURATION,
+        "state_class": SensorStateClass.TOTAL,
+        "icon": "mdi:weather-sunset",
     },
     "moistureLevel": {
         "class": "HcuGenericSensor",

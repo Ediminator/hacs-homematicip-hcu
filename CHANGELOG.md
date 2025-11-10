@@ -4,38 +4,57 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 
 ---
 
-## Version 1.15.4 - 2025-11-10
+## Version 1.15.5 - 2025-11-10
 
 ### 🐛 Bug Fixes
 
 **Fixed HmIP-BSL Button Event Detection (GitHub Issues #91, #98)**
 
-Button presses on HmIP-BSL switch actuators now properly trigger `hcu_integration_event` events.
+### 🔘 Button Event Fix (HmIP-BSL) - Issues #91, #81, PR #93
 
 **CRITICAL FIX (Issue #98):** Corrected fundamental misunderstanding of the Homematic IP Connect API event system. The API only provides `DEVICE_CHANGED` push events (not `DEVICE_CHANNEL_EVENT`). Removed dead code that was checking for non-existent event types. Button events are now correctly detected via timestamp changes on `KEY_CHANNEL` and other event-capable channels within `DEVICE_CHANGED` events.
 
 ### ✨ New Features
 
-**Add Optical Signal Behavior Support for HmIP-BSL Notification Lights (GitHub Issue #81)**
+Button presses on HmIP-BSL switch actuators now properly trigger `hcu_integration_event` events for automations.
 
-HmIP-BSL and similar notification lights now support visual effects (blinking, flashing, etc.) through Home Assistant's light effect feature.
+#### Root Cause
+The integration incorrectly assumed HmIP-BSL devices used `KEY_CHANNEL` for buttons. In reality, these devices use `SWITCH_CHANNEL` with `DOUBLE_INPUT_SWITCH` configuration. The event extraction method also only processed `DEVICE_CHANGED` events, but HmIP-BSL sends `DEVICE_CHANNEL_EVENT` type events for button presses.
 
-#### Supported Effects
-- **OFF** - No visual effect
-- **ON** - Solid light (default)
-- **BLINKING_MIDDLE** - Medium-speed blinking
-- **FLASH_MIDDLE** - Medium-speed flashing
-- **BILLOWING_MIDDLE** - Medium-speed billowing/pulsing effect
+#### What Was Fixed
+- **Corrected channel type detection**: Properly handle `SWITCH_CHANNEL` with dual input configuration
+- **Fixed event type handling**: Process both `DEVICE_CHANGED` and `DEVICE_CHANNEL_EVENT` events
+- **Button events now fire** for all press types: SHORT, LONG, LONG_START, LONG_STOP
 
-#### How to Use
-Effects can be selected in the Home Assistant UI or via service calls:
+#### Device Structure
+HmIP-BSL (BRAND_SWITCH_NOTIFICATION_LIGHT) contains:
+- Channel 0: Device base configuration
+- Channel 1: Switch channel with dual input (physical buttons)
+- Channels 2-3: Notification light channels (button backlights)
+
+### 💡 Optical Signal Behavior Support (HmIP-BSL) - Issue #81, PR #93
+
+**Added: Visual Effect Support for HmIP-BSL Notification Lights**
+
+Notification light channels on HmIP-BSL devices now support configurable visual effects beyond simple on/off.
+
+#### New Visual Effects
+- **OFF** – No light
+- **ON** – Steady illumination
+- **BLINKING_MIDDLE** – Medium-speed blinking effect
+- **FLASH_MIDDLE** – Medium-speed flash effect
+- **BILLOWING_MIDDLE** – Medium-speed pulsing/breathing effect
+
+#### Usage
+Set visual effects independently or combine with color and brightness:
 ```yaml
 service: light.turn_on
 target:
-  entity_id: light.bsl_button_an
+  entity_id: light.bsl_switch_backlight
 data:
   effect: "BLINKING_MIDDLE"
-  hs_color: [0, 100]  # Optional: Set color simultaneously
+  hs_color: [0, 100]  # Red
+  brightness: 255
 ```
 
 #### Technical Details

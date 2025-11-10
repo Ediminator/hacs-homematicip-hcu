@@ -356,17 +356,14 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
 
         self._register_hcu_device()
 
-        # --- REFACTOR START ---
         # Force an initial update for all devices, groups, and the home object
         # This ensures entities are marked available and not stuck in "restored" state
         _LOGGER.debug("Forcing initial state refresh for all entities")
-        all_ids = set(self.client.state.get("devices", {}).keys())
-        all_ids.update(self.client.state.get("groups", {}).keys())
-        if home_id := self.client.state.get("home", {}).get("id"):
+        state = self.client.state
+        all_ids = set(state.get("devices", {}).keys()) | set(state.get("groups", {}).keys())
+        if home_id := state.get("home", {}).get("id"):
             all_ids.add(home_id)
-            
         self.async_set_updated_data(all_ids)
-        # --- REFACTOR END ---
 
         return True
 

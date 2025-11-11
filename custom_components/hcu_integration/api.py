@@ -641,32 +641,19 @@ class HcuApiClient:
         self,
         group_id: str,
         on: bool,
-        signal_acoustic: str | None = None,
-        signal_optical: str | None = None,
-        on_time: float | None = None,
     ) -> None:
         """Set the state for an ALARM_SWITCHING group (siren).
+
+        Note: The HCU API only accepts the 'on' parameter. The tone (signalAcoustic),
+        optical signal (signalOptical), and duration (onTime) are configured as
+        properties of the ALARM_SWITCHING group in the HCU itself and cannot be
+        set dynamically via this API call.
 
         Args:
             group_id: The ID of the ALARM_SWITCHING group
             on: Turn the siren on or off
-            signal_acoustic: Acoustic alarm signal (tone), e.g., "FREQUENCY_RISING"
-            signal_optical: Optical alarm signal (LED pattern), e.g., "DOUBLE_FLASHING_REPEATING"
-            on_time: Duration in seconds for the alarm
         """
-        # Build body with only non-None optional parameters
-        body = {
-            "on": on,
-            **{
-                k: v
-                for k, v in {
-                    "signalAcoustic": signal_acoustic,
-                    "signalOptical": signal_optical,
-                    "onTime": on_time,
-                }.items()
-                if v is not None
-            },
-        }
+        body = {"on": on}
 
         await self.async_group_control(
             API_PATHS["SET_SWITCHING_GROUP_STATE"],

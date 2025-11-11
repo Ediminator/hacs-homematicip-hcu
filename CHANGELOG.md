@@ -8,30 +8,69 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 
 ### 🐛 Bug Fixes
 
-**Fix HmIP-ASIR2 Siren Issues with Multiple ALARM_SWITCHING Groups - Issue #100**
+**CRITICAL FIX: Correct API Parameter Usage for Siren Activation - Issue #100**
 
-Fixed two critical issues discovered in v1.15.10 where sirens with multiple ALARM_SWITCHING groups would not produce audio and would persist in "on" state after duration expired.
+Fixed critical bug where siren activation was failing silently due to sending invalid parameters to the HCU API endpoint.
 
 **Root Cause**
 
-1. **Wrong Group Selection**: When a siren belongs to multiple ALARM_SWITCHING groups (e.g., "SIREN" and "SIREN_SAFETY"), the deterministic selection logic was choosing alphabetically first group by ID, which could select a silent/safety alarm group with `acousticFeedbackEnabled=False` instead of the main alarm group with audio enabled.
+The integration was **misunderstanding the HCU API specification**:
 
-2. **State Not Updating After Duration**: The HCU does not send a state update when `acousticAlarmActive` becomes `False` after the siren duration expires, causing the entity to persist in "on" state indefinitely.
+1. **Invalid API Parameters**: The `/hmip/group/switching/setState` endpoint ONLY accepts `on` (boolean) and `groupId` parameters. It does NOT accept `signalAcoustic`, `signalOptical`, or `onTime` parameters.
+
+2. **Wrong Assumption**: We incorrectly assumed these parameters could be sent dynamically. In reality, they are **properties configured on the ALARM_SWITCHING group in the HCU** itself and cannot be set via the API call.
+
+3. **Silent Failure**: The HCU was either rejecting or silently ignoring the invalid parameters, causing the siren to never actually activate.
+
+**Previous behavior (v1.15.10 - broken):**
+```python
+await client.async_set_alarm_switching_group_state(
+    group_id=group_id,
+    on=True,
+    signal_acoustic=tone,        # ❌ Invalid parameter
+    signal_optical=optical_signal,  # ❌ Invalid parameter
+    on_time=duration,               # ❌ Invalid parameter
+)
+```
+
+**New behavior (v1.15.11 - correct):**
+```python
+await client.async_set_alarm_switching_group_state(
+    group_id=group_id,
+    on=True,  # ✅ Only valid parameter
+)
+# Siren uses tone/duration/optical_signal configured in HCU group settings
+```
 
 **What Was Fixed**
 
-1. **Smart Group Selection**:
-   - Now prefers ALARM_SWITCHING groups with `acousticFeedbackEnabled=True` when multiple groups exist
-   - Falls back to alphabetical selection only if all groups have audio disabled
-   - Adds detailed logging explaining which group was selected and why
+1. **Simplified API Call**:
+   - Only send `on: true` to activate the siren
+   - Removed invalid `signalAcoustic`, `signalOptical`, and `onTime` parameters
+   - HCU now uses the settings configured in the ALARM_SWITCHING group
 
-2. **Automatic State Refresh**:
-   - Schedules a coordinator refresh after siren duration + 1 second buffer
-   - Ensures entity state correctly updates to "off" when siren stops playing
-   - Eliminates phantom "on" states after siren duration expires
+2. **Removed Unsupported Features**:
+   - Removed `TONES` and `DURATION` from supported features
+   - Tone and duration must now be configured in the HCU's ALARM_SWITCHING group
+   - Cannot be controlled dynamically from Home Assistant
+
+3. **Code Cleanup**:
+   - Removed scheduled state refresh logic (no longer needed without dynamic duration)
+   - Removed tone validation and parameter handling
+   - Simplified `async_turn_on()` and `async_turn_off()` methods
+   - Improved group selection to prefer audio-enabled groups
+   - Fixed default value for `acousticFeedbackEnabled` to `False` for safety
+
+**Impact**
+
+- ✅ **Sirens now actually activate** when turned on
+- ⚠️ **Configuration Required**: Users must configure tone, duration, and optical signal in the HCU's ALARM_SWITCHING group settings (these cannot be controlled from Home Assistant)
+- ✅ Group selection logic improved to prefer audio-enabled groups
+- ✅ State updates handled by normal coordinator polling
 
 **Changes:**
-- `custom_components/hcu_integration/siren.py`: Updated `_find_alarm_switching_group()` to prefer audio-enabled groups and added `_schedule_state_refresh_after_duration()` for automatic state syncing
+- `custom_components/hcu_integration/api.py`: Simplified `async_set_alarm_switching_group_state()` to only accept `on` parameter
+- `custom_components/hcu_integration/siren.py`: Removed dynamic tone/duration/optical_signal handling, simplified activation logic, improved group selection
 
 ---
 

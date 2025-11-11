@@ -95,7 +95,8 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
         # Get all groups from coordinator state
         groups = self.coordinator.data.get("groups", {})
 
-        # Find ALARM_SWITCHING group containing this device/channel
+        # Find ALARM_SWITCHING group(s) containing this device/channel
+        matching_groups = []
         for group_id, group_data in groups.items():
             if group_data.get("type") == "ALARM_SWITCHING":
                 # Check if this group contains our siren channel
@@ -104,20 +105,37 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
                         channel.get("deviceId") == self._device_id
                         and str(channel.get("channelIndex")) == str(self._channel_index)
                     ):
-                        _LOGGER.info(
-                            "Found ALARM_SWITCHING group '%s' for siren %s",
-                            group_data.get("label", group_id),
-                            self._device_id,
-                        )
-                        return group_id
+                        matching_groups.append((group_id, group_data.get("label", group_id)))
+                        break
 
-        _LOGGER.warning(
-            "No ALARM_SWITCHING group found for siren %s channel %s. "
-            "Siren control may not work properly.",
+        # Handle results
+        if not matching_groups:
+            _LOGGER.warning(
+                "No ALARM_SWITCHING group found for siren %s channel %s. "
+                "Siren control may not work properly.",
+                self._device_id,
+                self._channel_index,
+            )
+            return None
+
+        if len(matching_groups) > 1:
+            _LOGGER.warning(
+                "Multiple ALARM_SWITCHING groups found for siren %s: %s. "
+                "Using first group '%s' (%s). This may indicate a configuration issue in the HCU.",
+                self._device_id,
+                ", ".join(f"'{label}' ({gid})" for gid, label in matching_groups),
+                matching_groups[0][1],
+                matching_groups[0][0],
+            )
+
+        group_id, group_label = matching_groups[0]
+        _LOGGER.info(
+            "Found ALARM_SWITCHING group '%s' (%s) for siren %s",
+            group_label,
+            group_id,
             self._device_id,
-            self._channel_index,
         )
-        return None
+        return group_id
 
     @property
     def available(self) -> bool:

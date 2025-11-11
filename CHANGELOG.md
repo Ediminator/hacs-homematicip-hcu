@@ -4,6 +4,72 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 
 ---
 
+## Version 1.15.9 - 2025-11-11
+
+### 🐛 Bug Fixes
+
+**Fix HmIP-ASIR2 Missing Tones and Audio Playback - Issue #100**
+
+Fixed critical bugs with HmIP-ASIR2 siren where many acoustic alarm tones were missing from the available options list, and audio tones were not playing when triggered.
+
+**Root Cause**
+
+The `HMIP_SIREN_TONES` constant in `const.py` contained incorrect and incomplete tone names that didn't match the official HomematicIP API specification for the HmIP-ASIR2 device. When Home Assistant sent these incorrect tone names to the HCU via the `/hmip/device/control/setSoundFileVolumeLevelWithTime` API endpoint, the HCU rejected them, causing no audio to play.
+
+**Previous behavior (broken):**
+```python
+HMIP_SIREN_TONES = frozenset({
+    "FREQUENCY_ALTERNATING_MID_HIGH",  # Wrong - should be LOW_MID_HIGH
+    "BATTERY_STATUS",                  # Wrong - should be LOW_BATTERY
+    "ARMED_STATUS",                    # Wrong - unclear mapping
+    "EVENT_ON", "EVENT_OFF",          # Wrong - should be just EVENT
+    # Missing: EXTERNALLY_ARMED, INTERNALLY_ARMED, DISARMED, etc.
+})
+```
+
+**What Was Fixed**
+
+- **Updated tone list** to match official HomematicIP HmIP-ASIR2 specification
+- **Added missing status tones**: EXTERNALLY_ARMED, INTERNALLY_ARMED, DISARMED, DELAYED_INTERNALLY_ARMED, DELAYED_EXTERNALLY_ARMED, LOW_BATTERY, DISABLE_ACOUSTIC_SIGNAL, EVENT
+- **Corrected frequency tones**: FREQUENCY_ALTERNATING_LOW_MID_HIGH, FREQUENCY_HIGHON_OFF, FREQUENCY_LOWON_OFF_HIGHON_OFF, FREQUENCY_LOWON_LONGOFF_HIGHON_LONGOFF
+- **Removed incorrect tones**: FREQUENCY_ALTERNATING_MID_HIGH, FREQUENCY_ALTERNATING_LOW_MID, FREQUENCY_HIGHON_SHORTOFF, FREQUENCY_LOWON_LONGOFF_HIGH, FREQUENCY_LOWON_SHORTOFF_HIGH, FREQUENCY_LOWON_SHORTOFF, BATTERY_STATUS, ARMED_STATUS, EVENT_ON, EVENT_OFF
+
+**New behavior (working):**
+```python
+HMIP_SIREN_TONES = frozenset({
+    # Frequency pattern tones (alarm sounds)
+    "FREQUENCY_RISING",
+    "FREQUENCY_FALLING",
+    "FREQUENCY_RISING_AND_FALLING",
+    "FREQUENCY_ALTERNATING_LOW_HIGH",
+    "FREQUENCY_ALTERNATING_LOW_MID_HIGH",
+    "FREQUENCY_HIGHON_OFF",
+    "FREQUENCY_HIGHON_LONGOFF",
+    "FREQUENCY_LOWON_OFF_HIGHON_OFF",
+    "FREQUENCY_LOWON_LONGOFF_HIGHON_LONGOFF",
+    # Status and alert tones
+    "DISABLE_ACOUSTIC_SIGNAL",
+    "LOW_BATTERY",
+    "DISARMED",
+    "INTERNALLY_ARMED",
+    "EXTERNALLY_ARMED",
+    "DELAYED_INTERNALLY_ARMED",
+    "DELAYED_EXTERNALLY_ARMED",
+    "EVENT",
+    "ERROR",
+})
+```
+
+**Impact**
+- ✅ All 18 official HomematicIP acoustic tones are now available
+- ✅ "EXTERNALLY_ARMED" tone now appears in the tone list (Issue #100)
+- ✅ Audio tones now play correctly when siren is triggered
+- ✅ HCU accepts all tone names via setSoundFileVolumeLevelWithTime API
+- ✅ Status tones (armed, disarmed, battery, etc.) now work for alarm system integration
+- ✅ All 9 frequency pattern alarm tones work correctly
+
+---
+
 ## Version 1.15.8 - 2025-11-11
 
 ### 🐛 Bug Fixes

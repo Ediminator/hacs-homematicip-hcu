@@ -4,6 +4,50 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 
 ---
 
+## Version 1.15.7 - 2025-11-11
+
+### 🐛 Bug Fixes
+
+**Fix HmIP-BSL Multicolor Functionality - Issue #99**
+
+Fixed a critical bug where HmIP-BSL notification light color changes failed with error `404 UNKNOWN_REQUEST`. The issue affected all HmIP-BSL devices with `NOTIFICATION_LIGHT_CHANNEL` (notification light backlights).
+
+**Root Cause**
+
+The `HcuLight` class was incorrectly sending both `simpleRGBColorState` and `dimLevel` parameters in a single API call to `/hmip/device/control/setSimpleRGBColorState`. The HCU API endpoint only accepts color and optical signal behavior parameters, not dimLevel.
+
+**Previous behavior (broken):**
+```python
+# Single API call with both color and dimLevel
+payload = {"simpleRGBColorState": "RED", "dimLevel": 1.0}
+# Result: 404 UNKNOWN_REQUEST error
+```
+
+**What Was Fixed**
+
+- **Separated API calls**: Color changes now use `/hmip/device/control/setSimpleRGBColorState` (color only)
+- **Separate dimming**: Brightness changes use `/hmip/device/control/setDimLevel` (separate call)
+- **Preserved functionality**: All features still work (color, brightness, effects)
+- **Proper sequencing**: When both color and brightness are changed, color is set first, then brightness
+
+**New behavior (working):**
+```python
+# Color/effect API call (no dimLevel)
+payload = {"simpleRGBColorState": "RED", "opticalSignalBehaviour": "BLINKING_MIDDLE"}
+
+# Separate brightness API call if needed
+await async_set_dim_level(device_id, channel, dim_level)
+```
+
+**Impact**
+- ✅ HmIP-BSL notification lights now properly change colors
+- ✅ All 7 colors work: WHITE, RED, BLUE, GREEN, YELLOW, PURPLE, TURQUOISE
+- ✅ Brightness control works independently
+- ✅ Optical signal effects (blinking, flashing, billowing) work correctly
+- ✅ No more 404 errors when setting colors
+
+---
+
 ## Version 1.15.6 - 2025-11-10
 
 ### 🐛 Bug Fixes

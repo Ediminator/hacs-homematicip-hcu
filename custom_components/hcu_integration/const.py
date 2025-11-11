@@ -705,26 +705,26 @@ HMIP_OPTICAL_SIGNAL_BEHAVIOURS = (
 # These acoustic signals can be used with the siren.turn_on service
 # Based on official HomematicIP API documentation and HmIP-ASIR2 device specification
 HMIP_SIREN_TONES = frozenset({
-    # Frequency pattern tones (alarm sounds)
-    "FREQUENCY_RISING",
-    "FREQUENCY_FALLING",
-    "FREQUENCY_RISING_AND_FALLING",
+    # Frequency pattern tones (alarm sounds) - alphabetically sorted
     "FREQUENCY_ALTERNATING_LOW_HIGH",
     "FREQUENCY_ALTERNATING_LOW_MID_HIGH",
-    "FREQUENCY_HIGHON_OFF",
+    "FREQUENCY_FALLING",
     "FREQUENCY_HIGHON_LONGOFF",
-    "FREQUENCY_LOWON_OFF_HIGHON_OFF",
+    "FREQUENCY_HIGHON_OFF",
     "FREQUENCY_LOWON_LONGOFF_HIGHON_LONGOFF",
-    # Status and alert tones
-    "DISABLE_ACOUSTIC_SIGNAL",
-    "LOW_BATTERY",
-    "DISARMED",
-    "INTERNALLY_ARMED",
-    "EXTERNALLY_ARMED",
-    "DELAYED_INTERNALLY_ARMED",
+    "FREQUENCY_LOWON_OFF_HIGHON_OFF",
+    "FREQUENCY_RISING",
+    "FREQUENCY_RISING_AND_FALLING",
+    # Status and alert tones - alphabetically sorted
     "DELAYED_EXTERNALLY_ARMED",
-    "EVENT",
+    "DELAYED_INTERNALLY_ARMED",
+    "DISABLE_ACOUSTIC_SIGNAL",
+    "DISARMED",
     "ERROR",
+    "EVENT",
+    "EXTERNALLY_ARMED",
+    "INTERNALLY_ARMED",
+    "LOW_BATTERY",
 })
 
 # Default siren settings

@@ -6,61 +6,56 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 
 ## Version 1.15.8 - 2025-11-11
 
-### 🐛 Bug Fixes
+### 🐛 Bug Fixes & Diagnostics
 
-**Fix HmIP-BSL False Button Events - Issue #98**
+**HmIP-BSL Button Event Investigation - Issue #98 (IN PROGRESS)**
 
-Fixed a critical bug where HmIP-BSL devices triggered false button events whenever the light was toggled via Home Assistant, not just on actual physical button presses. This caused automations to trigger unexpectedly.
+This version restores button event detection for HmIP-BSL devices and adds comprehensive diagnostic logging to understand the root cause of the reported issues.
 
-**Root Cause**
+**Issues Reported:**
+1. Both upper and lower buttons report as "channel 1" (indistinguishable)
+2. Toggling light via Home Assistant triggers false button events
+3. Version 1.15.7 broke button events entirely (no events fired at all)
 
-The integration was treating `SWITCH_CHANNEL` with `DOUBLE_INPUT_SWITCH` internal link configuration as an event channel for timestamp-based button detection. The problem is that this channel's `lastStatusUpdate` timestamp changes whenever the switch state changes - whether from a physical button press OR from a programmatic toggle via Home Assistant.
+**Changes in This Version:**
 
-**Previous behavior (broken):**
-```python
-# SWITCH_CHANNEL with DOUBLE_INPUT_SWITCH was included in event_channels
-# Timestamp-based detection fired on ANY state change:
-#   - Physical button press → timestamp changed → event fired ✓
-#   - HA light toggle → timestamp changed → event fired ✗ (false positive)
+- **Restored DOUBLE_INPUT_SWITCH detection** to make button events work again
+- **Added diagnostic logging** to capture:
+  - All `DEVICE_CHANGED` events for HmIP-BSL SWITCH_CHANNEL (shows state and timestamp)
+  - All `DEVICE_CHANNEL_EVENT` events (to determine if HmIP-BSL sends these at all)
+  - Device model, channel info, and event details
+- **Enhanced logging at INFO level** for all button-related events
+
+**Diagnostic Logging Examples:**
+```
+[BSL-DEBUG] DEVICE_CHANGED: device=xxx, channel=1, on=True, timestamp=12345
+[DEBUG] DEVICE_CHANNEL_EVENT received: {...}
+Button press: device=xxx (HmIP-BSL), channel=1 (...), event=press
 ```
 
-**What Was Fixed**
+**Why This Version Exists:**
 
-- **Removed DOUBLE_INPUT_SWITCH detection** from `_extract_event_channels()` method
-- **HmIP-BSL now uses ONLY DEVICE_CHANNEL_EVENT** for button press detection (no timestamp-based detection)
-- **Enhanced logging** with device model, channel index, channel label, and channel type
-- **Elevated log level to INFO** for button presses to help diagnose channel identification issues
-- **Code cleanup**: Refactored logging using fallback empty dict pattern for cleaner, more concise code
+There is conflicting information about how HmIP-BSL button events work:
+- Some code comments claim HmIP-BSL sends `DEVICE_CHANNEL_EVENT`
+- Previous working versions used timestamp-based detection on SWITCH_CHANNEL
+- Both approaches have drawbacks (false events vs. no channel distinction)
 
-**New behavior (working):**
-```python
-# SWITCH_CHANNEL excluded from timestamp-based detection
-# Button presses detected ONLY via DEVICE_CHANNEL_EVENT:
-#   - Physical button press → DEVICE_CHANNEL_EVENT → event fired ✓
-#   - HA light toggle → no event fired ✓
-```
+**This diagnostic version will help determine:**
+1. Does HmIP-BSL send `DEVICE_CHANNEL_EVENT` at all?
+2. If so, what channel indices are included?
+3. What information is available to distinguish upper vs. lower button?
+4. Can we distinguish physical button presses from programmatic toggles?
 
-**Technical Details**
+**Known Issue:**
+This version will likely still have the false event problem (toggling via HA triggers events).
+We need the diagnostic logs to design the proper fix.
 
-HmIP-BSL device channel structure:
-- **Channel 0**: `DEVICE_BASE` (maintenance/status)
-- **Channel 1**: `SWITCH_CHANNEL` with `DOUBLE_INPUT_SWITCH` (relay control)
-  - State changes on every toggle (physical or programmatic)
-  - NOT suitable for timestamp-based button detection
-- **Channels 2-3**: `NOTIFICATION_LIGHT_CHANNEL` (button backlights)
-
-Button press events are properly sent via `DEVICE_CHANNEL_EVENT` with the actual channel index that was pressed. The enhanced logging will help identify which channel indices correspond to upper vs lower buttons.
-
-**Enhanced Logging Example**
-```
-Button press: device=3014F711A00018D9992FBF94 (HmIP-BSL), channel=2 (Upper Button, NOTIFICATION_LIGHT_CHANNEL), event=PRESS_SHORT
-```
-
-**Impact**
-- ✅ No more false button events when toggling lights via Home Assistant
-- ✅ Only actual physical button presses trigger `hcu_integration_event` events
-- ✅ Automations now work reliably without unexpected triggers
-- ✅ Enhanced diagnostic information for troubleshooting channel identification
+**For Users Testing This Version:**
+1. Enable INFO-level logging for `custom_components.hcu_integration`
+2. Press upper button, check logs
+3. Press lower button, check logs
+4. Toggle light via HA, check logs
+5. Report findings in Issue #98
 
 ---
 

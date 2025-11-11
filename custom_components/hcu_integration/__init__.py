@@ -392,17 +392,12 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
         """Extract button channels that were updated in the events.
 
         Returns a set of (device_id, channel_index) tuples for channels that
-        are of EVENT_CHANNEL_TYPES and were updated in the events.
+        are of EVENT_CHANNEL_TYPES and were updated in the events, or channels
+        that have button input capabilities (e.g., SWITCH_CHANNEL with DOUBLE_INPUT_SWITCH).
 
         Note: DEVICE_CHANNEL_EVENT type events are handled separately in
         _handle_device_channel_events and should not be added here to avoid
         duplicate event firing.
-
-        Note: SWITCH_CHANNEL with DOUBLE_INPUT_SWITCH (e.g., HmIP-BSL) should NOT
-        be included here because:
-        1. These channels fire DEVICE_CHANNEL_EVENT for actual button presses
-        2. Including them causes false button events when toggling the light via HA
-        3. The switch state changes (and timestamp updates) even when toggled programmatically
         """
         event_channels = set()
         for event in events.values():
@@ -416,14 +411,33 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
             if not device_id:
                 continue
 
+            # Get device model for diagnostic logging
+            device = self.client.get_device_by_address(device_id) or {}
+            device_model = device.get("modelType", "")
+
             for ch_idx, ch_data in device_data.get("functionalChannels", {}).items():
                 channel_type = ch_data.get("functionalChannelType")
 
-                # Only process standard event channel types (KEY_CHANNEL, etc.)
-                # Do NOT include SWITCH_CHANNEL with DOUBLE_INPUT_SWITCH as it causes
-                # false events when the light is toggled
+                # Standard event channel types (KEY_CHANNEL, etc.)
                 if channel_type in EVENT_CHANNEL_TYPES:
                     event_channels.add((device_id, ch_idx))
+                    continue
+
+                # Special case: SWITCH_CHANNEL with DOUBLE_INPUT_SWITCH configuration
+                # These are switches like HmIP-BSL that have physical button inputs
+                # NOTE: This causes false events when toggling via HA, but HmIP-BSL
+                # does NOT send DEVICE_CHANNEL_EVENT, so this is the only way to detect button presses
+                if channel_type == "SWITCH_CHANNEL":
+                    internal_link_config = ch_data.get("internalLinkConfiguration", {})
+                    config_type = internal_link_config.get("internalLinkConfigurationType")
+                    if config_type == "DOUBLE_INPUT_SWITCH":
+                        event_channels.add((device_id, ch_idx))
+                        # Diagnostic logging for HmIP-BSL events
+                        if device_model == "HmIP-BSL":
+                            _LOGGER.info(
+                                "[BSL-DEBUG] DEVICE_CHANGED: device=%s, channel=%s, on=%s, timestamp=%s",
+                                device_id, ch_idx, ch_data.get("on"), ch_data.get("lastStatusUpdate")
+                            )
 
         return event_channels
 
@@ -480,7 +494,7 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
         """Handle DEVICE_CHANNEL_EVENT type events (stateless buttons).
 
         These events are fired by newer button devices that don't maintain state.
-        Examples: HmIP-WGS, HmIP-WRC6, HmIP-BSL. The events contain direct button press
+        Examples: HmIP-WGS, HmIP-WRC6. The events contain direct button press
         information without requiring timestamp comparison.
 
         Args:
@@ -490,7 +504,11 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
             if event.get("pushEventType") != "DEVICE_CHANNEL_EVENT":
                 continue
 
+            # Log ALL DEVICE_CHANNEL_EVENT events for diagnostic purposes
+            _LOGGER.info("[DEBUG] DEVICE_CHANNEL_EVENT received: %s", event)
+
             if event.get("channelEventType") not in DEVICE_CHANNEL_EVENT_TYPES:
+                _LOGGER.info("[DEBUG] Skipping event with unknown channelEventType: %s", event.get("channelEventType"))
                 continue
 
             device_id = event.get("deviceId")

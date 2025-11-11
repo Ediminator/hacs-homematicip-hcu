@@ -31,6 +31,10 @@ if TYPE_CHECKING:
 
 _LOGGER = logging.getLogger(__name__)
 
+# Time buffer (in seconds) to add after siren duration before refreshing state
+# This ensures the HCU has finished processing before we check the state
+_REFRESH_BUFFER_SECONDS = 1.0
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -292,8 +296,8 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
         Args:
             duration: Duration in seconds to wait before refreshing
         """
-        # Add a small buffer (1 second) to ensure the siren has finished
-        await asyncio.sleep(duration + 1.0)
+        # Add buffer to ensure the siren has finished before checking state
+        await asyncio.sleep(duration + _REFRESH_BUFFER_SECONDS)
 
         _LOGGER.debug(
             "Refreshing coordinator state for siren %s after duration expired",

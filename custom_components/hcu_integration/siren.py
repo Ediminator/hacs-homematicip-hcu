@@ -132,13 +132,15 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
             return None
 
         if len(matching_groups) > 1:
+            # Sort by ID once for deterministic selection
+            matching_groups.sort(key=lambda g: g["id"])
+
             # Prefer groups with acousticFeedbackEnabled=True (audio-enabled alarms)
             # over silent/safety alarm groups
             audio_enabled_groups = [g for g in matching_groups if g["audio_enabled"]]
 
             if audio_enabled_groups:
-                # Use audio-enabled groups, sorted by ID for determinism
-                audio_enabled_groups.sort(key=lambda g: g["id"])
+                # Use first audio-enabled group (already sorted)
                 selected_group = audio_enabled_groups[0]
                 _LOGGER.info(
                     "Multiple ALARM_SWITCHING groups found for siren %s: %s. "
@@ -153,8 +155,7 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
                     len(matching_groups) - len(audio_enabled_groups),
                 )
             else:
-                # All groups have audio disabled - use first one deterministically
-                matching_groups.sort(key=lambda g: g["id"])
+                # All groups have audio disabled - use first one (already sorted)
                 selected_group = matching_groups[0]
                 _LOGGER.warning(
                     "Multiple ALARM_SWITCHING groups found for siren %s, but all have acousticFeedbackEnabled=False: %s. "

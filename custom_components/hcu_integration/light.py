@@ -198,18 +198,27 @@ class HcuLight(HcuBaseEntity, LightEntity):
             # For devices with simpleRGBColorState (e.g., BSL backlight)
             if self._has_simple_rgb:
                 rgb_color = self._hs_to_simple_rgb(hs_color)
-                payload = {"simpleRGBColorState": rgb_color, "dimLevel": dim_level}
+
+                # Build payload with color only (dimLevel must be sent separately)
+                payload = {"simpleRGBColorState": rgb_color}
 
                 # Add optical signal behavior if effect is specified
                 if effect and self._supports_optical_signal:
                     payload["opticalSignalBehaviour"] = effect
 
+                # Send color/effect command
                 await self._client.async_device_control(
                     API_PATHS["SET_SIMPLE_RGB_COLOR_STATE"],
                     self._device_id,
                     self._channel_index,
                     payload
                 )
+
+                # Send separate dimLevel command if brightness is being changed
+                if ATTR_BRIGHTNESS in kwargs or ATTR_TRANSITION in kwargs:
+                    await self._client.async_set_dim_level(
+                        self._device_id, self._channel_index, dim_level, ramp_time
+                    )
             else:
                 # For devices with hue/saturation (e.g., RGBW lights)
                 hue = int(hs_color[0])
@@ -224,11 +233,9 @@ class HcuLight(HcuBaseEntity, LightEntity):
             )
         elif effect and self._supports_optical_signal and self._has_simple_rgb:
             # Effect-only change (no color change) for simpleRGBColorState devices
-            # Include current color state and dimLevel when changing only the effect
             current_color = self._channel.get("simpleRGBColorState", HMIP_COLOR_WHITE)
             payload = {
                 "simpleRGBColorState": current_color,
-                "dimLevel": dim_level,
                 "opticalSignalBehaviour": effect
             }
             await self._client.async_device_control(
@@ -237,6 +244,12 @@ class HcuLight(HcuBaseEntity, LightEntity):
                 self._channel_index,
                 payload
             )
+
+            # Send separate dimLevel command if brightness is being changed
+            if ATTR_BRIGHTNESS in kwargs or ATTR_TRANSITION in kwargs:
+                await self._client.async_set_dim_level(
+                    self._device_id, self._channel_index, dim_level, ramp_time
+                )
         else:
             await self._client.async_set_dim_level(
                 self._device_id, self._channel_index, dim_level, ramp_time

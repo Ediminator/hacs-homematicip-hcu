@@ -107,7 +107,11 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
 
         # Find ALARM_SWITCHING group(s) containing this device/channel
         matching_groups = [
-            (group_id, group_data.get("label", group_id), group_data.get("acousticFeedbackEnabled", True))
+            {
+                "id": group_id,
+                "label": group_data.get("label", group_id),
+                "audio_enabled": group_data.get("acousticFeedbackEnabled", True),
+            }
             for group_id, group_data in groups.items()
             if group_data.get("type") == "ALARM_SWITCHING"
             and any(
@@ -130,47 +134,49 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
         if len(matching_groups) > 1:
             # Prefer groups with acousticFeedbackEnabled=True (audio-enabled alarms)
             # over silent/safety alarm groups
-            audio_enabled_groups = [g for g in matching_groups if g[2]]  # g[2] is acousticFeedbackEnabled
+            audio_enabled_groups = [g for g in matching_groups if g["audio_enabled"]]
 
             if audio_enabled_groups:
                 # Use audio-enabled groups, sorted by ID for determinism
-                audio_enabled_groups.sort()
+                audio_enabled_groups.sort(key=lambda g: g["id"])
                 selected_group = audio_enabled_groups[0]
                 _LOGGER.info(
                     "Multiple ALARM_SWITCHING groups found for siren %s: %s. "
                     "Selected audio-enabled group '%s' (%s) over %d silent/safety alarm group(s).",
                     self._device_id,
-                    ", ".join(f"'{label}' ({gid}, audio={'enabled' if audio else 'disabled'})"
-                              for gid, label, audio in matching_groups),
-                    selected_group[1],
-                    selected_group[0],
+                    ", ".join(
+                        f"'{g['label']}' ({g['id']}, audio={'enabled' if g['audio_enabled'] else 'disabled'})"
+                        for g in matching_groups
+                    ),
+                    selected_group["label"],
+                    selected_group["id"],
                     len(matching_groups) - len(audio_enabled_groups),
                 )
             else:
                 # All groups have audio disabled - use first one deterministically
-                matching_groups.sort()
+                matching_groups.sort(key=lambda g: g["id"])
                 selected_group = matching_groups[0]
                 _LOGGER.warning(
                     "Multiple ALARM_SWITCHING groups found for siren %s, but all have acousticFeedbackEnabled=False: %s. "
                     "Using first group '%s' (%s). Siren may not produce audio.",
                     self._device_id,
-                    ", ".join(f"'{label}' ({gid})" for gid, label, _ in matching_groups),
-                    selected_group[1],
-                    selected_group[0],
+                    ", ".join(f"'{g['label']}' ({g['id']})" for g in matching_groups),
+                    selected_group["label"],
+                    selected_group["id"],
                 )
         else:
             # Single group found
             selected_group = matching_groups[0]
-            audio_status = "enabled" if selected_group[2] else "disabled"
+            audio_status = "enabled" if selected_group["audio_enabled"] else "disabled"
             _LOGGER.info(
                 "Found ALARM_SWITCHING group '%s' (%s) for siren %s (audio %s)",
-                selected_group[1],
-                selected_group[0],
+                selected_group["label"],
+                selected_group["id"],
                 self._device_id,
                 audio_status,
             )
 
-        return selected_group[0]
+        return selected_group["id"]
 
     @property
     def available(self) -> bool:

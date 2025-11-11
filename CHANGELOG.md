@@ -4,6 +4,58 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 
 ---
 
+## Version 1.15.9 - 2025-11-11
+
+### 🐛 Bug Fixes
+
+**Fix HmIP-BSL Light Not Turning On When Setting Color - Issue #108**
+
+Fixed a critical regression from v1.15.7 where HmIP-BSL notification lights would not turn on when setting a color without explicitly specifying brightness.
+
+**Root Cause**
+
+The v1.15.7 fix correctly separated color and dimLevel API calls, but introduced a new bug: it only sent the dimLevel command when `ATTR_BRIGHTNESS` or `ATTR_TRANSITION` was explicitly provided in the service call. This caused lights to remain off when users set colors through the Home Assistant UI (which doesn't send brightness by default).
+
+**Behavior Before This Fix (v1.15.7-1.15.8):**
+```python
+# User clicks light and picks red color
+# Home Assistant calls: light.turn_on(hs_color=[0, 100])
+# No ATTR_BRIGHTNESS in kwargs
+↓
+1. Set color to RED ✅
+2. Skip dimLevel command ❌  (condition was: if ATTR_BRIGHTNESS in kwargs)
+3. Light stays OFF (dimLevel remains 0.0)
+```
+
+**What Was Fixed**
+
+Changed the logic to **always** send dimLevel when setting color or effect on `simpleRGBColorState` devices. The dimLevel value is already correctly calculated from:
+- Explicit brightness if provided in kwargs
+- Current brightness if light is already on
+- Default to full brightness (255) if light is off
+
+**Behavior After This Fix (v1.15.9):**
+```python
+# User clicks light and picks red color
+# Home Assistant calls: light.turn_on(hs_color=[0, 100])
+↓
+1. Set color to RED ✅
+2. Send dimLevel=1.0 (full brightness) ✅
+3. Light turns ON with red color ✅
+```
+
+**Impact**
+- ✅ HmIP-BSL lights now turn on when setting color from UI
+- ✅ Color changes work without requiring explicit brightness
+- ✅ Brightness is preserved when changing color on already-on lights
+- ✅ Effects (blinking, flashing) now properly turn light on
+- ✅ All color control methods work as expected
+
+**Files Changed**
+- `custom_components/hcu_integration/light.py` - Removed conditional checks, always send dimLevel for simpleRGBColorState devices
+
+---
+
 ## Version 1.15.7 - 2025-11-11
 
 ### 🐛 Bug Fixes

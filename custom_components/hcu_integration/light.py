@@ -214,11 +214,11 @@ class HcuLight(HcuBaseEntity, LightEntity):
                     payload
                 )
 
-                # Send separate dimLevel command if brightness is being changed
-                if ATTR_BRIGHTNESS in kwargs or ATTR_TRANSITION in kwargs:
-                    await self._client.async_set_dim_level(
-                        self._device_id, self._channel_index, dim_level, ramp_time
-                    )
+                # Always send dimLevel command to ensure light is on
+                # (dim_level is already calculated from kwargs or current brightness)
+                await self._client.async_set_dim_level(
+                    self._device_id, self._channel_index, dim_level, ramp_time
+                )
             else:
                 # For devices with hue/saturation (e.g., RGBW lights)
                 hue = int(hs_color[0])
@@ -245,11 +245,11 @@ class HcuLight(HcuBaseEntity, LightEntity):
                 payload
             )
 
-            # Send separate dimLevel command if brightness is being changed
-            if ATTR_BRIGHTNESS in kwargs or ATTR_TRANSITION in kwargs:
-                await self._client.async_set_dim_level(
-                    self._device_id, self._channel_index, dim_level, ramp_time
-                )
+            # Always send dimLevel command to ensure light is on
+            # (dim_level is already calculated from kwargs or current brightness)
+            await self._client.async_set_dim_level(
+                self._device_id, self._channel_index, dim_level, ramp_time
+            )
         else:
             await self._client.async_set_dim_level(
                 self._device_id, self._channel_index, dim_level, ramp_time

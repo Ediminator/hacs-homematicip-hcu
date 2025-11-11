@@ -267,7 +267,7 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
         )
 
     async def _async_execute_with_state_management(
-        self, target_state: bool, api_call: Any, action: str
+        self, target_state: bool, api_call: Any, action: str, clear_assumed_state: bool = True
     ) -> None:
         """Execute API call with optimistic state management and error handling.
 
@@ -275,6 +275,8 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
             target_state: The desired state (True for on, False for off)
             api_call: Coroutine to execute for the API call
             action: Action name for logging ("turn on" or "turn off")
+            clear_assumed_state: Whether to clear assumed_state after successful API call
+                                 (False when using scheduled refresh to clear it later)
         """
         # Set optimistic state immediately
         self._attr_is_on = target_state
@@ -283,9 +285,10 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
 
         try:
             await api_call
-            # API call succeeded - clear assumed_state to allow coordinator updates
-            self._attr_assumed_state = False
-            self.async_write_ha_state()
+            # API call succeeded - optionally clear assumed_state
+            if clear_assumed_state:
+                self._attr_assumed_state = False
+                self.async_write_ha_state()
         except (HcuApiError, ConnectionError) as err:
             # Revert state on error
             _LOGGER.error("Failed to %s siren %s: %s", action, self.name, err)
@@ -300,11 +303,18 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
         This ensures the entity state is updated after the siren stops playing,
         as the HCU may not send a state update when acousticAlarmActive becomes False.
 
+        Clears the assumed_state flag before refreshing to allow coordinator updates
+        to sync the actual state, preventing race conditions during the active period.
+
         Args:
             duration: Duration in seconds to wait before refreshing
         """
         # Add buffer to ensure the siren has finished before checking state
         await asyncio.sleep(duration + _REFRESH_BUFFER_SECONDS)
+
+        # Clear assumed_state to allow the coordinator update to sync the real state
+        self._attr_assumed_state = False
+        self.async_write_ha_state()
 
         _LOGGER.debug(
             "Refreshing coordinator state for siren %s after duration expired",
@@ -347,6 +357,8 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
         )
 
         # Activate the siren via ALARM_SWITCHING group
+        # Don't clear assumed_state yet - let the scheduled refresh handle it
+        # to prevent race conditions during the active period
         await self._async_execute_with_state_management(
             target_state=True,
             api_call=self._client.async_set_alarm_switching_group_state(
@@ -357,6 +369,7 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
                 on_time=duration,
             ),
             action="turn on",
+            clear_assumed_state=False,
         )
 
         # Schedule a state refresh after the duration expires to ensure

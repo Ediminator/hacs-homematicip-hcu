@@ -8,125 +8,51 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 
 ### 🐛 Bug Fixes
 
-**Fix HmIP-ASIR2 Missing Tones and Audio Playback - Issue #100**
+**Fix HmIP-BSL Light Not Turning On When Setting Color - Issue #108**
 
-Fixed critical bugs with HmIP-ASIR2 siren where many acoustic alarm tones were missing from the available options list, and audio tones were not playing when triggered.
+Fixed a critical regression from v1.15.7 where HmIP-BSL notification lights would not turn on when setting a color without explicitly specifying brightness.
 
 **Root Cause**
 
-The `HMIP_SIREN_TONES` constant in `const.py` contained incorrect and incomplete tone names that didn't match the official HomematicIP API specification for the HmIP-ASIR2 device. When Home Assistant sent these incorrect tone names to the HCU via the `/hmip/device/control/setSoundFileVolumeLevelWithTime` API endpoint, the HCU rejected them, causing no audio to play.
+The v1.15.7 fix correctly separated color and dimLevel API calls, but introduced a new bug: it only sent the dimLevel command when `ATTR_BRIGHTNESS` or `ATTR_TRANSITION` was explicitly provided in the service call. This caused lights to remain off when users set colors through the Home Assistant UI (which doesn't send brightness by default).
 
-**Previous behavior (broken):**
+**Behavior Before This Fix (v1.15.7-1.15.8):**
 ```python
-HMIP_SIREN_TONES = frozenset({
-    "FREQUENCY_ALTERNATING_MID_HIGH",  # Wrong - should be LOW_MID_HIGH
-    "BATTERY_STATUS",                  # Wrong - should be LOW_BATTERY
-    "ARMED_STATUS",                    # Wrong - unclear mapping
-    "EVENT_ON", "EVENT_OFF",          # Wrong - should be just EVENT
-    # Missing: EXTERNALLY_ARMED, INTERNALLY_ARMED, DISARMED, etc.
-})
+# User clicks light and picks red color
+# Home Assistant calls: light.turn_on(hs_color=[0, 100])
+# No ATTR_BRIGHTNESS in kwargs
+↓
+1. Set color to RED ✅
+2. Skip dimLevel command ❌  (condition was: if ATTR_BRIGHTNESS in kwargs)
+3. Light stays OFF (dimLevel remains 0.0)
 ```
 
 **What Was Fixed**
 
-- **Updated tone list** to match official HomematicIP HmIP-ASIR2 specification
-- **Added missing status tones**: EXTERNALLY_ARMED, INTERNALLY_ARMED, DISARMED, DELAYED_INTERNALLY_ARMED, DELAYED_EXTERNALLY_ARMED, LOW_BATTERY, DISABLE_ACOUSTIC_SIGNAL, EVENT
-- **Corrected frequency tones**: FREQUENCY_ALTERNATING_LOW_MID_HIGH, FREQUENCY_HIGHON_OFF, FREQUENCY_LOWON_OFF_HIGHON_OFF, FREQUENCY_LOWON_LONGOFF_HIGHON_LONGOFF
-- **Removed incorrect tones**: FREQUENCY_ALTERNATING_MID_HIGH, FREQUENCY_ALTERNATING_LOW_MID, FREQUENCY_HIGHON_SHORTOFF, FREQUENCY_LOWON_LONGOFF_HIGH, FREQUENCY_LOWON_SHORTOFF_HIGH, FREQUENCY_LOWON_SHORTOFF, BATTERY_STATUS, ARMED_STATUS, EVENT_ON, EVENT_OFF
+Changed the logic to **always** send dimLevel when setting color or effect on `simpleRGBColorState` devices. The dimLevel value is already correctly calculated from:
+- Explicit brightness if provided in kwargs
+- Current brightness if light is already on
+- Default to full brightness (255) if light is off
 
-**New behavior (working):**
+**Behavior After This Fix (v1.15.9):**
 ```python
-HMIP_SIREN_TONES = frozenset({
-    # Frequency pattern tones (alarm sounds)
-    "FREQUENCY_RISING",
-    "FREQUENCY_FALLING",
-    "FREQUENCY_RISING_AND_FALLING",
-    "FREQUENCY_ALTERNATING_LOW_HIGH",
-    "FREQUENCY_ALTERNATING_LOW_MID_HIGH",
-    "FREQUENCY_HIGHON_OFF",
-    "FREQUENCY_HIGHON_LONGOFF",
-    "FREQUENCY_LOWON_OFF_HIGHON_OFF",
-    "FREQUENCY_LOWON_LONGOFF_HIGHON_LONGOFF",
-    # Status and alert tones
-    "DISABLE_ACOUSTIC_SIGNAL",
-    "LOW_BATTERY",
-    "DISARMED",
-    "INTERNALLY_ARMED",
-    "EXTERNALLY_ARMED",
-    "DELAYED_INTERNALLY_ARMED",
-    "DELAYED_EXTERNALLY_ARMED",
-    "EVENT",
-    "ERROR",
-})
+# User clicks light and picks red color
+# Home Assistant calls: light.turn_on(hs_color=[0, 100])
+↓
+1. Set color to RED ✅
+2. Send dimLevel=1.0 (full brightness) ✅
+3. Light turns ON with red color ✅
 ```
 
 **Impact**
-- ✅ All 18 official HomematicIP acoustic tones are now available
-- ✅ "EXTERNALLY_ARMED" tone now appears in the tone list (Issue #100)
-- ✅ Audio tones now play correctly when siren is triggered
-- ✅ HCU accepts all tone names via setSoundFileVolumeLevelWithTime API
-- ✅ Status tones (armed, disarmed, battery, etc.) now work for alarm system integration
-- ✅ All 9 frequency pattern alarm tones work correctly
+- ✅ HmIP-BSL lights now turn on when setting color from UI
+- ✅ Color changes work without requiring explicit brightness
+- ✅ Brightness is preserved when changing color on already-on lights
+- ✅ Effects (blinking, flashing) now properly turn light on
+- ✅ All color control methods work as expected
 
----
-
-## Version 1.15.8 - 2025-11-11
-
-### 🐛 Bug Fixes
-
-**Fix HmIP-BSL False Button Events - Issue #98**
-
-Fixed a critical bug where HmIP-BSL devices triggered false button events whenever the light was toggled via Home Assistant, not just on actual physical button presses. This caused automations to trigger unexpectedly.
-
-**Root Cause**
-
-The integration was treating `SWITCH_CHANNEL` with `DOUBLE_INPUT_SWITCH` internal link configuration as an event channel for timestamp-based button detection. The problem is that this channel's `lastStatusUpdate` timestamp changes whenever the switch state changes - whether from a physical button press OR from a programmatic toggle via Home Assistant.
-
-**Previous behavior (broken):**
-```python
-# SWITCH_CHANNEL with DOUBLE_INPUT_SWITCH was included in event_channels
-# Timestamp-based detection fired on ANY state change:
-#   - Physical button press → timestamp changed → event fired ✓
-#   - HA light toggle → timestamp changed → event fired ✗ (false positive)
-```
-
-**What Was Fixed**
-
-- **Removed DOUBLE_INPUT_SWITCH detection** from `_extract_event_channels()` method
-- **HmIP-BSL now uses ONLY DEVICE_CHANNEL_EVENT** for button press detection (no timestamp-based detection)
-- **Enhanced logging** with device model, channel index, channel label, and channel type
-- **Elevated log level to INFO** for button presses to help diagnose channel identification issues
-- **Code cleanup**: Refactored logging using fallback empty dict pattern for cleaner, more concise code
-
-**New behavior (working):**
-```python
-# SWITCH_CHANNEL excluded from timestamp-based detection
-# Button presses detected ONLY via DEVICE_CHANNEL_EVENT:
-#   - Physical button press → DEVICE_CHANNEL_EVENT → event fired ✓
-#   - HA light toggle → no event fired ✓
-```
-
-**Technical Details**
-
-HmIP-BSL device channel structure:
-- **Channel 0**: `DEVICE_BASE` (maintenance/status)
-- **Channel 1**: `SWITCH_CHANNEL` with `DOUBLE_INPUT_SWITCH` (relay control)
-  - State changes on every toggle (physical or programmatic)
-  - NOT suitable for timestamp-based button detection
-- **Channels 2-3**: `NOTIFICATION_LIGHT_CHANNEL` (button backlights)
-
-Button press events are properly sent via `DEVICE_CHANNEL_EVENT` with the actual channel index that was pressed. The enhanced logging will help identify which channel indices correspond to upper vs lower buttons.
-
-**Enhanced Logging Example**
-```
-Button press: device=3014F711A00018D9992FBF94 (HmIP-BSL), channel=2 (Upper Button, NOTIFICATION_LIGHT_CHANNEL), event=PRESS_SHORT
-```
-
-**Impact**
-- ✅ No more false button events when toggling lights via Home Assistant
-- ✅ Only actual physical button presses trigger `hcu_integration_event` events
-- ✅ Automations now work reliably without unexpected triggers
-- ✅ Enhanced diagnostic information for troubleshooting channel identification
+**Files Changed**
+- `custom_components/hcu_integration/light.py` - Removed conditional checks, always send dimLevel for simpleRGBColorState devices
 
 ---
 

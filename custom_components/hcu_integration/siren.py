@@ -119,6 +119,8 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
             return None
 
         if len(matching_groups) > 1:
+            # Sort by group ID to ensure deterministic selection across restarts
+            matching_groups.sort()
             _LOGGER.warning(
                 "Multiple ALARM_SWITCHING groups found for siren %s: %s. "
                 "Using first group '%s' (%s). This may indicate a configuration issue in the HCU.",

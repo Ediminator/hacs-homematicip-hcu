@@ -156,23 +156,18 @@ Button press events are properly sent via `DEVICE_CHANNEL_EVENT` with the actual
 **Enhanced Logging Example**
 ```
 Button press: device=3014F711A00018D9992FBF94 (HmIP-BSL), channel=2 (Upper Button, NOTIFICATION_LIGHT_CHANNEL), event=PRESS_SHORT
-# User clicks light and picks red color
-# Home Assistant calls: light.turn_on(hs_color=[0, 100])
-↓
-1. Set color to RED ✅
-2. Send dimLevel=1.0 (full brightness) ✅
-3. Light turns ON with red color ✅
 ```
 
 **Impact**
-- ✅ HmIP-BSL lights now turn on when setting color from UI
-- ✅ Color changes work without requiring explicit brightness
-- ✅ Brightness is preserved when changing color on already-on lights
-- ✅ Effects (blinking, flashing) now properly turn light on
-- ✅ All color control methods work as expected
+- ✅ HmIP-BSL button presses now trigger events only on actual physical button presses
+- ✅ No false events when toggling lights via Home Assistant
+- ✅ Automations triggered by button presses work correctly
+- ✅ Enhanced logging helps identify which channel corresponds to upper vs lower buttons
+- ✅ Event detection more reliable and predictable
 
 **Files Changed**
-- `custom_components/hcu_integration/light.py` - Removed conditional checks, always send dimLevel for simpleRGBColorState devices
+- `custom_components/hcu_integration/discovery.py` - Removed DOUBLE_INPUT_SWITCH from timestamp-based event detection
+- `custom_components/hcu_integration/event.py` - Enhanced logging with device model, channel info, and event type
 
 ---
 

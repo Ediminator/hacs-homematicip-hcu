@@ -19,6 +19,8 @@ from .const import (
     HMIP_SIREN_TONES,
     DEFAULT_SIREN_TONE,
     DEFAULT_SIREN_DURATION,
+    DEFAULT_SIREN_OPTICAL_SIGNAL,
+    ATTR_OPTICAL_SIGNAL,
     HMIP_CHANNEL_KEY_ACOUSTIC_ALARM_ACTIVE,
     CHANNEL_TYPE_ALARM_SIREN,
 )
@@ -255,18 +257,20 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
             raise
 
     async def async_turn_on(self, **kwargs: Any) -> None:
-        """Turn the siren on with optional tone and duration.
+        """Turn the siren on with optional tone, duration, and optical signal.
 
         Args:
             **kwargs: Optional parameters including:
                 - tone: The acoustic signal to play (from HMIP_SIREN_TONES)
                 - duration: Duration in seconds (default: 10.0)
+                - optical_signal: The LED visual signal pattern (default: BLINKING_ALTERNATELY_REPEATING)
         """
         # Validate ALARM_SWITCHING group is configured
         self._validate_alarm_group_configured()
 
         tone = kwargs.get(ATTR_TONE, DEFAULT_SIREN_TONE)
         duration = kwargs.get(ATTR_DURATION, DEFAULT_SIREN_DURATION)
+        optical_signal = kwargs.get(ATTR_OPTICAL_SIGNAL, DEFAULT_SIREN_OPTICAL_SIGNAL)
 
         # Validate tone
         if tone not in HMIP_SIREN_TONES:
@@ -279,21 +283,21 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
             tone = DEFAULT_SIREN_TONE
 
         _LOGGER.info(
-            "Activating siren %s via ALARM_SWITCHING group with tone=%s, duration=%s",
+            "Activating siren %s via ALARM_SWITCHING group with tone=%s, optical_signal=%s, duration=%s",
             self.name,
             tone,
+            optical_signal,
             duration,
         )
 
         # Activate the siren via ALARM_SWITCHING group
-        # Use BLINKING_ALTERNATELY_REPEATING as default optical signal (based on API docs)
         await self._async_execute_with_state_management(
             target_state=True,
             api_call=self._client.async_set_alarm_switching_group_state(
                 group_id=self._alarm_group_id,
                 on=True,
                 signal_acoustic=tone,
-                signal_optical="BLINKING_ALTERNATELY_REPEATING",
+                signal_optical=optical_signal,
                 on_time=duration,
             ),
             action="turn on",

@@ -37,6 +37,7 @@ The siren is now properly controlled through its ALARM_SWITCHING group:
 3. **Send correct parameters**: `signalAcoustic` (tone), `signalOptical` (LED pattern), `onTime` (duration)
 4. **Added tone list corrections**: Fixed incorrect tone names (BATTERY_STATUS→LOW_BATTERY, etc.) and added missing tones (EXTERNALLY_ARMED, INTERNALLY_ARMED, etc.)
 5. **Sorted tones alphabetically** within groups for better maintainability
+6. **Added optical_signal parameter**: Users can now customize the LED visual pattern (defaults to BLINKING_ALTERNATELY_REPEATING)
 
 **New behavior (working):**
 ```python
@@ -45,9 +46,20 @@ await client.async_set_alarm_switching_group_state(
     group_id=alarm_group_id,
     on=True,
     signal_acoustic=tone,                        # Acoustic tone
-    signal_optical="BLINKING_ALTERNATELY_REPEATING",  # LED pattern
+    signal_optical=optical_signal,               # LED pattern (customizable)
     on_time=duration                             # Duration in seconds
 )
+```
+
+**Example Usage:**
+```yaml
+service: siren.turn_on
+target:
+  entity_id: siren.alarmsirene
+data:
+  tone: FREQUENCY_RISING
+  duration: 10
+  optical_signal: BLINKING_ALTERNATELY_REPEATING  # Optional, defaults to this value
 ```
 
 **Impact**
@@ -55,54 +67,9 @@ await client.async_set_alarm_switching_group_state(
 - ✅ All 18 official HomematicIP acoustic tones work (FREQUENCY_RISING, EXTERNALLY_ARMED, etc.)
 - ✅ HCU accepts commands and siren activates immediately
 - ✅ LED visual signals work alongside acoustic signals
+- ✅ LED visual pattern is now customizable via optical_signal parameter
 - ✅ Duration control works properly
 - ✅ Turn off command successfully stops the siren
-
-**Fix HmIP-BSL Light Not Turning On When Setting Color - Issue #108**
-
-Fixed a critical regression from v1.15.7 where HmIP-BSL notification lights would not turn on when setting a color without explicitly specifying brightness.
-
-**Root Cause**
-
-The v1.15.7 fix correctly separated color and dimLevel API calls, but introduced a new bug: it only sent the dimLevel command when `ATTR_BRIGHTNESS` or `ATTR_TRANSITION` was explicitly provided in the service call. This caused lights to remain off when users set colors through the Home Assistant UI (which doesn't send brightness by default).
-
-**Behavior Before This Fix (v1.15.7-1.15.8):**
-```python
-# User clicks light and picks red color
-# Home Assistant calls: light.turn_on(hs_color=[0, 100])
-# No ATTR_BRIGHTNESS in kwargs
-↓
-1. Set color to RED ✅
-2. Skip dimLevel command ❌  (condition was: if ATTR_BRIGHTNESS in kwargs)
-3. Light stays OFF (dimLevel remains 0.0)
-```
-
-**What Was Fixed**
-
-Changed the logic to **always** send dimLevel when setting color or effect on `simpleRGBColorState` devices. The dimLevel value is already correctly calculated from:
-- Explicit brightness if provided in kwargs
-- Current brightness if light is already on
-- Default to full brightness (255) if light is off
-
-**Behavior After This Fix (v1.15.9):**
-```python
-# User clicks light and picks red color
-# Home Assistant calls: light.turn_on(hs_color=[0, 100])
-↓
-1. Set color to RED ✅
-2. Send dimLevel=1.0 (full brightness) ✅
-3. Light turns ON with red color ✅
-```
-
-**Impact**
-- ✅ HmIP-BSL lights now turn on when setting color from UI
-- ✅ Color changes work without requiring explicit brightness
-- ✅ Brightness is preserved when changing color on already-on lights
-- ✅ Effects (blinking, flashing) now properly turn light on
-- ✅ All color control methods work as expected
-
-**Files Changed**
-- `custom_components/hcu_integration/light.py` - Removed conditional checks, always send dimLevel for simpleRGBColorState devices
 
 ---
 

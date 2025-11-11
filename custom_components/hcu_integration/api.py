@@ -637,6 +637,37 @@ class HcuApiClient:
             {"on": on},
         )
 
+    async def async_set_alarm_switching_group_state(
+        self,
+        group_id: str,
+        on: bool,
+        signal_acoustic: str | None = None,
+        signal_optical: str | None = None,
+        on_time: float | None = None,
+    ) -> None:
+        """Set the state for an ALARM_SWITCHING group (siren).
+
+        Args:
+            group_id: The ID of the ALARM_SWITCHING group
+            on: Turn the siren on or off
+            signal_acoustic: Acoustic alarm signal (tone), e.g., "FREQUENCY_RISING"
+            signal_optical: Optical alarm signal (LED pattern), e.g., "DOUBLE_FLASHING_REPEATING"
+            on_time: Duration in seconds for the alarm
+        """
+        body = {"on": on}
+        if signal_acoustic is not None:
+            body["signalAcoustic"] = signal_acoustic
+        if signal_optical is not None:
+            body["signalOptical"] = signal_optical
+        if on_time is not None:
+            body["onTime"] = on_time
+
+        await self.async_group_control(
+            API_PATHS["SET_SWITCHING_GROUP_STATE"],
+            group_id,
+            body,
+        )
+
     async def disconnect(self) -> None:
         """Close the WebSocket connection gracefully."""
         if self.is_connected and self._websocket:

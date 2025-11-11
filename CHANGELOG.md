@@ -8,65 +8,55 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 
 ### 🐛 Bug Fixes
 
-**Fix HmIP-ASIR2 Missing Tones and Audio Playback - Issue #100**
+**Fix HmIP-ASIR2 Audio Not Playing - Issue #100**
 
-Fixed critical bugs with HmIP-ASIR2 siren where many acoustic alarm tones were missing from the available options list, and audio tones were not playing when triggered.
+Fixed critical bug where HmIP-ASIR2 siren tones were not playing when activated. The HCU was rejecting all siren commands with error 400 `INVALID_REQUEST`.
 
 **Root Cause**
 
-The `HMIP_SIREN_TONES` constant in `const.py` contained incorrect and incomplete tone names that didn't match the official HomematicIP API specification for the HmIP-ASIR2 device. When Home Assistant sent these incorrect tone names to the HCU via the `/hmip/device/control/setSoundFileVolumeLevelWithTime` API endpoint, the HCU rejected them, causing no audio to play.
+The siren was being controlled using the **wrong API endpoint**. The integration was using `/hmip/device/control/setSoundFileVolumeLevelWithTime` (designed for doorbell devices like HmIP-MP3P that play sound *files*), but the HmIP-ASIR2 siren requires control via an **ALARM_SWITCHING group** using the `/hmip/group/switching/setState` endpoint with group-specific parameters.
 
 **Previous behavior (broken):**
 ```python
-HMIP_SIREN_TONES = frozenset({
-    "FREQUENCY_ALTERNATING_MID_HIGH",  # Wrong - should be LOW_MID_HIGH
-    "BATTERY_STATUS",                  # Wrong - should be LOW_BATTERY
-    "ARMED_STATUS",                    # Wrong - unclear mapping
-    "EVENT_ON", "EVENT_OFF",          # Wrong - should be just EVENT
-    # Missing: EXTERNALLY_ARMED, INTERNALLY_ARMED, DISARMED, etc.
-})
+# Siren controlled via DEVICE API (wrong!)
+await client.async_set_sound_file(
+    device_id=device_id,
+    channel_index=1,
+    sound_file=tone,  # HCU rejected with INVALID_REQUEST
+    volume=1.0,
+    duration=duration
+)
 ```
 
 **What Was Fixed**
 
-- **Updated tone list** to match official HomematicIP HmIP-ASIR2 specification
-- **Added missing status tones**: EXTERNALLY_ARMED, INTERNALLY_ARMED, DISARMED, DELAYED_INTERNALLY_ARMED, DELAYED_EXTERNALLY_ARMED, LOW_BATTERY, DISABLE_ACOUSTIC_SIGNAL, EVENT
-- **Corrected frequency tones**: FREQUENCY_ALTERNATING_LOW_MID_HIGH, FREQUENCY_HIGHON_OFF, FREQUENCY_LOWON_OFF_HIGHON_OFF, FREQUENCY_LOWON_LONGOFF_HIGHON_LONGOFF
-- **Removed incorrect tones**: FREQUENCY_ALTERNATING_MID_HIGH, FREQUENCY_ALTERNATING_LOW_MID, FREQUENCY_HIGHON_SHORTOFF, FREQUENCY_LOWON_LONGOFF_HIGH, FREQUENCY_LOWON_SHORTOFF_HIGH, FREQUENCY_LOWON_SHORTOFF, BATTERY_STATUS, ARMED_STATUS, EVENT_ON, EVENT_OFF
+The siren is now properly controlled through its ALARM_SWITCHING group:
+
+1. **Find ALARM_SWITCHING group** during siren initialization
+2. **Use group API** `/hmip/group/switching/setState` instead of device API
+3. **Send correct parameters**: `signalAcoustic` (tone), `signalOptical` (LED pattern), `onTime` (duration)
+4. **Added tone list corrections**: Fixed incorrect tone names (BATTERY_STATUS→LOW_BATTERY, etc.) and added missing tones (EXTERNALLY_ARMED, INTERNALLY_ARMED, etc.)
+5. **Sorted tones alphabetically** within groups for better maintainability
 
 **New behavior (working):**
 ```python
-HMIP_SIREN_TONES = frozenset({
-    # Frequency pattern tones (alarm sounds)
-    "FREQUENCY_RISING",
-    "FREQUENCY_FALLING",
-    "FREQUENCY_RISING_AND_FALLING",
-    "FREQUENCY_ALTERNATING_LOW_HIGH",
-    "FREQUENCY_ALTERNATING_LOW_MID_HIGH",
-    "FREQUENCY_HIGHON_OFF",
-    "FREQUENCY_HIGHON_LONGOFF",
-    "FREQUENCY_LOWON_OFF_HIGHON_OFF",
-    "FREQUENCY_LOWON_LONGOFF_HIGHON_LONGOFF",
-    # Status and alert tones
-    "DISABLE_ACOUSTIC_SIGNAL",
-    "LOW_BATTERY",
-    "DISARMED",
-    "INTERNALLY_ARMED",
-    "EXTERNALLY_ARMED",
-    "DELAYED_INTERNALLY_ARMED",
-    "DELAYED_EXTERNALLY_ARMED",
-    "EVENT",
-    "ERROR",
-})
+# Siren controlled via ALARM_SWITCHING GROUP (correct!)
+await client.async_set_alarm_switching_group_state(
+    group_id=alarm_group_id,
+    on=True,
+    signal_acoustic=tone,                        # Acoustic tone
+    signal_optical="BLINKING_ALTERNATELY_REPEATING",  # LED pattern
+    on_time=duration                             # Duration in seconds
+)
 ```
 
 **Impact**
-- ✅ All 18 official HomematicIP acoustic tones are now available
-- ✅ "EXTERNALLY_ARMED" tone now appears in the tone list (Issue #100)
-- ✅ Audio tones now play correctly when siren is triggered
-- ✅ HCU accepts all tone names via setSoundFileVolumeLevelWithTime API
-- ✅ Status tones (armed, disarmed, battery, etc.) now work for alarm system integration
-- ✅ All 9 frequency pattern alarm tones work correctly
+- ✅ Audio tones now play correctly when siren is activated
+- ✅ All 18 official HomematicIP acoustic tones work (FREQUENCY_RISING, EXTERNALLY_ARMED, etc.)
+- ✅ HCU accepts commands and siren activates immediately
+- ✅ LED visual signals work alongside acoustic signals
+- ✅ Duration control works properly
+- ✅ Turn off command successfully stops the siren
 
 ---
 

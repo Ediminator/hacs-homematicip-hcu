@@ -73,14 +73,51 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
         self._attr_available_tones = list(HMIP_SIREN_TONES)
         self._init_switch_state()
 
+        # Find the ALARM_SWITCHING group for this siren
+        self._alarm_group_id = self._find_alarm_switching_group()
+
         # Log diagnostic information for troubleshooting
         _LOGGER.debug(
-            "HcuSiren initialized: device=%s, channel=%s, has_acousticAlarmActive=%s, channel_type=%s",
+            "HcuSiren initialized: device=%s, channel=%s, has_acousticAlarmActive=%s, channel_type=%s, alarm_group=%s",
             self._device_id,
             self._channel_index,
             self._state_channel_key in self._channel,
             self._channel.get("functionalChannelType"),
+            self._alarm_group_id,
         )
+
+    def _find_alarm_switching_group(self) -> str | None:
+        """Find the ALARM_SWITCHING group that contains this siren channel.
+
+        Returns:
+            The group ID if found, None otherwise
+        """
+        # Get all groups from coordinator state
+        groups = self.coordinator.data.get("groups", {})
+
+        # Find ALARM_SWITCHING group containing this device/channel
+        for group_id, group_data in groups.items():
+            if group_data.get("type") == "ALARM_SWITCHING":
+                # Check if this group contains our siren channel
+                for channel in group_data.get("channels", []):
+                    if (
+                        channel.get("deviceId") == self._device_id
+                        and str(channel.get("channelIndex")) == str(self._channel_index)
+                    ):
+                        _LOGGER.info(
+                            "Found ALARM_SWITCHING group '%s' for siren %s",
+                            group_data.get("label", group_id),
+                            self._device_id,
+                        )
+                        return group_id
+
+        _LOGGER.warning(
+            "No ALARM_SWITCHING group found for siren %s channel %s. "
+            "Siren control may not work properly.",
+            self._device_id,
+            self._channel_index,
+        )
+        return None
 
     @property
     def available(self) -> bool:
@@ -191,6 +228,15 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
                 - tone: The acoustic signal to play (from HMIP_SIREN_TONES)
                 - duration: Duration in seconds (default: 10.0)
         """
+        # Check if we have an ALARM_SWITCHING group
+        if not self._alarm_group_id:
+            _LOGGER.error(
+                "Cannot turn on siren %s: No ALARM_SWITCHING group found. "
+                "The siren may not be properly configured in the HCU.",
+                self.name,
+            )
+            raise HcuApiError("No ALARM_SWITCHING group found for siren")
+
         tone = kwargs.get(ATTR_TONE, DEFAULT_SIREN_TONE)
         duration = kwargs.get(ATTR_DURATION, DEFAULT_SIREN_DURATION)
 
@@ -204,24 +250,45 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
             )
             tone = DEFAULT_SIREN_TONE
 
-        # Play the acoustic signal using the sound file API
-        # Volume is set to 1.0 (100%) for siren activation
+        _LOGGER.info(
+            "Activating siren %s via ALARM_SWITCHING group with tone=%s, duration=%s",
+            self.name,
+            tone,
+            duration,
+        )
+
+        # Activate the siren via ALARM_SWITCHING group
+        # Use BLINKING_ALTERNATELY_REPEATING as default optical signal (based on API docs)
         await self._async_execute_with_state_management(
             target_state=True,
-            api_call=self._client.async_set_sound_file(
-                self._device_id,
-                self._channel_index,
-                sound_file=tone,
-                volume=1.0,
-                duration=duration,
+            api_call=self._client.async_set_alarm_switching_group_state(
+                group_id=self._alarm_group_id,
+                on=True,
+                signal_acoustic=tone,
+                signal_optical="BLINKING_ALTERNATELY_REPEATING",
+                on_time=duration,
             ),
             action="turn on",
         )
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the siren off."""
+        # Check if we have an ALARM_SWITCHING group
+        if not self._alarm_group_id:
+            _LOGGER.error(
+                "Cannot turn off siren %s: No ALARM_SWITCHING group found.",
+                self.name,
+            )
+            raise HcuApiError("No ALARM_SWITCHING group found for siren")
+
+        _LOGGER.info("Deactivating siren %s via ALARM_SWITCHING group", self.name)
+
+        # Deactivate the siren via ALARM_SWITCHING group
         await self._async_execute_with_state_management(
             target_state=False,
-            api_call=self._call_switch_api(False),
+            api_call=self._client.async_set_alarm_switching_group_state(
+                group_id=self._alarm_group_id,
+                on=False,
+            ),
             action="turn off",
         )

@@ -730,6 +730,10 @@ HMIP_SIREN_TONES = frozenset({
 # Default siren settings
 DEFAULT_SIREN_TONE = "FREQUENCY_RISING"
 DEFAULT_SIREN_DURATION = 10.0  # seconds
+DEFAULT_SIREN_OPTICAL_SIGNAL = "BLINKING_ALTERNATELY_REPEATING"
+
+# Custom attribute for siren optical signal (not a standard Home Assistant attribute)
+ATTR_OPTICAL_SIGNAL = "optical_signal"
 
 # Absence Types
 ABSENCE_TYPE_NOT_ABSENT = "NOT_ABSENT"

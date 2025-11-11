@@ -1,4 +1,5 @@
 # custom_components/hcu_integration/siren.py
+import asyncio
 import logging
 from typing import TYPE_CHECKING, Any
 
@@ -91,6 +92,9 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
     def _find_alarm_switching_group(self) -> str | None:
         """Find the ALARM_SWITCHING group that contains this siren channel.
 
+        Prefers groups with acousticFeedbackEnabled=True when multiple groups exist,
+        as groups with this flag disabled are typically silent/safety alarms.
+
         Returns:
             The group ID if found, None otherwise
         """
@@ -99,7 +103,7 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
 
         # Find ALARM_SWITCHING group(s) containing this device/channel
         matching_groups = [
-            (group_id, group_data.get("label", group_id))
+            (group_id, group_data.get("label", group_id), group_data.get("acousticFeedbackEnabled", True))
             for group_id, group_data in groups.items()
             if group_data.get("type") == "ALARM_SWITCHING"
             and any(
@@ -120,25 +124,49 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
             return None
 
         if len(matching_groups) > 1:
-            # Sort by group ID to ensure deterministic selection across restarts
-            matching_groups.sort()
-            _LOGGER.warning(
-                "Multiple ALARM_SWITCHING groups found for siren %s: %s. "
-                "Using first group '%s' (%s). This may indicate a configuration issue in the HCU.",
+            # Prefer groups with acousticFeedbackEnabled=True (audio-enabled alarms)
+            # over silent/safety alarm groups
+            audio_enabled_groups = [g for g in matching_groups if g[2]]  # g[2] is acousticFeedbackEnabled
+
+            if audio_enabled_groups:
+                # Use audio-enabled groups, sorted by ID for determinism
+                audio_enabled_groups.sort()
+                selected_group = audio_enabled_groups[0]
+                _LOGGER.info(
+                    "Multiple ALARM_SWITCHING groups found for siren %s: %s. "
+                    "Selected audio-enabled group '%s' (%s) over %d silent/safety alarm group(s).",
+                    self._device_id,
+                    ", ".join(f"'{label}' ({gid}, audio={'enabled' if audio else 'disabled'})"
+                              for gid, label, audio in matching_groups),
+                    selected_group[1],
+                    selected_group[0],
+                    len(matching_groups) - len(audio_enabled_groups),
+                )
+            else:
+                # All groups have audio disabled - use first one deterministically
+                matching_groups.sort()
+                selected_group = matching_groups[0]
+                _LOGGER.warning(
+                    "Multiple ALARM_SWITCHING groups found for siren %s, but all have acousticFeedbackEnabled=False: %s. "
+                    "Using first group '%s' (%s). Siren may not produce audio.",
+                    self._device_id,
+                    ", ".join(f"'{label}' ({gid})" for gid, label, _ in matching_groups),
+                    selected_group[1],
+                    selected_group[0],
+                )
+        else:
+            # Single group found
+            selected_group = matching_groups[0]
+            audio_status = "enabled" if selected_group[2] else "disabled"
+            _LOGGER.info(
+                "Found ALARM_SWITCHING group '%s' (%s) for siren %s (audio %s)",
+                selected_group[1],
+                selected_group[0],
                 self._device_id,
-                ", ".join(f"'{label}' ({gid})" for gid, label in matching_groups),
-                matching_groups[0][1],
-                matching_groups[0][0],
+                audio_status,
             )
 
-        group_id, group_label = matching_groups[0]
-        _LOGGER.info(
-            "Found ALARM_SWITCHING group '%s' (%s) for siren %s",
-            group_label,
-            group_id,
-            self._device_id,
-        )
-        return group_id
+        return selected_group[0]
 
     @property
     def available(self) -> bool:
@@ -255,6 +283,24 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
             self.async_write_ha_state()
             raise
 
+    async def _schedule_state_refresh_after_duration(self, duration: float) -> None:
+        """Schedule a coordinator refresh after the siren duration expires.
+
+        This ensures the entity state is updated after the siren stops playing,
+        as the HCU may not send a state update when acousticAlarmActive becomes False.
+
+        Args:
+            duration: Duration in seconds to wait before refreshing
+        """
+        # Add a small buffer (1 second) to ensure the siren has finished
+        await asyncio.sleep(duration + 1.0)
+
+        _LOGGER.debug(
+            "Refreshing coordinator state for siren %s after duration expired",
+            self.name,
+        )
+        await self.coordinator.async_request_refresh()
+
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the siren on with optional tone, duration, and optical signal.
 
@@ -300,6 +346,12 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
                 on_time=duration,
             ),
             action="turn on",
+        )
+
+        # Schedule a state refresh after the duration expires to ensure
+        # the entity state is updated when the siren stops
+        self.hass.async_create_task(
+            self._schedule_state_refresh_after_duration(duration)
         )
 
     async def async_turn_off(self, **kwargs: Any) -> None:

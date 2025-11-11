@@ -392,12 +392,17 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
         """Extract button channels that were updated in the events.
 
         Returns a set of (device_id, channel_index) tuples for channels that
-        are of EVENT_CHANNEL_TYPES and were updated in the events, or channels
-        that have button input capabilities (e.g., SWITCH_CHANNEL with DOUBLE_INPUT_SWITCH).
+        are of EVENT_CHANNEL_TYPES and were updated in the events.
 
         Note: DEVICE_CHANNEL_EVENT type events are handled separately in
         _handle_device_channel_events and should not be added here to avoid
         duplicate event firing.
+
+        Note: SWITCH_CHANNEL with DOUBLE_INPUT_SWITCH (e.g., HmIP-BSL) should NOT
+        be included here because:
+        1. These channels fire DEVICE_CHANNEL_EVENT for actual button presses
+        2. Including them causes false button events when toggling the light via HA
+        3. The switch state changes (and timestamp updates) even when toggled programmatically
         """
         event_channels = set()
         for event in events.values():
@@ -414,15 +419,10 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
             for ch_idx, ch_data in device_data.get("functionalChannels", {}).items():
                 channel_type = ch_data.get("functionalChannelType")
 
-                # Check if this is a SWITCH_CHANNEL with DOUBLE_INPUT_SWITCH configuration
-                # These are switches like HmIP-BSL that have physical button inputs
-                is_double_input_switch = (
-                    channel_type == "SWITCH_CHANNEL" and
-                    ch_data.get("internalLinkConfiguration", {}).get("internalLinkConfigurationType") == "DOUBLE_INPUT_SWITCH"
-                )
-
-                # Standard event channel types or special SWITCH_CHANNEL with button inputs
-                if channel_type in EVENT_CHANNEL_TYPES or is_double_input_switch:
+                # Only process standard event channel types (KEY_CHANNEL, etc.)
+                # Do NOT include SWITCH_CHANNEL with DOUBLE_INPUT_SWITCH as it causes
+                # false events when the light is toggled
+                if channel_type in EVENT_CHANNEL_TYPES:
                     event_channels.add((device_id, ch_idx))
 
         return event_channels
@@ -503,10 +503,18 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
 
             # Convert channel index to string for consistency
             channel_idx_str = str(channel_idx)
+
+            # Get device info for enhanced logging
+            device = self.client.get_device_by_address(device_id) or {}
+            device_model = device.get("modelType", "Unknown")
+            channel = device.get("functionalChannels", {}).get(channel_idx_str, {})
+            channel_type = channel.get("functionalChannelType", "Unknown")
+            channel_label = channel.get("label", f"Channel {channel_idx_str}")
+
             self._fire_button_event(device_id, channel_idx_str, event_type)
-            _LOGGER.debug(
-                "Button press detected via device channel event: device=%s, channel=%s, type=%s",
-                device_id, channel_idx_str, event_type
+            _LOGGER.info(
+                "Button press: device=%s (%s), channel=%s (%s, %s), event=%s",
+                device_id, device_model, channel_idx_str, channel_label, channel_type, event_type
             )
 
     def _should_fire_button_press(

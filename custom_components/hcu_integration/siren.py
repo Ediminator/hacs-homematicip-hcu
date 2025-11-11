@@ -94,21 +94,20 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
         Returns:
             The group ID if found, None otherwise
         """
-        # Get all groups from coordinator state
-        groups = self.coordinator.data.get("groups", {})
+        # Get all groups from client state (not coordinator.data which is just entity IDs)
+        groups = self._client.state.get("groups", {})
 
         # Find ALARM_SWITCHING group(s) containing this device/channel
-        matching_groups = []
-        for group_id, group_data in groups.items():
-            if group_data.get("type") == "ALARM_SWITCHING":
-                # Check if this group contains our siren channel
-                for channel in group_data.get("channels", []):
-                    if (
-                        channel.get("deviceId") == self._device_id
-                        and str(channel.get("channelIndex")) == str(self._channel_index)
-                    ):
-                        matching_groups.append((group_id, group_data.get("label", group_id)))
-                        break
+        matching_groups = [
+            (group_id, group_data.get("label", group_id))
+            for group_id, group_data in groups.items()
+            if group_data.get("type") == "ALARM_SWITCHING"
+            and any(
+                channel.get("deviceId") == self._device_id
+                and str(channel.get("channelIndex")) == str(self._channel_index)
+                for channel in group_data.get("channels", [])
+            )
+        ]
 
         # Handle results
         if not matching_groups:

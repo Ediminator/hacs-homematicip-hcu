@@ -654,13 +654,19 @@ class HcuApiClient:
             signal_optical: Optical alarm signal (LED pattern), e.g., "DOUBLE_FLASHING_REPEATING"
             on_time: Duration in seconds for the alarm
         """
-        body = {"on": on}
-        if signal_acoustic is not None:
-            body["signalAcoustic"] = signal_acoustic
-        if signal_optical is not None:
-            body["signalOptical"] = signal_optical
-        if on_time is not None:
-            body["onTime"] = on_time
+        # Build body with only non-None optional parameters
+        body = {
+            "on": on,
+            **{
+                k: v
+                for k, v in {
+                    "signalAcoustic": signal_acoustic,
+                    "signalOptical": signal_optical,
+                    "onTime": on_time,
+                }.items()
+                if v is not None
+            },
+        }
 
         await self.async_group_control(
             API_PATHS["SET_SWITCHING_GROUP_STATE"],

@@ -1,13 +1,10 @@
 # custom_components/hcu_integration/siren.py
-import asyncio
 import logging
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.siren import (
     SirenEntity,
     SirenEntityFeature,
-    ATTR_TONE,
-    ATTR_DURATION,
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
@@ -17,11 +14,6 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from .entity import HcuBaseEntity, SwitchStateMixin
 from .api import HcuApiClient, HcuApiError
 from .const import (
-    HMIP_SIREN_TONES,
-    DEFAULT_SIREN_TONE,
-    DEFAULT_SIREN_DURATION,
-    DEFAULT_SIREN_OPTICAL_SIGNAL,
-    ATTR_OPTICAL_SIGNAL,
     HMIP_CHANNEL_KEY_ACOUSTIC_ALARM_ACTIVE,
     CHANNEL_TYPE_ALARM_SIREN,
 )
@@ -30,10 +22,6 @@ if TYPE_CHECKING:
     from . import HcuCoordinator
 
 _LOGGER = logging.getLogger(__name__)
-
-# Time buffer (in seconds) to add after siren duration before refreshing state
-# This ensures the HCU has finished processing before we check the state
-_REFRESH_BUFFER_SECONDS = 1.0
 
 
 async def async_setup_entry(
@@ -50,7 +38,13 @@ async def async_setup_entry(
 
 
 class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
-    """Representation of a Homematic IP HCU alarm siren."""
+    """Representation of a Homematic IP HCU alarm siren.
+
+    Note: The tone, duration, and optical signal are configured on the
+    ALARM_SWITCHING group in the HCU itself and cannot be controlled
+    dynamically from Home Assistant. The siren will use whatever settings
+    are configured in the HCU when activated.
+    """
 
     PLATFORM = Platform.SIREN
 
@@ -60,8 +54,6 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
     _attr_supported_features = (
         SirenEntityFeature.TURN_ON
         | SirenEntityFeature.TURN_OFF
-        | SirenEntityFeature.TONES
-        | SirenEntityFeature.DURATION
     )
 
     def __init__(
@@ -77,14 +69,10 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
         self._set_entity_name(channel_label=self._channel.get("label"))
 
         self._attr_unique_id = f"{self._device_id}_{self._channel_index}_siren"
-        self._attr_available_tones = list(HMIP_SIREN_TONES)
         self._init_switch_state()
 
         # Find the ALARM_SWITCHING group for this siren
         self._alarm_group_id = self._find_alarm_switching_group()
-
-        # Track scheduled state refresh task to prevent multiple concurrent tasks
-        self._refresh_task: asyncio.Task | None = None
 
         # Log diagnostic information for troubleshooting
         _LOGGER.debug(
@@ -277,7 +265,7 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
         )
 
     async def _async_execute_with_state_management(
-        self, target_state: bool, api_call: Any, action: str, clear_assumed_state: bool = True
+        self, target_state: bool, api_call: Any, action: str
     ) -> None:
         """Execute API call with optimistic state management and error handling.
 
@@ -285,8 +273,6 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
             target_state: The desired state (True for on, False for off)
             api_call: Coroutine to execute for the API call
             action: Action name for logging ("turn on" or "turn off")
-            clear_assumed_state: Whether to clear assumed_state after successful API call
-                                 (False when using scheduled refresh to clear it later)
         """
         # Set optimistic state immediately
         self._attr_is_on = target_state
@@ -295,10 +281,9 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
 
         try:
             await api_call
-            # API call succeeded - optionally clear assumed_state
-            if clear_assumed_state:
-                self._attr_assumed_state = False
-                self.async_write_ha_state()
+            # API call succeeded - clear assumed_state to allow coordinator updates
+            self._attr_assumed_state = False
+            self.async_write_ha_state()
         except (HcuApiError, ConnectionError) as err:
             # Revert state on error
             _LOGGER.error("Failed to %s siren %s: %s", action, self.name, err)
@@ -307,118 +292,33 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
             self.async_write_ha_state()
             raise
 
-    async def _schedule_state_refresh_after_duration(self, duration: float) -> None:
-        """Schedule a coordinator refresh after the siren duration expires.
-
-        This ensures the entity state is updated after the siren stops playing,
-        as the HCU may not send a state update when acousticAlarmActive becomes False.
-
-        Clears the assumed_state flag before refreshing to allow coordinator updates
-        to sync the actual state, preventing race conditions during the active period.
-
-        Args:
-            duration: Duration in seconds to wait before refreshing
-        """
-        try:
-            # Add buffer to ensure the siren has finished before checking state
-            await asyncio.sleep(duration + _REFRESH_BUFFER_SECONDS)
-
-            # Clear assumed_state to allow the coordinator update to sync the real state
-            self._attr_assumed_state = False
-            self.async_write_ha_state()
-
-            _LOGGER.debug(
-                "Refreshing coordinator state for siren %s after duration expired",
-                self.name,
-            )
-            await self.coordinator.async_request_refresh()
-        except asyncio.CancelledError:
-            _LOGGER.debug(
-                "State refresh task for siren %s was cancelled",
-                self.name,
-            )
-            raise
-        finally:
-            # Clear task reference when done or cancelled
-            self._refresh_task = None
-
     async def async_turn_on(self, **kwargs: Any) -> None:
-        """Turn the siren on with optional tone, duration, and optical signal.
+        """Turn the siren on.
 
-        Args:
-            **kwargs: Optional parameters including:
-                - tone: The acoustic signal to play (from HMIP_SIREN_TONES)
-                - duration: Duration in seconds (default: 10.0)
-                - optical_signal: The LED visual signal pattern (default: BLINKING_ALTERNATELY_REPEATING)
+        Note: The tone, duration, and optical signal settings are configured
+        on the ALARM_SWITCHING group in the HCU and cannot be controlled from
+        Home Assistant. The siren will use whatever settings are configured
+        in the HCU when activated.
         """
         # Validate ALARM_SWITCHING group is configured
         self._validate_alarm_group_configured()
 
-        tone = kwargs.get(ATTR_TONE, DEFAULT_SIREN_TONE)
-        duration = kwargs.get(ATTR_DURATION, DEFAULT_SIREN_DURATION)
-        optical_signal = kwargs.get(ATTR_OPTICAL_SIGNAL, DEFAULT_SIREN_OPTICAL_SIGNAL)
-
-        # Validate tone
-        if tone not in HMIP_SIREN_TONES:
-            _LOGGER.warning(
-                "Invalid tone '%s' for siren %s. Using default tone '%s'.",
-                tone,
-                self.name,
-                DEFAULT_SIREN_TONE,
-            )
-            tone = DEFAULT_SIREN_TONE
-
-        _LOGGER.info(
-            "Activating siren %s via ALARM_SWITCHING group with tone=%s, optical_signal=%s, duration=%s",
-            self.name,
-            tone,
-            optical_signal,
-            duration,
-        )
+        _LOGGER.info("Activating siren %s via ALARM_SWITCHING group", self.name)
 
         # Activate the siren via ALARM_SWITCHING group
-        # Don't clear assumed_state yet - let the scheduled refresh handle it
-        # to prevent race conditions during the active period
         await self._async_execute_with_state_management(
             target_state=True,
             api_call=self._client.async_set_alarm_switching_group_state(
                 group_id=self._alarm_group_id,
                 on=True,
-                signal_acoustic=tone,
-                signal_optical=optical_signal,
-                on_time=duration,
             ),
             action="turn on",
-            clear_assumed_state=False,
-        )
-
-        # Cancel any previous refresh task to prevent race conditions
-        # with multiple rapid turn_on calls
-        if self._refresh_task and not self._refresh_task.done():
-            self._refresh_task.cancel()
-            _LOGGER.debug(
-                "Cancelled previous state refresh task for siren %s",
-                self.name,
-            )
-
-        # Schedule a state refresh after the duration expires to ensure
-        # the entity state is updated when the siren stops
-        self._refresh_task = self.hass.async_create_task(
-            self._schedule_state_refresh_after_duration(duration)
         )
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the siren off."""
         # Validate ALARM_SWITCHING group is configured
         self._validate_alarm_group_configured()
-
-        # Cancel any pending refresh task since we're manually stopping the siren
-        if self._refresh_task and not self._refresh_task.done():
-            self._refresh_task.cancel()
-            _LOGGER.debug(
-                "Cancelled pending state refresh task for siren %s (manual turn off)",
-                self.name,
-            )
 
         _LOGGER.info("Deactivating siren %s via ALARM_SWITCHING group", self.name)
 

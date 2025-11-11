@@ -113,7 +113,7 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
             {
                 "id": group_id,
                 "label": group_data.get("label", group_id),
-                "audio_enabled": group_data.get("acousticFeedbackEnabled", True),
+                "audio_enabled": group_data.get("acousticFeedbackEnabled", False),
             }
             for group_id, group_data in groups.items()
             if group_data.get("type") == "ALARM_SWITCHING"

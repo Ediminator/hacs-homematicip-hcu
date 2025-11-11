@@ -176,6 +176,20 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
 
         return is_available
 
+    def _validate_alarm_group_configured(self) -> None:
+        """Validate that an ALARM_SWITCHING group is configured for this siren.
+
+        Raises:
+            HcuApiError: If no ALARM_SWITCHING group is found
+        """
+        if not self._alarm_group_id:
+            _LOGGER.error(
+                "Cannot control siren %s: No ALARM_SWITCHING group found. "
+                "The siren may not be properly configured in the HCU.",
+                self.name,
+            )
+            raise HcuApiError("No ALARM_SWITCHING group found for siren")
+
     def _sync_switch_state_from_coordinator(self) -> None:
         """Sync switch state from coordinator data with diagnostic logging.
 
@@ -246,14 +260,8 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
                 - tone: The acoustic signal to play (from HMIP_SIREN_TONES)
                 - duration: Duration in seconds (default: 10.0)
         """
-        # Check if we have an ALARM_SWITCHING group
-        if not self._alarm_group_id:
-            _LOGGER.error(
-                "Cannot turn on siren %s: No ALARM_SWITCHING group found. "
-                "The siren may not be properly configured in the HCU.",
-                self.name,
-            )
-            raise HcuApiError("No ALARM_SWITCHING group found for siren")
+        # Validate ALARM_SWITCHING group is configured
+        self._validate_alarm_group_configured()
 
         tone = kwargs.get(ATTR_TONE, DEFAULT_SIREN_TONE)
         duration = kwargs.get(ATTR_DURATION, DEFAULT_SIREN_DURATION)
@@ -291,13 +299,8 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the siren off."""
-        # Check if we have an ALARM_SWITCHING group
-        if not self._alarm_group_id:
-            _LOGGER.error(
-                "Cannot turn off siren %s: No ALARM_SWITCHING group found.",
-                self.name,
-            )
-            raise HcuApiError("No ALARM_SWITCHING group found for siren")
+        # Validate ALARM_SWITCHING group is configured
+        self._validate_alarm_group_configured()
 
         _LOGGER.info("Deactivating siren %s via ALARM_SWITCHING group", self.name)
 

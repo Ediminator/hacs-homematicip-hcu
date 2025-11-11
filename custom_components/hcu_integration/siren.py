@@ -1,4 +1,5 @@
 # custom_components/hcu_integration/siren.py
+import asyncio
 import logging
 from typing import TYPE_CHECKING, Any
 
@@ -29,6 +30,10 @@ if TYPE_CHECKING:
     from . import HcuCoordinator
 
 _LOGGER = logging.getLogger(__name__)
+
+# Time buffer (in seconds) to add after siren duration before refreshing state
+# This ensures the HCU has finished processing before we check the state
+_REFRESH_BUFFER_SECONDS = 1.0
 
 
 async def async_setup_entry(
@@ -78,6 +83,9 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
         # Find the ALARM_SWITCHING group for this siren
         self._alarm_group_id = self._find_alarm_switching_group()
 
+        # Track scheduled state refresh task to prevent multiple concurrent tasks
+        self._refresh_task: asyncio.Task | None = None
+
         # Log diagnostic information for troubleshooting
         _LOGGER.debug(
             "HcuSiren initialized: device=%s, channel=%s, has_acousticAlarmActive=%s, channel_type=%s, alarm_group=%s",
@@ -91,6 +99,9 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
     def _find_alarm_switching_group(self) -> str | None:
         """Find the ALARM_SWITCHING group that contains this siren channel.
 
+        Prefers groups with acousticFeedbackEnabled=True when multiple groups exist,
+        as groups with this flag disabled are typically silent/safety alarms.
+
         Returns:
             The group ID if found, None otherwise
         """
@@ -99,7 +110,11 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
 
         # Find ALARM_SWITCHING group(s) containing this device/channel
         matching_groups = [
-            (group_id, group_data.get("label", group_id))
+            {
+                "id": group_id,
+                "label": group_data.get("label", group_id),
+                "audio_enabled": group_data.get("acousticFeedbackEnabled", False),
+            }
             for group_id, group_data in groups.items()
             if group_data.get("type") == "ALARM_SWITCHING"
             and any(
@@ -120,25 +135,59 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
             return None
 
         if len(matching_groups) > 1:
-            # Sort by group ID to ensure deterministic selection across restarts
-            matching_groups.sort()
-            _LOGGER.warning(
-                "Multiple ALARM_SWITCHING groups found for siren %s: %s. "
-                "Using first group '%s' (%s). This may indicate a configuration issue in the HCU.",
+            # Sort by ID once for deterministic selection
+            matching_groups.sort(key=lambda g: g["id"])
+
+            # Prefer groups with acousticFeedbackEnabled=True (audio-enabled alarms)
+            # over silent/safety alarm groups
+            audio_enabled_groups = [g for g in matching_groups if g["audio_enabled"]]
+
+            if audio_enabled_groups:
+                # Use first audio-enabled group (already sorted)
+                selected_group = audio_enabled_groups[0]
+                # Format group list for logging
+                groups_list = ", ".join(
+                    f"'{g['label']}' ({g['id']}, audio={'enabled' if g['audio_enabled'] else 'disabled'})"
+                    for g in matching_groups
+                )
+                silent_count = len(matching_groups) - len(audio_enabled_groups)
+                _LOGGER.info(
+                    "Multiple ALARM_SWITCHING groups found for siren %s: %s. "
+                    "Selected audio-enabled group '%s' (%s) over %d silent/safety alarm group(s).",
+                    self._device_id,
+                    groups_list,
+                    selected_group["label"],
+                    selected_group["id"],
+                    silent_count,
+                )
+            else:
+                # All groups have audio disabled - use first one (already sorted)
+                selected_group = matching_groups[0]
+                # Format group list for logging
+                groups_list = ", ".join(
+                    f"'{g['label']}' ({g['id']})" for g in matching_groups
+                )
+                _LOGGER.warning(
+                    "Multiple ALARM_SWITCHING groups found for siren %s, but all have acousticFeedbackEnabled=False: %s. "
+                    "Using first group '%s' (%s). Siren may not produce audio.",
+                    self._device_id,
+                    groups_list,
+                    selected_group["label"],
+                    selected_group["id"],
+                )
+        else:
+            # Single group found
+            selected_group = matching_groups[0]
+            audio_status = "enabled" if selected_group["audio_enabled"] else "disabled"
+            _LOGGER.info(
+                "Found ALARM_SWITCHING group '%s' (%s) for siren %s (audio %s)",
+                selected_group["label"],
+                selected_group["id"],
                 self._device_id,
-                ", ".join(f"'{label}' ({gid})" for gid, label in matching_groups),
-                matching_groups[0][1],
-                matching_groups[0][0],
+                audio_status,
             )
 
-        group_id, group_label = matching_groups[0]
-        _LOGGER.info(
-            "Found ALARM_SWITCHING group '%s' (%s) for siren %s",
-            group_label,
-            group_id,
-            self._device_id,
-        )
-        return group_id
+        return selected_group["id"]
 
     @property
     def available(self) -> bool:
@@ -228,7 +277,7 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
         )
 
     async def _async_execute_with_state_management(
-        self, target_state: bool, api_call: Any, action: str
+        self, target_state: bool, api_call: Any, action: str, clear_assumed_state: bool = True
     ) -> None:
         """Execute API call with optimistic state management and error handling.
 
@@ -236,6 +285,8 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
             target_state: The desired state (True for on, False for off)
             api_call: Coroutine to execute for the API call
             action: Action name for logging ("turn on" or "turn off")
+            clear_assumed_state: Whether to clear assumed_state after successful API call
+                                 (False when using scheduled refresh to clear it later)
         """
         # Set optimistic state immediately
         self._attr_is_on = target_state
@@ -244,9 +295,10 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
 
         try:
             await api_call
-            # API call succeeded - clear assumed_state to allow coordinator updates
-            self._attr_assumed_state = False
-            self.async_write_ha_state()
+            # API call succeeded - optionally clear assumed_state
+            if clear_assumed_state:
+                self._attr_assumed_state = False
+                self.async_write_ha_state()
         except (HcuApiError, ConnectionError) as err:
             # Revert state on error
             _LOGGER.error("Failed to %s siren %s: %s", action, self.name, err)
@@ -254,6 +306,41 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
             self._attr_assumed_state = False
             self.async_write_ha_state()
             raise
+
+    async def _schedule_state_refresh_after_duration(self, duration: float) -> None:
+        """Schedule a coordinator refresh after the siren duration expires.
+
+        This ensures the entity state is updated after the siren stops playing,
+        as the HCU may not send a state update when acousticAlarmActive becomes False.
+
+        Clears the assumed_state flag before refreshing to allow coordinator updates
+        to sync the actual state, preventing race conditions during the active period.
+
+        Args:
+            duration: Duration in seconds to wait before refreshing
+        """
+        try:
+            # Add buffer to ensure the siren has finished before checking state
+            await asyncio.sleep(duration + _REFRESH_BUFFER_SECONDS)
+
+            # Clear assumed_state to allow the coordinator update to sync the real state
+            self._attr_assumed_state = False
+            self.async_write_ha_state()
+
+            _LOGGER.debug(
+                "Refreshing coordinator state for siren %s after duration expired",
+                self.name,
+            )
+            await self.coordinator.async_request_refresh()
+        except asyncio.CancelledError:
+            _LOGGER.debug(
+                "State refresh task for siren %s was cancelled",
+                self.name,
+            )
+            raise
+        finally:
+            # Clear task reference when done or cancelled
+            self._refresh_task = None
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the siren on with optional tone, duration, and optical signal.
@@ -290,6 +377,8 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
         )
 
         # Activate the siren via ALARM_SWITCHING group
+        # Don't clear assumed_state yet - let the scheduled refresh handle it
+        # to prevent race conditions during the active period
         await self._async_execute_with_state_management(
             target_state=True,
             api_call=self._client.async_set_alarm_switching_group_state(
@@ -300,12 +389,36 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
                 on_time=duration,
             ),
             action="turn on",
+            clear_assumed_state=False,
+        )
+
+        # Cancel any previous refresh task to prevent race conditions
+        # with multiple rapid turn_on calls
+        if self._refresh_task and not self._refresh_task.done():
+            self._refresh_task.cancel()
+            _LOGGER.debug(
+                "Cancelled previous state refresh task for siren %s",
+                self.name,
+            )
+
+        # Schedule a state refresh after the duration expires to ensure
+        # the entity state is updated when the siren stops
+        self._refresh_task = self.hass.async_create_task(
+            self._schedule_state_refresh_after_duration(duration)
         )
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the siren off."""
         # Validate ALARM_SWITCHING group is configured
         self._validate_alarm_group_configured()
+
+        # Cancel any pending refresh task since we're manually stopping the siren
+        if self._refresh_task and not self._refresh_task.done():
+            self._refresh_task.cancel()
+            _LOGGER.debug(
+                "Cancelled pending state refresh task for siren %s (manual turn off)",
+                self.name,
+            )
 
         _LOGGER.info("Deactivating siren %s via ALARM_SWITCHING group", self.name)
 

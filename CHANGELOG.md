@@ -4,6 +4,37 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 
 ---
 
+## Version 1.15.11 - 2025-11-11
+
+### 🐛 Bug Fixes
+
+**Fix HmIP-ASIR2 Siren Issues with Multiple ALARM_SWITCHING Groups - Issue #100**
+
+Fixed two critical issues discovered in v1.15.10 where sirens with multiple ALARM_SWITCHING groups would not produce audio and would persist in "on" state after duration expired.
+
+**Root Cause**
+
+1. **Wrong Group Selection**: When a siren belongs to multiple ALARM_SWITCHING groups (e.g., "SIREN" and "SIREN_SAFETY"), the deterministic selection logic was choosing alphabetically first group by ID, which could select a silent/safety alarm group with `acousticFeedbackEnabled=False` instead of the main alarm group with audio enabled.
+
+2. **State Not Updating After Duration**: The HCU does not send a state update when `acousticAlarmActive` becomes `False` after the siren duration expires, causing the entity to persist in "on" state indefinitely.
+
+**What Was Fixed**
+
+1. **Smart Group Selection**:
+   - Now prefers ALARM_SWITCHING groups with `acousticFeedbackEnabled=True` when multiple groups exist
+   - Falls back to alphabetical selection only if all groups have audio disabled
+   - Adds detailed logging explaining which group was selected and why
+
+2. **Automatic State Refresh**:
+   - Schedules a coordinator refresh after siren duration + 1 second buffer
+   - Ensures entity state correctly updates to "off" when siren stops playing
+   - Eliminates phantom "on" states after siren duration expires
+
+**Changes:**
+- `custom_components/hcu_integration/siren.py`: Updated `_find_alarm_switching_group()` to prefer audio-enabled groups and added `_schedule_state_refresh_after_duration()` for automatic state syncing
+
+---
+
 ## Version 1.15.10 - 2025-11-11
 
 ### 🐛 Bug Fixes

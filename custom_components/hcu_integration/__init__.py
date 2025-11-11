@@ -505,9 +505,9 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
             channel_idx_str = str(channel_idx)
 
             # Get device info for enhanced logging
-            device = self.client.get_device_by_address(device_id)
-            device_model = device.get("modelType", "Unknown") if device else "Unknown"
-            channel = device.get("functionalChannels", {}).get(channel_idx_str, {}) if device else {}
+            device = self.client.get_device_by_address(device_id) or {}
+            device_model = device.get("modelType", "Unknown")
+            channel = device.get("functionalChannels", {}).get(channel_idx_str, {})
             channel_type = channel.get("functionalChannelType", "Unknown")
             channel_label = channel.get("label", f"Channel {channel_idx_str}")
 

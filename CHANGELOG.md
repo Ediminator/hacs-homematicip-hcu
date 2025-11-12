@@ -6,6 +6,56 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 
 ## Version 1.15.13 - 2025-11-12
 
+### 🐛 Critical Bug Fix
+
+**Fix Wired Switch Actuators Becoming Unavailable After Click (Issue #94)**
+
+Fixed a critical regression introduced in recent refactoring where wired switching actuators (HmIP-DRS8 and similar devices) would become unavailable immediately after being toggled.
+
+#### Root Cause
+
+The `process_events` method in `api.py` had flawed merge logic for partial WebSocket updates:
+- When a switch was toggled, the HCU would send a `DEVICE_CHANGED` event with updated state
+- If this event didn't include `functionalChannels` (common for state-only updates), the **entire device object was replaced** with the partial update data
+- This caused loss of critical device metadata like `permanentlyReachable`, `modelType`, `firmwareVersion`, and all channel information
+- Without `permanentlyReachable`, the availability check failed, marking the entity as unavailable
+- The entity would remain stuck in unavailable state until Home Assistant restart
+
+#### The Fix
+
+Completely rewrote the device/group merge logic to handle partial updates correctly:
+
+1. **Smart merging**: Existing devices/groups now **always merge** incoming data instead of replacing
+2. **Preserved metadata**: Critical fields like `permanentlyReachable` are preserved across state updates
+3. **Channel preservation**: Channel data is only updated if included in the event, otherwise preserved
+4. **Top-level updates**: State changes and other top-level fields merge properly without data loss
+
+**Technical details** (`api.py:473-487`):
+```python
+elif existing_entity := self._state.get(data_key, {}).get(data_id):
+    # Merge partial updates - preserves fields not in the update
+    for key, value in data.items():
+        if key == "functionalChannels":
+            # Special handling: merge channel data at the channel level
+            existing_entity.setdefault("functionalChannels", {})
+            for ch_idx, ch_data in value.items():
+                existing_entity["functionalChannels"].setdefault(ch_idx, {}).update(ch_data)
+        else:
+            # Regular top-level fields: direct assignment
+            existing_entity[key] = value
+```
+
+#### Impact
+
+- ✅ DRS8 and all wired switch actuators remain available after toggling
+- ✅ Prevents data loss from partial WebSocket updates
+- ✅ More robust state management for all device types
+- ✅ Fixes the same issue for dimmers (DRD3) and other actuators
+
+**Reported by:** @hennengrint in Issue #94
+**Affects:** Versions 1.15.5 - 1.15.12
+**Fixed in:** Version 1.15.13
+
 ### 🔘 Enhanced Button Event Support
 
 **Add Multi-Function Channel Support for HmIP-BSL - Issue #98**

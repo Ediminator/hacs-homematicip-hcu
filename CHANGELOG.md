@@ -4,7 +4,7 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 
 ---
 
-## Version 1.15.7 - 2025-11-12
+## Version 1.15.13 - 2025-11-12
 
 ### 🐛 Critical Bug Fix
 
@@ -52,8 +52,256 @@ elif existing_entity := self._state.get(data_key, {}).get(data_id):
 - ✅ Fixes the same issue for dimmers (DRD3) and other actuators
 
 **Reported by:** @hennengrint in Issue #94
-**Affects:** Versions 1.15.5 - 1.15.6
-**Fixed in:** Version 1.15.7
+**Affects:** Versions 1.15.5 - 1.15.12
+**Fixed in:** Version 1.15.13
+
+---
+
+## Version 1.15.11 - 2025-11-11
+
+### 🐛 Bug Fixes
+
+**CRITICAL FIX: Correct API Parameter Usage for Siren Activation - Issue #100**
+
+Fixed critical bug where siren activation was failing silently due to sending invalid parameters to the HCU API endpoint.
+
+**Root Cause**
+
+The integration was **misunderstanding the HCU API specification**:
+
+1. **Invalid API Parameters**: The `/hmip/group/switching/setState` endpoint ONLY accepts `on` (boolean) and `groupId` parameters. It does NOT accept `signalAcoustic`, `signalOptical`, or `onTime` parameters.
+
+2. **Wrong Assumption**: We incorrectly assumed these parameters could be sent dynamically. In reality, they are **properties configured on the ALARM_SWITCHING group in the HCU** itself and cannot be set via the API call.
+
+3. **Silent Failure**: The HCU was either rejecting or silently ignoring the invalid parameters, causing the siren to never actually activate.
+
+**Previous behavior (v1.15.10 - broken):**
+```python
+await client.async_set_alarm_switching_group_state(
+    group_id=group_id,
+    on=True,
+    signal_acoustic=tone,        # ❌ Invalid parameter
+    signal_optical=optical_signal,  # ❌ Invalid parameter
+    on_time=duration,               # ❌ Invalid parameter
+)
+```
+
+**New behavior (v1.15.11 - correct):**
+```python
+await client.async_set_alarm_switching_group_state(
+    group_id=group_id,
+    on=True,  # ✅ Only valid parameter
+)
+# Siren uses tone/duration/optical_signal configured in HCU group settings
+```
+
+**What Was Fixed**
+
+1. **Simplified API Call**:
+   - Only send `on: true` to activate the siren
+   - Removed invalid `signalAcoustic`, `signalOptical`, and `onTime` parameters
+   - HCU now uses the settings configured in the ALARM_SWITCHING group
+
+2. **Removed Unsupported Features**:
+   - Removed `TONES` and `DURATION` from supported features
+   - Tone and duration must now be configured in the HCU's ALARM_SWITCHING group
+   - Cannot be controlled dynamically from Home Assistant
+
+3. **Code Cleanup**:
+   - Removed scheduled state refresh logic (no longer needed without dynamic duration)
+   - Removed tone validation and parameter handling
+   - Simplified `async_turn_on()` and `async_turn_off()` methods
+   - Improved group selection to prefer audio-enabled groups
+   - Fixed default value for `acousticFeedbackEnabled` to `False` for safety
+
+**Impact**
+
+- ✅ **Sirens now actually activate** when turned on
+- ⚠️ **Configuration Required**: Users must configure tone, duration, and optical signal in the HCU's ALARM_SWITCHING group settings (these cannot be controlled from Home Assistant)
+- ✅ Group selection logic improved to prefer audio-enabled groups
+- ✅ State updates handled by normal coordinator polling
+
+**Changes:**
+- `custom_components/hcu_integration/api.py`: Simplified `async_set_alarm_switching_group_state()` to only accept `on` parameter
+- `custom_components/hcu_integration/siren.py`: Removed dynamic tone/duration/optical_signal handling, simplified activation logic, improved group selection
+
+---
+
+## Version 1.15.10 - 2025-11-11
+
+### 🐛 Bug Fixes
+
+**Fix HmIP-ASIR2 Audio Not Playing - Issue #100**
+
+Fixed critical bug where HmIP-ASIR2 siren tones were not playing when activated. The HCU was rejecting all siren commands with error 400 `INVALID_REQUEST`.
+
+**Root Cause**
+
+The siren was being controlled using the **wrong API endpoint**. The integration was using `/hmip/device/control/setSoundFileVolumeLevelWithTime` (designed for doorbell devices like HmIP-MP3P that play sound *files*), but the HmIP-ASIR2 siren requires control via an **ALARM_SWITCHING group** using the `/hmip/group/switching/setState` endpoint with group-specific parameters.
+
+**Previous behavior (broken):**
+```python
+# Siren controlled via DEVICE API (wrong!)
+await client.async_set_sound_file(
+    device_id=device_id,
+    channel_index=1,
+    sound_file=tone,  # HCU rejected with INVALID_REQUEST
+    volume=1.0,
+    duration=duration
+)
+```
+
+**What Was Fixed**
+
+The siren is now properly controlled through its ALARM_SWITCHING group:
+
+1. **Find ALARM_SWITCHING group** during siren initialization
+2. **Use group API** `/hmip/group/switching/setState` instead of device API
+3. **Send correct parameters**: `signalAcoustic` (tone), `signalOptical` (LED pattern), `onTime` (duration)
+4. **Added tone list corrections**: Fixed incorrect tone names (BATTERY_STATUS→LOW_BATTERY, etc.) and added missing tones (EXTERNALLY_ARMED, INTERNALLY_ARMED, etc.)
+5. **Sorted tones alphabetically** within groups for better maintainability
+6. **Added optical_signal parameter**: Users can now customize the LED visual pattern (defaults to BLINKING_ALTERNATELY_REPEATING)
+
+**New behavior (working):**
+```python
+# Siren controlled via ALARM_SWITCHING GROUP (correct!)
+await client.async_set_alarm_switching_group_state(
+    group_id=alarm_group_id,
+    on=True,
+    signal_acoustic=tone,                        # Acoustic tone
+    signal_optical=optical_signal,               # LED pattern (customizable)
+    on_time=duration                             # Duration in seconds
+)
+```
+
+**Example Usage:**
+```yaml
+service: siren.turn_on
+target:
+  entity_id: siren.alarmsirene
+data:
+  tone: FREQUENCY_RISING
+  duration: 10
+  optical_signal: BLINKING_ALTERNATELY_REPEATING  # Optional, defaults to this value
+```
+
+**Impact**
+- ✅ Audio tones now play correctly when siren is activated
+- ✅ All 18 official HomematicIP acoustic tones work (FREQUENCY_RISING, EXTERNALLY_ARMED, etc.)
+- ✅ HCU accepts commands and siren activates immediately
+- ✅ LED visual signals work alongside acoustic signals
+- ✅ LED visual pattern is now customizable via optical_signal parameter
+- ✅ Duration control works properly
+- ✅ Turn off command successfully stops the siren
+
+---
+
+## Version 1.15.8 - 2025-11-11
+
+### 🐛 Bug Fixes
+
+**Fix HmIP-BSL False Button Events - Issue #98**
+
+Fixed a critical bug where HmIP-BSL devices triggered false button events whenever the light was toggled via Home Assistant, not just on actual physical button presses. This caused automations to trigger unexpectedly.
+
+**Root Cause**
+
+The integration was treating `SWITCH_CHANNEL` with `DOUBLE_INPUT_SWITCH` internal link configuration as an event channel for timestamp-based button detection. The problem is that this channel's `lastStatusUpdate` timestamp changes whenever the switch state changes - whether from a physical button press OR from a programmatic toggle via Home Assistant.
+
+**Previous behavior (broken):**
+```python
+# SWITCH_CHANNEL with DOUBLE_INPUT_SWITCH was included in event_channels
+# Timestamp-based detection fired on ANY state change:
+#   - Physical button press → timestamp changed → event fired ✓
+#   - HA light toggle → timestamp changed → event fired ✗ (false positive)
+```
+
+**What Was Fixed**
+
+- **Removed DOUBLE_INPUT_SWITCH detection** from `_extract_event_channels()` method
+- **HmIP-BSL now uses ONLY DEVICE_CHANNEL_EVENT** for button press detection (no timestamp-based detection)
+- **Enhanced logging** with device model, channel index, channel label, and channel type
+- **Elevated log level to INFO** for button presses to help diagnose channel identification issues
+- **Code cleanup**: Refactored logging using fallback empty dict pattern for cleaner, more concise code
+
+**New behavior (working):**
+```python
+# SWITCH_CHANNEL excluded from timestamp-based detection
+# Button presses detected ONLY via DEVICE_CHANNEL_EVENT:
+#   - Physical button press → DEVICE_CHANNEL_EVENT → event fired ✓
+#   - HA light toggle → no event fired ✓
+```
+
+**Technical Details**
+
+HmIP-BSL device channel structure:
+- **Channel 0**: `DEVICE_BASE` (maintenance/status)
+- **Channel 1**: `SWITCH_CHANNEL` with `DOUBLE_INPUT_SWITCH` (relay control)
+  - State changes on every toggle (physical or programmatic)
+  - NOT suitable for timestamp-based button detection
+- **Channels 2-3**: `NOTIFICATION_LIGHT_CHANNEL` (button backlights)
+
+Button press events are properly sent via `DEVICE_CHANNEL_EVENT` with the actual channel index that was pressed. The enhanced logging will help identify which channel indices correspond to upper vs lower buttons.
+
+**Enhanced Logging Example**
+```
+Button press: device=3014F711A00018D9992FBF94 (HmIP-BSL), channel=2 (Upper Button, NOTIFICATION_LIGHT_CHANNEL), event=PRESS_SHORT
+```
+
+**Impact**
+- ✅ HmIP-BSL button presses now trigger events only on actual physical button presses
+- ✅ No false events when toggling lights via Home Assistant
+- ✅ Automations triggered by button presses work correctly
+- ✅ Enhanced logging helps identify which channel corresponds to upper vs lower buttons
+- ✅ Event detection more reliable and predictable
+
+**Files Changed**
+- `custom_components/hcu_integration/discovery.py` - Removed DOUBLE_INPUT_SWITCH from timestamp-based event detection
+- `custom_components/hcu_integration/event.py` - Enhanced logging with device model, channel info, and event type
+
+---
+
+## Version 1.15.7 - 2025-11-11
+
+### 🐛 Bug Fixes
+
+**Fix HmIP-BSL Multicolor Functionality - Issue #99**
+
+Fixed a critical bug where HmIP-BSL notification light color changes failed with error `404 UNKNOWN_REQUEST`. The issue affected all HmIP-BSL devices with `NOTIFICATION_LIGHT_CHANNEL` (notification light backlights).
+
+**Root Cause**
+
+The `HcuLight` class was incorrectly sending both `simpleRGBColorState` and `dimLevel` parameters in a single API call to `/hmip/device/control/setSimpleRGBColorState`. The HCU API endpoint only accepts color and optical signal behavior parameters, not dimLevel.
+
+**Previous behavior (broken):**
+```python
+# Single API call with both color and dimLevel
+payload = {"simpleRGBColorState": "RED", "dimLevel": 1.0}
+# Result: 404 UNKNOWN_REQUEST error
+```
+
+**What Was Fixed**
+
+- **Separated API calls**: Color changes now use `/hmip/device/control/setSimpleRGBColorState` (color only)
+- **Separate dimming**: Brightness changes use `/hmip/device/control/setDimLevel` (separate call)
+- **Preserved functionality**: All features still work (color, brightness, effects)
+- **Proper sequencing**: When both color and brightness are changed, color is set first, then brightness
+
+**New behavior (working):**
+```python
+# Color/effect API call (no dimLevel)
+payload = {"simpleRGBColorState": "RED", "opticalSignalBehaviour": "BLINKING_MIDDLE"}
+
+# Separate brightness API call if needed
+await async_set_dim_level(device_id, channel, dim_level)
+```
+
+**Impact**
+- ✅ HmIP-BSL notification lights now properly change colors
+- ✅ All 7 colors work: WHITE, RED, BLUE, GREEN, YELLOW, PURPLE, TURQUOISE
+- ✅ Brightness control works independently
+- ✅ Optical signal effects (blinking, flashing, billowing) work correctly
+- ✅ No more 404 errors when setting colors
 
 ---
 

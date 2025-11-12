@@ -5,8 +5,6 @@ from typing import TYPE_CHECKING, Any
 from homeassistant.components.siren import (
     SirenEntity,
     SirenEntityFeature,
-    ATTR_TONE,
-    ATTR_DURATION,
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
@@ -16,9 +14,6 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from .entity import HcuBaseEntity, SwitchStateMixin
 from .api import HcuApiClient, HcuApiError
 from .const import (
-    HMIP_SIREN_TONES,
-    DEFAULT_SIREN_TONE,
-    DEFAULT_SIREN_DURATION,
     HMIP_CHANNEL_KEY_ACOUSTIC_ALARM_ACTIVE,
     CHANNEL_TYPE_ALARM_SIREN,
 )
@@ -43,7 +38,13 @@ async def async_setup_entry(
 
 
 class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
-    """Representation of a Homematic IP HCU alarm siren."""
+    """Representation of a Homematic IP HCU alarm siren.
+
+    Note: The tone, duration, and optical signal are configured on the
+    ALARM_SWITCHING group in the HCU itself and cannot be controlled
+    dynamically from Home Assistant. The siren will use whatever settings
+    are configured in the HCU when activated.
+    """
 
     PLATFORM = Platform.SIREN
 
@@ -53,8 +54,6 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
     _attr_supported_features = (
         SirenEntityFeature.TURN_ON
         | SirenEntityFeature.TURN_OFF
-        | SirenEntityFeature.TONES
-        | SirenEntityFeature.DURATION
     )
 
     def __init__(
@@ -70,17 +69,113 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
         self._set_entity_name(channel_label=self._channel.get("label"))
 
         self._attr_unique_id = f"{self._device_id}_{self._channel_index}_siren"
-        self._attr_available_tones = list(HMIP_SIREN_TONES)
         self._init_switch_state()
+
+        # Find the ALARM_SWITCHING group for this siren
+        self._alarm_group_id = self._find_alarm_switching_group()
 
         # Log diagnostic information for troubleshooting
         _LOGGER.debug(
-            "HcuSiren initialized: device=%s, channel=%s, has_acousticAlarmActive=%s, channel_type=%s",
+            "HcuSiren initialized: device=%s, channel=%s, has_acousticAlarmActive=%s, channel_type=%s, alarm_group=%s",
             self._device_id,
             self._channel_index,
             self._state_channel_key in self._channel,
             self._channel.get("functionalChannelType"),
+            self._alarm_group_id,
         )
+
+    def _find_alarm_switching_group(self) -> str | None:
+        """Find the ALARM_SWITCHING group that contains this siren channel.
+
+        Prefers groups with acousticFeedbackEnabled=True when multiple groups exist,
+        as groups with this flag disabled are typically silent/safety alarms.
+
+        Returns:
+            The group ID if found, None otherwise
+        """
+        # Get all groups from client state (not coordinator.data which is just entity IDs)
+        groups = self._client.state.get("groups", {})
+
+        # Find ALARM_SWITCHING group(s) containing this device/channel
+        matching_groups = [
+            {
+                "id": group_id,
+                "label": group_data.get("label", group_id),
+                "audio_enabled": group_data.get("acousticFeedbackEnabled", False),
+            }
+            for group_id, group_data in groups.items()
+            if group_data.get("type") == "ALARM_SWITCHING"
+            and any(
+                channel.get("deviceId") == self._device_id
+                and str(channel.get("channelIndex")) == str(self._channel_index)
+                for channel in group_data.get("channels", [])
+            )
+        ]
+
+        # Handle results
+        if not matching_groups:
+            _LOGGER.warning(
+                "No ALARM_SWITCHING group found for siren %s channel %s. "
+                "Siren control may not work properly.",
+                self._device_id,
+                self._channel_index,
+            )
+            return None
+
+        if len(matching_groups) > 1:
+            # Sort by ID once for deterministic selection
+            matching_groups.sort(key=lambda g: g["id"])
+
+            # Prefer groups with acousticFeedbackEnabled=True (audio-enabled alarms)
+            # over silent/safety alarm groups
+            audio_enabled_groups = [g for g in matching_groups if g["audio_enabled"]]
+
+            if audio_enabled_groups:
+                # Use first audio-enabled group (already sorted)
+                selected_group = audio_enabled_groups[0]
+                # Format group list for logging
+                groups_list = ", ".join(
+                    f"'{g['label']}' ({g['id']}, audio={'enabled' if g['audio_enabled'] else 'disabled'})"
+                    for g in matching_groups
+                )
+                silent_count = len(matching_groups) - len(audio_enabled_groups)
+                _LOGGER.info(
+                    "Multiple ALARM_SWITCHING groups found for siren %s: %s. "
+                    "Selected audio-enabled group '%s' (%s) over %d silent/safety alarm group(s).",
+                    self._device_id,
+                    groups_list,
+                    selected_group["label"],
+                    selected_group["id"],
+                    silent_count,
+                )
+            else:
+                # All groups have audio disabled - use first one (already sorted)
+                selected_group = matching_groups[0]
+                # Format group list for logging
+                groups_list = ", ".join(
+                    f"'{g['label']}' ({g['id']})" for g in matching_groups
+                )
+                _LOGGER.warning(
+                    "Multiple ALARM_SWITCHING groups found for siren %s, but all have acousticFeedbackEnabled=False: %s. "
+                    "Using first group '%s' (%s). Siren may not produce audio.",
+                    self._device_id,
+                    groups_list,
+                    selected_group["label"],
+                    selected_group["id"],
+                )
+        else:
+            # Single group found
+            selected_group = matching_groups[0]
+            audio_status = "enabled" if selected_group["audio_enabled"] else "disabled"
+            _LOGGER.info(
+                "Found ALARM_SWITCHING group '%s' (%s) for siren %s (audio %s)",
+                selected_group["label"],
+                selected_group["id"],
+                self._device_id,
+                audio_status,
+            )
+
+        return selected_group["id"]
 
     @property
     def available(self) -> bool:
@@ -120,6 +215,20 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
                 )
 
         return is_available
+
+    def _validate_alarm_group_configured(self) -> None:
+        """Validate that an ALARM_SWITCHING group is configured for this siren.
+
+        Raises:
+            HcuApiError: If no ALARM_SWITCHING group is found
+        """
+        if not self._alarm_group_id:
+            _LOGGER.error(
+                "Cannot control siren %s: No ALARM_SWITCHING group found. "
+                "The siren may not be properly configured in the HCU.",
+                self.name,
+            )
+            raise HcuApiError("No ALARM_SWITCHING group found for siren")
 
     def _sync_switch_state_from_coordinator(self) -> None:
         """Sync switch state from coordinator data with diagnostic logging.
@@ -184,44 +293,41 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
             raise
 
     async def async_turn_on(self, **kwargs: Any) -> None:
-        """Turn the siren on with optional tone and duration.
+        """Turn the siren on.
 
-        Args:
-            **kwargs: Optional parameters including:
-                - tone: The acoustic signal to play (from HMIP_SIREN_TONES)
-                - duration: Duration in seconds (default: 10.0)
+        Note: The tone, duration, and optical signal settings are configured
+        on the ALARM_SWITCHING group in the HCU and cannot be controlled from
+        Home Assistant. The siren will use whatever settings are configured
+        in the HCU when activated.
         """
-        tone = kwargs.get(ATTR_TONE, DEFAULT_SIREN_TONE)
-        duration = kwargs.get(ATTR_DURATION, DEFAULT_SIREN_DURATION)
+        # Validate ALARM_SWITCHING group is configured
+        self._validate_alarm_group_configured()
 
-        # Validate tone
-        if tone not in HMIP_SIREN_TONES:
-            _LOGGER.warning(
-                "Invalid tone '%s' for siren %s. Using default tone '%s'.",
-                tone,
-                self.name,
-                DEFAULT_SIREN_TONE,
-            )
-            tone = DEFAULT_SIREN_TONE
+        _LOGGER.info("Activating siren %s via ALARM_SWITCHING group", self.name)
 
-        # Play the acoustic signal using the sound file API
-        # Volume is set to 1.0 (100%) for siren activation
+        # Activate the siren via ALARM_SWITCHING group
         await self._async_execute_with_state_management(
             target_state=True,
-            api_call=self._client.async_set_sound_file(
-                self._device_id,
-                self._channel_index,
-                sound_file=tone,
-                volume=1.0,
-                duration=duration,
+            api_call=self._client.async_set_alarm_switching_group_state(
+                group_id=self._alarm_group_id,
+                on=True,
             ),
             action="turn on",
         )
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the siren off."""
+        # Validate ALARM_SWITCHING group is configured
+        self._validate_alarm_group_configured()
+
+        _LOGGER.info("Deactivating siren %s via ALARM_SWITCHING group", self.name)
+
+        # Deactivate the siren via ALARM_SWITCHING group
         await self._async_execute_with_state_management(
             target_state=False,
-            api_call=self._call_switch_api(False),
+            api_call=self._client.async_set_alarm_switching_group_state(
+                group_id=self._alarm_group_id,
+                on=False,
+            ),
             action="turn off",
         )

@@ -703,29 +703,37 @@ HMIP_OPTICAL_SIGNAL_BEHAVIOURS = (
 
 # Siren tone options for HmIP-ASIR2 and compatible devices
 # These acoustic signals can be used with the siren.turn_on service
+# Based on official HomematicIP API documentation and HmIP-ASIR2 device specification
 HMIP_SIREN_TONES = frozenset({
-    "FREQUENCY_RISING",
-    "FREQUENCY_FALLING",
-    "FREQUENCY_RISING_AND_FALLING",
+    # Frequency pattern tones (alarm sounds) - alphabetically sorted
     "FREQUENCY_ALTERNATING_LOW_HIGH",
-    "FREQUENCY_ALTERNATING_MID_HIGH",
-    "FREQUENCY_ALTERNATING_LOW_MID",
+    "FREQUENCY_ALTERNATING_LOW_MID_HIGH",
+    "FREQUENCY_FALLING",
     "FREQUENCY_HIGHON_LONGOFF",
-    "FREQUENCY_HIGHON_SHORTOFF",
-    "FREQUENCY_LOWON_LONGOFF_HIGH",
-    "FREQUENCY_LOWON_SHORTOFF_HIGH",
-    "FREQUENCY_LOWON_LONGOFF",
-    "FREQUENCY_LOWON_SHORTOFF",
-    "BATTERY_STATUS",
-    "ARMED_STATUS",
-    "EVENT_ON",
-    "EVENT_OFF",
+    "FREQUENCY_HIGHON_OFF",
+    "FREQUENCY_LOWON_LONGOFF_HIGHON_LONGOFF",
+    "FREQUENCY_LOWON_OFF_HIGHON_OFF",
+    "FREQUENCY_RISING",
+    "FREQUENCY_RISING_AND_FALLING",
+    # Status and alert tones - alphabetically sorted
+    "DELAYED_EXTERNALLY_ARMED",
+    "DELAYED_INTERNALLY_ARMED",
+    "DISABLE_ACOUSTIC_SIGNAL",
+    "DISARMED",
     "ERROR",
+    "EVENT",
+    "EXTERNALLY_ARMED",
+    "INTERNALLY_ARMED",
+    "LOW_BATTERY",
 })
 
 # Default siren settings
 DEFAULT_SIREN_TONE = "FREQUENCY_RISING"
 DEFAULT_SIREN_DURATION = 10.0  # seconds
+DEFAULT_SIREN_OPTICAL_SIGNAL = "BLINKING_ALTERNATELY_REPEATING"
+
+# Custom attribute for siren optical signal (not a standard Home Assistant attribute)
+ATTR_OPTICAL_SIGNAL = "optical_signal"
 
 # Absence Types
 ABSENCE_TYPE_NOT_ABSENT = "NOT_ABSENT"

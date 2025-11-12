@@ -649,6 +649,30 @@ class HcuApiClient:
             {"on": on},
         )
 
+    async def async_set_alarm_switching_group_state(
+        self,
+        group_id: str,
+        on: bool,
+    ) -> None:
+        """Set the state for an ALARM_SWITCHING group (siren).
+
+        Note: The HCU API only accepts the 'on' parameter. The tone (signalAcoustic),
+        optical signal (signalOptical), and duration (onTime) are configured as
+        properties of the ALARM_SWITCHING group in the HCU itself and cannot be
+        set dynamically via this API call.
+
+        Args:
+            group_id: The ID of the ALARM_SWITCHING group
+            on: Turn the siren on or off
+        """
+        body = {"on": on}
+
+        await self.async_group_control(
+            API_PATHS["SET_SWITCHING_GROUP_STATE"],
+            group_id,
+            body,
+        )
+
     async def disconnect(self) -> None:
         """Close the WebSocket connection gracefully."""
         if self.is_connected and self._websocket:

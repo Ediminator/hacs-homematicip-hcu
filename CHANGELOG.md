@@ -35,6 +35,7 @@ Completely rewrote the device/group merge logic to handle partial updates correc
 elif existing_entity := self._state.get(data_key, {}).get(data_id):
     # Merge partial updates - preserves fields not in the update
     if data.get("functionalChannels"):
+        existing_entity.setdefault("functionalChannels", {})
         for ch_idx, ch_data in data["functionalChannels"].items():
             existing_entity["functionalChannels"].setdefault(ch_idx, {}).update(ch_data)
 

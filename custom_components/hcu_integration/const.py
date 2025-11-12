@@ -431,6 +431,22 @@ HMIP_FEATURE_TO_ENTITY = {
         "state_class": SensorStateClass.MEASUREMENT,
         "entity_registry_enabled_default": False,
     },
+    "dutyCycle": {
+        "class": "HcuHomeSensor",
+        "name": "Duty Cycle",
+        "unit": PERCENTAGE,
+        "icon": "mdi:radio-tower",
+        "state_class": SensorStateClass.MEASUREMENT,
+        "entity_registry_enabled_default": False,
+    },
+    "dutyCycleLevel": {
+        "class": "HcuGenericSensor",
+        "name": "Duty Cycle Level",
+        "unit": PERCENTAGE,
+        "icon": "mdi:radio-tower",
+        "state_class": SensorStateClass.MEASUREMENT,
+        "entity_registry_enabled_default": False,
+    },
     "rssiDeviceValue": {
         "class": "HcuGenericSensor",
         "name": "RSSI Device",
@@ -612,6 +628,17 @@ HMIP_FEATURE_TO_ENTITY = {
         "device_class": BinarySensorDeviceClass.RUNNING,
         "entity_registry_enabled_default": False,
     },
+}
+
+# Special mapping for dutyCycle binary sensor (device-level warning flag)
+# Note: dutyCycle exists in both home object (as percentage) and device channels (as boolean)
+# This mapping is used for device channels to avoid key collision in HMIP_FEATURE_TO_ENTITY
+DUTY_CYCLE_BINARY_SENSOR_MAPPING = {
+    "class": "HcuBinarySensor",
+    "name": "Duty Cycle Limit",
+    "device_class": BinarySensorDeviceClass.PROBLEM,
+    "entity_category": "diagnostic",
+    "entity_registry_enabled_default": False,
 }
 
 EVENT_CHANNEL_TYPES = {

@@ -4,6 +4,136 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 
 ---
 
+## Version 1.15.14 - 2025-11-12
+
+### 🐛 Critical Bug Fix
+
+**Fix Radio Traffic Sensor Showing Incorrect Values Up to 2000% - Issue #112**
+
+Fixed a critical bug where the Radio Traffic (carrierSense) sensor was displaying values multiplied by 100, causing readings to spike up to 2000% instead of the correct 20%.
+
+#### Root Cause
+
+The HCU API already transmits `carrierSense` values as percentages (e.g., 0.20 = 20%). The integration was incorrectly multiplying this value by 100 in `sensor.py`, resulting in:
+- Actual HCU value: 0.20 (20%)
+- Displayed value: 20.0% (0.20 × 100 = 20%)
+- User report: Values spiking to 2000% (20% × 100)
+
+#### The Fix
+
+Removed the erroneous multiplication in `HcuHomeSensor.native_value` (`sensor.py:67-69`):
+
+**Before (incorrect):**
+```python
+if self._feature == "carrierSense":
+    return round(value * 100.0, 1)  # ❌ Wrong - already a percentage
+```
+
+**After (correct):**
+```python
+# carrierSense and dutyCycle are already in percentage from HCU
+if self._feature in ("carrierSense", "dutyCycle"):
+    return round(value, 1)  # ✅ Correct - just round to 1 decimal
+```
+
+#### Impact
+
+- ✅ Radio Traffic sensor now shows correct percentage values
+- ✅ No more 2000% spikes in readings
+- ✅ Consistent with how HCU reports radio performance metrics
+- ✅ Applies same fix to new duty cycle sensors
+
+**Reported by:** Users in Issue #112
+**Affects:** All previous versions with carrierSense sensor
+**Fixed in:** Version 1.15.14
+
+---
+
+### ✨ New Features
+
+**Add Duty Cycle Monitoring Entities - Issue #112**
+
+Added comprehensive duty cycle monitoring capabilities to track radio transmission limits and network health.
+
+#### Background
+
+Homematic IP devices operate on sub-GHz radio frequencies with strict transmission duty cycle limits (typically 1% per hour) to comply with regulations. The HCU provides three types of duty cycle information:
+
+1. **System-wide duty cycle** - Overall network transmission percentage
+2. **Access point duty cycle levels** - Per-device metrics for HCU and additional access points (HmIP-HAP)
+3. **Device duty cycle warnings** - Boolean flags when individual devices exceed their 1% limit
+
+#### New Entities
+
+**1. Overall Duty Cycle Sensor** (`home.dutyCycle`)
+- **Type:** Percentage sensor
+- **Location:** Home object (system-wide)
+- **Purpose:** Monitor overall radio network transmission levels
+- **Icon:** `mdi:radio-tower`
+- **Default:** Disabled (enable in entity settings)
+- **Value:** Rounded to 1 decimal place (e.g., 5.3%)
+
+**2. Duty Cycle Level Sensor** (`dutyCycleLevel`)
+- **Type:** Percentage sensor
+- **Location:** Device channels (HCU and access points like HmIP-HAP)
+- **Purpose:** Track duty cycle for each access point individually
+- **Icon:** `mdi:radio-tower`
+- **Default:** Disabled
+- **Value:** Rounded to 1 decimal place (e.g., 13.5%)
+
+**3. Duty Cycle Limit Binary Sensor** (`dutyCycle` boolean)
+- **Type:** Binary sensor (Problem device class)
+- **Location:** Device channels (most devices)
+- **Purpose:** Warning flag when a specific device exceeds its 1% transmit limit
+- **Default:** Disabled
+- **Category:** Diagnostic
+- **Value:** `on` = limit exceeded, `off` = normal operation
+
+#### Technical Implementation
+
+**Challenge: Dictionary Key Collision**
+
+The HCU API uses the same field name `dutyCycle` for two different purposes:
+- On `home` object: Percentage value (system-wide duty cycle)
+- On device channels: Boolean flag (device limit warning)
+
+This created a key collision in `HMIP_FEATURE_TO_ENTITY` where the second definition would overwrite the first.
+
+**Solution:**
+1. Created separate `DUTY_CYCLE_BINARY_SENSOR_MAPPING` constant in `const.py`
+2. Added special handling in `discovery.py` to detect `dutyCycle` as boolean in device channels
+3. Uses type checking (`isinstance(channel_data["dutyCycle"], bool)`) to differentiate contexts
+4. Similar approach to how temperature sensors are handled as special cases
+
+**Code highlights** (`discovery.py:203-218`):
+```python
+# Special handling for dutyCycle binary sensor (device-level warning flag)
+# Note: dutyCycle exists in both home object (percentage) and device channels (boolean)
+if "dutyCycle" in channel_data and isinstance(channel_data["dutyCycle"], bool):
+    entities[Platform.BINARY_SENSOR].append(
+        binary_sensor.HcuBinarySensor(
+            coordinator, client, device_data, channel_index, "dutyCycle", entity_mapping
+        )
+    )
+```
+
+#### Impact
+
+- ✅ Full visibility into radio network duty cycle usage
+- ✅ Monitor system-wide transmission levels
+- ✅ Track individual access point performance
+- ✅ Get warnings when devices exceed regulatory limits
+- ✅ All entities disabled by default to avoid clutter
+- ✅ Consistent percentage formatting across all duty cycle sensors
+
+#### Files Changed
+
+- `custom_components/hcu_integration/const.py` - Added duty cycle entity mappings and special constant
+- `custom_components/hcu_integration/sensor.py` - Fixed carrierSense, added rounding for duty cycle sensors
+- `custom_components/hcu_integration/discovery.py` - Added special handling for duty cycle binary sensors
+
+---
+
 ## Version 1.15.13 - 2025-11-12
 
 ### 🐛 Critical Bug Fix

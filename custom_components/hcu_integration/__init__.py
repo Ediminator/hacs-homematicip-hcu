@@ -49,6 +49,7 @@ from .const import (
     EVENT_CHANNEL_TYPES,
     DEVICE_CHANNEL_EVENT_TYPES,
     CHANNEL_TYPE_MULTI_MODE_INPUT_TRANSMITTER,
+    MULTI_FUNCTION_CHANNEL_DEVICES,
 )
 from .discovery import async_discover_entities
 from . import event
@@ -507,15 +508,32 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
             # Get device info for enhanced logging
             device = self.client.get_device_by_address(device_id) or {}
             device_model = device.get("modelType", "Unknown")
+            device_type = device.get("type", "Unknown")
             channel = device.get("functionalChannels", {}).get(channel_idx_str, {})
             channel_type = channel.get("functionalChannelType", "Unknown")
             channel_label = channel.get("label", f"Channel {channel_idx_str}")
 
+            # Check if this is a multi-function channel (e.g., HmIP-BSL button+light)
+            is_multi_function = False
+            if device_type in MULTI_FUNCTION_CHANNEL_DEVICES:
+                multi_func_channels = MULTI_FUNCTION_CHANNEL_DEVICES[device_type]
+                if channel_type in multi_func_channels:
+                    is_multi_function = True
+                    functions = multi_func_channels[channel_type]["functions"]
+                    _LOGGER.info(
+                        "Button press on multi-function channel: device=%s (%s), channel=%s (%s, %s), "
+                        "event=%s, functions=%s",
+                        device_id, device_model, channel_idx_str, channel_label, channel_type,
+                        event_type, functions
+                    )
+
             self._fire_button_event(device_id, channel_idx_str, event_type)
-            _LOGGER.info(
-                "Button press: device=%s (%s), channel=%s (%s, %s), event=%s",
-                device_id, device_model, channel_idx_str, channel_label, channel_type, event_type
-            )
+
+            if not is_multi_function:
+                _LOGGER.info(
+                    "Button press: device=%s (%s), channel=%s (%s, %s), event=%s",
+                    device_id, device_model, channel_idx_str, channel_label, channel_type, event_type
+                )
 
     def _should_fire_button_press(
         self, new_timestamp: int | None, old_timestamp: int | None

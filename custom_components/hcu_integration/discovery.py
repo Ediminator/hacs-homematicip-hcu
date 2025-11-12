@@ -112,6 +112,12 @@ async def async_discover_entities(
                 if is_unused_channel:
                     continue
 
+                # Note: Some channels serve multiple functions (e.g., HmIP-BSL NOTIFICATION_LIGHT_CHANNEL)
+                # - These channels create light entities for backlight control
+                # - They ALSO respond to button presses via DEVICE_CHANNEL_EVENT
+                # - Button events are handled in __init__.py via _handle_device_channel_events
+                # - See MULTI_FUNCTION_CHANNEL_DEVICES in const.py for device-specific mappings
+
                 class_name = channel_mapping["class"]
                 if module := class_module_map.get(class_name):
                     try:

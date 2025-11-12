@@ -158,6 +158,18 @@ DEACTIVATED_BY_DEFAULT_DEVICES = {
     "DIGITAL_RADIO_INPUT_32",  # HmIP-DRI32 - Input-only device
 }
 
+# Devices with multi-function channels that serve dual purposes
+# Maps device type to a dict of channel types that have multiple functions
+# For HmIP-BSL: NOTIFICATION_LIGHT_CHANNEL serves as BOTH button input AND backlight control
+MULTI_FUNCTION_CHANNEL_DEVICES = {
+    "BRAND_SWITCH_NOTIFICATION_LIGHT": {
+        "NOTIFICATION_LIGHT_CHANNEL": {
+            "functions": ["button", "light"],
+            "description": "Button input with backlight LED (channels 2-3 on HmIP-BSL)",
+        }
+    }
+}
+
 # --- Entity Mapping Dictionaries ---
 HMIP_DEVICE_TYPE_TO_DEVICE_CLASS = {
     "BLIND_ACTUATOR": CoverDeviceClass.BLIND,
@@ -609,7 +621,10 @@ EVENT_CHANNEL_TYPES = {
     "SINGLE_KEY_CHANNEL",
     "MULTI_MODE_INPUT_CHANNEL",
     CHANNEL_TYPE_MULTI_MODE_INPUT_TRANSMITTER,
-    "KEY_CHANNEL",  # For HmIP-BSL and similar devices with button inputs
+    "KEY_CHANNEL",  # For remote controls and wall-mounted transmitters
+    # Note: HmIP-BSL uses NOTIFICATION_LIGHT_CHANNEL for button inputs (channels 2-3)
+    # These are multi-function channels that serve as BOTH button inputs AND backlight LEDs
+    # Button events are handled via DEVICE_CHANNEL_EVENT, not timestamp-based detection
 }
 
 DEVICE_CHANNEL_EVENT_TYPES = frozenset({

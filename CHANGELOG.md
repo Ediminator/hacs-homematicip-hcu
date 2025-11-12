@@ -4,6 +4,65 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 
 ---
 
+## Version 1.15.13 - 2025-11-12
+
+### 🔘 Enhanced Button Event Support
+
+**Add Multi-Function Channel Support for HmIP-BSL - Issue #98**
+
+Improved handling of devices like HmIP-BSL where channels serve multiple purposes (button input + backlight control).
+
+**Device Architecture Clarification**
+
+HmIP-BSL (BRAND_SWITCH_NOTIFICATION_LIGHT) channel structure:
+- **Channel 0**: `DEVICE_BASE` (maintenance/status)
+- **Channel 1**: `SWITCH_CHANNEL` with `DOUBLE_INPUT_SWITCH` - Relay control only (friendly name: "Relais")
+- **Channel 2**: `NOTIFICATION_LIGHT_CHANNEL` - **Top button input AND backlight LED** (friendly name: "An")
+- **Channel 3**: `NOTIFICATION_LIGHT_CHANNEL` - **Bottom button input AND backlight LED** (friendly name: "Aus")
+
+**What Was Fixed**
+
+1. **Added Multi-Function Channel Metadata**:
+   - New `MULTI_FUNCTION_CHANNEL_DEVICES` constant in `const.py`
+   - Explicitly documents which device types have channels serving dual purposes
+   - Maps channel types to their multiple functions (button + light)
+
+2. **Enhanced Event Logging**:
+   - Button presses on multi-function channels now log with context: `"Button press on multi-function channel: ...functions=['button', 'light']"`
+   - Helps diagnose which channel is actually triggering events
+   - Shows friendly channel names from device configuration
+
+3. **Corrected Documentation**:
+   - Fixed incorrect comment claiming `KEY_CHANNEL` is used by HmIP-BSL
+   - HmIP-BSL actually uses `NOTIFICATION_LIGHT_CHANNEL` for button inputs (channels 2-3)
+   - Added clear comments explaining multi-function channel behavior
+
+4. **Discovery Documentation**:
+   - Added inline comments in `discovery.py` explaining dual-function channels
+   - Light entities are created for backlight control
+   - Same channels respond to button presses via `DEVICE_CHANNEL_EVENT`
+
+**Technical Details**
+
+The HCU sends `DEVICE_CHANNEL_EVENT` messages when physical buttons are pressed:
+- Top button press: `functionalChannelIndex: 2`, `channelEventType: "PRESS_SHORT"` (or PRESS_LONG, etc.)
+- Bottom button press: `functionalChannelIndex: 3`, `channelEventType: "PRESS_SHORT"` (or PRESS_LONG, etc.)
+
+These events are handled by `_handle_device_channel_events()` regardless of the channel type. The enhanced logging now explicitly identifies when these events come from multi-function channels.
+
+**Impact**
+- ✅ Better visibility into multi-function channel behavior
+- ✅ Clearer documentation for devices with dual-purpose channels
+- ✅ Enhanced diagnostics for troubleshooting button event issues
+- ✅ Foundation for supporting other devices with multi-function channels
+
+**Files Changed**
+- `custom_components/hcu_integration/const.py` - Added `MULTI_FUNCTION_CHANNEL_DEVICES`, corrected documentation
+- `custom_components/hcu_integration/__init__.py` - Enhanced `_handle_device_channel_events()` with multi-function logging
+- `custom_components/hcu_integration/discovery.py` - Added documentation about dual-function channels
+
+---
+
 ## Version 1.15.11 - 2025-11-11
 
 ### 🐛 Bug Fixes

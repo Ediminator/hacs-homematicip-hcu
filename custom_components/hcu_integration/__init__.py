@@ -513,23 +513,21 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
             channel_type = channel.get("functionalChannelType", "Unknown")
             channel_label = channel.get("label", f"Channel {channel_idx_str}")
 
-            # Check if this is a multi-function channel (e.g., HmIP-BSL button+light)
-            is_multi_function = False
-            if device_type in MULTI_FUNCTION_CHANNEL_DEVICES:
-                multi_func_channels = MULTI_FUNCTION_CHANNEL_DEVICES[device_type]
-                if channel_type in multi_func_channels:
-                    is_multi_function = True
-                    functions = multi_func_channels[channel_type]["functions"]
-                    _LOGGER.info(
-                        "Button press on multi-function channel: device=%s (%s), channel=%s (%s, %s), "
-                        "event=%s, functions=%s",
-                        device_id, device_model, channel_idx_str, channel_label, channel_type,
-                        event_type, functions
-                    )
-
+            # Fire button event first (maintain consistent operation order)
             self._fire_button_event(device_id, channel_idx_str, event_type)
 
-            if not is_multi_function:
+            # Check if this is a multi-function channel for enhanced logging
+            multi_func_info = MULTI_FUNCTION_CHANNEL_DEVICES.get(device_type, {}).get(channel_type)
+            if multi_func_info:
+                # Multi-function channel (e.g., HmIP-BSL button+light)
+                _LOGGER.info(
+                    "Button press on multi-function channel: device=%s (%s), channel=%s (%s, %s), "
+                    "event=%s, functions=%s",
+                    device_id, device_model, channel_idx_str, channel_label, channel_type,
+                    event_type, multi_func_info["functions"]
+                )
+            else:
+                # Standard single-function channel
                 _LOGGER.info(
                     "Button press: device=%s (%s), channel=%s (%s, %s), event=%s",
                     device_id, device_model, channel_idx_str, channel_label, channel_type, event_type

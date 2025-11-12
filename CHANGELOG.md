@@ -30,18 +30,18 @@ Completely rewrote the device/group merge logic to handle partial updates correc
 3. **Channel preservation**: Channel data is only updated if included in the event, otherwise preserved
 4. **Top-level updates**: State changes and other top-level fields merge properly without data loss
 
-**Technical details** (`api.py:473-489`):
+**Technical details** (`api.py:473-487`):
 ```python
 elif existing_entity := self._state.get(data_key, {}).get(data_id):
     # Merge partial updates - preserves fields not in the update
-    if data.get("functionalChannels"):
-        existing_entity.setdefault("functionalChannels", {})
-        for ch_idx, ch_data in data["functionalChannels"].items():
-            existing_entity["functionalChannels"].setdefault(ch_idx, {}).update(ch_data)
-
-    # Merge top-level fields (state, firmware, etc.)
     for key, value in data.items():
-        if key != "functionalChannels":
+        if key == "functionalChannels":
+            # Special handling: merge channel data at the channel level
+            existing_entity.setdefault("functionalChannels", {})
+            for ch_idx, ch_data in value.items():
+                existing_entity["functionalChannels"].setdefault(ch_idx, {}).update(ch_data)
+        else:
+            # Regular top-level fields: direct assignment
             existing_entity[key] = value
 ```
 

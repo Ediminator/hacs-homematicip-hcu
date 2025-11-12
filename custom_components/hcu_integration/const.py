@@ -431,6 +431,22 @@ HMIP_FEATURE_TO_ENTITY = {
         "state_class": SensorStateClass.MEASUREMENT,
         "entity_registry_enabled_default": False,
     },
+    "dutyCycle": {
+        "class": "HcuHomeSensor",
+        "name": "Duty Cycle",
+        "unit": PERCENTAGE,
+        "icon": "mdi:radio-tower",
+        "state_class": SensorStateClass.MEASUREMENT,
+        "entity_registry_enabled_default": False,
+    },
+    "dutyCycleLevel": {
+        "class": "HcuGenericSensor",
+        "name": "Duty Cycle Level",
+        "unit": PERCENTAGE,
+        "icon": "mdi:radio-tower",
+        "state_class": SensorStateClass.MEASUREMENT,
+        "entity_registry_enabled_default": False,
+    },
     "rssiDeviceValue": {
         "class": "HcuGenericSensor",
         "name": "RSSI Device",
@@ -574,6 +590,13 @@ HMIP_FEATURE_TO_ENTITY = {
         "class": "HcuBinarySensor",
         "name": "Sabotage",
         "device_class": BinarySensorDeviceClass.TAMPER,
+    },
+    "dutyCycle": {
+        "class": "HcuBinarySensor",
+        "name": "Duty Cycle Limit",
+        "device_class": BinarySensorDeviceClass.PROBLEM,
+        "entity_category": "diagnostic",
+        "entity_registry_enabled_default": False,
     },
     "waterlevelDetected": {
         "class": "HcuBinarySensor",

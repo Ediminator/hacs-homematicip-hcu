@@ -64,8 +64,9 @@ class HcuHomeSensor(HcuHomeBaseEntity, SensorEntity):
         if value is None:
             return None
 
-        if self._feature == "carrierSense":
-            return round(value * 100.0, 1)
+        # carrierSense and dutyCycle are already in percentage from HCU
+        if self._feature in ("carrierSense", "dutyCycle"):
+            return round(value, 1)
 
         return value
 

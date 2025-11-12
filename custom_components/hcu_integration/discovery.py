@@ -26,6 +26,7 @@ from .api import HcuApiClient
 from .const import (
     CHANNEL_TYPE_MULTI_MODE_INPUT_TRANSMITTER,
     DEACTIVATED_BY_DEFAULT_DEVICES,
+    DUTY_CYCLE_BINARY_SENSOR_MAPPING,
     HMIP_CHANNEL_TYPE_TO_ENTITY,
     HMIP_FEATURE_TO_ENTITY,
     PLATFORMS,
@@ -199,6 +200,22 @@ async def async_discover_entities(
                             )
                     except (AttributeError, TypeError) as e:
                         _LOGGER.error("Failed to create entity for feature %s (%s): %s", feature, class_name, e)
+
+            # Special handling for dutyCycle binary sensor (device-level warning flag)
+            # Note: dutyCycle exists in both home object (percentage) and device channels (boolean)
+            # This is handled separately to avoid key collision in HMIP_FEATURE_TO_ENTITY
+            if "dutyCycle" in channel_data and isinstance(channel_data["dutyCycle"], bool):
+                try:
+                    entity_mapping = DUTY_CYCLE_BINARY_SENSOR_MAPPING.copy()
+                    if is_deactivated_by_default:
+                        entity_mapping["entity_registry_enabled_default"] = not is_unused_channel
+                    entities[Platform.BINARY_SENSOR].append(
+                        binary_sensor.HcuBinarySensor(
+                            coordinator, client, device_data, channel_index, "dutyCycle", entity_mapping
+                        )
+                    )
+                except (AttributeError, TypeError) as e:
+                    _LOGGER.error("Failed to create dutyCycle binary sensor for device %s: %s", device_data.get("id"), e)
 
     # Create group entities using type mapping
     # Maps group type to (platform, entity_class, extra_kwargs)

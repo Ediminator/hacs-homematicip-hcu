@@ -468,12 +468,24 @@ class HcuApiClient:
 
             data_id = data["id"]
             if data_key == "home":
+                # Home data is always replaced completely
                 self._state["home"] = data
-            elif self._state.get(data_key, {}).get(data_id) and data.get("functionalChannels"):
-                # Merge partial updates for existing devices
-                for ch_idx, ch_data in data["functionalChannels"].items():
-                    self._state[data_key][data_id]["functionalChannels"][ch_idx].update(ch_data)
+            elif existing_entity := self._state.get(data_key, {}).get(data_id):
+                # Merge partial updates for existing devices/groups
+                # This preserves fields that aren't included in partial updates (e.g., permanentlyReachable)
+                if data.get("functionalChannels"):
+                    # Merge channel data if present in the update
+                    existing_entity.setdefault("functionalChannels", {})
+                    for ch_idx, ch_data in data["functionalChannels"].items():
+                        # Create channel if it doesn't exist, then merge
+                        existing_entity["functionalChannels"].setdefault(ch_idx, {}).update(ch_data)
+
+                # Always merge top-level fields (e.g., state changes, firmware updates)
+                for key, value in data.items():
+                    if key != "functionalChannels":  # Already handled above
+                        existing_entity[key] = value
             else:
+                # New device/group - add it to state
                 self._state.setdefault(data_key, {})[data_id] = data
 
             updated_ids.add(data_id)

@@ -526,7 +526,7 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
                 _LOGGER.info(
                     "Button press on multi-function channel: device=%s (%s), channel=%s (%s, %s), "
                     "event=%s, functions=%s",
-                    *common_log_args, multi_func_info["functions"]
+                    *common_log_args, multi_func_info.get("functions", [])
                 )
             else:
                 # Standard single-function channel

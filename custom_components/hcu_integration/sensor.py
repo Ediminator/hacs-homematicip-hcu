@@ -141,6 +141,8 @@ class HcuGenericSensor(HcuBaseEntity, SensorEntity):
             return round(value * 100.0, 1)
         if self._feature == "vaporAmount":
             return round(value, 2)
+        if self._feature == "dutyCycleLevel":
+            return round(value, 1)
 
         return value
 

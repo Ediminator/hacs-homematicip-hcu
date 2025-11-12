@@ -516,6 +516,9 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
             # Fire button event first (maintain consistent operation order)
             self._fire_button_event(device_id, channel_idx_str, event_type)
 
+            # Define common log arguments once for both logging paths
+            common_log_args = (device_id, device_model, channel_idx_str, channel_label, channel_type, event_type)
+
             # Check if this is a multi-function channel for enhanced logging
             multi_func_info = MULTI_FUNCTION_CHANNEL_DEVICES.get(device_type, {}).get(channel_type)
             if multi_func_info:
@@ -523,14 +526,13 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
                 _LOGGER.info(
                     "Button press on multi-function channel: device=%s (%s), channel=%s (%s, %s), "
                     "event=%s, functions=%s",
-                    device_id, device_model, channel_idx_str, channel_label, channel_type,
-                    event_type, multi_func_info["functions"]
+                    *common_log_args, multi_func_info["functions"]
                 )
             else:
                 # Standard single-function channel
                 _LOGGER.info(
                     "Button press: device=%s (%s), channel=%s (%s, %s), event=%s",
-                    device_id, device_model, channel_idx_str, channel_label, channel_type, event_type
+                    *common_log_args
                 )
 
     def _should_fire_button_press(

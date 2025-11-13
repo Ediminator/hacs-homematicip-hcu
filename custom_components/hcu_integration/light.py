@@ -171,10 +171,12 @@ class HcuLight(HcuBaseEntity, LightEntity):
         if sat < 20:
             return HMIP_COLOR_WHITE
 
-        # Map hue ranges to 7 colors: WHITE, RED, YELLOW, GREEN, TURQUOISE, BLUE, PURPLE
-        if hue < 30 or hue >= 330:
+        # Map hue ranges to 8 colors: WHITE, RED, ORANGE, YELLOW, GREEN, TURQUOISE, BLUE, PURPLE
+        if hue < 15 or hue >= 345:
             return HMIP_COLOR_RED
-        elif 30 <= hue < 90:
+        elif 15 <= hue < 45:
+            return HMIP_COLOR_ORANGE
+        elif 45 <= hue < 90:
             return HMIP_COLOR_YELLOW
         elif 90 <= hue < 150:
             return HMIP_COLOR_GREEN
@@ -182,7 +184,7 @@ class HcuLight(HcuBaseEntity, LightEntity):
             return HMIP_COLOR_TURQUOISE
         elif 210 <= hue < 270:
             return HMIP_COLOR_BLUE
-        else:  # 270 <= hue < 330
+        else:  # 270 <= hue < 345
             return HMIP_COLOR_PURPLE
 
     async def async_turn_on(self, **kwargs) -> None:

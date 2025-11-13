@@ -128,6 +128,7 @@ API_PATHS = {
     "SET_PRIMARY_SHADING_LEVEL": "/hmip/device/control/setPrimaryShadingLevel",  # For SHADING_CHANNEL devices (e.g., HmIP-HDM1)
     "SET_SHUTTER_LEVEL": "/hmip/device/control/setShutterLevel",
     "SET_SIMPLE_RGB_COLOR_STATE": "/hmip/device/control/setSimpleRGBColorDimLevel",
+    "SET_SIMPLE_RGB_COLOR_STATE_WITH_TIME": "/hmip/device/control/setSimpleRGBColorDimLevelWithTime",
     "SET_SLATS_LEVEL": "/hmip/device/control/setSlatsLevel",
     "SET_SOUND_FILE": "/hmip/device/control/setSoundFileVolumeLevelWithTime",
     "SET_SWITCH_STATE": "/hmip/device/control/setSwitchState",
@@ -137,7 +138,6 @@ API_PATHS = {
     "STOP_COVER": "/hmip/device/control/stop",
     "STOP_GROUP_COVER": "/hmip/group/switching/stop",
     "TOGGLE_GARAGE_DOOR_STATE": "/hmip/device/control/toggleGarageDoorState",
-    "SET_SIMPLE_RGB_COLOR_STATE_WITH_TIME": "/hmip/device/control/setSimpleRGBColorDimLevelWithTime", # ADDED
 }
 
 # --- Device Identification Constants ---

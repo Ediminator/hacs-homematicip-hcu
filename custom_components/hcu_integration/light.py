@@ -196,9 +196,9 @@ class HcuLight(HcuBaseEntity, LightEntity):
 
     async def async_turn_on(self, **kwargs) -> None:
         """Turn the light on with optional color, temperature, brightness, or effect adjustments."""
-        # Default to current brightness or 100% (dim_level = 1.0) if unknown
+        # Default to current brightness if the light is on, otherwise 100%.
         current_brightness = self.brightness
-        target_brightness = kwargs.get(ATTR_BRIGHTNESS, current_brightness if current_brightness is not None else 255)
+        target_brightness = kwargs.get(ATTR_BRIGHTNESS, current_brightness or 255)
         dim_level = target_brightness / 255.0
         
         ramp_time = kwargs.get(ATTR_TRANSITION)

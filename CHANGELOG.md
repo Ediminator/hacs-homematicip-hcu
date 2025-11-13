@@ -4,6 +4,83 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 
 ---
 
+## Version 1.15.18 - 2025-11-13
+
+### 🐛 Bug Fixes
+
+**Fix API Endpoints and Remove Invalid Parameters - PR #129**
+
+Fixed critical API integration issues identified through diagnostic file analysis and official HCU API documentation review.
+
+#### Issues Addressed
+
+1. **Incorrect RGB Color Control Endpoint**
+   - **Problem**: Integration was calling `/setSimpleRGBColorState` endpoint which doesn't exist in the HCU API
+   - **Fix**: Corrected endpoint to `/setSimpleRGBColorDimLevel` (matches API documentation section 6.8.1.26)
+   - **Impact**: RGB color control for devices like HmIP-BSL now works correctly
+
+2. **Invalid rampTime Parameter Usage**
+   - **Problem**: Integration was sending `rampTime` parameter to endpoints that don't accept it:
+     - `/setDimLevel` doesn't accept `rampTime`
+     - `/setColorTemperatureDimLevel` doesn't accept `rampTime`
+     - `/setHueSaturationDimLevel` doesn't accept `rampTime`
+   - **Fix**: Implemented dynamic endpoint selection:
+     - When `ramp_time` is provided: use `*WithTime` variant endpoints
+     - When `ramp_time` is `None`: use base endpoints without the parameter
+   - **Added Endpoints**:
+     - `SET_DIM_LEVEL_WITH_TIME` → `/setDimLevelWithTime`
+     - `SET_COLOR_TEMP_WITH_TIME` → `/setColorTemperatureDimLevelWithTime`
+     - `SET_HUE_WITH_TIME` → `/setHueSaturationDimLevelWithTime`
+   - **Impact**: Light transitions now work correctly without API errors
+
+3. **Invalid onLevel Parameter**
+   - **Problem**: Integration was sending `onLevel` parameter to switch commands
+   - **Analysis**: Diagnostic file confirmed switches only support boolean `on` field, not `onLevel`
+   - **Fix**: Removed `onLevel` parameter from:
+     - `async_set_switch_state()` in `api.py`
+     - `_call_switch_api()` in `switch.py`
+     - `_call_switch_api()` (unused) in `siren.py`
+   - **Impact**: Switch commands no longer send invalid parameters
+
+#### Code Quality Improvements
+
+1. **Extracted Helper Method**
+   - Created `_get_api_path_with_ramp_time()` helper method following DRY principles
+   - Eliminated code duplication across three light control methods
+   - Centralized API path selection logic with clear documentation
+
+2. **Organized Constants**
+   - Sorted `API_PATHS` dictionary alphabetically for improved readability and maintainability
+
+3. **Removed Dead Code**
+   - Deleted unused `_call_switch_api()` method from `HcuSiren` class
+
+#### Validated "Undocumented" Fields
+
+Confirmed these fields are **valid** per diagnostic file analysis, despite not being in official documentation:
+- `vaporAmount` - HmIP-BWTH Wall Thermostat (absolute humidity in g/m³)
+- `valvePosition` - HmIP-FALMOT-C12 Floor Heating Controller (valve position percentage)
+- `dutyCycleLevel` - HmIP-HCU1 Home Control Unit (duty cycle level percentage)
+
+These fields are retained in the integration as they contain valid device data.
+
+#### Technical Details
+
+**Files Modified**:
+- `custom_components/hcu_integration/const.py` - Added WithTime endpoints, sorted API_PATHS
+- `custom_components/hcu_integration/api.py` - Fixed endpoint selection, removed invalid parameters, added helper method
+- `custom_components/hcu_integration/light.py` - No changes (uses corrected API)
+- `custom_components/hcu_integration/switch.py` - Removed onLevel parameter
+- `custom_components/hcu_integration/siren.py` - Removed onLevel parameter and dead code
+
+**Documentation References**:
+- HCU API Documentation sections 6.8.1.7-9 (Dim Level)
+- HCU API Documentation sections 6.8.1.8-9 (Color Temperature)
+- HCU API Documentation sections 6.8.1.15-16 (Hue/Saturation)
+- HCU API Documentation section 6.8.1.26 (RGB Color)
+
+---
+
 ## Version 1.15.15 - 2025-11-13
 
 ### 🐛 Bug Fix

@@ -125,7 +125,7 @@ class HcuApiClient:
             device_id
             for device_id in non_hap_candidates
             if (model_type := devices.get(device_id, {}).get("modelType", ""))
-            and (model_type in HCU_MODEL_TYPES or model_type.startswith("HmIP-HCU"))
+            and model_type.startswith("HmIP-HCU")
         ]
 
         if primary_hcu_candidates:

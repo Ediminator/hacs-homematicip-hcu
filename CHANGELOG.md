@@ -94,9 +94,24 @@ Added detailed logging to help diagnose device assignment:
 **Affects:** Versions 1.15.14 and earlier with multi-access-point setups
 **Fixed in:** Version 1.15.15
 
+**Fix Entity Discovery Crash for Home-Level Sensors**
+
+Fixed a crash during entity discovery when home-level sensor features (like `dutyCycle` or `carrierSense`) were found on device channels. The discovery code was incorrectly trying to instantiate `HcuHomeSensor` with device/channel arguments, causing a `TypeError`.
+
+The fix generalizes the solution by skipping all features mapped to `HcuHomeSensor` class in the device-channel entity creation loop, as these sensors are handled separately in the home entity creation section with the correct signature.
+
+```python
+# Skip home-level sensors in device-channel loop
+if mapping.get("class") == "HcuHomeSensor":
+    continue
+```
+
+This prevents crashes for `dutyCycle`, `carrierSense`, and any future home-level sensors, making the discovery logic more robust.
+
 #### Files Changed
 
 - `custom_components/hcu_integration/api.py` - Enhanced `_update_hcu_device_ids()` with 3-tier selection and HAP exclusion
+- `custom_components/hcu_integration/discovery.py` - Skip home-level sensors in device-channel entity loop
 
 ---
 

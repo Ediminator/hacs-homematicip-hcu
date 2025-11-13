@@ -165,10 +165,10 @@ async def async_discover_entities(
                 if feature in processed_features or feature not in channel_data:
                     continue
 
-                # Skip dutyCycle here - it has special handling:
-                # - Device-level boolean values are handled separately below (lines 207-218)
-                # - Home-level percentage values are handled in home entity creation (lines 257-261)
-                if feature == "dutyCycle":
+                # Skip home-level sensors, as they are handled separately in the home entity creation section.
+                # HcuHomeSensor expects 4 arguments (coordinator, client, feature, mapping) but this loop
+                # provides 6 arguments (coordinator, client, device_data, channel_index, feature, mapping).
+                if mapping.get("class") == "HcuHomeSensor":
                     continue
 
                 # Skip features with null values to prevent broken sensors

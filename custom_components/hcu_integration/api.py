@@ -112,21 +112,24 @@ class HcuApiClient:
         devices = self.state.get("devices", {})
         hap_drap_prefixes = ("HmIP-HAP", "HmIP-DRAP")
 
-        # Pre-calculate non-HAP candidates for fallback strategies
-        non_hap_candidates = sorted([
-            device_id
-            for device_id in hcu_ids
-            if not devices.get(device_id, {}).get("modelType", "").startswith(hap_drap_prefixes)
-        ])
+        # Single-pass candidate selection: build both lists in one iteration
+        # This reduces redundant dictionary lookups and improves performance
+        primary_hcu_candidates = []
+        non_hap_candidates = []
 
-        # Strategy 1: Find devices with HCU model types (flexible pattern matching)
-        # Derive from non_hap_candidates to avoid re-iterating hcu_ids
-        primary_hcu_candidates = [
-            device_id
-            for device_id in non_hap_candidates
-            if (model_type := devices.get(device_id, {}).get("modelType", ""))
-            and model_type.startswith("HmIP-HCU")
-        ]
+        for device_id in sorted(hcu_ids):
+            model_type = devices.get(device_id, {}).get("modelType", "")
+
+            # Skip HAP/DRAP devices
+            if model_type.startswith(hap_drap_prefixes):
+                continue
+
+            # This is a non-HAP candidate
+            non_hap_candidates.append(device_id)
+
+            # Check if it's an HCU model (Strategy 1)
+            if model_type.startswith("HmIP-HCU"):
+                primary_hcu_candidates.append(device_id)
 
         if primary_hcu_candidates:
             # Use the actual HCU as primary (deterministically select first after sorting)

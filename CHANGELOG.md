@@ -28,18 +28,17 @@ This caused the integration to incorrectly assign home-level entities to the HAP
 Implemented a robust 3-tier primary HCU selection strategy in `api.py:_update_hcu_device_ids()`:
 
 **Strategy 1: Flexible HCU Pattern Matching**
-- Check if `modelType` is in `HCU_MODEL_TYPES` (exact match for known models)
-- OR `modelType` starts with `"HmIP-HCU"` (flexible matching for any HCU variant)
-- AND explicitly exclude `"HmIP-HAP"` and `"HmIP-DRAP"` prefixes
+- Match any device with `modelType` starting with `"HmIP-HCU"`
+- This covers all known models ("HmIP-HCU-1", "HmIP-HCU1-A") and future variants
+- Explicitly exclude `"HmIP-HAP"` and `"HmIP-DRAP"` prefixes
 
 ```python
-primary_hcu_candidates = sorted([
+primary_hcu_candidates = [
     device_id
-    for device_id in hcu_ids
+    for device_id in non_hap_candidates
     if (model_type := devices.get(device_id, {}).get("modelType", ""))
-    and (model_type in HCU_MODEL_TYPES or model_type.startswith("HmIP-HCU"))
-    and not model_type.startswith(("HmIP-HAP", "HmIP-DRAP"))
-])
+    and model_type.startswith("HmIP-HCU")
+]
 ```
 
 **Strategy 2: Validated accessPointId**

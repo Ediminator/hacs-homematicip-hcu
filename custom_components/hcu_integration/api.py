@@ -569,9 +569,10 @@ class HcuApiClient:
         body = {"dimLevel": dim_level}
         if ramp_time is not None:
             body["rampTime"] = ramp_time
-            await self.async_device_control(API_PATHS["SET_DIM_LEVEL_WITH_TIME"], device_id, channel_index, body)
+            api_path = API_PATHS["SET_DIM_LEVEL_WITH_TIME"]
         else:
-            await self.async_device_control(API_PATHS["SET_DIM_LEVEL"], device_id, channel_index, body)
+            api_path = API_PATHS["SET_DIM_LEVEL"]
+        await self.async_device_control(api_path, device_id, channel_index, body)
 
     async def async_set_color_temperature(self, device_id: str, channel_index: int, color_temp: int, dim_level: float, ramp_time: float | None = None) -> None:
         body = {"colorTemperature": color_temp, "dimLevel": dim_level}

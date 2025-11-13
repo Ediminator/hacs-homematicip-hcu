@@ -33,12 +33,21 @@ Implemented a robust 3-tier primary HCU selection strategy in `api.py:_update_hc
 - Explicitly exclude `"HmIP-HAP"` and `"HmIP-DRAP"` prefixes
 
 ```python
-primary_hcu_candidates = [
-    device_id
-    for device_id in non_hap_candidates
-    if (model_type := devices.get(device_id, {}).get("modelType", ""))
-    and model_type.startswith("HmIP-HCU")
-]
+# Single-pass candidate selection
+sorted_hcu_ids = sorted(hcu_ids)
+primary_hcu_candidates = []
+non_hap_candidates = []
+
+for device_id in sorted_hcu_ids:
+    model_type = devices.get(device_id, {}).get("modelType", "")
+
+    if model_type.startswith(("HmIP-HAP", "HmIP-DRAP")):
+        continue
+
+    non_hap_candidates.append(device_id)
+
+    if model_type.startswith("HmIP-HCU"):
+        primary_hcu_candidates.append(device_id)
 ```
 
 **Strategy 2: Validated accessPointId**

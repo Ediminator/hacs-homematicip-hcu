@@ -102,28 +102,63 @@ class HcuApiClient:
 
         self._hcu_device_ids = hcu_ids
 
-        # Prioritize actual HCU models (HmIP-HCU-1, HmIP-HCU1-A) over auxiliary access points
-        # This ensures home-level entities (alarm, vacation) link to the real HCU, not HAP/DRAP
-        # The prioritization order is: actual HCU models -> accessPointId from home state -> any identified HCU-like device.
+        # Prioritize actual HCU models (HmIP-HCU-*) over auxiliary access points (HAP/DRAP)
+        # This ensures home-level entities (alarm, vacation, duty cycle) link to the real HCU, not HAP/DRAP
+        # The prioritization order is: actual HCU models -> accessPointId (if not HAP/DRAP) -> any access point
         # Rationale: In multi-access-point setups, home.accessPointId may point to an auxiliary HAP/DRAP
         # instead of the main HCU, causing incorrect device associations. By explicitly prioritizing
-        # actual HCU model types, we ensure the true central controller is always the primary device.
+        # actual HCU model types and excluding HAP/DRAP patterns, we ensure the true central controller
+        # is always the primary device.
         devices = self.state.get("devices", {})
+
+        # Strategy 1: Find devices with HCU model types (flexible pattern matching)
         primary_hcu_candidates = sorted([
             device_id
             for device_id in hcu_ids
-            if devices.get(device_id, {}).get("modelType") in HCU_MODEL_TYPES
+            if (model_type := devices.get(device_id, {}).get("modelType", ""))
+            and (model_type in HCU_MODEL_TYPES or model_type.startswith("HmIP-HCU"))
+            and not model_type.startswith(("HmIP-HAP", "HmIP-DRAP"))
         ])
 
         if primary_hcu_candidates:
             # Use the actual HCU as primary (deterministically select first after sorting)
             self._primary_hcu_device_id = primary_hcu_candidates[0]
+            _LOGGER.debug("Selected primary HCU by model type: %s", self._primary_hcu_device_id)
         elif access_point_id:
-            # Fallback to home.accessPointId if no HCU model found
-            self._primary_hcu_device_id = access_point_id
+            # Strategy 2: Use home.accessPointId, but verify it's not a HAP/DRAP
+            access_point_model = devices.get(access_point_id, {}).get("modelType", "")
+            if not access_point_model.startswith(("HmIP-HAP", "HmIP-DRAP")):
+                self._primary_hcu_device_id = access_point_id
+                _LOGGER.debug("Selected primary HCU by accessPointId: %s", self._primary_hcu_device_id)
+            else:
+                # accessPointId is HAP/DRAP, try to find any non-HAP device
+                non_hap_candidates = sorted([
+                    device_id
+                    for device_id in hcu_ids
+                    if not devices.get(device_id, {}).get("modelType", "").startswith(("HmIP-HAP", "HmIP-DRAP"))
+                ])
+                if non_hap_candidates:
+                    self._primary_hcu_device_id = non_hap_candidates[0]
+                    _LOGGER.warning(
+                        "home.accessPointId points to HAP/DRAP (%s), selected non-HAP device as primary: %s",
+                        access_point_id, self._primary_hcu_device_id
+                    )
+                else:
+                    # All devices are HAP/DRAP, fall back to access_point_id
+                    self._primary_hcu_device_id = access_point_id
+                    _LOGGER.warning("Only HAP/DRAP devices found, using accessPointId as primary: %s", access_point_id)
         elif hcu_ids:
-            # Last resort: pick any access point (sort for deterministic selection)
-            self._primary_hcu_device_id = sorted(hcu_ids)[0]
+            # Strategy 3: Last resort - pick any access point, preferring non-HAP
+            non_hap_candidates = sorted([
+                device_id
+                for device_id in hcu_ids
+                if not devices.get(device_id, {}).get("modelType", "").startswith(("HmIP-HAP", "HmIP-DRAP"))
+            ])
+            if non_hap_candidates:
+                self._primary_hcu_device_id = non_hap_candidates[0]
+            else:
+                self._primary_hcu_device_id = sorted(hcu_ids)[0]
+            _LOGGER.debug("Selected primary HCU from available access points: %s", self._primary_hcu_device_id)
         else:
             self._primary_hcu_device_id = None
 

@@ -112,12 +112,15 @@ class HcuApiClient:
         devices = self.state.get("devices", {})
         hap_drap_prefixes = ("HmIP-HAP", "HmIP-DRAP")
 
+        # Sort once and reuse to avoid redundant sorting operations
+        sorted_hcu_ids = sorted(hcu_ids)
+
         # Single-pass candidate selection: build both lists in one iteration
         # This reduces redundant dictionary lookups and improves performance
         primary_hcu_candidates = []
         non_hap_candidates = []
 
-        for device_id in sorted(hcu_ids):
+        for device_id in sorted_hcu_ids:
             model_type = devices.get(device_id, {}).get("modelType", "")
 
             # Skip HAP/DRAP devices
@@ -158,7 +161,7 @@ class HcuApiClient:
             if non_hap_candidates:
                 self._primary_hcu_device_id = non_hap_candidates[0]
             else:
-                self._primary_hcu_device_id = sorted(hcu_ids)[0]
+                self._primary_hcu_device_id = sorted_hcu_ids[0]
             _LOGGER.debug("Selected primary HCU from available access points: %s", self._primary_hcu_device_id)
         else:
             self._primary_hcu_device_id = None

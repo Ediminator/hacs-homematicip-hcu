@@ -4,6 +4,18 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 
 ---
 
+## 1.15.19 - 2025-11-13
+
+### Fixes & Improvements
+
+Fixed Light Control for Notification Devices (HmIP-BSL, etc.): Corrected an issue where setting the color or brightness on lights using the `NOTIFICATION_LIGHT_CHANNEL` (e.g., HmIP-BSL) would sometimes fail to visually turn the light on (the "invisible light" bug).
+
+The HcuLight entity's `turn_on` and `turn_off` methods now explicitly manage the `opticalSignalBehaviour` state, ensuring the physical LED function is activated and deactivated correctly in conjunction with color/brightness settings.
+
+API Improvement: Added support for the `/hmip/device/control/setSimpleRGBColorDimLevelWithTime` endpoint to enable future support for transitions/ramp times on simple RGB devices.
+
+---
+
 ## Version 1.15.18 - 2025-11-13
 
 ### 🐛 Bug Fixes

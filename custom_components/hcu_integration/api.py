@@ -557,11 +557,9 @@ class HcuApiClient:
         await self._send_hmip_request(path, body or {})
 
     # --- Specific Device Control Methods ---
-    async def async_set_switch_state(self, device_id: str, channel_index: int, is_on: bool, on_level: float | None = None) -> None:
+    async def async_set_switch_state(self, device_id: str, channel_index: int, is_on: bool) -> None:
         """Set the state of a switch channel."""
         body = {"on": is_on}
-        if on_level is not None:
-            body["onLevel"] = on_level
         await self.async_device_control(API_PATHS["SET_SWITCH_STATE"], device_id, channel_index, body)
 
     async def async_set_watering_switch_state(self, device_id: str, channel_index: int, is_on: bool) -> None:
@@ -571,7 +569,9 @@ class HcuApiClient:
         body = {"dimLevel": dim_level}
         if ramp_time is not None:
             body["rampTime"] = ramp_time
-        await self.async_device_control(API_PATHS["SET_DIM_LEVEL"], device_id, channel_index, body)
+            await self.async_device_control(API_PATHS["SET_DIM_LEVEL_WITH_TIME"], device_id, channel_index, body)
+        else:
+            await self.async_device_control(API_PATHS["SET_DIM_LEVEL"], device_id, channel_index, body)
 
     async def async_set_color_temperature(self, device_id: str, channel_index: int, color_temp: int, dim_level: float, ramp_time: float | None = None) -> None:
         body = {"colorTemperature": color_temp, "dimLevel": dim_level}

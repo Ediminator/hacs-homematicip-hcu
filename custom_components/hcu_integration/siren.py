@@ -259,9 +259,8 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
 
     async def _call_switch_api(self, turn_on: bool) -> None:
         """Call the API to set the siren state."""
-        on_level = 1.0 if turn_on else 0.0
         await self._client.async_set_switch_state(
-            self._device_id, self._channel_index, turn_on, on_level=on_level
+            self._device_id, self._channel_index, turn_on
         )
 
     async def _async_execute_with_state_management(

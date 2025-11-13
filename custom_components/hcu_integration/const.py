@@ -106,9 +106,10 @@ API_PATHS = {
     "SET_SWITCH_STATE": "/hmip/device/control/setSwitchState",
     "SET_WATERING_SWITCH_STATE": "/hmip/device/control/setWateringSwitchState",
     "SET_DIM_LEVEL": "/hmip/device/control/setDimLevel",
+    "SET_DIM_LEVEL_WITH_TIME": "/hmip/device/control/setDimLevelWithTime",
     "SET_COLOR_TEMP": "/hmip/device/control/setColorTemperatureDimLevel",
     "SET_HUE": "/hmip/device/control/setHueSaturationDimLevel",
-    "SET_SIMPLE_RGB_COLOR_STATE": "/hmip/device/control/setSimpleRGBColorState",
+    "SET_SIMPLE_RGB_COLOR_STATE": "/hmip/device/control/setSimpleRGBColorDimLevel",
     "SET_SHUTTER_LEVEL": "/hmip/device/control/setShutterLevel",
     "SET_PRIMARY_SHADING_LEVEL": "/hmip/device/control/setPrimaryShadingLevel",  # For SHADING_CHANNEL devices (e.g., HmIP-HDM1)
     "SET_SLATS_LEVEL": "/hmip/device/control/setSlatsLevel",

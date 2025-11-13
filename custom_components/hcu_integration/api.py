@@ -110,6 +110,14 @@ class HcuApiClient:
         # actual HCU model types and excluding HAP/DRAP patterns, we ensure the true central controller
         # is always the primary device.
         devices = self.state.get("devices", {})
+        hap_drap_prefixes = ("HmIP-HAP", "HmIP-DRAP")
+
+        # Pre-calculate non-HAP candidates for fallback strategies
+        non_hap_candidates = sorted([
+            device_id
+            for device_id in hcu_ids
+            if not devices.get(device_id, {}).get("modelType", "").startswith(hap_drap_prefixes)
+        ])
 
         # Strategy 1: Find devices with HCU model types (flexible pattern matching)
         primary_hcu_candidates = sorted([
@@ -117,7 +125,7 @@ class HcuApiClient:
             for device_id in hcu_ids
             if (model_type := devices.get(device_id, {}).get("modelType", ""))
             and (model_type in HCU_MODEL_TYPES or model_type.startswith("HmIP-HCU"))
-            and not model_type.startswith(("HmIP-HAP", "HmIP-DRAP"))
+            and not model_type.startswith(hap_drap_prefixes)
         ])
 
         if primary_hcu_candidates:
@@ -127,16 +135,11 @@ class HcuApiClient:
         elif access_point_id:
             # Strategy 2: Use home.accessPointId, but verify it's not a HAP/DRAP
             access_point_model = devices.get(access_point_id, {}).get("modelType", "")
-            if not access_point_model.startswith(("HmIP-HAP", "HmIP-DRAP")):
+            if not access_point_model.startswith(hap_drap_prefixes):
                 self._primary_hcu_device_id = access_point_id
                 _LOGGER.debug("Selected primary HCU by accessPointId: %s", self._primary_hcu_device_id)
             else:
                 # accessPointId is HAP/DRAP, try to find any non-HAP device
-                non_hap_candidates = sorted([
-                    device_id
-                    for device_id in hcu_ids
-                    if not devices.get(device_id, {}).get("modelType", "").startswith(("HmIP-HAP", "HmIP-DRAP"))
-                ])
                 if non_hap_candidates:
                     self._primary_hcu_device_id = non_hap_candidates[0]
                     _LOGGER.warning(
@@ -149,11 +152,6 @@ class HcuApiClient:
                     _LOGGER.warning("Only HAP/DRAP devices found, using accessPointId as primary: %s", access_point_id)
         elif hcu_ids:
             # Strategy 3: Last resort - pick any access point, preferring non-HAP
-            non_hap_candidates = sorted([
-                device_id
-                for device_id in hcu_ids
-                if not devices.get(device_id, {}).get("modelType", "").startswith(("HmIP-HAP", "HmIP-DRAP"))
-            ])
             if non_hap_candidates:
                 self._primary_hcu_device_id = non_hap_candidates[0]
             else:

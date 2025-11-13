@@ -27,12 +27,28 @@ This caused the integration to incorrectly assign home-level entities to the HAP
 
 Implemented a robust 3-tier primary HCU selection strategy in `api.py:_update_hcu_device_ids()`:
 
+**Code Improvements**
+- Removed dependency on incomplete `HCU_MODEL_TYPES` constant
+- Defined `HAP_DRAP_PREFIXES` as module-level constant following PEP 8 conventions
+- Updated both initial HCU collection and primary selection to use flexible pattern matching with `startswith("HmIP-HCU")`
+- This ensures consistent matching logic throughout the entire method
+
 **Strategy 1: Flexible HCU Pattern Matching**
 - Match any device with `modelType` starting with `"HmIP-HCU"`
 - This covers all known models ("HmIP-HCU-1", "HmIP-HCU1-A") and future variants
-- Explicitly exclude `"HmIP-HAP"` and `"HmIP-DRAP"` prefixes
+- Explicitly exclude `"HmIP-HAP"` and `"HmIP-DRAP"` prefixes using module-level constant
 
 ```python
+# Module-level constant
+HAP_DRAP_PREFIXES = ("HmIP-HAP", "HmIP-DRAP")
+
+# Initial HCU collection using flexible pattern matching
+hcu_ids = {
+    device_id
+    for device_id, device_data in self.state.get("devices", {}).items()
+    if device_data.get("modelType", "").startswith("HmIP-HCU")
+}
+
 # Single-pass candidate selection
 sorted_hcu_ids = sorted(hcu_ids)
 primary_hcu_candidates = []
@@ -41,7 +57,7 @@ non_hap_candidates = []
 for device_id in sorted_hcu_ids:
     model_type = devices.get(device_id, {}).get("modelType", "")
 
-    if model_type.startswith(("HmIP-HAP", "HmIP-DRAP")):
+    if model_type.startswith(HAP_DRAP_PREFIXES):
         continue
 
     non_hap_candidates.append(device_id)

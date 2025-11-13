@@ -11,7 +11,6 @@ from homeassistant.core import HomeAssistant
 from .const import (
     PLUGIN_ID,
     HCU_DEVICE_TYPES,
-    HCU_MODEL_TYPES,
     API_REQUEST_TIMEOUT,
     API_PATHS,
     API_MAX_RETRIES,
@@ -22,6 +21,9 @@ from .const import (
 from .util import create_unverified_ssl_context
 
 _LOGGER = logging.getLogger(__name__)
+
+# Model type prefixes for auxiliary access points (not primary HCU controllers)
+HAP_DRAP_PREFIXES = ("HmIP-HAP", "HmIP-DRAP")
 
 
 class HcuApiError(Exception):
@@ -94,7 +96,7 @@ class HcuApiClient:
             hcu_ids = {
                 device_id
                 for device_id, device_data in self.state.get("devices", {}).items()
-                if device_data.get("modelType") in HCU_MODEL_TYPES
+                if device_data.get("modelType", "").startswith("HmIP-HCU")
             }
 
         if access_point_id:
@@ -110,7 +112,6 @@ class HcuApiClient:
         # actual HCU model types and excluding HAP/DRAP patterns, we ensure the true central controller
         # is always the primary device.
         devices = self.state.get("devices", {})
-        hap_drap_prefixes = ("HmIP-HAP", "HmIP-DRAP")
 
         # Sort once and reuse to avoid redundant sorting operations
         sorted_hcu_ids = sorted(hcu_ids)
@@ -124,7 +125,7 @@ class HcuApiClient:
             model_type = devices.get(device_id, {}).get("modelType", "")
 
             # Skip HAP/DRAP devices
-            if model_type.startswith(hap_drap_prefixes):
+            if model_type.startswith(HAP_DRAP_PREFIXES):
                 continue
 
             # This is a non-HAP candidate
@@ -141,7 +142,7 @@ class HcuApiClient:
         elif access_point_id:
             # Strategy 2: Use home.accessPointId, but verify it's not a HAP/DRAP
             access_point_model = devices.get(access_point_id, {}).get("modelType", "")
-            if not access_point_model.startswith(hap_drap_prefixes):
+            if not access_point_model.startswith(HAP_DRAP_PREFIXES):
                 self._primary_hcu_device_id = access_point_id
                 _LOGGER.debug("Selected primary HCU by accessPointId: %s", self._primary_hcu_device_id)
             else:

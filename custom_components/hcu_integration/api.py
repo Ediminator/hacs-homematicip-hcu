@@ -135,6 +135,11 @@ class HcuApiClient:
             if model_type.startswith("HmIP-HCU"):
                 primary_hcu_candidates.append(device_id)
 
+        # Update hcu_device_ids to exclude HAP/DRAP devices
+        # HAP/DRAP are separate physical devices, not part of the HCU hardware complex
+        # Only actual HCU devices should have their entities linked to the main HCU device
+        self._hcu_device_ids = set(non_hap_candidates)
+
         if primary_hcu_candidates:
             # Use the actual HCU as primary (deterministically select first after sorting)
             self._primary_hcu_device_id = primary_hcu_candidates[0]

@@ -165,9 +165,8 @@ async def async_discover_entities(
                 if feature in processed_features or feature not in channel_data:
                     continue
 
-                # Skip home-level sensors, as they are handled separately in the home entity creation section.
-                # HcuHomeSensor expects 4 arguments (coordinator, client, feature, mapping) but this loop
-                # provides 6 arguments (coordinator, client, device_data, channel_index, feature, mapping).
+# Skip HcuHomeSensor entities in this loop. They are home-level sensors
+# handled separately and expect a different constructor signature (4 args vs 6 here).
                 if mapping.get("class") == "HcuHomeSensor":
                     continue
 

@@ -197,12 +197,12 @@ class HcuLight(HcuBaseEntity, LightEntity):
     async def async_turn_on(self, **kwargs) -> None:
         """Turn the light on with optional color, temperature, brightness, or effect adjustments."""
         # Default to current brightness if the light is on, otherwise 100%.
-        current_brightness = self.brightness
+        current_brightness = self.brightness if self.is_on else None
         target_brightness = kwargs.get(ATTR_BRIGHTNESS, current_brightness or 255)
         dim_level = target_brightness / 255.0
-        
+
         ramp_time = kwargs.get(ATTR_TRANSITION)
-        
+
         # Handle Simple RGB devices (e.g., HmIP-BSL)
         if self._has_simple_rgb and self._supports_optical_signal:
             # 1. Determine Color
@@ -277,24 +277,24 @@ class HcuLight(HcuBaseEntity, LightEntity):
         
         # For BSL devices, we set optical signal to OFF to ensure it goes dark
         if self._has_simple_rgb and self._supports_optical_signal:
-             payload = {
-                 # Preserve color state, set dim to 0, and set signal to OFF
-                 "simpleRGBColorState": self._channel.get("simpleRGBColorState", HMIP_COLOR_BLACK), 
-                 "dimLevel": 0.0,
-                 "opticalSignalBehaviour": "OFF"
-             }
-             
-             if ramp_time is not None:
-                 path = API_PATHS["SET_SIMPLE_RGB_COLOR_STATE_WITH_TIME"]
-                 payload["rampTime"] = ramp_time
-             else:
-                 path = API_PATHS["SET_SIMPLE_RGB_COLOR_STATE"]
-            
-             # Set optimistic state for immediate feedback
-             self._attr_assumed_state = True
-             self.async_write_ha_state()
-            
-             await self._client.async_device_control(
+            payload = {
+                # Preserve color state, set dim to 0, and set signal to OFF
+                "simpleRGBColorState": self._channel.get("simpleRGBColorState", HMIP_COLOR_BLACK),
+                "dimLevel": 0.0,
+                "opticalSignalBehaviour": "OFF"
+            }
+
+            if ramp_time is not None:
+                path = API_PATHS["SET_SIMPLE_RGB_COLOR_STATE_WITH_TIME"]
+                payload["rampTime"] = ramp_time
+            else:
+                path = API_PATHS["SET_SIMPLE_RGB_COLOR_STATE"]
+
+            # Set optimistic state for immediate feedback
+            self._attr_assumed_state = True
+            self.async_write_ha_state()
+
+            await self._client.async_device_control(
                 path,
                 self._device_id,
                 self._channel_index,

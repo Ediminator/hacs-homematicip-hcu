@@ -120,13 +120,13 @@ class HcuApiClient:
         ])
 
         # Strategy 1: Find devices with HCU model types (flexible pattern matching)
-        primary_hcu_candidates = sorted([
+        # Derive from non_hap_candidates to avoid re-iterating hcu_ids
+        primary_hcu_candidates = [
             device_id
-            for device_id in hcu_ids
+            for device_id in non_hap_candidates
             if (model_type := devices.get(device_id, {}).get("modelType", ""))
             and (model_type in HCU_MODEL_TYPES or model_type.startswith("HmIP-HCU"))
-            and not model_type.startswith(hap_drap_prefixes)
-        ])
+        ]
 
         if primary_hcu_candidates:
             # Use the actual HCU as primary (deterministically select first after sorting)

@@ -137,6 +137,7 @@ API_PATHS = {
     "STOP_COVER": "/hmip/device/control/stop",
     "STOP_GROUP_COVER": "/hmip/group/switching/stop",
     "TOGGLE_GARAGE_DOOR_STATE": "/hmip/device/control/toggleGarageDoorState",
+    "SET_SIMPLE_RGB_COLOR_STATE_WITH_TIME": "/hmip/device/control/setSimpleRGBColorDimLevelWithTime", # ADDED
 }
 
 # --- Device Identification Constants ---

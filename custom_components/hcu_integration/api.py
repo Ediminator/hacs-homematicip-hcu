@@ -556,6 +556,21 @@ class HcuApiClient:
         """Generic method to send a control command at the home level."""
         await self._send_hmip_request(path, body or {})
 
+    def _get_api_path_with_ramp_time(self, base_path_key: str, with_time_path_key: str, ramp_time: float | None) -> str:
+        """Helper to select API path based on ramp_time parameter.
+
+        Args:
+            base_path_key: The base API path key (e.g., "SET_DIM_LEVEL")
+            with_time_path_key: The API path key with time support (e.g., "SET_DIM_LEVEL_WITH_TIME")
+            ramp_time: Optional ramp time parameter
+
+        Returns:
+            The appropriate API path from API_PATHS
+        """
+        if ramp_time is not None:
+            return API_PATHS[with_time_path_key]
+        return API_PATHS[base_path_key]
+
     # --- Specific Device Control Methods ---
     async def async_set_switch_state(self, device_id: str, channel_index: int, is_on: bool) -> None:
         """Set the state of a switch channel."""
@@ -567,26 +582,23 @@ class HcuApiClient:
 
     async def async_set_dim_level(self, device_id: str, channel_index: int, dim_level: float, ramp_time: float | None = None) -> None:
         body = {"dimLevel": dim_level}
-        api_path = API_PATHS["SET_DIM_LEVEL"]
         if ramp_time is not None:
             body["rampTime"] = ramp_time
-            api_path = API_PATHS["SET_DIM_LEVEL_WITH_TIME"]
+        api_path = self._get_api_path_with_ramp_time("SET_DIM_LEVEL", "SET_DIM_LEVEL_WITH_TIME", ramp_time)
         await self.async_device_control(api_path, device_id, channel_index, body)
 
     async def async_set_color_temperature(self, device_id: str, channel_index: int, color_temp: int, dim_level: float, ramp_time: float | None = None) -> None:
         body = {"colorTemperature": color_temp, "dimLevel": dim_level}
-        api_path = API_PATHS["SET_COLOR_TEMP"]
         if ramp_time is not None:
             body["rampTime"] = ramp_time
-            api_path = API_PATHS["SET_COLOR_TEMP_WITH_TIME"]
+        api_path = self._get_api_path_with_ramp_time("SET_COLOR_TEMP", "SET_COLOR_TEMP_WITH_TIME", ramp_time)
         await self.async_device_control(api_path, device_id, channel_index, body)
 
     async def async_set_hue_saturation(self, device_id: str, channel_index: int, hue: int, saturation: float, dim_level: float, ramp_time: float | None = None) -> None:
         body = {"hue": hue, "saturationLevel": saturation, "dimLevel": dim_level}
-        api_path = API_PATHS["SET_HUE"]
         if ramp_time is not None:
             body["rampTime"] = ramp_time
-            api_path = API_PATHS["SET_HUE_WITH_TIME"]
+        api_path = self._get_api_path_with_ramp_time("SET_HUE", "SET_HUE_WITH_TIME", ramp_time)
         await self.async_device_control(api_path, device_id, channel_index, body)
 
     async def async_set_shutter_level(self, device_id: str, channel_index: int, shutter_level: float) -> None:

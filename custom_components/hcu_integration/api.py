@@ -160,9 +160,11 @@ class HcuApiClient:
             # Strategy 3: Last resort - pick any access point, preferring non-HAP
             if non_hap_candidates:
                 self._primary_hcu_device_id = non_hap_candidates[0]
+                _LOGGER.debug("Selected primary HCU from available access points: %s", self._primary_hcu_device_id)
             else:
+                # All devices are HAP/DRAP, fall back to first available
                 self._primary_hcu_device_id = sorted_hcu_ids[0]
-            _LOGGER.debug("Selected primary HCU from available access points: %s", self._primary_hcu_device_id)
+                _LOGGER.warning("Only HAP/DRAP devices found, using first available device as primary: %s", self._primary_hcu_device_id)
         else:
             self._primary_hcu_device_id = None
 

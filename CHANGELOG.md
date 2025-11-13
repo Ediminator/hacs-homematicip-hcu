@@ -4,6 +4,102 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 
 ---
 
+## Version 1.15.15 - 2025-11-13
+
+### 🐛 Bug Fix
+
+**Fix Home-Level Entities Being Assigned to HAP Instead of HCU - Issue #120**
+
+Fixed a bug where home-level entities (duty cycle, radio traffic, alarm, vacation mode) were being incorrectly assigned to HAP (Home Assistant Proxy) devices instead of the actual HCU in multi-access-point setups.
+
+#### Root Cause
+
+The primary HCU selection logic in `api.py` had several issues:
+
+1. **Incomplete Model Type List**: The `HCU_MODEL_TYPES` constant only included "HmIP-HCU-1" and "HmIP-HCU1-A", missing other HCU variants
+2. **No HAP Exclusion**: HAP/DRAP devices weren't explicitly excluded from selection
+3. **Strict Matching**: Only exact model type matches were accepted, not flexible pattern matching
+4. **Fallback Issue**: When no exact match was found, the code fell back to `home.accessPointId`, which often points to a HAP device in multi-access-point configurations
+
+This caused the integration to incorrectly assign home-level entities to the HAP device instead of the main HCU.
+
+#### The Fix
+
+Implemented a robust 3-tier primary HCU selection strategy in `api.py:_update_hcu_device_ids()`:
+
+**Code Improvements**
+- Removed dependency on incomplete `HCU_MODEL_TYPES` constant
+- Defined `HAP_DRAP_PREFIXES` as module-level constant following PEP 8 conventions
+- Updated both initial HCU collection and primary selection to use flexible pattern matching with `startswith("HmIP-HCU")`
+- This ensures consistent matching logic throughout the entire method
+
+**Strategy 1: Flexible HCU Pattern Matching**
+- Match any device with `modelType` starting with `"HmIP-HCU"`
+- This covers all known models ("HmIP-HCU-1", "HmIP-HCU1-A") and future variants
+- Explicitly exclude `"HmIP-HAP"` and `"HmIP-DRAP"` prefixes using module-level constant
+
+```python
+# Module-level constant
+HAP_DRAP_PREFIXES = ("HmIP-HAP", "HmIP-DRAP")
+
+# Initial HCU collection using flexible pattern matching
+hcu_ids = {
+    device_id
+    for device_id, device_data in self.state.get("devices", {}).items()
+    if device_data.get("modelType", "").startswith("HmIP-HCU")
+}
+
+# Single-pass candidate selection
+sorted_hcu_ids = sorted(hcu_ids)
+primary_hcu_candidates = []
+non_hap_candidates = []
+
+for device_id in sorted_hcu_ids:
+    model_type = devices.get(device_id, {}).get("modelType", "")
+
+    if model_type.startswith(HAP_DRAP_PREFIXES):
+        continue
+
+    non_hap_candidates.append(device_id)
+
+    if model_type.startswith("HmIP-HCU"):
+        primary_hcu_candidates.append(device_id)
+```
+
+**Strategy 2: Validated accessPointId**
+- Use `home.accessPointId` if it's NOT a HAP/DRAP model
+- If `accessPointId` IS a HAP/DRAP, search for non-HAP alternatives
+- Log warning when HAP/DRAP is detected and alternative is selected
+
+**Strategy 3: Fallback with HAP Avoidance**
+- Prefer any non-HAP/DRAP device from available access points
+- Only use HAP/DRAP if absolutely no other options exist
+
+#### Enhanced Logging
+
+Added detailed logging to help diagnose device assignment:
+- Debug logs show which selection strategy was used
+- Warning logs alert when `home.accessPointId` points to HAP/DRAP
+- Helps users understand device association in multi-AP setups
+
+#### Impact
+
+- ✅ Home-level entities now correctly link to HCU device, not HAP
+- ✅ Works with any `HmIP-HCU-*` model variant (future-proof)
+- ✅ Handles edge cases in multi-access-point setups
+- ✅ Better diagnostics via enhanced logging
+- ✅ Explicit HAP/DRAP exclusion prevents misassignment
+
+**Reported by:** @holsteiner-kiel in Issue #120
+**Affects:** Versions 1.15.14 and earlier with multi-access-point setups
+**Fixed in:** Version 1.15.15
+
+#### Files Changed
+
+- `custom_components/hcu_integration/api.py` - Enhanced `_update_hcu_device_ids()` with 3-tier selection and HAP exclusion
+
+---
+
 ## Version 1.15.14 - 2025-11-12
 
 ### 🐛 Critical Bug Fix

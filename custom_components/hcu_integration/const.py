@@ -730,6 +730,7 @@ HMIP_RGB_COLOR_MAP = {
     HMIP_COLOR_RED: (0, 100),        # Red
     HMIP_COLOR_PURPLE: (300, 100),   # Purple/Magenta
     HMIP_COLOR_YELLOW: (60, 100),    # Yellow
+    HMIP_COLOR_ORANGE: (30, 100),    # Orange
     HMIP_COLOR_WHITE: (0, 0),        # White (will be handled separately with brightness)
 }
 

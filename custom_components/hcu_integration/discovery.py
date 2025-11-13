@@ -165,6 +165,12 @@ async def async_discover_entities(
                 if feature in processed_features or feature not in channel_data:
                     continue
 
+                # Skip dutyCycle here - it has special handling:
+                # - Device-level boolean values are handled separately below (lines 207-218)
+                # - Home-level percentage values are handled in home entity creation (lines 257-261)
+                if feature == "dutyCycle":
+                    continue
+
                 # Skip features with null values to prevent broken sensors
                 if channel_data[feature] is None:
                     _LOGGER.debug(

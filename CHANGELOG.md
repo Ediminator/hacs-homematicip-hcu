@@ -108,9 +108,24 @@ if mapping.get("class") == "HcuHomeSensor":
 
 This prevents crashes for `dutyCycle`, `carrierSense`, and any future home-level sensors, making the discovery logic more robust.
 
+**Fix HAP/DRAP Entities Being Linked to HCU Device**
+
+Fixed an issue where entities from HAP (Home Assistant Proxy) and DRAP devices were incorrectly being linked to the main HCU device instead of appearing on their respective access point devices.
+
+The root cause was that `hcu_part_device_ids` included all access point devices (HCU, HAP, DRAP). When the entity's `device_info` property checked if the device was "part of the HCU hardware complex", it would link HAP/DRAP entities to the HCU.
+
+HAP and DRAP are separate physical devices, not parts of the HCU hardware. The fix excludes HAP/DRAP devices from `hcu_part_device_ids`:
+
+```python
+# Only include non-HAP/DRAP devices as part of HCU hardware complex
+self._hcu_device_ids = set(non_hap_candidates)
+```
+
+Now HAP and DRAP devices appear as separate devices in Home Assistant with their own entities (like `dutyCycleLevel` sensors), while only the actual HCU device has home-level entities linked to it.
+
 #### Files Changed
 
-- `custom_components/hcu_integration/api.py` - Enhanced `_update_hcu_device_ids()` with 3-tier selection and HAP exclusion
+- `custom_components/hcu_integration/api.py` - Enhanced `_update_hcu_device_ids()` with 3-tier selection and HAP exclusion, exclude HAP/DRAP from hardware complex
 - `custom_components/hcu_integration/discovery.py` - Skip home-level sensors in device-channel entity loop
 
 ---

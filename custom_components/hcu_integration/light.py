@@ -1,3 +1,4 @@
+# custom_components/hcu_integration/light.py
 """Support for Homematic IP light entities."""
 
 from __future__ import annotations
@@ -123,6 +124,12 @@ class HcuLight(HcuBaseEntity, LightEntity):
     @property
     def is_on(self) -> bool:
         """Return True if the light is on."""
+        # For BSL-like devices, opticalSignalBehaviour being OFF means the light is off,
+        # regardless of dimLevel.
+        if self._supports_optical_signal:
+            if self._channel.get("opticalSignalBehaviour") == "OFF":
+                return False
+
         dim_level = self._channel.get("dimLevel")
         if dim_level is not None:
             return dim_level > 0.0
@@ -171,7 +178,7 @@ class HcuLight(HcuBaseEntity, LightEntity):
         if sat < 20:
             return HMIP_COLOR_WHITE
 
-        # Map hue ranges to 8 colors: WHITE, RED, ORANGE, YELLOW, GREEN, TURQUOISE, BLUE, PURPLE
+        # Map hue ranges to 8 colors: RED, ORANGE, YELLOW, GREEN, TURQUOISE, BLUE, PURPLE
         if hue < 15 or hue >= 345:
             return HMIP_COLOR_RED
         elif 15 <= hue < 45:
@@ -189,70 +196,77 @@ class HcuLight(HcuBaseEntity, LightEntity):
 
     async def async_turn_on(self, **kwargs) -> None:
         """Turn the light on with optional color, temperature, brightness, or effect adjustments."""
-        dim_level = kwargs.get(ATTR_BRIGHTNESS, self.brightness or 255) / 255.0
+        # Default to current brightness if the light is on, otherwise 100%.
+        current_brightness = self.brightness if self.is_on else None
+        target_brightness = kwargs.get(ATTR_BRIGHTNESS, current_brightness or 255)
+        dim_level = target_brightness / 255.0
+
         ramp_time = kwargs.get(ATTR_TRANSITION)
-        effect = kwargs.get(ATTR_EFFECT)
 
-        # Handle color mode specific commands
-        if ATTR_HS_COLOR in kwargs and ColorMode.HS in self.supported_color_modes:
-            hs_color = kwargs[ATTR_HS_COLOR]
+        # Handle Simple RGB devices (e.g., HmIP-BSL)
+        if self._has_simple_rgb and self._supports_optical_signal:
+            # 1. Determine Color
+            rgb_color = self._channel.get("simpleRGBColorState")
+            if ATTR_HS_COLOR in kwargs:
+                rgb_color = self._hs_to_simple_rgb(kwargs[ATTR_HS_COLOR])
+            
+            # Fallback for color if missing or black (default to white)
+            if not rgb_color or rgb_color == HMIP_COLOR_BLACK:
+                rgb_color = HMIP_COLOR_WHITE
 
-            # For devices with simpleRGBColorState (e.g., BSL backlight)
-            if self._has_simple_rgb:
-                rgb_color = self._hs_to_simple_rgb(hs_color)
-
-                # Build payload with color only (dimLevel must be sent separately)
-                payload = {"simpleRGBColorState": rgb_color}
-
-                # Add optical signal behavior if effect is specified
-                if effect and self._supports_optical_signal:
-                    payload["opticalSignalBehaviour"] = effect
-
-                # Send color/effect command
-                await self._client.async_device_control(
-                    API_PATHS["SET_SIMPLE_RGB_COLOR_STATE"],
-                    self._device_id,
-                    self._channel_index,
-                    payload
-                )
-
-                # Always send dimLevel command to ensure light is on
-                # (dim_level is already calculated from kwargs or current brightness)
-                await self._client.async_set_dim_level(
-                    self._device_id, self._channel_index, dim_level, ramp_time
-                )
+            # 2. Determine Optical Signal Behavior (The "ON" switch for BSL LEDs)
+            optical_signal = None
+            if ATTR_EFFECT in kwargs:
+                optical_signal = kwargs[ATTR_EFFECT]
             else:
-                # For devices with hue/saturation (e.g., RGBW lights)
-                hue = int(hs_color[0])
-                saturation = hs_color[1] / 100.0
-                await self._client.async_set_hue_saturation(
-                    self._device_id, self._channel_index, hue, saturation, dim_level, ramp_time
-                )
+                # Ensure the light is turned ON. Default to "ON" or preserve existing active effect.
+                current_signal = self._channel.get("opticalSignalBehaviour")
+                if current_signal == "OFF" or current_signal is None:
+                    optical_signal = "ON"
+                else:
+                    optical_signal = current_signal
+
+            # 3. Build Payload for consolidated call
+            payload = {
+                "simpleRGBColorState": rgb_color,
+                "dimLevel": dim_level
+            }
+            if optical_signal:
+                payload["opticalSignalBehaviour"] = optical_signal
+
+            # 4. Determine Path (With or Without Time)
+            if ramp_time is not None:
+                path = API_PATHS["SET_SIMPLE_RGB_COLOR_STATE_WITH_TIME"]
+                payload["rampTime"] = ramp_time
+            else:
+                path = API_PATHS["SET_SIMPLE_RGB_COLOR_STATE"]
+
+            # Set optimistic state for immediate feedback
+            self._attr_assumed_state = True
+            self.async_write_ha_state()
+
+            await self._client.async_device_control(
+                path,
+                self._device_id,
+                self._channel_index,
+                payload
+            )
+            return
+
+        # Handle Standard RGB/Dimmer Devices
+        if ATTR_HS_COLOR in kwargs and ColorMode.HS in self.supported_color_modes:
+            hue = int(kwargs[ATTR_HS_COLOR][0])
+            saturation = kwargs[ATTR_HS_COLOR][1] / 100.0
+            await self._client.async_set_hue_saturation(
+                self._device_id, self._channel_index, hue, saturation, dim_level, ramp_time
+            )
         elif ATTR_COLOR_TEMP_KELVIN in kwargs and ColorMode.COLOR_TEMP in self.supported_color_modes:
             color_temp = kwargs[ATTR_COLOR_TEMP_KELVIN]
             await self._client.async_set_color_temperature(
                 self._device_id, self._channel_index, color_temp, dim_level, ramp_time
             )
-        elif effect and self._supports_optical_signal and self._has_simple_rgb:
-            # Effect-only change (no color change) for simpleRGBColorState devices
-            current_color = self._channel.get("simpleRGBColorState", HMIP_COLOR_WHITE)
-            payload = {
-                "simpleRGBColorState": current_color,
-                "opticalSignalBehaviour": effect
-            }
-            await self._client.async_device_control(
-                API_PATHS["SET_SIMPLE_RGB_COLOR_STATE"],
-                self._device_id,
-                self._channel_index,
-                payload
-            )
-
-            # Always send dimLevel command to ensure light is on
-            # (dim_level is already calculated from kwargs or current brightness)
-            await self._client.async_set_dim_level(
-                self._device_id, self._channel_index, dim_level, ramp_time
-            )
         else:
+            # Simple Dimmer or Switch
             await self._client.async_set_dim_level(
                 self._device_id, self._channel_index, dim_level, ramp_time
             )
@@ -260,7 +274,34 @@ class HcuLight(HcuBaseEntity, LightEntity):
     async def async_turn_off(self, **kwargs) -> None:
         """Turn the light off."""
         ramp_time = kwargs.get(ATTR_TRANSITION)
-        await self._client.async_set_dim_level(self._device_id, self._channel_index, 0.0, ramp_time)
+        
+        # For BSL devices, we set optical signal to OFF to ensure it goes dark
+        if self._has_simple_rgb and self._supports_optical_signal:
+            payload = {
+                # Preserve color state, set dim to 0, and set signal to OFF
+                "simpleRGBColorState": self._channel.get("simpleRGBColorState", HMIP_COLOR_BLACK),
+                "dimLevel": 0.0,
+                "opticalSignalBehaviour": "OFF"
+            }
+
+            if ramp_time is not None:
+                path = API_PATHS["SET_SIMPLE_RGB_COLOR_STATE_WITH_TIME"]
+                payload["rampTime"] = ramp_time
+            else:
+                path = API_PATHS["SET_SIMPLE_RGB_COLOR_STATE"]
+
+            # Set optimistic state for immediate feedback
+            self._attr_assumed_state = True
+            self.async_write_ha_state()
+
+            await self._client.async_device_control(
+                path,
+                self._device_id,
+                self._channel_index,
+                payload
+            )
+        else:
+            await self._client.async_set_dim_level(self._device_id, self._channel_index, 0.0, ramp_time)
 
 
 class HcuNotificationLight(HcuBaseEntity, LightEntity):

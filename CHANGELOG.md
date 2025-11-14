@@ -4,6 +4,12 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 
 ---
 
+## Unreleased
+
+### Fixes & Improvements
+
+- **Fix Siren State Detection**: Corrected an issue where the siren entity would always report its state as "off". The integration now correctly derives the siren's on/off state from its associated `ALARM_SWITCHING` group, as the `acousticAlarmActive` field is not provided by the HCU API.
+
 ## 1.15.19 - 2025-11-13
 
 ### Fixes & Improvements

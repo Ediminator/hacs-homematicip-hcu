@@ -206,7 +206,7 @@ class HcuLight(HcuBaseEntity, LightEntity):
         dim_level = target_brightness / 255.0
 
         ramp_time = kwargs.get(ATTR_TRANSITION)
-        
+
         # Handle Simple RGB devices (e.g., HmIP-BSL)
         if self._has_simple_rgb and self._supports_optical_signal:
             # 1. Determine Color

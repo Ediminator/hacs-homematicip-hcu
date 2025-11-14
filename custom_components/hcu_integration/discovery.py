@@ -31,7 +31,6 @@ from .const import (
     HMIP_FEATURE_TO_ENTITY,
     PLATFORMS,
     EVENT_CHANNEL_TYPES,
-    HMIP_CHANNEL_KEY_ACOUSTIC_ALARM_ACTIVE,
 )
 
 if TYPE_CHECKING:
@@ -126,14 +125,13 @@ async def async_discover_entities(
                         platform = getattr(entity_class, "PLATFORM")
                         init_kwargs = {"config_entry": config_entry} if base_channel_type == "DOOR_LOCK_CHANNEL" else {}
 
-                        # Log siren entity creation for debugging issue #82
+                        # Log siren entity creation for debugging
                         if class_name == "HcuSiren":
                             _LOGGER.debug(
-                                "Creating siren entity: device=%s, channel=%s, type=%s, has_acousticAlarmActive=%s",
+                                "Creating siren entity: device=%s, channel=%s, type=%s",
                                 device_data.get("id"),
                                 channel_index,
                                 channel_type,
-                                HMIP_CHANNEL_KEY_ACOUSTIC_ALARM_ACTIVE in channel_data
                             )
 
                         entities[platform].append(

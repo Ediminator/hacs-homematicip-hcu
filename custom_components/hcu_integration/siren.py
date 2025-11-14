@@ -14,7 +14,6 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from .entity import HcuBaseEntity, SwitchStateMixin
 from .api import HcuApiClient, HcuApiError
 from .const import (
-    HMIP_CHANNEL_KEY_ACOUSTIC_ALARM_ACTIVE,
     CHANNEL_TYPE_ALARM_SIREN,
 )
 
@@ -48,9 +47,6 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
 
     PLATFORM = Platform.SIREN
 
-    # Alarm sirens use 'acousticAlarmActive' instead of 'on' for state
-    _state_channel_key = HMIP_CHANNEL_KEY_ACOUSTIC_ALARM_ACTIVE
-
     _attr_supported_features = (
         SirenEntityFeature.TURN_ON
         | SirenEntityFeature.TURN_OFF
@@ -69,17 +65,18 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
         self._set_entity_name(channel_label=self._channel.get("label"))
 
         self._attr_unique_id = f"{self._device_id}_{self._channel_index}_siren"
-        self._init_switch_state()
 
         # Find the ALARM_SWITCHING group for this siren
         self._alarm_group_id = self._find_alarm_switching_group()
 
+        # Initial state sync
+        self._sync_state_from_group()
+
         # Log diagnostic information for troubleshooting
         _LOGGER.debug(
-            "HcuSiren initialized: device=%s, channel=%s, has_acousticAlarmActive=%s, channel_type=%s, alarm_group=%s",
+            "HcuSiren initialized: device=%s, channel=%s, channel_type=%s, alarm_group=%s",
             self._device_id,
             self._channel_index,
-            self._state_channel_key in self._channel,
             self._channel.get("functionalChannelType"),
             self._alarm_group_id,
         )
@@ -230,33 +227,21 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
             )
             raise HcuApiError("No ALARM_SWITCHING group found for siren")
 
-    def _sync_switch_state_from_coordinator(self) -> None:
-        """Sync switch state from coordinator data with diagnostic logging.
-
-        The parent implementation correctly defaults to False when acousticAlarmActive
-        is missing, which is the expected behavior for an inactive siren.
-        """
-        # Overridden to provide better debug context when the key is missing.
-        # The base Mixin handles the actual retrieval and defaulting.
-        if self._state_channel_key not in self._channel:
-            _LOGGER.debug(
-                "Siren %s: '%s' key not present in channel data (siren likely inactive)",
-                self._device_id,
-                self._state_channel_key,
-            )
-        super()._sync_switch_state_from_coordinator()
+    def _sync_state_from_group(self) -> None:
+        """Sync the siren's state from the ALARM_SWITCHING group."""
+        is_on = False
+        if self._alarm_group_id:
+            group_data = self._client.state.get("groups", {}).get(self._alarm_group_id)
+            if group_data:
+                is_on = group_data.get("on", False)
+        self._attr_is_on = is_on
 
     @callback
     def _handle_coordinator_update(self) -> None:
-        """Handle updated data from the coordinator.
-
-        Don't sync state from coordinator when in assumed_state mode
-        (i.e., we just triggered the siren and are waiting for the sound to complete).
-        This prevents the coordinator from incorrectly reporting the siren as 'off'
-        while it's still playing the acoustic signal.
-        """
+        """Handle updated data from the coordinator."""
+        # Sync state from the group data when an update is received
         if not self._attr_assumed_state:
-            self._sync_switch_state_from_coordinator()
+            self._sync_state_from_group()
         super()._handle_coordinator_update()
 
     async def _async_execute_with_state_management(

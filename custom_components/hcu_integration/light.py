@@ -221,10 +221,10 @@ class HcuLight(HcuBaseEntity, LightEntity):
             # 2. Determine Optical Signal Behaviour (The "ON" switch for BSL LEDs/Effects)
             optical_signal = None
             if ATTR_EFFECT in kwargs:
-                # Fix 2: Use explicit effect if requested
+                # If an effect is specified in the service call, use it directly.
                 optical_signal = kwargs[ATTR_EFFECT]
             else:
-                # Fix 1: Ensure the light is turned ON or stays in its non-OFF state
+                # If no effect is specified, turn the light on if it's off, or preserve its current non-OFF state.
                 current_signal = self._channel.get("opticalSignalBehaviour")
                 if current_signal == "OFF" or current_signal is None:
                     optical_signal = "ON"

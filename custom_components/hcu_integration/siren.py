@@ -79,7 +79,7 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
             "HcuSiren initialized: device=%s, channel=%s, has_acousticAlarmActive=%s, channel_type=%s, alarm_group=%s",
             self._device_id,
             self._channel_index,
-            self._state_channel_key in self._channel, # Still use this for accurate reporting if key is present
+            self._state_channel_key in self._channel,
             self._channel.get("functionalChannelType"),
             self._alarm_group_id,
         )

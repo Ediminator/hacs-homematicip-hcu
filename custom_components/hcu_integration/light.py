@@ -195,7 +195,7 @@ class HcuLight(HcuBaseEntity, LightEntity):
             return HMIP_COLOR_TURQUOISE
         elif 210 <= hue < 270:          # ~240 degrees (Blue)
             return HMIP_COLOR_BLUE
-        else: # 270 <= hue < 345        # ~300 degrees (Purple/Magenta)
+        else:  # 270 <= hue < 345        # ~300 degrees (Purple/Magenta)
             return HMIP_COLOR_PURPLE
 
     async def async_turn_on(self, **kwargs) -> None:

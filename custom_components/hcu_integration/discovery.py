@@ -93,7 +93,6 @@ async def async_discover_entities(
             channel_type = channel_data.get("functionalChannelType")
             base_channel_type = None
             channel_mapping = None
-            is_main_channel_entity = False # Flag to track if a primary entity (like light/switch) was created
 
             # Match channel type, including indexed variants (e.g., SWITCH_CHANNEL_1)
             if channel_type in HMIP_CHANNEL_TYPE_TO_ENTITY:
@@ -113,6 +112,12 @@ async def async_discover_entities(
                     continue
                 if is_unused_channel:
                     continue
+
+                # Note: Some channels serve multiple functions (e.g., HmIP-BSL NOTIFICATION_LIGHT_CHANNEL)
+                # - These channels create light entities for backlight control
+                # - They ALSO respond to button presses via DEVICE_CHANNEL_EVENT
+                # - Button events are handled in __init__.py via _handle_device_channel_events
+                # - See MULTI_FUNCTION_CHANNEL_DEVICES in const.py for device-specific mappings
 
                 class_name = channel_mapping["class"]
                 if module := class_module_map.get(class_name):
@@ -134,29 +139,15 @@ async def async_discover_entities(
                         entities[platform].append(
                             entity_class(coordinator, client, device_data, channel_index, **init_kwargs)
                         )
-                        is_main_channel_entity = True
                     except (AttributeError, TypeError) as e:
                         _LOGGER.error(
                             "Failed to create entity for channel %s (base: %s, class: %s): %s",
                             channel_type, base_channel_type, class_name, e
                         )
 
-            # --- Feature-based entity creation starts here ---
-            
             # Create temperature sensor (prioritize actualTemperature over valveActualTemperature)
             temp_features = {"actualTemperature", "valveActualTemperature"}
             found_temp_feature = next((f for f in temp_features if f in channel_data), None)
-            
-            # Optimization: Skip redundant check for main channel entity if it's NOT a multi-function device.
-            # However, for devices like HmIP-BSL (light + stateless button) or devices with both a primary
-            # function AND a secondary sensor (like a dimmable switch with power consumption sensor),
-            # we must proceed to the feature discovery below.
-            
-            # The only thing that strictly needs to skip the feature loop is if we intentionally mapped
-            # a channel type to 'None' (meaning no entities should be created for this primary type)
-            if channel_mapping is None and not is_main_channel_entity:
-                continue
-
             if found_temp_feature:
                 try:
                     mapping = HMIP_FEATURE_TO_ENTITY[found_temp_feature]

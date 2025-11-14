@@ -79,7 +79,7 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
             "HcuSiren initialized: device=%s, channel=%s, has_acousticAlarmActive=%s, channel_type=%s, alarm_group=%s",
             self._device_id,
             self._channel_index,
-            self._state_channel_key in self._channel,
+            self._state_channel_key in self._channel, # Still use this for accurate reporting if key is present
             self._channel.get("functionalChannelType"),
             self._alarm_group_id,
         )
@@ -236,9 +236,11 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
         The parent implementation correctly defaults to False when acousticAlarmActive
         is missing, which is the expected behavior for an inactive siren.
         """
+        # Overridden to provide better debug context when the key is missing.
+        # The base Mixin handles the actual retrieval and defaulting.
         if self._state_channel_key not in self._channel:
             _LOGGER.debug(
-                "Siren %s: '%s' field missing, defaulting to 'off'",
+                "Siren %s: '%s' key not present in channel data (siren likely inactive)",
                 self._device_id,
                 self._state_channel_key,
             )
@@ -267,6 +269,9 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
             api_call: Coroutine to execute for the API call
             action: Action name for logging ("turn on" or "turn off")
         """
+        # Store previous state for rollback on error
+        previous_state = self.is_on
+
         # Set optimistic state immediately
         self._attr_is_on = target_state
         self._attr_assumed_state = True
@@ -280,7 +285,7 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
         except (HcuApiError, ConnectionError) as err:
             # Revert state on error
             _LOGGER.error("Failed to %s siren %s: %s", action, self.name, err)
-            self._attr_is_on = not target_state
+            self._attr_is_on = previous_state
             self._attr_assumed_state = False
             self.async_write_ha_state()
             raise

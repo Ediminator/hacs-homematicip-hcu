@@ -160,13 +160,12 @@ async def async_discover_entities(
                 except (AttributeError, TypeError) as e:
                     _LOGGER.error("Failed to create temperature sensor for %s: %s", device_data.get("id"), e)
 
-            # Create feature-based entities (sensors, binary sensors, buttons)
+            # Create generic feature-based entities (sensors, binary sensors, buttons)
             for feature, mapping in HMIP_FEATURE_TO_ENTITY.items():
                 if feature in processed_features or feature not in channel_data:
                     continue
 
-# Skip HcuHomeSensor entities in this loop. They are home-level sensors
-# handled separately and expect a different constructor signature (4 args vs 6 here).
+                # Skip HcuHomeSensor entities as they are home-level sensors handled separately
                 if mapping.get("class") == "HcuHomeSensor":
                     continue
 

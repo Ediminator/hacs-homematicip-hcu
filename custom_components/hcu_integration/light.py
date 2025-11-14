@@ -171,27 +171,31 @@ class HcuLight(HcuBaseEntity, LightEntity):
         return None
 
     def _hs_to_simple_rgb(self, hs_color: tuple[float, float]) -> str:
-        """Convert HS color to the closest Homematic IP simple RGB color."""
+        """
+        Convert HA HS color (0-360, 0-100) to the closest Homematic IP simple RGB color name.
+        
+        Fixes issue #3 by correcting Hue boundaries, especially for Orange.
+        """
         hue, sat = hs_color
 
         # If saturation is very low, it's white
         if sat < 20:
             return HMIP_COLOR_WHITE
 
-        # Map hue ranges to 8 colors: RED, ORANGE, YELLOW, GREEN, TURQUOISE, BLUE, PURPLE
-        if hue < 15 or hue >= 345:
+        # Hue ranges (0-360 degrees) mapped to 8 colors: RED, ORANGE, YELLOW, GREEN, TURQUOISE, BLUE, PURPLE
+        if hue < 15 or hue >= 345:      # 0 degrees
             return HMIP_COLOR_RED
-        elif 15 <= hue < 45:
+        elif 15 <= hue < 45:            # ~30 degrees (Orange)
             return HMIP_COLOR_ORANGE
-        elif 45 <= hue < 90:
+        elif 45 <= hue < 90:            # ~60 degrees (Yellow)
             return HMIP_COLOR_YELLOW
-        elif 90 <= hue < 150:
+        elif 90 <= hue < 150:           # ~120 degrees (Green)
             return HMIP_COLOR_GREEN
-        elif 150 <= hue < 210:
+        elif 150 <= hue < 210:          # ~180 degrees (Turquoise/Cyan)
             return HMIP_COLOR_TURQUOISE
-        elif 210 <= hue < 270:
+        elif 210 <= hue < 270:          # ~240 degrees (Blue)
             return HMIP_COLOR_BLUE
-        else:  # 270 <= hue < 345
+        else: # 270 <= hue < 345        # ~300 degrees (Purple/Magenta)
             return HMIP_COLOR_PURPLE
 
     async def async_turn_on(self, **kwargs) -> None:
@@ -202,7 +206,7 @@ class HcuLight(HcuBaseEntity, LightEntity):
         dim_level = target_brightness / 255.0
 
         ramp_time = kwargs.get(ATTR_TRANSITION)
-
+        
         # Handle Simple RGB devices (e.g., HmIP-BSL)
         if self._has_simple_rgb and self._supports_optical_signal:
             # 1. Determine Color
@@ -214,16 +218,18 @@ class HcuLight(HcuBaseEntity, LightEntity):
             if not rgb_color or rgb_color == HMIP_COLOR_BLACK:
                 rgb_color = HMIP_COLOR_WHITE
 
-            # 2. Determine Optical Signal Behavior (The "ON" switch for BSL LEDs)
+            # 2. Determine Optical Signal Behaviour (The "ON" switch for BSL LEDs/Effects)
             optical_signal = None
             if ATTR_EFFECT in kwargs:
+                # Fix 2: Use explicit effect if requested
                 optical_signal = kwargs[ATTR_EFFECT]
             else:
-                # Ensure the light is turned ON. Default to "ON" or preserve existing active effect.
+                # Fix 1: Ensure the light is turned ON or stays in its non-OFF state
                 current_signal = self._channel.get("opticalSignalBehaviour")
                 if current_signal == "OFF" or current_signal is None:
                     optical_signal = "ON"
                 else:
+                    # Preserve existing non-OFF behavior (e.g., if blinking, keep blinking)
                     optical_signal = current_signal
 
             # 3. Build Payload for consolidated call
@@ -420,7 +426,6 @@ class HcuNotificationLight(HcuBaseEntity, LightEntity):
             volume=volume,
             duration=duration,
         )
-
 
 class HcuLightGroup(HcuSwitchingGroupBase, LightEntity):
     """Representation of a Homematic IP HCU light group."""

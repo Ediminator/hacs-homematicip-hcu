@@ -552,12 +552,10 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
         Returns:
             tuple: (should_fire, reason) where reason describes the detection method
         """
+        # Only fire if we have both timestamps and they differ
         if new_timestamp is not None and old_timestamp is not None:
             if new_timestamp != old_timestamp:
                 return True, "timestamp change"
-        elif new_timestamp is None:
-            # No timestamp available, but channel was in event (stateless buttons)
-            return True, "stateless channel"
 
         return False, ""
 

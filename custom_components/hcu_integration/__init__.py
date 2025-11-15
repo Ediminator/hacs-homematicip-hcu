@@ -520,13 +520,13 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
             # Define common log arguments once for both logging paths
             common_log_args = (device_id, device_model, channel_idx_str, channel_label, channel_type, event_type)
 
+            # Fire legacy event for backward compatibility
+            self._fire_button_event(device_id, channel_idx_str, event_type)
+
             # Prioritize triggering event entities for stateless buttons
             # This provides richer events (e.g., press_short vs. press_long)
             if (device_id, channel_idx_str) in self._event_entities:
                 self._trigger_event_entity(device_id, channel_idx_str, event_type)
-            else:
-                # Fallback to legacy hcu_integration_event for other button types
-                self._fire_button_event(device_id, channel_idx_str, event_type)
 
             # Check if this is a multi-function channel for enhanced logging
             multi_func_info = MULTI_FUNCTION_CHANNEL_DEVICES.get(device_type, {}).get(channel_type)
@@ -589,12 +589,14 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
                 if should_fire:
                     channel_type = channel.get("functionalChannelType")
 
-                    # Trigger event entity for doorbell/button channels, otherwise fire button event
+                    # Fire legacy event for backward compatibility
+                    self._fire_button_event(dev_id, ch_idx, "press")
+
+                    # Set log label and trigger event entity if one exists
                     if (dev_id, ch_idx) in self._event_entities:
                         self._trigger_event_entity(dev_id, ch_idx)
                         event_label = "Button entity press"
                     else:
-                        self._fire_button_event(dev_id, ch_idx, "press")
                         event_label = "Legacy button press"
 
                     _LOGGER.debug(

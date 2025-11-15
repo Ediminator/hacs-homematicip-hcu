@@ -4,11 +4,29 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 
 ---
 
-## Unreleased
+## 1.16.2 - 2025-11-15
 
 ### Fixes & Improvements
 
-- **Fix Siren State Detection**: Corrected an issue where the siren entity would always report its state as "off". The integration now correctly derives the siren's on/off state from its associated `ALARM_SWITCHING` group, as the `acousticAlarmActive` field is not provided by the HCU API.
+- **Backward Compatibility for Button Events**: Ensured that both modern, entity-based events and the legacy `hcu_integration_event` are fired for button presses. This maintains compatibility with existing user automations while introducing the new event system.
+- **Refactored Event Handling Logic**: Simplified and improved the internal logic for detecting and handling button press events, increasing code readability and maintainability.
+
+---
+
+## 1.16.0 - 2025-11-15
+
+### Features
+
+- **Added Support for New Devices**:
+  - `HmIP-WRC2`
+  - `HmIP-BRC2`
+  - `HmIP-WRC6-A`
+- **Enhanced Button Events**: Events for newly supported devices include `press_short`, `press_long`, `press_long_start`, and `press_long_stop`.
+
+### Fixes & Improvements
+
+- **Refactored Event Handling**: Migrated button-like devices to a modern, entity-based event system for more consistent and reliable event handling.
+- **Fixed Stateless Button Presses**: Corrected an issue where stateless button presses were not being correctly processed.
 
 ## 1.15.19 - 2025-11-13
 

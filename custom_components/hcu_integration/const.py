@@ -175,6 +175,20 @@ MULTI_FUNCTION_CHANNEL_DEVICES = {
 }
 
 # --- Entity Mapping Dictionaries ---
+# This mapping is used by discovery.py to create Event entities
+HMIP_DEVICE_HAS_EVENT = {
+    "HmIP-WRC2": {"channels": [1, 2]},
+    "HmIP-BRC2": {"channels": [1, 2, 3, 4]},
+    "HmIP-WRC6-A": {"channels": [1, 2, 3, 4, 5, 6]},
+}
+
+# Devices that require a generic button event entity
+GENERIC_BUTTON_DEVICES = {
+    "HmIP-WRC2": {"channels": [1, 2]},
+    "HmIP-BRC2": {"channels": [1, 2, 3, 4]},
+    "HmIP-WRC6-A": {"channels": [1, 2, 3, 4, 5, 6]},
+}
+
 HMIP_DEVICE_TYPE_TO_DEVICE_CLASS = {
     "BLIND_ACTUATOR": CoverDeviceClass.BLIND,
     "BLIND_MODULE": CoverDeviceClass.BLIND,  # HmIP-HDM1 HunterDouglas

@@ -69,6 +69,7 @@ async def async_discover_entities(
         "HcuCover": cover,
         "HcuGarageDoorCover": cover,
         "HcuDoorbellEvent": event,
+        "HcuButtonEvent": event,
         "HcuLock": lock,
         "HcuResetEnergyButton": button,
         "HcuDoorOpenerButton": button,
@@ -106,8 +107,12 @@ async def async_discover_entities(
 
             # Create channel-based entities (lights, switches, covers, locks, event)
             if channel_mapping:
-                # Skip EVENT_CHANNEL_TYPES except doorbell (which creates event entities)
-                if base_channel_type in EVENT_CHANNEL_TYPES and base_channel_type != CHANNEL_TYPE_MULTI_MODE_INPUT_TRANSMITTER:
+                class_name = channel_mapping["class"]
+                # Skip EVENT_CHANNEL_TYPES, allowing only specific event entity classes
+                if base_channel_type in EVENT_CHANNEL_TYPES and class_name not in (
+                    "HcuDoorbellEvent",
+                    "HcuButtonEvent",
+                ):
                     continue
                 if is_unused_channel:
                     continue
@@ -117,8 +122,6 @@ async def async_discover_entities(
                 # - They ALSO respond to button presses via DEVICE_CHANNEL_EVENT
                 # - Button events are handled in __init__.py via _handle_device_channel_events
                 # - See MULTI_FUNCTION_CHANNEL_DEVICES in const.py for device-specific mappings
-
-                class_name = channel_mapping["class"]
                 if module := class_module_map.get(class_name):
                     try:
                         entity_class = getattr(module, class_name)

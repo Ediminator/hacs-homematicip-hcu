@@ -2,5 +2,7 @@
   "name": "Homematic IP Local (HCU)",
   "content_in_root": false,
   "render_readme": true,
-  "country": "DE"
+  "country": "DE",
+  "zip_release": true,
+  "filename": "hcu_integration.zip"
 }

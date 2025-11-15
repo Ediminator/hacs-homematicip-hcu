@@ -439,7 +439,7 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
             },
         )
 
-    def _trigger_event_entity(self, device_id: str, channel_idx: str) -> None:
+    def _trigger_event_entity(self, device_id: str, channel_idx: str, event_type: str | None = None) -> None:
         """Trigger an event entity for a specific device/channel.
 
         Uses the TriggerableEvent protocol to support any event entity type
@@ -471,7 +471,11 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
                 )
                 return
 
-        entity.handle_trigger()
+        if event_type and isinstance(entity, event.HcuButtonEvent):
+            entity.handle_trigger(event_type)
+        else:
+            entity.handle_trigger()
+
         _LOGGER.debug(
             "Triggered event entity for device=%s, channel=%s",
             device_id, channel_idx
@@ -513,11 +517,16 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
             channel_type = channel.get("functionalChannelType", "Unknown")
             channel_label = channel.get("label", f"Channel {channel_idx_str}")
 
-            # Fire button event first (maintain consistent operation order)
-            self._fire_button_event(device_id, channel_idx_str, event_type)
-
             # Define common log arguments once for both logging paths
             common_log_args = (device_id, device_model, channel_idx_str, channel_label, channel_type, event_type)
+
+            # Prioritize triggering event entities for stateless buttons
+            # This provides richer events (e.g., press_short vs. press_long)
+            if (device_id, channel_idx_str) in self._event_entities:
+                self._trigger_event_entity(device_id, channel_idx_str, event_type)
+            else:
+                # Fallback to legacy hcu_integration_event for other button types
+                self._fire_button_event(device_id, channel_idx_str, event_type)
 
             # Check if this is a multi-function channel for enhanced logging
             multi_func_info = MULTI_FUNCTION_CHANNEL_DEVICES.get(device_type, {}).get(channel_type)
@@ -580,13 +589,13 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
                 if should_fire:
                     channel_type = channel.get("functionalChannelType")
 
-                    # Trigger event entity for doorbell channels, otherwise fire button event
-                    if channel_type == CHANNEL_TYPE_MULTI_MODE_INPUT_TRANSMITTER:
+                    # Trigger event entity for doorbell/button channels, otherwise fire button event
+                    if (dev_id, ch_idx) in self._event_entities:
                         self._trigger_event_entity(dev_id, ch_idx)
-                        event_label = "Doorbell press"
+                        event_label = "Button entity press"
                     else:
                         self._fire_button_event(dev_id, ch_idx, "press")
-                        event_label = "Button press"
+                        event_label = "Legacy button press"
 
                     _LOGGER.debug(
                         "%s detected via %s: device=%s, channel=%s",

@@ -592,7 +592,7 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
                     # Fire legacy event for backward compatibility
                     self._fire_button_event(dev_id, ch_idx, "press")
 
-                    # Trigger event entity for doorbell/button channels, otherwise fire button event
+                    # Trigger event entity if one exists, and set the appropriate log label
                     if (dev_id, ch_idx) in self._event_entities:
                         self._trigger_event_entity(dev_id, ch_idx)
                         event_label = "Button entity press"

@@ -4,7 +4,7 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 
 ---
 
-## 1.17.0 - 2024-11-15
+## 1.16.2 - 2025-11-15
 
 ### Fixes & Improvements
 
@@ -13,7 +13,7 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 
 ---
 
-## 1.16.0 - 2024-11-15
+## 1.16.0 - 2025-11-15
 
 ### Features
 

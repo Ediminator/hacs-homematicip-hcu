@@ -99,8 +99,7 @@ class HcuButtonEvent(HcuBaseEntity, EventEntity):
         # Use a generic "press" for timestamp-based events
         # and specific types for stateless events.
         trigger_type = event_type or "press"
-        if trigger_type in self._attr_event_types:
-            self._trigger_event(trigger_type)
-        else:
+        if trigger_type not in self._attr_event_types:
             # Fallback for unexpected event types
-            self._trigger_event("press")
+            trigger_type = "press"
+        self._trigger_event(trigger_type)

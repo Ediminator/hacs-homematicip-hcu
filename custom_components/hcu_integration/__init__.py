@@ -471,7 +471,7 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
                 )
                 return
 
-        if event_type:
+        if event_type and isinstance(entity, event.HcuButtonEvent):
             entity.handle_trigger(event_type)
         else:
             entity.handle_trigger()

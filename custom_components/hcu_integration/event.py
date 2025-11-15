@@ -80,7 +80,7 @@ class HcuButtonEvent(HcuBaseEntity, EventEntity):
     PLATFORM = Platform.EVENT
 
     _attr_device_class = EventDeviceClass.BUTTON
-    _attr_event_types = ["press", "press_short", "press_long"]
+    _attr_event_types = ["press", "press_short", "press_long", "press_long_start", "press_long_stop"]
 
     def __init__(
         self,
@@ -98,7 +98,8 @@ class HcuButtonEvent(HcuBaseEntity, EventEntity):
         """Handle an event trigger from the coordinator."""
         # Use a generic "press" for timestamp-based events (where event_type is None)
         # and as a fallback for unexpected event types.
-        if event_type in self._attr_event_types:
-            self._trigger_event(event_type)
+        normalized_event = event_type.lower().replace("key_", "") if event_type else "press"
+        if normalized_event in self._attr_event_types:
+            self._trigger_event(normalized_event)
         else:
             self._trigger_event("press")

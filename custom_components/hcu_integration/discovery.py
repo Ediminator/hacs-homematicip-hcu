@@ -69,6 +69,7 @@ async def async_discover_entities(
         "HcuCover": cover,
         "HcuGarageDoorCover": cover,
         "HcuDoorbellEvent": event,
+        "HcuButtonEvent": event,
         "HcuLock": lock,
         "HcuResetEnergyButton": button,
         "HcuDoorOpenerButton": button,

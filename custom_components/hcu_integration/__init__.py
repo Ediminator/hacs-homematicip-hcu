@@ -589,13 +589,13 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
                 if should_fire:
                     channel_type = channel.get("functionalChannelType")
 
-                    # Trigger event entity for doorbell channels, otherwise fire button event
-                    if channel_type == CHANNEL_TYPE_MULTI_MODE_INPUT_TRANSMITTER:
+                    # Trigger event entity for doorbell/button channels, otherwise fire button event
+                    if (dev_id, ch_idx) in self._event_entities:
                         self._trigger_event_entity(dev_id, ch_idx)
-                        event_label = "Doorbell press"
+                        event_label = "Button entity press"
                     else:
                         self._fire_button_event(dev_id, ch_idx, "press")
-                        event_label = "Button press"
+                        event_label = "Legacy button press"
 
                     _LOGGER.debug(
                         "%s detected via %s: device=%s, channel=%s",

@@ -96,10 +96,9 @@ class HcuButtonEvent(HcuBaseEntity, EventEntity):
     @callback
     def handle_trigger(self, event_type: str | None = None) -> None:
         """Handle an event trigger from the coordinator."""
-        # Use a generic "press" for timestamp-based events
-        # and specific types for stateless events.
-        trigger_type = event_type or "press"
-        if trigger_type not in self._attr_event_types:
-            # Fallback for unexpected event types
-            trigger_type = "press"
-        self._trigger_event(trigger_type)
+        # Use a generic "press" for timestamp-based events (where event_type is None)
+        # and as a fallback for unexpected event types.
+        if event_type in self._attr_event_types:
+            self._trigger_event(event_type)
+        else:
+            self._trigger_event("press")

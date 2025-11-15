@@ -4,7 +4,16 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 
 ---
 
-## 1.16.0 - 2025-11-15
+## 1.17.0 - 2024-11-15
+
+### Fixes & Improvements
+
+- **Backward Compatibility for Button Events**: Ensured that both modern, entity-based events and the legacy `hcu_integration_event` are fired for button presses. This maintains compatibility with existing user automations while introducing the new event system.
+- **Refactored Event Handling Logic**: Simplified and improved the internal logic for detecting and handling button press events, increasing code readability and maintainability.
+
+---
+
+## 1.16.0 - 2024-11-15
 
 ### Features
 

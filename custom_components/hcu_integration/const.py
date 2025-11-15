@@ -203,27 +203,26 @@ HMIP_DEVICE_TYPE_TO_DEVICE_CLASS = {
     "ENERGY_SENSING_INTERFACE": None,
     "ENERGY_SENSORS_INTERFACE": None,
     "MAINS_FAILURE_SENSOR": None,
-    "BRAND_REMOTE_CONTROL_2": None,
+    "OPEN_COLLECTOR_MODULE_8": SwitchDeviceClass.SWITCH,
+    "PLUGABLE_DIMMER": None,
+    "PLUGABLE_SWITCH": SwitchDeviceClass.OUTLET,
+    "PLUGABLE_SWITCH_MEASURING": SwitchDeviceClass.OUTLET,
+    "PRESENCE_DETECTOR_INDOOR": None,
     "PUSH_BUTTON_2": None,
-    "DOOR_LOCK_DRIVE": None,
-    "TEMPERATURE_HUMIDITY_SENSOR_OUTDOOR": None,
-    "TILT_VIBRATION_SENSOR": None,
-    "GLASS_WALL_THERMOSTAT_CARBON": None,
+    "RADIATOR_THERMOSTAT": None,
+    "SHUTTER_ACTUATOR": CoverDeviceClass.SHUTTER,
+    "SHUTTER_CONTACT": None,
+    "SHUTTER_CONTACT_INVISIBLE": None,
+    "SHUTTER_CONTACT_MAGNETIC": None,
     "SOIL_MOUNTURE_SENSOR_INTERFACE": None,
     "FLUSH_MOUNT_CONTACT_INTERFACE_1": None,
-    "SHUTTER_CONTACT_MAGNETIC": None,
+    "TEMPERATURE_HUMIDITY_SENSOR_OUTDOOR": None,
+    "TILT_VIBRATION_SENSOR": None,
+    "WALL_MOUNTED_GLASS_SWITCH": SwitchDeviceClass.SWITCH,
     "WALL_MOUNTED_GLASS_SWITCH_2": None,
-    "RADIATOR_THERMOSTAT": None,
-    "SHUTTER_CONTACT": None,
-    "BRAND_WALL_THERMOSTAT": None,
-    "FLOOR_TERMINAL_BLOCK_MOTOR": None,
-    "PRESENCE_DETECTOR_INDOOR": None,
-    "ALARM_SIREN_INDOOR": None,
-    "LIGHT_SENSOR_OUTDOOR": None,
-    "PLUGABLE_DIMMER": None,
-    "FLUSH_MOUNT_SWITCH_1": SwitchDeviceClass.SWITCH,
-    "COMBINATION_SIGNALLING_DEVICE": None,
-    "SHUTTER_CONTACT_INVISIBLE": None,
+    "WIRED_DIN_RAIL_BLIND_4": CoverDeviceClass.BLIND,
+    "WIRED_DIN_RAIL_DIMMER_3": None,
+    "WIRED_DIN_RAIL_SWITCH_8": SwitchDeviceClass.SWITCH,
 }
 
 HMIP_FEATURE_TO_ENTITY = {
@@ -646,16 +645,16 @@ DUTY_CYCLE_BINARY_SENSOR_MAPPING = {
 }
 
 EVENT_CHANNEL_TYPES = {
-    "WALL_MOUNTED_TRANSMITTER_CHANNEL",
-    "KEY_REMOTE_CONTROL_CHANNEL",
-    "SWITCH_INPUT_CHANNEL",
-    "SINGLE_KEY_CHANNEL",
-    "MULTI_MODE_INPUT_CHANNEL",
+    "BRAND_REMOTE_CONTROL",
+    "BRAND_WALL_MOUNTED_TRANSMITTER",
     CHANNEL_TYPE_MULTI_MODE_INPUT_TRANSMITTER,
-    "KEY_CHANNEL",  # For remote controls and wall-mounted transmitters
-    # Note: HmIP-BSL uses NOTIFICATION_LIGHT_CHANNEL for button inputs (channels 2-3)
-    # These are multi-function channels that serve as BOTH button inputs AND backlight LEDs
-    # Button events are handled via DEVICE_CHANNEL_EVENT, not timestamp-based detection
+    "KEY_CHANNEL",
+    "KEY_REMOTE_CONTROL_CHANNEL",
+    "MULTI_MODE_INPUT_CHANNEL",
+    "REMOTE_CONTROL_TRANSMITTER",
+    "SINGLE_KEY_CHANNEL",
+    "SWITCH_INPUT_CHANNEL",
+    "WALL_MOUNTED_TRANSMITTER_CHANNEL",
 }
 
 DEVICE_CHANNEL_EVENT_TYPES = frozenset({
@@ -711,6 +710,12 @@ HMIP_CHANNEL_TYPE_TO_ENTITY = {
     "WALL_MOUNTED_THERMOSTAT_CARBON_CHANNEL": None,
     "WALL_MOUNTED_THERMOSTAT_CHANNEL": None,
 }
+
+# Dynamically add button event channels
+for channel_type in EVENT_CHANNEL_TYPES:
+    # Do not overwrite existing specific mappings like for doorbell
+    if channel_type not in HMIP_CHANNEL_TYPE_TO_ENTITY:
+        HMIP_CHANNEL_TYPE_TO_ENTITY[channel_type] = {"class": "HcuButtonEvent"}
 
 # --- Simple RGB Color State Constants ---
 # Color values for simpleRGBColorState (HmIP-BSL, HmIP-MP3P, etc.)

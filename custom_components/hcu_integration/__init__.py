@@ -592,12 +592,11 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
                     # Fire legacy event for backward compatibility
                     self._fire_button_event(dev_id, ch_idx, "press")
 
-                    # Trigger event entity if one exists, and set the appropriate log label
+                    # Set log label and trigger event entity if one exists
+                    event_label = "Legacy button press"
                     if (dev_id, ch_idx) in self._event_entities:
                         self._trigger_event_entity(dev_id, ch_idx)
                         event_label = "Button entity press"
-                    else:
-                        event_label = "Legacy button press"
 
                     _LOGGER.debug(
                         "%s detected via %s: device=%s, channel=%s",

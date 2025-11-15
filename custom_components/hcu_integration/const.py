@@ -693,15 +693,6 @@ HMIP_CHANNEL_TYPE_TO_ENTITY = {
     "DOOR_CHANNEL": {"class": "HcuGarageDoorCover"},
     "DOOR_SWITCH_CHANNEL": {"class": "HcuDoorOpenerButton"},
     "DOOR_LOCK_CHANNEL": {"class": "HcuLock"},
-    "WALL_MOUNTED_TRANSMITTER_CHANNEL": {"class": "HcuButtonEvent"},
-    "KEY_REMOTE_CONTROL_CHANNEL": {"class": "HcuButtonEvent"},
-    "BRAND_WALL_MOUNTED_TRANSMITTER": {"class": "HcuButtonEvent"},
-    "BRAND_REMOTE_CONTROL": {"class": "HcuButtonEvent"},
-    "REMOTE_CONTROL_TRANSMITTER": {"class": "HcuButtonEvent"},
-    "SINGLE_KEY_CHANNEL": {"class": "HcuButtonEvent"},
-    "KEY_CHANNEL": {"class": "HcuButtonEvent"},
-    "MULTI_MODE_INPUT_CHANNEL": {"class": "HcuButtonEvent"},
-    "SWITCH_INPUT_CHANNEL": {"class": "HcuButtonEvent"},
     "ACCELERATION_SENSOR_CHANNEL": None,
     "CLIMATE_CONTROL_CHANNEL": None,
     "CLIMATE_CONTROL_INPUT_CHANNEL": None,
@@ -719,6 +710,12 @@ HMIP_CHANNEL_TYPE_TO_ENTITY = {
     "WALL_MOUNTED_THERMOSTAT_CARBON_CHANNEL": None,
     "WALL_MOUNTED_THERMOSTAT_CHANNEL": None,
 }
+
+# Dynamically add button event channels
+for channel_type in EVENT_CHANNEL_TYPES:
+    # Do not overwrite existing specific mappings like for doorbell
+    if channel_type not in HMIP_CHANNEL_TYPE_TO_ENTITY:
+        HMIP_CHANNEL_TYPE_TO_ENTITY[channel_type] = {"class": "HcuButtonEvent"}
 
 # --- Simple RGB Color State Constants ---
 # Color values for simpleRGBColorState (HmIP-BSL, HmIP-MP3P, etc.)

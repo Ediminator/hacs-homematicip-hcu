@@ -34,7 +34,6 @@ from .const import (
     HMIP_COLOR_YELLOW,
     HMIP_COLOR_PURPLE,
     HMIP_COLOR_TURQUOISE,
-    HMIP_COLOR_ORANGE,
     HMIP_OPTICAL_SIGNAL_BEHAVIOURS,
 )
 
@@ -53,7 +52,7 @@ def _convert_hs_to_simple_rgb(hs_color: tuple[float, float]) -> str:
     Maps to the 8 colors officially supported by the HCU API:
     BLACK, BLUE, GREEN, TURQUOISE, RED, PURPLE, YELLOW, WHITE
 
-    Note: ORANGE is NOT supported despite being defined as a constant.
+    Note: ORANGE is NOT supported by the HCU API despite appearing in some device specs.
     The orange hue range (15-45°) is split between RED and YELLOW based on proximity.
 
     Hue ranges are divided to approximate standard color wheel positions while accounting

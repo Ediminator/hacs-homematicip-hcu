@@ -735,6 +735,8 @@ HMIP_CHANNEL_TYPE_TO_ENTITY = {
 
 # --- Simple RGB Color State Constants ---
 # Color values for simpleRGBColorState (HmIP-BSL, HmIP-MP3P, etc.)
+# Only the 8 colors officially supported by the HCU API are defined here.
+# Note: ORANGE is NOT supported by the API despite appearing in some device specs.
 HMIP_COLOR_BLACK = "BLACK"
 HMIP_COLOR_WHITE = "WHITE"
 HMIP_COLOR_RED = "RED"
@@ -743,7 +745,6 @@ HMIP_COLOR_GREEN = "GREEN"
 HMIP_COLOR_YELLOW = "YELLOW"
 HMIP_COLOR_PURPLE = "PURPLE"
 HMIP_COLOR_TURQUOISE = "TURQUOISE"
-HMIP_COLOR_ORANGE = "ORANGE"
 
 # RGB Color mappings for devices with simpleRGBColorState (e.g., HmIP-BSL backlight)
 # Maps simpleRGBColorState values to HS color tuples (hue, saturation)
@@ -758,9 +759,7 @@ HMIP_RGB_COLOR_MAP = {
     HMIP_COLOR_PURPLE: (300, 100),   # Purple/Magenta
     HMIP_COLOR_YELLOW: (60, 100),    # Yellow
     HMIP_COLOR_WHITE: (0, 0),        # White (will be handled separately with brightness)
-    # NOTE: ORANGE is NOT supported by the HCU API despite being defined as a constant above.
-    # It was removed from this mapping to prevent API errors. Hues in the orange range (15-45°)
-    # are now mapped to RED or YELLOW depending on proximity.
+    # Note: Hues in the orange range (15-45°) are mapped to RED or YELLOW depending on proximity.
 }
 
 # Optical signal behavior values for HmIP-BSL and similar notification lights

@@ -171,10 +171,13 @@ class HcuLight(HcuBaseEntity, LightEntity):
         return None
 
     def _hs_to_simple_rgb(self, hs_color: tuple[float, float]) -> str:
-        """
-        Convert HA HS color (0-360, 0-100) to the closest Homematic IP simple RGB color name.
-        
-        Fixes issue #3 by correcting Hue boundaries, especially for Orange.
+        """Convert HA HS color (0-360, 0-100) to the closest Homematic IP simple RGB color name.
+
+        Maps to the 8 colors officially supported by the HCU API:
+        BLACK, BLUE, GREEN, TURQUOISE, RED, PURPLE, YELLOW, WHITE
+
+        Note: ORANGE is NOT supported despite being defined as a constant.
+        The orange hue range (15-45°) is split between RED and YELLOW based on proximity.
         """
         hue, sat = hs_color
 
@@ -182,12 +185,11 @@ class HcuLight(HcuBaseEntity, LightEntity):
         if sat < 20:
             return HMIP_COLOR_WHITE
 
-        # Hue ranges (0-360 degrees) mapped to 8 colors: RED, ORANGE, YELLOW, GREEN, TURQUOISE, BLUE, PURPLE
-        if hue < 15 or hue >= 345:      # 0 degrees
+        # Hue ranges (0-360 degrees) mapped to 7 supported colors
+        # Note: ORANGE removed - hues 0-30 map to RED, 30-90 map to YELLOW
+        if hue < 30 or hue >= 345:      # 0 degrees (Red)
             return HMIP_COLOR_RED
-        elif 15 <= hue < 45:            # ~30 degrees (Orange)
-            return HMIP_COLOR_ORANGE
-        elif 45 <= hue < 90:            # ~60 degrees (Yellow)
+        elif 30 <= hue < 90:            # ~60 degrees (Yellow, expanded to include orange range)
             return HMIP_COLOR_YELLOW
         elif 90 <= hue < 150:           # ~120 degrees (Green)
             return HMIP_COLOR_GREEN
@@ -318,6 +320,8 @@ class HcuNotificationLight(HcuBaseEntity, LightEntity):
     _attr_color_mode = ColorMode.HS
 
     # RGB color mappings for Homematic IP notification devices
+    # Based on official HCU API - only 8 colors supported:
+    # BLACK, BLUE, GREEN, TURQUOISE, RED, PURPLE, YELLOW, WHITE
     _COLOR_MAP = {
         HMIP_COLOR_BLACK: (0, 0, 0),
         HMIP_COLOR_BLUE: (240, 100, 50),
@@ -327,7 +331,7 @@ class HcuNotificationLight(HcuBaseEntity, LightEntity):
         HMIP_COLOR_PURPLE: (300, 100, 50),
         HMIP_COLOR_YELLOW: (60, 100, 50),
         HMIP_COLOR_WHITE: (0, 0, 100),
-        HMIP_COLOR_ORANGE: (30, 100, 50),
+        # NOTE: ORANGE removed - not supported by HCU API
     }
 
     def __init__(
@@ -368,19 +372,25 @@ class HcuNotificationLight(HcuBaseEntity, LightEntity):
         return None
 
     def _hs_to_simple_rgb(self, hs_color: tuple[float, float]) -> str:
-        """Convert HS color to the closest Homematic IP simple RGB color."""
+        """Convert HS color to the closest Homematic IP simple RGB color.
+
+        Maps to the 8 colors officially supported by the HCU API:
+        BLACK, BLUE, GREEN, TURQUOISE, RED, PURPLE, YELLOW, WHITE
+
+        Note: ORANGE is NOT supported despite being defined as a constant.
+        The orange hue range (15-45°) is split between RED and YELLOW.
+        """
         hue, sat = hs_color
 
         # If saturation is very low, it's white
         if sat < 20:
             return HMIP_COLOR_WHITE
 
-        # Map hue ranges to colors
-        if hue < 15 or hue >= 345:
+        # Map hue ranges to supported colors
+        # Note: ORANGE removed - hues 15-30 map to RED, 30-52.5 map to YELLOW
+        if hue < 30 or hue >= 345:
             return HMIP_COLOR_RED
-        elif 15 <= hue < 45:
-            return HMIP_COLOR_ORANGE
-        elif 45 <= hue < 75:
+        elif 30 <= hue < 75:
             return HMIP_COLOR_YELLOW
         elif 75 <= hue < 165:
             return HMIP_COLOR_GREEN

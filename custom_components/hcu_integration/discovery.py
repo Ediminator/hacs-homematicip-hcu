@@ -308,7 +308,7 @@ async def async_discover_entities(
         else:
             # Log unknown group types to help diagnose missing entities
             if group_type:
-                _LOGGER.info(
+                _LOGGER.warning(
                     "Unknown group type '%s' for group '%s' (id: %s) - no entity created. "
                     "If you expected an entity for this group, please report this as an issue.",
                     group_type,

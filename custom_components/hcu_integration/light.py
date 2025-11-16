@@ -378,7 +378,9 @@ class HcuNotificationLight(HcuBaseEntity, LightEntity):
         BLACK, BLUE, GREEN, TURQUOISE, RED, PURPLE, YELLOW, WHITE
 
         Note: ORANGE is NOT supported despite being defined as a constant.
-        The orange hue range (15-45°) is split between RED and YELLOW.
+        The orange hue range (15-45°) is split between RED and YELLOW based on proximity.
+
+        Uses 60-degree divisions aligned with standard color wheel for consistency.
         """
         hue, sat = hs_color
 
@@ -386,19 +388,20 @@ class HcuNotificationLight(HcuBaseEntity, LightEntity):
         if sat < 20:
             return HMIP_COLOR_WHITE
 
-        # Map hue ranges to supported colors
-        # Note: ORANGE removed - hues 15-30 map to RED, 30-52.5 map to YELLOW
-        if hue < 30 or hue >= 345:
+        # Hue ranges (0-360 degrees) mapped to 7 supported colors
+        # Note: ORANGE removed - hues 0-30 map to RED, 30-90 map to YELLOW
+        # Using consistent 60-degree boundaries across all color mappings
+        if hue < 30 or hue >= 345:      # 0 degrees (Red)
             return HMIP_COLOR_RED
-        elif 30 <= hue < 75:
+        elif 30 <= hue < 90:            # ~60 degrees (Yellow, expanded to include orange range)
             return HMIP_COLOR_YELLOW
-        elif 75 <= hue < 165:
+        elif 90 <= hue < 150:           # ~120 degrees (Green)
             return HMIP_COLOR_GREEN
-        elif 165 <= hue < 195:
+        elif 150 <= hue < 210:          # ~180 degrees (Turquoise/Cyan)
             return HMIP_COLOR_TURQUOISE
-        elif 195 <= hue < 270:
+        elif 210 <= hue < 270:          # ~240 degrees (Blue)
             return HMIP_COLOR_BLUE
-        else:  # 270 <= hue < 345
+        else:  # 270 <= hue < 345        # ~300 degrees (Purple/Magenta)
             return HMIP_COLOR_PURPLE
 
     async def async_turn_on(self, **kwargs) -> None:

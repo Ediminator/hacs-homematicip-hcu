@@ -53,7 +53,8 @@ def _convert_hs_to_simple_rgb(hs_color: tuple[float, float]) -> str:
     Note: ORANGE is NOT supported despite being defined as a constant.
     The orange hue range (15-45°) is split between RED and YELLOW based on proximity.
 
-    Uses 60-degree divisions aligned with standard color wheel for consistency.
+    Hue ranges are divided to approximate standard color wheel positions while accounting
+    for the absence of ORANGE support.
 
     Args:
         hs_color: Tuple of (hue, saturation) where hue is 0-360 degrees and saturation is 0-100%.
@@ -69,7 +70,6 @@ def _convert_hs_to_simple_rgb(hs_color: tuple[float, float]) -> str:
 
     # Hue ranges (0-360 degrees) mapped to 7 supported colors
     # Note: ORANGE removed - hues 0-30 map to RED, 30-90 map to YELLOW
-    # Using consistent 60-degree boundaries across all color mappings
     if hue < 30 or hue >= 345:      # 0 degrees (Red)
         return HMIP_COLOR_RED
     elif 30 <= hue < 90:            # ~60 degrees (Yellow, expanded to include orange range)

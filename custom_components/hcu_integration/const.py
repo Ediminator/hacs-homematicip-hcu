@@ -708,6 +708,13 @@ HMIP_CHANNEL_TYPE_TO_ENTITY = {
     "DOOR_CHANNEL": {"class": "HcuGarageDoorCover"},
     "DOOR_SWITCH_CHANNEL": {"class": "HcuDoorOpenerButton"},
     "DOOR_LOCK_CHANNEL": {"class": "HcuLock"},
+    # Event channel types - create HcuButtonEvent entities for button devices
+    "KEY_CHANNEL": {"class": "HcuButtonEvent"},  # For HmIP-WRC2, HmIP-BRC2, HmIP-WRC6-A, HmIP-WKP
+    "WALL_MOUNTED_TRANSMITTER_CHANNEL": {"class": "HcuButtonEvent"},
+    "KEY_REMOTE_CONTROL_CHANNEL": {"class": "HcuButtonEvent"},
+    "SWITCH_INPUT_CHANNEL": {"class": "HcuButtonEvent"},
+    "SINGLE_KEY_CHANNEL": {"class": "HcuButtonEvent"},
+    "MULTI_MODE_INPUT_CHANNEL": {"class": "HcuButtonEvent"},
     "ACCELERATION_SENSOR_CHANNEL": None,
     "CLIMATE_CONTROL_CHANNEL": None,
     "CLIMATE_CONTROL_INPUT_CHANNEL": None,

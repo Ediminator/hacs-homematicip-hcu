@@ -29,6 +29,7 @@ from .const import (
     DUTY_CYCLE_BINARY_SENSOR_MAPPING,
     HMIP_CHANNEL_TYPE_TO_ENTITY,
     HMIP_FEATURE_TO_ENTITY,
+    MULTI_FUNCTION_CHANNEL_DEVICES,
     PLATFORMS,
     EVENT_CHANNEL_TYPES,
 )
@@ -144,6 +145,30 @@ async def async_discover_entities(
                         _LOGGER.error(
                             "Failed to create entity for channel %s (base: %s, class: %s): %s",
                             channel_type, base_channel_type, class_name, e
+                        )
+
+            # Handle multi-function channels (e.g., HmIP-BSL NOTIFICATION_LIGHT_CHANNEL)
+            # These channels serve multiple purposes and need additional event entities
+            device_type = device_data.get("type")
+            if device_type in MULTI_FUNCTION_CHANNEL_DEVICES:
+                multi_func_config = MULTI_FUNCTION_CHANNEL_DEVICES[device_type].get(base_channel_type or channel_type)
+                if multi_func_config and "button" in multi_func_config.get("functions", []):
+                    # Create additional button event entity for multi-function channel
+                    try:
+                        _LOGGER.debug(
+                            "Creating button event entity for multi-function channel: device=%s (%s), channel=%s (%s)",
+                            device_data.get("id"),
+                            device_type,
+                            channel_index,
+                            channel_type,
+                        )
+                        entities[Platform.EVENT].append(
+                            event.HcuButtonEvent(coordinator, client, device_data, channel_index)
+                        )
+                    except (AttributeError, TypeError) as e:
+                        _LOGGER.error(
+                            "Failed to create button event entity for multi-function channel %s: %s",
+                            channel_type, e
                         )
 
             # Create temperature sensor (prioritize actualTemperature over valveActualTemperature)

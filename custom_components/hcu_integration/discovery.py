@@ -256,8 +256,16 @@ async def async_discover_entities(
         "LIGHT": (Platform.LIGHT, light.HcuLightGroup, {}),
     }
 
+    # Track group discovery statistics for diagnostics
+    groups_discovered = 0
+    groups_skipped_meta = 0
+    groups_unknown_type = 0
+
     for group_data in state.get("groups", {}).values():
         group_type = group_data.get("type")
+        group_id = group_data.get("id")
+        group_label = group_data.get("label", group_id)
+
         if mapping := group_type_mapping.get(group_type):
             # Skip auto-created meta groups for SWITCHING and LIGHT
             # These are created automatically by HCU for rooms and provide unexpected entities
@@ -265,16 +273,37 @@ async def async_discover_entities(
             if group_type in ("SWITCHING", "LIGHT"):
                 if "metaGroupId" in group_data:
                     _LOGGER.debug(
-                        "Skipping auto-created meta %s group '%s'",
+                        "Skipping auto-created meta %s group '%s' (id: %s)",
                         group_type,
-                        group_data.get("label", group_data.get("id"))
+                        group_label,
+                        group_id
                     )
+                    groups_skipped_meta += 1
                     continue
 
             platform, entity_class, extra_kwargs = mapping
             entities[platform].append(
                 entity_class(coordinator, client, group_data, **extra_kwargs)
             )
+            groups_discovered += 1
+            _LOGGER.debug(
+                "Created %s group entity '%s' (id: %s, type: %s)",
+                platform.value,
+                group_label,
+                group_id,
+                group_type
+            )
+        else:
+            # Log unknown group types to help diagnose missing entities
+            if group_type:
+                _LOGGER.info(
+                    "Unknown group type '%s' for group '%s' (id: %s) - no entity created. "
+                    "If you expected an entity for this group, please report this as an issue.",
+                    group_type,
+                    group_label,
+                    group_id
+                )
+                groups_unknown_type += 1
 
     # Create home-level entities (alarm panel, vacation mode sensor, home sensors)
     if "home" in state:
@@ -291,4 +320,14 @@ async def async_discover_entities(
                 )
 
     _LOGGER.info("Discovered entities: %s", {p.value: len(e) for p, e in entities.items() if e})
+
+    # Log group discovery summary for diagnostics
+    if groups_discovered > 0 or groups_skipped_meta > 0 or groups_unknown_type > 0:
+        _LOGGER.info(
+            "Group discovery summary: %d created, %d skipped (meta groups), %d unknown types",
+            groups_discovered,
+            groups_skipped_meta,
+            groups_unknown_type
+        )
+
     return entities

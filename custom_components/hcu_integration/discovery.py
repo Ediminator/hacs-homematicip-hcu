@@ -143,8 +143,8 @@ async def async_discover_entities(
                         )
                     except (AttributeError, TypeError) as e:
                         _LOGGER.error(
-                            "Failed to create entity for channel %s (base: %s, class: %s): %s",
-                            channel_type, base_channel_type, class_name, e
+                            "Failed to create entity for device %s, channel %s (type: %s, base: %s, class: %s): %s",
+                            device_data.get("id"), channel_index, channel_type, base_channel_type, class_name, e
                         )
 
             # Handle multi-function channels (e.g., HmIP-BSL NOTIFICATION_LIGHT_CHANNEL)
@@ -167,8 +167,8 @@ async def async_discover_entities(
                         )
                     except (AttributeError, TypeError) as e:
                         _LOGGER.error(
-                            "Failed to create button event entity for multi-function channel %s: %s",
-                            channel_type, e
+                            "Failed to create button event entity for device %s, channel %s (type: %s): %s",
+                            device_data.get("id"), channel_index, channel_type, e
                         )
 
             # Create temperature sensor (prioritize actualTemperature over valveActualTemperature)
@@ -229,7 +229,10 @@ async def async_discover_entities(
                                 )
                             )
                     except (AttributeError, TypeError) as e:
-                        _LOGGER.error("Failed to create entity for feature %s (%s): %s", feature, class_name, e)
+                        _LOGGER.error(
+                            "Failed to create entity for device %s, channel %s, feature %s (%s): %s",
+                            device_data.get("id"), channel_index, feature, class_name, e
+                        )
 
             # Special handling for dutyCycle binary sensor (device-level warning flag)
             # Note: dutyCycle exists in both home object (percentage) and device channels (boolean)

@@ -266,6 +266,15 @@ async def async_discover_entities(
         group_id = group_data.get("id")
         group_label = group_data.get("label", group_id)
 
+        # Skip groups without valid ID (defensive null-checking)
+        if not group_id:
+            _LOGGER.debug(
+                "Skipping group without valid ID (type: %s, label: %s)",
+                group_type,
+                group_label or "unknown"
+            )
+            continue
+
         if mapping := group_type_mapping.get(group_type):
             # Skip auto-created meta groups for SWITCHING and LIGHT
             # These are created automatically by HCU for rooms and provide unexpected entities

@@ -43,6 +43,9 @@ if TYPE_CHECKING:
 
 _LOGGER = logging.getLogger(__name__)
 
+# Saturation threshold below which colors are considered white (low saturation = desaturated)
+_LOW_SATURATION_THRESHOLD = 20
+
 
 def _convert_hs_to_simple_rgb(hs_color: tuple[float, float]) -> str:
     """Convert HA HS color (0-360, 0-100) to the closest Homematic IP simple RGB color name.
@@ -65,7 +68,7 @@ def _convert_hs_to_simple_rgb(hs_color: tuple[float, float]) -> str:
     hue, sat = hs_color
 
     # If saturation is very low, it's white
-    if sat < 20:
+    if sat < _LOW_SATURATION_THRESHOLD:
         return HMIP_COLOR_WHITE
 
     # Hue ranges (0-360 degrees) mapped to 7 supported colors

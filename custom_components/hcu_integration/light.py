@@ -239,38 +239,40 @@ class HcuLight(HcuBaseEntity, LightEntity):
             if not rgb_color or rgb_color == HMIP_COLOR_BLACK:
                 rgb_color = HMIP_COLOR_WHITE
 
-            # 2. Determine Optical Signal Behaviour (The "ON" switch for BSL LEDs/Effects)
+            # 2. Determine if we need to change optical signal state
+            # Use setOpticalSignal endpoint when changing effects or turning on/off
+            # Use setSimpleRGBColorDimLevel endpoint for simple color/brightness adjustments
+            need_optical_signal_change = False
             optical_signal = None
+
             if ATTR_EFFECT in kwargs:
-                # If an effect is specified in the service call, use it directly.
+                # User explicitly setting an effect
                 optical_signal = kwargs[ATTR_EFFECT]
+                need_optical_signal_change = True
             else:
-                # If no effect is specified, turn the light on if it's off, or preserve its current non-OFF state.
                 current_signal = self._channel.get("opticalSignalBehaviour")
+                # If light is currently off, we need to turn it on
                 if current_signal == "OFF" or current_signal is None:
                     optical_signal = "ON"
-                else:
-                    # Preserve existing non-OFF behavior (e.g., if blinking, keep blinking)
-                    optical_signal = current_signal
+                    need_optical_signal_change = True
+                # Otherwise, preserve current state and just change color/brightness using simple endpoint
 
             # 3. Build Payload and Determine Correct API Endpoint
-            # Use setOpticalSignal endpoint when setting effects (opticalSignalBehaviour)
-            # Use setSimpleRGBColorDimLevel endpoint for simple color/brightness changes
             payload = {
                 "simpleRGBColorState": rgb_color,
                 "dimLevel": dim_level
             }
 
-            if optical_signal:
+            if need_optical_signal_change:
+                # Use optical signal endpoint when changing effects or turning on from off
                 payload["opticalSignalBehaviour"] = optical_signal
-                # Use optical signal endpoint when setting effects
                 if ramp_time is not None:
                     path = API_PATHS["SET_OPTICAL_SIGNAL_WITH_TIME"]
                     payload["rampTime"] = ramp_time
                 else:
                     path = API_PATHS["SET_OPTICAL_SIGNAL"]
             else:
-                # Use simple RGB endpoint for color/brightness without effects
+                # Use simple RGB endpoint for color/brightness adjustments on already-on lights
                 if ramp_time is not None:
                     path = API_PATHS["SET_SIMPLE_RGB_COLOR_STATE_WITH_TIME"]
                     payload["rampTime"] = ramp_time

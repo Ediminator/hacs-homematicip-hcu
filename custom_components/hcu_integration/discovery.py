@@ -259,9 +259,18 @@ async def async_discover_entities(
         "LIGHT": (Platform.LIGHT, light.HcuLightGroup, {}),
     }
 
+    # Organizational/administrative group types that don't need entities
+    # These are filtered out to reduce log noise
+    organizational_group_types = {
+        "INDOOR_CLIMATE",  # Room-level climate organization (actual control via HEATING groups)
+        "ENVIRONMENT",     # Environmental/outdoor monitoring organization
+        "META",           # Generic meta/organizational groups
+    }
+
     # Track group discovery statistics for diagnostics
     groups_discovered = 0
     groups_skipped_meta = 0
+    groups_skipped_organizational = 0
     groups_unknown_type = 0
 
     for group_data in state.get("groups", {}).values():
@@ -276,6 +285,17 @@ async def async_discover_entities(
                 group_type,
                 group_label or "unknown"
             )
+            continue
+
+        # Skip organizational/administrative group types
+        if group_type in organizational_group_types:
+            _LOGGER.debug(
+                "Skipping organizational %s group '%s' (id: %s) - these groups don't create entities",
+                group_type,
+                group_label,
+                group_id
+            )
+            groups_skipped_organizational += 1
             continue
 
         if mapping := group_type_mapping.get(group_type):
@@ -334,11 +354,12 @@ async def async_discover_entities(
     _LOGGER.info("Discovered entities: %s", {p.value: len(e) for p, e in entities.items() if e})
 
     # Log group discovery summary for diagnostics
-    if groups_discovered > 0 or groups_skipped_meta > 0 or groups_unknown_type > 0:
+    if groups_discovered > 0 or groups_skipped_meta > 0 or groups_skipped_organizational > 0 or groups_unknown_type > 0:
         _LOGGER.info(
-            "Group discovery summary: %d created, %d skipped (meta groups), %d unknown types",
+            "Group discovery summary: %d created, %d skipped (meta groups), %d skipped (organizational), %d unknown types",
             groups_discovered,
             groups_skipped_meta,
+            groups_skipped_organizational,
             groups_unknown_type
         )
 

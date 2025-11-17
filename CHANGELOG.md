@@ -69,6 +69,49 @@ Also restored three channel type mappings that were accidentally removed in v1.1
 **Reported by:** Community users in Issue #134 with detailed diagnostic logs
 **Affects:** Versions 1.15.20 - 1.17.1 (all button devices, especially HmIP-BRC2/WRC2)
 **Fixed in:** Version 1.17.2
+## 1.17.1 - 2025-11-17
+
+### 🐛 Critical Bug Fix
+
+**Fix Button Events Completely Broken - Restore Missing Channel Type Mappings**
+
+Fixed a critical regression introduced in v1.17.0 where button events stopped working entirely for devices using certain channel types.
+
+**Root Cause:**
+
+In v1.17.0 (commit d4da009), a refactoring removed the dynamic channel type mapping loop and replaced it with explicit mappings. However, THREE critical channel types were removed from `EVENT_CHANNEL_TYPES` but were NEVER added to `HMIP_CHANNEL_TYPE_TO_ENTITY`:
+- `BRAND_REMOTE_CONTROL`
+- `BRAND_WALL_MOUNTED_TRANSMITTER`
+- `REMOTE_CONTROL_TRANSMITTER`
+
+This caused any device using these channel types to:
+1. NOT have button event entities created during discovery
+2. NOT fire any button events (neither modern entity-based events nor legacy hcu_integration_event)
+3. Be completely non-functional for button presses
+
+**What Was Fixed:**
+
+1. **Restored Missing Channel Types**: Added all three missing channel types back to `EVENT_CHANNEL_TYPES`
+2. **Added Explicit Mappings**: Created explicit `HcuButtonEvent` mappings for all three channel types in `HMIP_CHANNEL_TYPE_TO_ENTITY`
+3. **Comprehensive Coverage**: Ensures all button devices work regardless of which channel type their firmware reports
+
+**Impact:**
+- ✅ Button events now work for ALL button devices
+- ✅ Devices using BRAND_REMOTE_CONTROL, BRAND_WALL_MOUNTED_TRANSMITTER, or REMOTE_CONTROL_TRANSMITTER channel types are now functional
+- ✅ Both modern entity-based events and legacy hcu_integration_event now fire correctly
+- ✅ No breaking changes - existing working devices continue to work
+
+**How to Apply:**
+1. Update to version 1.17.1
+2. Restart Home Assistant
+3. Button events should immediately start working
+
+**Files Changed:**
+- `custom_components/hcu_integration/const.py` - Added missing channel type mappings
+
+**Reported by:** Community users experiencing broken button events after v1.15.20
+**Affects:** Version 1.17.0 (all button devices using the three missing channel types)
+**Fixed in:** Version 1.17.1
 
 ---
 

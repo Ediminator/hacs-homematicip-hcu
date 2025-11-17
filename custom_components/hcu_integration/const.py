@@ -125,6 +125,8 @@ API_PATHS = {
     "SET_HUE": "/hmip/device/control/setHueSaturationDimLevel",
     "SET_HUE_WITH_TIME": "/hmip/device/control/setHueSaturationDimLevelWithTime",
     "SET_LOCK_STATE": "/hmip/device/control/setLockState",
+    "SET_OPTICAL_SIGNAL": "/hmip/device/control/setOpticalSignal",
+    "SET_OPTICAL_SIGNAL_WITH_TIME": "/hmip/device/control/setOpticalSignalWithTime",
     "SET_PRIMARY_SHADING_LEVEL": "/hmip/device/control/setPrimaryShadingLevel",  # For SHADING_CHANNEL devices (e.g., HmIP-HDM1)
     "SET_SHUTTER_LEVEL": "/hmip/device/control/setShutterLevel",
     "SET_SIMPLE_RGB_COLOR_STATE": "/hmip/device/control/setSimpleRGBColorDimLevel",

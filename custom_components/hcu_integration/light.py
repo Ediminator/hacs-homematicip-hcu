@@ -253,20 +253,29 @@ class HcuLight(HcuBaseEntity, LightEntity):
                     # Preserve existing non-OFF behavior (e.g., if blinking, keep blinking)
                     optical_signal = current_signal
 
-            # 3. Build Payload for consolidated call
+            # 3. Build Payload and Determine Correct API Endpoint
+            # Use setOpticalSignal endpoint when setting effects (opticalSignalBehaviour)
+            # Use setSimpleRGBColorDimLevel endpoint for simple color/brightness changes
             payload = {
                 "simpleRGBColorState": rgb_color,
                 "dimLevel": dim_level
             }
+
             if optical_signal:
                 payload["opticalSignalBehaviour"] = optical_signal
-
-            # 4. Determine Path (With or Without Time)
-            if ramp_time is not None:
-                path = API_PATHS["SET_SIMPLE_RGB_COLOR_STATE_WITH_TIME"]
-                payload["rampTime"] = ramp_time
+                # Use optical signal endpoint when setting effects
+                if ramp_time is not None:
+                    path = API_PATHS["SET_OPTICAL_SIGNAL_WITH_TIME"]
+                    payload["rampTime"] = ramp_time
+                else:
+                    path = API_PATHS["SET_OPTICAL_SIGNAL"]
             else:
-                path = API_PATHS["SET_SIMPLE_RGB_COLOR_STATE"]
+                # Use simple RGB endpoint for color/brightness without effects
+                if ramp_time is not None:
+                    path = API_PATHS["SET_SIMPLE_RGB_COLOR_STATE_WITH_TIME"]
+                    payload["rampTime"] = ramp_time
+                else:
+                    path = API_PATHS["SET_SIMPLE_RGB_COLOR_STATE"]
 
             # Set optimistic state for immediate feedback
             self._attr_assumed_state = True
@@ -311,11 +320,12 @@ class HcuLight(HcuBaseEntity, LightEntity):
                 "opticalSignalBehaviour": "OFF"
             }
 
+            # Use optical signal endpoint when setting opticalSignalBehaviour
             if ramp_time is not None:
-                path = API_PATHS["SET_SIMPLE_RGB_COLOR_STATE_WITH_TIME"]
+                path = API_PATHS["SET_OPTICAL_SIGNAL_WITH_TIME"]
                 payload["rampTime"] = ramp_time
             else:
-                path = API_PATHS["SET_SIMPLE_RGB_COLOR_STATE"]
+                path = API_PATHS["SET_OPTICAL_SIGNAL"]
 
             # Set optimistic state for immediate feedback
             self._attr_assumed_state = True

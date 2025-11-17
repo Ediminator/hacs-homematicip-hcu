@@ -239,9 +239,13 @@ class HcuLight(HcuBaseEntity, LightEntity):
             if not rgb_color or rgb_color == HMIP_COLOR_BLACK:
                 rgb_color = HMIP_COLOR_WHITE
 
-            # 2. Determine if we need to change optical signal state
-            # Use setOpticalSignal endpoint when changing effects or turning on/off
-            # Use setSimpleRGBColorDimLevel endpoint for simple color/brightness adjustments
+            # 2. Determine if we need to use optical signal endpoint
+            # Use setOpticalSignal endpoint when:
+            # - Explicitly setting/changing an effect
+            # - Light is currently off and needs to be turned on
+            # - Light has an active effect and we need to preserve it while changing color/brightness
+            # Use setSimpleRGBColorDimLevel endpoint only when:
+            # - Light is in plain "ON" state (no effects) and just changing color/brightness
             need_optical_signal_change = False
             optical_signal = None
 
@@ -255,7 +259,11 @@ class HcuLight(HcuBaseEntity, LightEntity):
                 if current_signal == "OFF" or current_signal is None:
                     optical_signal = "ON"
                     need_optical_signal_change = True
-                # Otherwise, preserve current state and just change color/brightness using simple endpoint
+                # If light has an active effect (BLINKING, BILLOWING, etc.), preserve it
+                elif current_signal != "ON":
+                    optical_signal = current_signal
+                    need_optical_signal_change = True
+                # Otherwise light is in plain "ON" state, use simple RGB endpoint
 
             # 3. Build Payload and Determine Correct API Endpoint
             payload = {

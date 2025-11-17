@@ -708,6 +708,13 @@ HMIP_CHANNEL_TYPE_TO_ENTITY = {
     "DOOR_CHANNEL": {"class": "HcuGarageDoorCover"},
     "DOOR_SWITCH_CHANNEL": {"class": "HcuDoorOpenerButton"},
     "DOOR_LOCK_CHANNEL": {"class": "HcuLock"},
+    # Event channel types - create HcuButtonEvent entities for button devices
+    "KEY_CHANNEL": {"class": "HcuButtonEvent"},  # For HmIP-WRC2, HmIP-BRC2, HmIP-WRC6-A, HmIP-WKP
+    "WALL_MOUNTED_TRANSMITTER_CHANNEL": {"class": "HcuButtonEvent"},
+    "KEY_REMOTE_CONTROL_CHANNEL": {"class": "HcuButtonEvent"},
+    "SWITCH_INPUT_CHANNEL": {"class": "HcuButtonEvent"},
+    "SINGLE_KEY_CHANNEL": {"class": "HcuButtonEvent"},
+    "MULTI_MODE_INPUT_CHANNEL": {"class": "HcuButtonEvent"},
     "ACCELERATION_SENSOR_CHANNEL": None,
     "CLIMATE_CONTROL_CHANNEL": None,
     "CLIMATE_CONTROL_INPUT_CHANNEL": None,
@@ -728,6 +735,8 @@ HMIP_CHANNEL_TYPE_TO_ENTITY = {
 
 # --- Simple RGB Color State Constants ---
 # Color values for simpleRGBColorState (HmIP-BSL, HmIP-MP3P, etc.)
+# Only the 8 colors officially supported by the HCU API are defined here.
+# Note: ORANGE is NOT supported by the API despite appearing in some device specs.
 HMIP_COLOR_BLACK = "BLACK"
 HMIP_COLOR_WHITE = "WHITE"
 HMIP_COLOR_RED = "RED"
@@ -736,10 +745,11 @@ HMIP_COLOR_GREEN = "GREEN"
 HMIP_COLOR_YELLOW = "YELLOW"
 HMIP_COLOR_PURPLE = "PURPLE"
 HMIP_COLOR_TURQUOISE = "TURQUOISE"
-HMIP_COLOR_ORANGE = "ORANGE"
 
 # RGB Color mappings for devices with simpleRGBColorState (e.g., HmIP-BSL backlight)
 # Maps simpleRGBColorState values to HS color tuples (hue, saturation)
+# Based on official HCU API documentation - only 8 colors supported:
+# BLACK, BLUE, GREEN, TURQUOISE, RED, PURPLE, YELLOW, WHITE
 HMIP_RGB_COLOR_MAP = {
     HMIP_COLOR_BLACK: (0, 0),        # Off/Black
     HMIP_COLOR_BLUE: (240, 100),     # Blue
@@ -748,8 +758,8 @@ HMIP_RGB_COLOR_MAP = {
     HMIP_COLOR_RED: (0, 100),        # Red
     HMIP_COLOR_PURPLE: (300, 100),   # Purple/Magenta
     HMIP_COLOR_YELLOW: (60, 100),    # Yellow
-    HMIP_COLOR_ORANGE: (30, 100),    # Orange
     HMIP_COLOR_WHITE: (0, 0),        # White (will be handled separately with brightness)
+    # Note: Hues in the orange range (15-45°) are mapped to RED or YELLOW depending on proximity.
 }
 
 # Optical signal behavior values for HmIP-BSL and similar notification lights

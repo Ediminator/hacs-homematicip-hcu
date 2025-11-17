@@ -4,6 +4,191 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 
 ---
 
+## 1.17.0 - 2025-11-17
+
+### 🐛 Critical Bug Fixes
+
+**Fix Missing Button Events for Multiple Device Types - Issues #134, #98**
+
+Fixed critical issues where button press events were not firing for several device types, preventing users from creating automations based on button presses.
+
+**Devices Affected:**
+- **HmIP-WRC2** (Wall Remote Control 2-button)
+- **HmIP-BRC2** (Brand Wall Remote Control 2-button)
+- **HmIP-WRC6-A** (Wall Remote Control 6-button)
+- **HmIP-WKP** (Keypad)
+- **HmIP-BSL** (Brand Switch with Notification Light)
+
+**Root Causes:**
+
+1. **Missing Channel Type Mappings (Issue #134)**: Six channel types used by button devices were missing from `HMIP_CHANNEL_TYPE_TO_ENTITY`, preventing event entity creation:
+   - `KEY_CHANNEL` (HmIP-WRC2, HmIP-BRC2)
+   - `WALL_MOUNTED_TRANSMITTER_CHANNEL` (HmIP-WRC6-A)
+   - `KEY_REMOTE_CONTROL_CHANNEL` (HmIP-WKP)
+   - `SWITCH_INPUT_CHANNEL`, `SINGLE_KEY_CHANNEL`, `MULTI_MODE_INPUT_CHANNEL`
+
+2. **Multi-Function Channel Issue (Issue #98)**: HmIP-BSL uses `NOTIFICATION_LIGHT_CHANNEL` for dual purposes (LED backlight control AND button input). The integration only created light entities, missing the button event functionality.
+
+**What Was Fixed:**
+
+1. **Added Missing Channel Mappings**: All six button channel types now properly map to `HcuButtonEvent` entity class
+2. **Multi-Function Channel Support**: Created `MULTI_FUNCTION_CHANNEL_DEVICES` constant to identify channels serving multiple purposes
+3. **Dual Entity Creation**: HmIP-BSL now creates BOTH light entities (for LED control) AND button event entities (for button presses)
+4. **Enhanced Logging**: Added debug logging showing device type, channel index, and functions when creating multi-function channel entities
+
+**Impact:**
+- ✅ Button events now fire for all affected devices
+- ✅ All button press types work: `PRESS_SHORT`, `PRESS_LONG`, `PRESS_LONG_START`, `PRESS_LONG_STOP`
+- ✅ HmIP-BSL buttons functional alongside LED backlight control
+- ✅ Users can now create automations for previously non-functional buttons
+
+**Fix Multicolor Issues for HmIP-BSL and Similar Devices - Issue #112**
+
+Fixed color control issues where setting certain colors (particularly ORANGE) would fail with API errors.
+
+**Root Cause:**
+
+The HCU API only officially supports 8 colors for `simpleRGBColorState` devices:
+- BLACK, BLUE, GREEN, TURQUOISE, RED, PURPLE, YELLOW, WHITE
+
+Despite ORANGE being defined in device specifications, the HCU API does not accept it and returns errors when attempting to set it.
+
+**What Was Fixed:**
+
+1. **Removed ORANGE Color Support**:
+   - Removed `HMIP_COLOR_ORANGE` constant and all references
+   - Removed ORANGE from `HMIP_RGB_COLOR_MAP`
+   - Updated color mappings in both `HcuLight` and `HcuNotificationLight` classes
+
+2. **Remapped Orange Hue Range**:
+   - Hues 0-30° now map to RED (closer to red on color wheel)
+   - Hues 30-90° now map to YELLOW (expanded to include orange range)
+   - Users selecting orange colors will get the closest supported alternative
+
+3. **Unified Color Conversion Logic**:
+   - Extracted duplicated `_hs_to_simple_rgb()` methods into shared module-level helper
+   - Unified hue boundaries between `HcuLight` and `HcuNotificationLight` for consistency
+   - Both classes now use identical color mapping algorithm
+
+**Impact:**
+- ✅ Color changes no longer fail with API errors
+- ✅ Consistent color behavior across all simple RGB devices
+- ✅ Orange hue selections gracefully map to RED or YELLOW
+- ✅ Better maintainability through shared color conversion logic
+
+### ✨ Improvements
+
+**Enhanced Group Discovery Diagnostics - Issue #146**
+
+Added comprehensive logging to help diagnose missing group entities and understand group discovery behavior.
+
+**What Was Added:**
+
+1. **Discovery Statistics**:
+   - Counts groups successfully created
+   - Tracks auto-created meta groups that are skipped
+   - Reports unknown group types that couldn't be mapped
+
+2. **Detailed Per-Group Logging**:
+   - Debug logs show each created group with type, label, and ID
+   - Warning logs alert for unknown group types with user-friendly messages
+   - Info summary shows discovery statistics
+
+3. **Meta Group Filtering**:
+   - Auto-created SWITCHING and LIGHT meta groups are intentionally skipped (reduces entity clutter)
+   - Debug logs explain why each meta group is skipped
+   - User-created functional groups still discovered normally
+
+4. **Robustness Improvements**:
+   - Added defensive null-checking for group IDs
+   - Prevents silent failures when HCU API omits group ID field
+   - Debug logging when groups are skipped due to missing data
+
+**Example Log Output:**
+```
+Group discovery summary: 12 created, 8 skipped (meta groups), 0 unknown types
+```
+
+**Impact:**
+- ✅ Users can easily diagnose why groups aren't appearing
+- ✅ Clear guidance to report missing group type support
+- ✅ Better visibility into integration's group discovery process
+- ✅ Reduced entity clutter from unwanted auto-generated groups
+
+**Enhanced Error Logging with Device Context - PR Review Feedback**
+
+Improved error messages during entity discovery to include device ID and channel index for easier debugging.
+
+**What Was Enhanced:**
+
+All entity creation error messages now include:
+- **Device ID**: Identifies which specific device encountered the error
+- **Channel Index**: Pinpoints the exact channel that failed
+- **Feature/Type Info**: Shows what was being created when error occurred
+
+**Before:**
+```
+Failed to create entity for feature windowState (HcuWindowStateSensor): ...
+```
+
+**After:**
+```
+Failed to create entity for device 3014F711A000123456789ABC, channel 1, feature windowState (HcuWindowStateSensor): ...
+```
+
+**Impact:**
+- ✅ Dramatically easier to identify problem devices when users report issues
+- ✅ Channel-specific errors can be diagnosed without guesswork
+- ✅ Helps developers quickly locate and fix device-specific compatibility issues
+
+### 🔧 Code Quality & Maintainability
+
+**Refactored Color Conversion Logic**
+
+- Extracted duplicated `_hs_to_simple_rgb()` method from both `HcuLight` and `HcuNotificationLight` classes
+- Created shared `_convert_hs_to_simple_rgb()` module-level helper function
+- Reduced code duplication by ~60 lines while maintaining identical behavior
+- Comprehensive docstring with Args and Returns documentation
+- Both light classes now delegate to the same helper for consistent color mapping
+
+**Extracted Magic Numbers to Named Constants**
+
+- Created `_LOW_SATURATION_THRESHOLD = 20` constant for color conversion
+- Improves code clarity and makes threshold easily adjustable
+- Documents that low saturation values are interpreted as white
+
+**Improved Documentation Accuracy**
+
+- Clarified color hue range descriptions in docstrings
+- Removed misleading "60-degree divisions" reference
+- More accurately describes varied hue range sizes (RED=45°, YELLOW=60°, PURPLE=75°)
+- Updated comments to reflect actual HCU API support limitations
+
+**Enhanced Defensive Programming**
+
+- Added null-checking for group IDs during discovery
+- Prevents crashes when HCU API omits expected fields
+- Debug logging for skipped invalid groups
+
+### 📝 Files Changed
+
+- `custom_components/hcu_integration/const.py` - Added button channel mappings, removed ORANGE constant, added multi-function device config
+- `custom_components/hcu_integration/discovery.py` - Multi-function channel support, enhanced group logging, defensive null-checks, improved error messages
+- `custom_components/hcu_integration/light.py` - Removed ORANGE support, refactored color conversion, extracted constants, unified color boundaries
+
+### 🙏 Acknowledgments
+
+**Issues Addressed:**
+- Issue #134 - Button events for WRC2/BRC2/WRC6-A/WKP (reported by community)
+- Issue #98 - HmIP-BSL button events not firing
+- Issue #112 - Multicolor/ORANGE color issues
+- Issue #146 - Missing group entities diagnostics
+
+**Code Review:**
+- Special thanks to Gemini Code Assist for thorough code review feedback that led to significant improvements in code quality, maintainability, and error diagnostics
+
+---
+
 ## 1.16.2 - 2025-11-15
 
 ### Fixes & Improvements

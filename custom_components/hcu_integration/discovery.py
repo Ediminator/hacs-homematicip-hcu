@@ -29,6 +29,7 @@ from .const import (
     DUTY_CYCLE_BINARY_SENSOR_MAPPING,
     HMIP_CHANNEL_TYPE_TO_ENTITY,
     HMIP_FEATURE_TO_ENTITY,
+    MULTI_FUNCTION_CHANNEL_DEVICES,
     PLATFORMS,
     EVENT_CHANNEL_TYPES,
 )
@@ -142,8 +143,32 @@ async def async_discover_entities(
                         )
                     except (AttributeError, TypeError) as e:
                         _LOGGER.error(
-                            "Failed to create entity for channel %s (base: %s, class: %s): %s",
-                            channel_type, base_channel_type, class_name, e
+                            "Failed to create entity for device %s, channel %s (type: %s, base: %s, class: %s): %s",
+                            device_data.get("id"), channel_index, channel_type, base_channel_type, class_name, e
+                        )
+
+            # Handle multi-function channels (e.g., HmIP-BSL NOTIFICATION_LIGHT_CHANNEL)
+            # These channels serve multiple purposes and need additional event entities
+            device_type = device_data.get("type")
+            if device_type in MULTI_FUNCTION_CHANNEL_DEVICES:
+                multi_func_config = MULTI_FUNCTION_CHANNEL_DEVICES[device_type].get(base_channel_type or channel_type)
+                if multi_func_config and "button" in multi_func_config.get("functions", []):
+                    # Create additional button event entity for multi-function channel
+                    try:
+                        _LOGGER.debug(
+                            "Creating button event entity for multi-function channel: device=%s (%s), channel=%s (%s)",
+                            device_data.get("id"),
+                            device_type,
+                            channel_index,
+                            channel_type,
+                        )
+                        entities[Platform.EVENT].append(
+                            event.HcuButtonEvent(coordinator, client, device_data, channel_index)
+                        )
+                    except (AttributeError, TypeError) as e:
+                        _LOGGER.error(
+                            "Failed to create button event entity for device %s, channel %s (type: %s): %s",
+                            device_data.get("id"), channel_index, channel_type, e
                         )
 
             # Create temperature sensor (prioritize actualTemperature over valveActualTemperature)
@@ -204,7 +229,10 @@ async def async_discover_entities(
                                 )
                             )
                     except (AttributeError, TypeError) as e:
-                        _LOGGER.error("Failed to create entity for feature %s (%s): %s", feature, class_name, e)
+                        _LOGGER.error(
+                            "Failed to create entity for device %s, channel %s, feature %s (%s): %s",
+                            device_data.get("id"), channel_index, feature, class_name, e
+                        )
 
             # Special handling for dutyCycle binary sensor (device-level warning flag)
             # Note: dutyCycle exists in both home object (percentage) and device channels (boolean)
@@ -231,8 +259,25 @@ async def async_discover_entities(
         "LIGHT": (Platform.LIGHT, light.HcuLightGroup, {}),
     }
 
+    # Track group discovery statistics for diagnostics
+    groups_discovered = 0
+    groups_skipped_meta = 0
+    groups_unknown_type = 0
+
     for group_data in state.get("groups", {}).values():
         group_type = group_data.get("type")
+        group_id = group_data.get("id")
+        group_label = group_data.get("label", group_id)
+
+        # Skip groups without valid ID (defensive null-checking)
+        if not group_id:
+            _LOGGER.debug(
+                "Skipping group without valid ID (type: %s, label: %s)",
+                group_type,
+                group_label or "unknown"
+            )
+            continue
+
         if mapping := group_type_mapping.get(group_type):
             # Skip auto-created meta groups for SWITCHING and LIGHT
             # These are created automatically by HCU for rooms and provide unexpected entities
@@ -240,16 +285,37 @@ async def async_discover_entities(
             if group_type in ("SWITCHING", "LIGHT"):
                 if "metaGroupId" in group_data:
                     _LOGGER.debug(
-                        "Skipping auto-created meta %s group '%s'",
+                        "Skipping auto-created meta %s group '%s' (id: %s)",
                         group_type,
-                        group_data.get("label", group_data.get("id"))
+                        group_label,
+                        group_id
                     )
+                    groups_skipped_meta += 1
                     continue
 
             platform, entity_class, extra_kwargs = mapping
             entities[platform].append(
                 entity_class(coordinator, client, group_data, **extra_kwargs)
             )
+            groups_discovered += 1
+            _LOGGER.debug(
+                "Created %s group entity '%s' (id: %s, type: %s)",
+                platform.value,
+                group_label,
+                group_id,
+                group_type
+            )
+        else:
+            # Log unknown group types to help diagnose missing entities
+            if group_type:
+                _LOGGER.warning(
+                    "Unknown group type '%s' for group '%s' (id: %s) - no entity created. "
+                    "If you expected an entity for this group, please report this as an issue.",
+                    group_type,
+                    group_label,
+                    group_id
+                )
+                groups_unknown_type += 1
 
     # Create home-level entities (alarm panel, vacation mode sensor, home sensors)
     if "home" in state:
@@ -266,4 +332,14 @@ async def async_discover_entities(
                 )
 
     _LOGGER.info("Discovered entities: %s", {p.value: len(e) for p, e in entities.items() if e})
+
+    # Log group discovery summary for diagnostics
+    if groups_discovered > 0 or groups_skipped_meta > 0 or groups_unknown_type > 0:
+        _LOGGER.info(
+            "Group discovery summary: %d created, %d skipped (meta groups), %d unknown types",
+            groups_discovered,
+            groups_skipped_meta,
+            groups_unknown_type
+        )
+
     return entities

@@ -76,6 +76,41 @@ Despite ORANGE being defined in device specifications, the HCU API does not acce
 - ✅ Orange hue selections gracefully map to RED or YELLOW
 - ✅ Better maintainability through shared color conversion logic
 
+**Fix Light Effects Not Working - Critical API Endpoint Bug**
+
+Fixed critical issue where light effects (blinking, flashing, billowing) were not working on HmIP-BSL and similar devices.
+
+**Root Cause:**
+
+The integration was sending `opticalSignalBehaviour` parameter to the `setSimpleRGBColorDimLevel` endpoint, which does not accept this parameter according to the HCU API specification. The HCU was silently ignoring the effect parameter, resulting in static colors instead of the requested visual effects.
+
+**What Was Fixed:**
+
+1. **Added Correct API Endpoints**:
+   - `SET_OPTICAL_SIGNAL` → `/hmip/device/control/setOpticalSignal`
+   - `SET_OPTICAL_SIGNAL_WITH_TIME` → `/hmip/device/control/setOpticalSignalWithTime`
+
+2. **Updated Endpoint Selection Logic**:
+   - When setting effects: Use `setOpticalSignal` endpoint
+   - When setting color/brightness only: Use `setSimpleRGBColorDimLevel` endpoint
+   - Proper handling of transition times for both endpoints
+
+3. **Fixed Both Turn On and Turn Off**:
+   - `async_turn_on()` now uses correct endpoint when effects are specified
+   - `async_turn_off()` now uses correct endpoint when setting optical signal to "OFF"
+
+**Technical Details:**
+
+According to HCU API documentation:
+- `setSimpleRGBColorDimLevel` accepts: `simpleRGBColorState`, `dimLevel`, `deviceId`, `channelIndex`
+- `setOpticalSignal` accepts: `opticalSignalBehaviour`, `simpleRGBColorState`, `dimLevel`, `deviceId`, `channelIndex`
+
+**Impact:**
+- ✅ Light effects now work correctly (BLINKING_MIDDLE, FLASH_MIDDLE, BILLOWING_MIDDLE, etc.)
+- ✅ Effects can be combined with color and brightness settings
+- ✅ Transition times work with effects when supported
+- ✅ Affects HmIP-BSL, HmIP-MP3P, and all devices with optical signal support
+
 ### ✨ Improvements
 
 **Enhanced Group Discovery Diagnostics - Issue #146**

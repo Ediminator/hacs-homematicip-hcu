@@ -667,6 +667,10 @@ EVENT_CHANNEL_TYPES = {
     "MULTI_MODE_INPUT_CHANNEL",
     CHANNEL_TYPE_MULTI_MODE_INPUT_TRANSMITTER,
     "KEY_CHANNEL",  # For remote controls and wall-mounted transmitters
+    # Channel types that were missing from the v1.17.0 fix:
+    "BRAND_REMOTE_CONTROL",  # Used by some button devices
+    "BRAND_WALL_MOUNTED_TRANSMITTER",  # Used by some wall-mounted switches
+    "REMOTE_CONTROL_TRANSMITTER",  # Used by some remote controls
     # Note: HmIP-BSL uses NOTIFICATION_LIGHT_CHANNEL for button inputs (channels 2-3)
     # These are multi-function channels that serve as BOTH button inputs AND backlight LEDs
     # Button events are handled via DEVICE_CHANNEL_EVENT, not timestamp-based detection
@@ -715,6 +719,10 @@ HMIP_CHANNEL_TYPE_TO_ENTITY = {
     "SWITCH_INPUT_CHANNEL": {"class": "HcuButtonEvent"},
     "SINGLE_KEY_CHANNEL": {"class": "HcuButtonEvent"},
     "MULTI_MODE_INPUT_CHANNEL": {"class": "HcuButtonEvent"},
+    # Channel types that were missing from the v1.17.0 fix - now restored:
+    "BRAND_REMOTE_CONTROL": {"class": "HcuButtonEvent"},
+    "BRAND_WALL_MOUNTED_TRANSMITTER": {"class": "HcuButtonEvent"},
+    "REMOTE_CONTROL_TRANSMITTER": {"class": "HcuButtonEvent"},
     "ACCELERATION_SENSOR_CHANNEL": None,
     "CLIMATE_CONTROL_CHANNEL": None,
     "CLIMATE_CONTROL_INPUT_CHANNEL": None,

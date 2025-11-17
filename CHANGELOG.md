@@ -111,6 +111,8 @@ According to HCU API documentation:
 - ✅ Transition times work with effects when supported
 - ✅ Affects HmIP-BSL, HmIP-MP3P, and all devices with optical signal support
 
+**Update:** Fixed INVALID_REQUEST errors that occurred after initial endpoint fix. The integration now only uses `setOpticalSignal` when actually changing effects or turning lights on/off, and uses the simpler `setSimpleRGBColorDimLevel` endpoint for basic color/brightness adjustments on already-on lights.
+
 ### ✨ Improvements
 
 **Enhanced Group Discovery Diagnostics - Issue #146**

@@ -481,7 +481,7 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
             device_id, channel_idx
         )
 
-    def _handle_device_channel_events(self, events: dict) -> None:
+    def _handle_device_channel_events(self, events: dict) -> set[str]:
         """Handle DEVICE_CHANNEL_EVENT type events (stateless buttons).
 
         These events are fired by newer button devices that don't maintain state.
@@ -490,7 +490,14 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
 
         Args:
             events: Dictionary of event data from the HCU WebSocket message
+
+        Returns:
+            A set of device IDs that were updated.
+            Empty set if no valid events were processed.
         """
+
+        updated_ids = set()
+
         for event in events.values():
             if event.get("pushEventType") != "DEVICE_CHANNEL_EVENT":
                 continue
@@ -526,6 +533,7 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
             # Prioritize triggering event entities for stateless buttons
             # This provides richer events (e.g., press_short vs. press_long)
             if (device_id, channel_idx_str) in self._event_entities:
+                updated_ids.add(device_id)
                 self._trigger_event_entity(device_id, channel_idx_str, event_type)
 
             # Check if this is a multi-function channel for enhanced logging
@@ -543,6 +551,8 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
                     "Button press: device=%s (%s), channel=%s (%s, %s), event=%s",
                     *common_log_args
                 )
+
+        return updated_ids
 
     def _should_fire_button_press(
         self, new_timestamp: int | None, old_timestamp: int | None
@@ -614,7 +624,7 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
             return
 
         # Handle immediate stateless button events
-        self._handle_device_channel_events(events)
+        stateless_event_updated_ids = self._handle_device_channel_events(events)
 
         # Extract which event channels were updated for timestamp-based detection
         event_channels = self._extract_event_channels(events)
@@ -634,8 +644,8 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
         # Detect button presses via timestamp changes
         self._detect_timestamp_based_button_presses(updated_ids, event_channels, old_state)
 
-        if updated_ids:
-            self.async_set_updated_data(updated_ids)
+        if stateless_event_updated_ids or updated_ids:
+            self.async_set_updated_data(stateless_event_updated_ids | updated_ids)
 
     async def _listen_for_events(self) -> None:
         """Maintain a persistent WebSocket connection with automatic reconnection."""

@@ -48,6 +48,7 @@ from .const import (
     ATTR_END_TIME,
     EVENT_CHANNEL_TYPES,
     DEVICE_CHANNEL_EVENT_TYPES,
+    DEVICE_CHANNEL_EVENT_ONLY_TYPES,
     CHANNEL_TYPE_MULTI_MODE_INPUT_TRANSMITTER,
     MULTI_FUNCTION_CHANNEL_DEVICES,
 )
@@ -404,6 +405,9 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
         1. These channels fire DEVICE_CHANNEL_EVENT for actual button presses
         2. Including them causes false button events when toggling the light via HA
         3. The switch state changes (and timestamp updates) even when toggled programmatically
+
+        Note: Channels in DEVICE_CHANNEL_EVENT_ONLY_TYPES are excluded to prevent
+        false positives from configuration changes that update lastStatusUpdate timestamps.
         """
         event_channels = set()
         for event in events.values():
@@ -419,6 +423,11 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
 
             for ch_idx, ch_data in device_data.get("functionalChannels", {}).items():
                 channel_type = ch_data.get("functionalChannelType")
+
+                # Skip channels that exclusively use DEVICE_CHANNEL_EVENT
+                # to avoid false positives from configuration changes
+                if channel_type in DEVICE_CHANNEL_EVENT_ONLY_TYPES:
+                    continue
 
                 # Only process standard event channel types (KEY_CHANNEL, etc.)
                 # Do NOT include SWITCH_CHANNEL with DOUBLE_INPUT_SWITCH as it causes
@@ -481,7 +490,7 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
             device_id, channel_idx
         )
 
-    def _handle_device_channel_events(self, events: dict) -> None:
+    def _handle_device_channel_events(self, events: dict) -> set[str]:
         """Handle DEVICE_CHANNEL_EVENT type events (stateless buttons).
 
         These events are fired by newer button devices that don't maintain state.
@@ -490,7 +499,11 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
 
         Args:
             events: Dictionary of event data from the HCU WebSocket message
+
+        Returns:
+            Set of device IDs that had DEVICE_CHANNEL_EVENT events
         """
+        device_ids = set()
         for event in events.values():
             if event.get("pushEventType") != "DEVICE_CHANNEL_EVENT":
                 continue
@@ -505,6 +518,9 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
             if not device_id or channel_idx is None or not event_type:
                 _LOGGER.debug("Skipping incomplete device channel event: %s", event)
                 continue
+
+            # Add device ID to the set for coordinator state update
+            device_ids.add(device_id)
 
             # Convert channel index to string for consistency
             channel_idx_str = str(channel_idx)
@@ -543,6 +559,8 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
                     "Button press: device=%s (%s), channel=%s (%s, %s), event=%s",
                     *common_log_args
                 )
+
+        return device_ids
 
     def _should_fire_button_press(
         self, new_timestamp: int | None, old_timestamp: int | None
@@ -613,8 +631,9 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
         if not events:
             return
 
-        # Handle immediate stateless button events
-        self._handle_device_channel_events(events)
+        # Handle immediate stateless button events (DEVICE_CHANNEL_EVENT)
+        # Returns set of device IDs that need UI updates
+        device_channel_event_ids = self._handle_device_channel_events(events)
 
         # Extract which event channels were updated for timestamp-based detection
         event_channels = self._extract_event_channels(events)
@@ -628,8 +647,11 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
             for dev_id, dev in self.client.state.get("devices", {}).items()
         }
 
-        # Process events and update state
+        # Process events and update state (DEVICE_CHANGED, GROUP_CHANGED, HOME_CHANGED)
         updated_ids = self.client.process_events(events)
+
+        # Merge device IDs from DEVICE_CHANNEL_EVENT (for UI updates)
+        updated_ids.update(device_channel_event_ids)
 
         # Detect button presses via timestamp changes
         self._detect_timestamp_based_button_presses(updated_ids, event_channels, old_state)

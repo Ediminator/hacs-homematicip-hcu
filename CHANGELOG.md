@@ -4,6 +4,71 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 
 ---
 
+## 1.17.2 - 2025-11-17
+
+### 🐛 Critical Bug Fixes
+
+**Fix Button Events Completely Broken - Two Critical Issues (#134)**
+
+Fixed TWO critical bugs that broke button events since v1.15.20, affecting devices like HmIP-BRC2, HmIP-WRC2, HmIP-WRC6-A, and HmIP-WKP.
+
+**Bug #1: DEVICE_CHANNEL_EVENT Events Don't Update UI**
+
+**Root Cause:**
+The `process_events()` method in `api.py` only handles DEVICE_CHANGED, GROUP_CHANGED, and HOME_CHANGED events. It completely ignores DEVICE_CHANNEL_EVENT messages that modern button devices send for actual button presses.
+
+**Result:**
+- Button event entities receive button presses internally
+- But coordinator never calls `async_set_updated_data()`
+- Home Assistant never gets notified of state changes
+- **Event entities don't update in UI until integration reload!**
+
+**What Was Fixed:**
+1. Modified `_handle_device_channel_events()` to return set of device IDs
+2. Merge these IDs into `updated_ids` after processing events
+3. Coordinator now properly notifies Home Assistant of DEVICE_CHANNEL_EVENT state changes
+
+**Bug #2: False Button Presses from Configuration Changes**
+
+**Root Cause:**
+Devices like HmIP-BRC2 using `SINGLE_KEY_CHANNEL` were included in timestamp-based button detection. When users changed button configuration in HomematicIP app:
+1. HCU sends DEVICE_CHANGED event with updated `lastStatusUpdate`
+2. Timestamp detection sees the change
+3. **False "button press" event fires and triggers automations!**
+
+These devices send explicit DEVICE_CHANNEL_EVENT messages for real button presses - they should NOT use timestamp-based detection.
+
+**What Was Fixed:**
+1. Created `DEVICE_CHANNEL_EVENT_ONLY_TYPES` constant for channel types that exclusively use DEVICE_CHANNEL_EVENT
+2. Added `SINGLE_KEY_CHANNEL` and `KEY_CHANNEL` to this list
+3. Modified `_extract_event_channels()` to skip these channels in timestamp-based detection
+
+**Bonus Fix: Missing Channel Type Mappings**
+
+Also restored three channel type mappings that were accidentally removed in v1.17.0:
+- `BRAND_REMOTE_CONTROL`
+- `BRAND_WALL_MOUNTED_TRANSMITTER`
+- `REMOTE_CONTROL_TRANSMITTER`
+
+**Impact:**
+- ✅ Button event entities now update immediately in UI (no more waiting for integration reload!)
+- ✅ No more false button events from configuration changes
+- ✅ Real button presses work correctly with proper event types (press_short, press_long, etc.)
+- ✅ All button device channel types now properly supported
+- ✅ Both modern entity-based events and legacy `hcu_integration_event` fire correctly
+
+**How to Apply:**
+1. Update to version 1.17.2
+2. Restart Home Assistant
+3. Test button presses - events should fire immediately and UI should update
+
+**Files Changed:**
+- `custom_components/hcu_integration/__init__.py` - Fixed DEVICE_CHANNEL_EVENT UI update issue and false positive detection
+- `custom_components/hcu_integration/const.py` - Added DEVICE_CHANNEL_EVENT_ONLY_TYPES and missing channel mappings
+
+**Reported by:** Community users in Issue #134 with detailed diagnostic logs
+**Affects:** Versions 1.15.20 - 1.17.1 (all button devices, especially HmIP-BRC2/WRC2)
+**Fixed in:** Version 1.17.2
 ## 1.17.1 - 2025-11-17
 
 ### 🐛 Critical Bug Fix

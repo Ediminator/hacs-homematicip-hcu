@@ -8,7 +8,7 @@
   "quality_scale": "silver",
   "codeowners": ["@Ediminator"],
   "requirements": ["aiohttp>=3.0.0"],
-  "version": "1.16.2",
+  "version": "1.17.0",
   "dependencies": [],
   "reconfigure": true,
   "platforms": [

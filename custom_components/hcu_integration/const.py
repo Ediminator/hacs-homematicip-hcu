@@ -659,14 +659,26 @@ DUTY_CYCLE_BINARY_SENSOR_MAPPING = {
     "entity_registry_enabled_default": False,
 }
 
+# Channel types that send DEVICE_CHANNEL_EVENT messages exclusively
+# These should NOT use timestamp-based detection to avoid false positives from configuration changes
+DEVICE_CHANNEL_EVENT_ONLY_TYPES = {
+    "SINGLE_KEY_CHANNEL",  # HmIP-BRC2, HmIP-WRC2 - sends explicit DEVICE_CHANNEL_EVENT
+    "KEY_CHANNEL",  # Modern remote controls - sends explicit DEVICE_CHANNEL_EVENT
+}
+
+# Channel types for timestamp-based button detection
+# Note: DEVICE_CHANNEL_EVENT_ONLY_TYPES are intentionally excluded from this set
+# to prevent false positives from configuration changes
 EVENT_CHANNEL_TYPES = {
     "WALL_MOUNTED_TRANSMITTER_CHANNEL",
     "KEY_REMOTE_CONTROL_CHANNEL",
     "SWITCH_INPUT_CHANNEL",
-    "SINGLE_KEY_CHANNEL",
     "MULTI_MODE_INPUT_CHANNEL",
     CHANNEL_TYPE_MULTI_MODE_INPUT_TRANSMITTER,
-    "KEY_CHANNEL",  # For remote controls and wall-mounted transmitters
+    # Channel types that were missing from the v1.17.0 fix:
+    "BRAND_REMOTE_CONTROL",  # Used by some button devices
+    "BRAND_WALL_MOUNTED_TRANSMITTER",  # Used by some wall-mounted switches
+    "REMOTE_CONTROL_TRANSMITTER",  # Used by some remote controls
     # Note: HmIP-BSL uses NOTIFICATION_LIGHT_CHANNEL for button inputs (channels 2-3)
     # These are multi-function channels that serve as BOTH button inputs AND backlight LEDs
     # Button events are handled via DEVICE_CHANNEL_EVENT, not timestamp-based detection
@@ -715,6 +727,10 @@ HMIP_CHANNEL_TYPE_TO_ENTITY = {
     "SWITCH_INPUT_CHANNEL": {"class": "HcuButtonEvent"},
     "SINGLE_KEY_CHANNEL": {"class": "HcuButtonEvent"},
     "MULTI_MODE_INPUT_CHANNEL": {"class": "HcuButtonEvent"},
+    # Channel types that were missing from the v1.17.0 fix - now restored:
+    "BRAND_REMOTE_CONTROL": {"class": "HcuButtonEvent"},
+    "BRAND_WALL_MOUNTED_TRANSMITTER": {"class": "HcuButtonEvent"},
+    "REMOTE_CONTROL_TRANSMITTER": {"class": "HcuButtonEvent"},
     "ACCELERATION_SENSOR_CHANNEL": None,
     "CLIMATE_CONTROL_CHANNEL": None,
     "CLIMATE_CONTROL_INPUT_CHANNEL": None,

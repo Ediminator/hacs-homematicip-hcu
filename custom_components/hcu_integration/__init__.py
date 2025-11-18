@@ -400,14 +400,19 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
         _handle_device_channel_events and should not be added here to avoid
         duplicate event firing.
 
-        Note: SWITCH_CHANNEL with DOUBLE_INPUT_SWITCH (e.g., HmIP-BSL) should NOT
-        be included here because:
-        1. These channels fire DEVICE_CHANNEL_EVENT for actual button presses
-        2. Including them causes false button events when toggling the light via HA
-        3. The switch state changes (and timestamp updates) even when toggled programmatically
+        Note: SWITCH_CHANNEL with DOUBLE_INPUT_SWITCH should NOT be included here because:
+        1. Including them causes false button events when toggling the light via HA
+        2. The switch state changes (and timestamp updates) even when toggled programmatically
 
         Note: Channels in DEVICE_CHANNEL_EVENT_ONLY_TYPES are excluded to prevent
         false positives from configuration changes that update lastStatusUpdate timestamps.
+
+        Note: HmIP-BSL uses NOTIFICATION_LIGHT_CHANNEL for button inputs (channels 2-3).
+        Despite the code expecting DEVICE_CHANNEL_EVENT messages, the HCU hardware only
+        sends DEVICE_CHANGED events for this device. Therefore, we enable timestamp-based
+        detection for multi-function NOTIFICATION_LIGHT_CHANNEL when it's configured as
+        a button input. This may cause occasional false positives when controlling the LED
+        via HA, but this is preferable to having no button events at all.
         """
         event_channels = set()
         for event in events.values():
@@ -418,6 +423,7 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
 
             device_data = event.get("device", {})
             device_id = device_data.get("id")
+            device_type = device_data.get("type")
             if not device_id:
                 continue
 
@@ -434,6 +440,15 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
                 # false events when the light is toggled
                 if channel_type in EVENT_CHANNEL_TYPES:
                     event_channels.add((device_id, ch_idx))
+                    continue
+
+                # Handle multi-function channels (e.g., HmIP-BSL NOTIFICATION_LIGHT_CHANNEL)
+                # These channels serve dual purposes (button input + LED control)
+                # The HCU doesn't send DEVICE_CHANNEL_EVENT for these, only DEVICE_CHANGED
+                if device_type in MULTI_FUNCTION_CHANNEL_DEVICES:
+                    multi_func_config = MULTI_FUNCTION_CHANNEL_DEVICES[device_type].get(channel_type)
+                    if multi_func_config and "button" in multi_func_config.get("functions", []):
+                        event_channels.add((device_id, ch_idx))
 
         return event_channels
 
@@ -494,8 +509,11 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
         """Handle DEVICE_CHANNEL_EVENT type events (stateless buttons).
 
         These events are fired by newer button devices that don't maintain state.
-        Examples: HmIP-WGS, HmIP-WRC6, HmIP-BSL. The events contain direct button press
-        information without requiring timestamp comparison.
+        Examples: HmIP-WGS, HmIP-WRC6, HmIP-WRC2, HmIP-BRC2. The events contain direct
+        button press information without requiring timestamp comparison.
+
+        Note: HmIP-BSL does NOT send DEVICE_CHANNEL_EVENT despite being a newer device.
+        It uses timestamp-based detection via NOTIFICATION_LIGHT_CHANNEL instead.
 
         Args:
             events: Dictionary of event data from the HCU WebSocket message

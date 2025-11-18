@@ -680,8 +680,8 @@ EVENT_CHANNEL_TYPES = {
     "BRAND_WALL_MOUNTED_TRANSMITTER",  # Used by some wall-mounted switches
     "REMOTE_CONTROL_TRANSMITTER",  # Used by some remote controls
     # Note: HmIP-BSL uses NOTIFICATION_LIGHT_CHANNEL for button inputs (channels 2-3)
-    # These are multi-function channels that serve as BOTH button inputs AND backlight LEDs
-    # Button events are handled via DEVICE_CHANNEL_EVENT, not timestamp-based detection
+    # These are NOT in this set - they are handled separately as multi-function channels
+    # via MULTI_FUNCTION_CHANNEL_DEVICES because they serve as BOTH button inputs AND LEDs
 }
 
 DEVICE_CHANNEL_EVENT_TYPES = frozenset({
@@ -689,7 +689,7 @@ DEVICE_CHANNEL_EVENT_TYPES = frozenset({
     "KEY_PRESS_LONG",
     "KEY_PRESS_LONG_START",
     "KEY_PRESS_LONG_STOP",
-    # Some devices (e.g., HmIP-BSL KEY_CHANNEL) may use shorter event names
+    # Some devices may use shorter event names without the KEY_ prefix
     "PRESS_SHORT",
     "PRESS_LONG",
     "PRESS_LONG_START",

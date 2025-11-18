@@ -423,7 +423,6 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
 
             device_data = event.get("device", {})
             device_id = device_data.get("id")
-            device_type = device_data.get("type")
             if not device_id:
                 continue
 
@@ -445,10 +444,12 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
                 # Handle multi-function channels (e.g., HmIP-BSL NOTIFICATION_LIGHT_CHANNEL)
                 # These channels serve dual purposes (button input + LED control)
                 # The HCU doesn't send DEVICE_CHANNEL_EVENT for these, only DEVICE_CHANGED
-                if device_type in MULTI_FUNCTION_CHANNEL_DEVICES:
-                    multi_func_config = MULTI_FUNCTION_CHANNEL_DEVICES[device_type].get(channel_type)
-                    if multi_func_config and "button" in multi_func_config.get("functions", []):
-                        event_channels.add((device_id, ch_idx))
+                # Use chained .get() calls for safer dictionary traversal
+                multi_func_config = MULTI_FUNCTION_CHANNEL_DEVICES.get(
+                    device_data.get("type"), {}
+                ).get(channel_type)
+                if multi_func_config and "button" in multi_func_config.get("functions", []):
+                    event_channels.add((device_id, ch_idx))
 
         return event_channels
 

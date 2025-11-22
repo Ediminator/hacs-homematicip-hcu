@@ -12,7 +12,7 @@ from custom_components.hcu_integration.const import DOMAIN, EVENT_CHANNEL_TYPES
 
 
 @pytest.fixture
-async def coordinator(hass: HomeAssistant, mock_hcu_client: MagicMock, mock_config_entry: ConfigEntry):
+def coordinator(hass: HomeAssistant, mock_hcu_client: MagicMock, mock_config_entry: ConfigEntry):
     """Create a coordinator instance."""
     coordinator = HcuCoordinator(hass, mock_hcu_client, mock_config_entry)
     return coordinator
@@ -47,6 +47,7 @@ def test_extract_event_channels(coordinator: HcuCoordinator):
     assert ("device1", "2") not in result
 
 
+@pytest.mark.asyncio
 async def test_fire_button_event(coordinator: HcuCoordinator, hass: HomeAssistant):
     """Test firing a button event."""
     events_fired = []
@@ -66,6 +67,7 @@ async def test_fire_button_event(coordinator: HcuCoordinator, hass: HomeAssistan
     assert event.data["type"] == "press"
 
 
+@pytest.mark.asyncio
 async def test_handle_device_channel_events(coordinator: HcuCoordinator, hass: HomeAssistant):
     """Test handling DEVICE_CHANNEL_EVENT type events."""
     events_fired = []
@@ -115,6 +117,7 @@ def test_should_fire_button_press_no_change(coordinator: HcuCoordinator):
     assert reason == ""
 
 
+@pytest.mark.asyncio
 async def test_detect_timestamp_based_button_presses(coordinator: HcuCoordinator, hass: HomeAssistant):
     """Test timestamp-based button press detection."""
     events_fired = []
@@ -155,6 +158,7 @@ async def test_detect_timestamp_based_button_presses(coordinator: HcuCoordinator
     assert event.data["type"] == "press"
 
 
+@pytest.mark.asyncio
 async def test_handle_event_message_full_flow(coordinator: HcuCoordinator, hass: HomeAssistant):
     """Test complete event message handling flow."""
     events_fired = []

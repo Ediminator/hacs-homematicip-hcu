@@ -137,6 +137,15 @@ class HcuUnreachBinarySensor(HcuBinarySensor):
     """
 
     @property
+    def available(self) -> bool:
+        """
+        Return True if the entity is available.
+        The unreach sensor must be available even if the device is unreachable,
+        otherwise it cannot report the "Problem" status (OFF for connectivity).
+        """
+        return True
+
+    @property
     def is_on(self) -> bool:
         """
         Return true if the device is connected.

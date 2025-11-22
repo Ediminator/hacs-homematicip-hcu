@@ -80,7 +80,14 @@ class HcuButtonEvent(HcuBaseEntity, EventEntity):
     PLATFORM = Platform.EVENT
 
     _attr_device_class = EventDeviceClass.BUTTON
-    _attr_event_types = ["press", "press_short", "press_long", "press_long_start", "press_long_stop"]
+    _attr_event_types = [
+        "press",
+        "press_short",
+        "press_long",
+        "press_long_start",
+        "press_long_stop",
+        "notification_light_channel_event",
+    ]
 
     def __init__(
         self,

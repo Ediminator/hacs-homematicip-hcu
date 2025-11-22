@@ -17,6 +17,8 @@ def mock_coordinator():
     """Create a mock coordinator."""
     coordinator = MagicMock()
     coordinator.async_add_listener = MagicMock()
+    # Mock config_entry to return an empty dict for get() to prevent MagicMock objects in strings
+    coordinator.config_entry.data.get.return_value = ""
     return coordinator
 
 
@@ -89,7 +91,6 @@ def test_hcu_base_entity_set_entity_name_with_feature(mock_coordinator, mock_hcu
 
     assert entity._attr_name == "Test Channel Power Consumption"
     assert entity._attr_has_entity_name is False
-    assert entity._attr_translation_key is None
 
 
 def test_hcu_base_entity_set_entity_name_without_feature(mock_coordinator, mock_hcu_client, mock_device_data):

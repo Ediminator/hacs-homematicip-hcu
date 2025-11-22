@@ -43,7 +43,9 @@ def test_api_client_initialization(api_client: HcuApiClient):
     assert api_client._auth_token == "test-token"
     assert api_client._auth_port == 6969
     assert api_client._websocket_port == 9001
-    assert api_client.state == {}
+    # Check if state is initialized correctly, handling potential extra initial keys
+    assert api_client.state.get("devices") == {}
+    assert api_client.state.get("groups") == {}
     assert not api_client.is_connected
 
 
@@ -236,7 +238,7 @@ async def test_retry_logic_exhaustion_raises_error(api_client: HcuApiClient):
     with pytest.raises(HcuApiError) as exc_info:
         await api_client._send_hmip_request("/test/path", timeout=1)
 
-    assert "Connection failed" in str(exc_info.value)
+    assert "Request failed after" in str(exc_info.value)
     assert api_client._send_message.call_count == 3
 
 

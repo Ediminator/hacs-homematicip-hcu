@@ -10,6 +10,7 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 from custom_components.hcu_integration.const import DOMAIN
 from custom_components.hcu_integration.api import HcuApiClient
 
+pytest_plugins = "pytest_homeassistant_custom_component"
 
 @pytest.fixture
 def mock_hcu_client() -> MagicMock:

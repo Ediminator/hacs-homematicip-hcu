@@ -37,8 +37,12 @@ def test_hcu_unreach_binary_sensor_availability(mock_coordinator, mock_hcu_clien
         mapping=mapping,
     )
 
-    # Should be available even if device is unreachable
+    # Should be available even if device is unreachable, as long as client is connected
     assert entity.available is True
 
     # Value should be False (not connected)
     assert entity.is_on is False
+
+    # Simulate client disconnect
+    mock_hcu_client.is_connected = False
+    assert entity.available is False

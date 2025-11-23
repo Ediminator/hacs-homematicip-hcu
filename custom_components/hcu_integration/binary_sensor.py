@@ -142,8 +142,9 @@ class HcuUnreachBinarySensor(HcuBinarySensor):
         Return True if the entity is available.
         The unreach sensor must be available even if the device is unreachable,
         otherwise it cannot report the "Problem" status (OFF for connectivity).
+        However, it should be unavailable if the client is disconnected.
         """
-        return True
+        return self._client.is_connected
 
     @property
     def is_on(self) -> bool:

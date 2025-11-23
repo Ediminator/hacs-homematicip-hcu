@@ -146,7 +146,7 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, E
                     self._attr_name = None
                 return
 
-        # Apply prefix to base name for other cases
+        # Apply prefix to base name for other cases (e.g. labeled main entity)
         self._attr_name = self._apply_prefix(base_name)
 
     @property

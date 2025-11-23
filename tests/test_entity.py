@@ -12,16 +12,6 @@ from custom_components.hcu_integration.entity import (
 )
 
 
-@pytest.fixture
-def mock_coordinator():
-    """Create a mock coordinator."""
-    coordinator = MagicMock()
-    coordinator.async_add_listener = MagicMock()
-    # Mock config_entry to return an empty dict for get() to prevent MagicMock objects in strings
-    coordinator.config_entry.data.get.return_value = ""
-    return coordinator
-
-
 def test_hcu_base_entity_initialization(mock_coordinator, mock_hcu_client, mock_device_data):
     """Test HcuBaseEntity initialization."""
     entity = HcuBaseEntity(

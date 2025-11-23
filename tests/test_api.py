@@ -43,9 +43,8 @@ def test_api_client_initialization(api_client: HcuApiClient):
     assert api_client._auth_token == "test-token"
     assert api_client._auth_port == 6969
     assert api_client._websocket_port == 9001
-    # Check if state is initialized correctly, handling potential extra initial keys
-    assert api_client.state.get("devices") == {}
-    assert api_client.state.get("groups") == {}
+    # Check if state is initialized correctly
+    assert api_client.state == {"devices": {}, "groups": {}}
     assert not api_client.is_connected
 
 

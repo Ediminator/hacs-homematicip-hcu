@@ -1,15 +1,6 @@
 from unittest.mock import MagicMock
 import pytest
 
-@pytest.fixture
-def mock_coordinator():
-    """Create a mock coordinator."""
-    coordinator = MagicMock()
-    coordinator.async_add_listener = MagicMock()
-    # Mock config_entry to return an empty dict for get() to prevent MagicMock objects in strings
-    coordinator.config_entry.data.get.return_value = ""
-    return coordinator
-
 def test_hcu_unreach_binary_sensor_availability(mock_coordinator, mock_hcu_client, mock_device_data):
     """Test HcuUnreachBinarySensor availability."""
     from custom_components.hcu_integration.binary_sensor import HcuUnreachBinarySensor

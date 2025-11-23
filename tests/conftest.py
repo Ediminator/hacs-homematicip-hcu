@@ -107,3 +107,12 @@ def mock_group_data() -> dict:
         },
         "channels": [],
     }
+
+@pytest.fixture
+def mock_coordinator() -> MagicMock:
+    """Create a mock coordinator."""
+    coordinator = MagicMock()
+    coordinator.async_add_listener = MagicMock()
+    # Mock config_entry to return an empty dict for get() to prevent MagicMock objects in strings
+    coordinator.config_entry.data.get.return_value = ""
+    return coordinator

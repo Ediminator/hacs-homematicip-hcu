@@ -293,7 +293,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 )
                 continue
 
-            on_time = call.data[ATTR_ON_TIME]
+            if (on_time := call.data.get(ATTR_ON_TIME)) is None:
+                _LOGGER.error(
+                    "Required attribute '%s' is missing for service call on '%s'",
+                    ATTR_ON_TIME,
+                    entity_id,
+                )
+                continue
 
             try:
                 await hcu_entity.async_turn_on_with_time(on_time=on_time)

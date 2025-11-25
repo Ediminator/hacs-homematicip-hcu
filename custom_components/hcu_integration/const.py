@@ -733,7 +733,7 @@ HMIP_CHANNEL_TYPE_TO_ENTITY = {
     "BRAND_REMOTE_CONTROL": {"class": "HcuButtonEvent"},
     "BRAND_WALL_MOUNTED_TRANSMITTER": {"class": "HcuButtonEvent"},
     "REMOTE_CONTROL_TRANSMITTER": {"class": "HcuButtonEvent"},
-    "ACCELERATION_SENSOR_CHANNEL": {"class": "HcuGenericSensor"},
+    "ACCELERATION_SENSOR_CHANNEL": None,
     "CLIMATE_CONTROL_CHANNEL": None,
     "CLIMATE_CONTROL_INPUT_CHANNEL": None,
     "CLIMATE_SENSOR_CHANNEL": None,

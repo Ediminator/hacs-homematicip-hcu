@@ -276,7 +276,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     async def handle_switch_on_with_time(call: ServiceCall) -> None:
         """Handle the switch_on_with_time service call."""
-        for entity_id in call.data[ATTR_ENTITY_ID]:
+        for entity_id in call.data.get(ATTR_ENTITY_ID, []):
             hcu_entity = _get_entity_from_entity_id(entity_id)
 
             if not hcu_entity:

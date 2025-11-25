@@ -579,14 +579,8 @@ class HcuApiClient:
             body["onTime"] = on_time
         
         path = API_PATHS["SET_SWITCH_STATE"]
-        # If on_time is provided, we might need a different path if one exists, 
-        # but based on standard HCU API, setSwitchState usually handles onTime if supported.
-        # However, looking at other methods like setDimLevelWithTime, there might be a WithTime variant.
-        # Let's check API_PATHS in const.py. 
-        # API_PATHS["SET_SWITCH_STATE"] = "/hmip/device/control/setSwitchState"
-        # There is no SET_SWITCH_STATE_WITH_TIME in the current const.py.
-        # Assuming setSwitchState supports onTime in the body or we need to add a new path.
-        # For now, I will send it in the body.
+        
+        path = API_PATHS["SET_SWITCH_STATE"]
         
         await self.async_device_control(path, device_id, channel_index, body)
 

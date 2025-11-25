@@ -7,9 +7,12 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
+import logging
 from .const import HMIP_DEVICE_TYPE_TO_DEVICE_CLASS
 from .entity import HcuBaseEntity, SwitchStateMixin, HcuSwitchingGroupBase
-from .api import HcuApiClient
+from .api import HcuApiClient, HcuApiError
+
+_LOGGER = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from . import HcuCoordinator
@@ -84,6 +87,10 @@ class HcuSwitch(SwitchStateMixin, HcuBaseEntity, SwitchEntity):
 
     async def async_turn_on_with_time(self, on_time: float) -> None:
         """Turn the switch on for a specific duration."""
+        # Store previous state for rollback
+        previous_is_on = self._attr_is_on
+        previous_assumed_state = self._attr_assumed_state
+
         # Optimistic update
         self._attr_is_on = True
         self._attr_assumed_state = True
@@ -94,14 +101,10 @@ class HcuSwitch(SwitchStateMixin, HcuBaseEntity, SwitchEntity):
                 self._device_id, self._channel_index, True, on_time=on_time
             )
         except (HcuApiError, ConnectionError) as err:
-            # Revert to previous state on error (assuming it was off, or just sync later)
-            # We don't know the previous state for sure without storing it, but usually it's fine to revert to off if it failed to turn on.
-            # However, if it was already on, this might be wrong. 
-            # But for "turn on with time", we expect it to go to ON.
-            # Let's just log error and trigger a sync if possible, or just revert to off.
             _LOGGER.error("Failed to turn on %s with time: %s", self.name, err)
-            self._attr_is_on = False
-            self._attr_assumed_state = False
+            # Revert to previous state
+            self._attr_is_on = previous_is_on
+            self._attr_assumed_state = previous_assumed_state
             self.async_write_ha_state()
 
 

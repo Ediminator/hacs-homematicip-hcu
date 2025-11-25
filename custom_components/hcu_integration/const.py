@@ -93,6 +93,18 @@ SERVICE_SWITCH_ON_WITH_TIME = "switch_on_with_time"
 PRESET_ECO = "Eco"
 PRESET_PARTY = "Party"
 
+# --- Service Attribute Constants ---
+ATTR_SOUND_FILE = "sound_file"
+ATTR_DURATION = "duration"
+ATTR_VOLUME = "volume"
+ATTR_RULE_ID = "rule_id"
+ATTR_ENABLED = "enabled"
+ATTR_END_TIME = "end_time"
+ATTR_ON_TIME = "on_time"
+
+# --- API Path Constants ---
+API_PATHS = {
+    "ACTIVATE_ABSENCE_PERMANENT": "/hmip/home/heating/activateAbsencePermanent",
     "ACTIVATE_PARTY_MODE": "/hmip/group/heating/activatePartyMode",
     "ACTIVATE_VACATION": "/hmip/home/heating/activateVacation",
     "DEACTIVATE_ABSENCE": "/hmip/home/heating/deactivateAbsence",

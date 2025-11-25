@@ -81,7 +81,6 @@ _INTEGRATION_SERVICES = [
     SERVICE_ACTIVATE_ECO_MODE,
     SERVICE_DEACTIVATE_ABSENCE_MODE,
     SERVICE_SWITCH_ON_WITH_TIME,
-    SERVICE_SWITCH_ON_WITH_TIME,
 ]
 
 
@@ -288,11 +287,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 continue
             
             if not hasattr(hcu_entity, "async_turn_on_with_time"):
-                 _LOGGER.warning(
+                _LOGGER.warning(
                     "Entity %s does not support timed on.",
                     entity_id,
                 )
-                 continue
+                continue
 
             on_time = call.data[ATTR_ON_TIME]
 

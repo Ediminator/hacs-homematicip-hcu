@@ -137,7 +137,46 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, E
                 self._attr_has_entity_name = True
 
         # Apply prefix to base name
-        self._attr_name = self._apply_prefix(base_name)
+        prefix = self._entity_prefix
+        if prefix:
+            # If a prefix is configured, we must disable has_entity_name and manually
+            # construct the full name. This forces Home Assistant to generate the
+            # Entity ID from the full prefixed name (e.g., domain.prefix_device_feature)
+            # instead of appending the prefix to the ID suffix (domain.device_prefix_feature).
+            self._attr_has_entity_name = False
+            
+            # If base_name already starts with the device label (e.g. for main entities),
+            # we just prepend the prefix.
+            # If base_name is just the feature name (e.g. "Temperature"), we might want
+            # to include the device label if we are disabling has_entity_name, otherwise
+            # the entity name would just be "Prefix Temperature" which is ambiguous.
+            
+            # However, the previous logic for base_name already tried to construct a meaningful name.
+            # If has_entity_name was True, base_name was just the feature/device name.
+            # If we disable has_entity_name, we should ensure the device name is included 
+            # if it wasn't already.
+            
+            # Let's reconstruct the full name logic for the prefixed case:
+            
+            device_label = self._device.get("label") or self._device.get("modelType") or self._device_id
+            
+            if feature_name:
+                if channel_label:
+                    # "Prefix Channel Label Feature Name"
+                    self._attr_name = f"{prefix} {channel_label} {feature_name}"
+                else:
+                    # "Prefix Device Label Feature Name"
+                    self._attr_name = f"{prefix} {device_label} {feature_name}"
+            else:
+                if channel_label:
+                    # "Prefix Channel Label"
+                    self._attr_name = f"{prefix} {channel_label}"
+                else:
+                    # "Prefix Device Label"
+                    self._attr_name = f"{prefix} {device_label}"
+        else:
+            # No prefix - use standard logic
+            self._attr_name = base_name
 
     @property
     def _device(self) -> dict[str, Any]:

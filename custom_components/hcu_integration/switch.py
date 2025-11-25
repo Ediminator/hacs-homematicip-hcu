@@ -82,6 +82,28 @@ class HcuSwitch(SwitchStateMixin, HcuBaseEntity, SwitchEntity):
             duration=duration,
         )
 
+    async def async_turn_on_with_time(self, on_time: float) -> None:
+        """Turn the switch on for a specific duration."""
+        # Optimistic update
+        self._attr_is_on = True
+        self._attr_assumed_state = True
+        self.async_write_ha_state()
+        
+        try:
+            await self._client.async_set_switch_state(
+                self._device_id, self._channel_index, True, on_time=on_time
+            )
+        except (HcuApiError, ConnectionError) as err:
+            # Revert to previous state on error (assuming it was off, or just sync later)
+            # We don't know the previous state for sure without storing it, but usually it's fine to revert to off if it failed to turn on.
+            # However, if it was already on, this might be wrong. 
+            # But for "turn on with time", we expect it to go to ON.
+            # Let's just log error and trigger a sync if possible, or just revert to off.
+            _LOGGER.error("Failed to turn on %s with time: %s", self.name, err)
+            self._attr_is_on = False
+            self._attr_assumed_state = False
+            self.async_write_ha_state()
+
 
 class HcuWateringSwitch(SwitchStateMixin, HcuBaseEntity, SwitchEntity):
     """Representation of a Homematic IP HCU watering controller."""

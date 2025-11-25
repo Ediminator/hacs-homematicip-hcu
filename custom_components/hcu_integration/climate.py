@@ -203,6 +203,28 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
                         return temp
         return None
 
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return the optional state attributes."""
+        attributes = {}
+        if (valve_pos := self.current_valve_position) is not None:
+            attributes["valve_position"] = valve_pos
+        return attributes
+
+    @property
+    def current_valve_position(self) -> int | None:
+        """Return the current valve position."""
+        # Fallback: Find valve position from a device in the group
+        for channel_ref in self._group.get("channels", []):
+            device_id, channel_index = channel_ref.get("deviceId"), str(
+                channel_ref.get("channelIndex")
+            )
+            if device := self._client.get_device_by_address(device_id):
+                if channel := device.get("functionalChannels", {}).get(channel_index):
+                    if (valve_pos := channel.get("valvePosition")) is not None:
+                        return int(round(valve_pos * 100))
+        return None
+
     async def async_set_temperature(self, **kwargs: Any) -> None:
         """Set new target temperature."""
         temperature = kwargs.get(ATTR_TEMPERATURE)

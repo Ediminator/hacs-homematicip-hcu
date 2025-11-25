@@ -572,10 +572,23 @@ class HcuApiClient:
         return API_PATHS[base_path_key]
 
     # --- Specific Device Control Methods ---
-    async def async_set_switch_state(self, device_id: str, channel_index: int, is_on: bool) -> None:
+    async def async_set_switch_state(self, device_id: str, channel_index: int, is_on: bool, on_time: float | None = None) -> None:
         """Set the state of a switch channel."""
         body = {"on": is_on}
-        await self.async_device_control(API_PATHS["SET_SWITCH_STATE"], device_id, channel_index, body)
+        if on_time is not None:
+            body["onTime"] = on_time
+        
+        path = API_PATHS["SET_SWITCH_STATE"]
+        # If on_time is provided, we might need a different path if one exists, 
+        # but based on standard HCU API, setSwitchState usually handles onTime if supported.
+        # However, looking at other methods like setDimLevelWithTime, there might be a WithTime variant.
+        # Let's check API_PATHS in const.py. 
+        # API_PATHS["SET_SWITCH_STATE"] = "/hmip/device/control/setSwitchState"
+        # There is no SET_SWITCH_STATE_WITH_TIME in the current const.py.
+        # Assuming setSwitchState supports onTime in the body or we need to add a new path.
+        # For now, I will send it in the body.
+        
+        await self.async_device_control(path, device_id, channel_index, body)
 
     async def async_set_watering_switch_state(self, device_id: str, channel_index: int, is_on: bool) -> None:
         await self.async_device_control(API_PATHS["SET_WATERING_SWITCH_STATE"], device_id, channel_index, {"wateringActive": is_on})

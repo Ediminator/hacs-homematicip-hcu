@@ -215,6 +215,7 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
     def current_valve_position(self) -> int | None:
         """Return the current valve position."""
         # Fallback: Find valve position from a device in the group
+        valve_positions = []
         for channel_ref in self._group.get("channels", []):
             device_id, channel_index = channel_ref.get("deviceId"), str(
                 channel_ref.get("channelIndex")
@@ -222,8 +223,13 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
             if device := self._client.get_device_by_address(device_id):
                 if channel := device.get("functionalChannels", {}).get(channel_index):
                     if (valve_pos := channel.get("valvePosition")) is not None:
-                        return int(round(valve_pos * 100))
-        return None
+                        valve_positions.append(valve_pos)
+
+        if not valve_positions:
+            return None
+
+        # Return the maximum valve position to represent the heating demand of the group.
+        return int(round(max(valve_positions) * 100))
 
     async def async_set_temperature(self, **kwargs: Any) -> None:
         """Set new target temperature."""

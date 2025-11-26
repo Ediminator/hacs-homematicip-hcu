@@ -276,6 +276,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     async def handle_switch_on_with_time(call: ServiceCall) -> None:
         """Handle the switch_on_with_time service call."""
+        if (on_time := call.data.get(ATTR_ON_TIME)) is None:
+            _LOGGER.error(
+                "Required attribute '%s' is missing for service call switch_on_with_time",
+                ATTR_ON_TIME,
+            )
+            return
+
         for entity_id in call.data.get(ATTR_ENTITY_ID, []):
             hcu_entity = _get_entity_from_entity_id(entity_id)
 
@@ -289,14 +296,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             if not hasattr(hcu_entity, "async_turn_on_with_time"):
                 _LOGGER.warning(
                     "Entity %s does not support timed on.",
-                    entity_id,
-                )
-                continue
-
-            if (on_time := call.data.get(ATTR_ON_TIME)) is None:
-                _LOGGER.error(
-                    "Required attribute '%s' is missing for service call on '%s'",
-                    ATTR_ON_TIME,
                     entity_id,
                 )
                 continue

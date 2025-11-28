@@ -137,7 +137,33 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, E
                 self._attr_has_entity_name = True
 
         # Apply prefix to base name
-        self._attr_name = self._apply_prefix(base_name)
+        if self._entity_prefix:
+            was_child_entity = self._attr_has_entity_name
+            # If a prefix is configured, we must disable has_entity_name and manually
+            # construct the full name. This forces Home Assistant to generate the
+            # Entity ID from the full prefixed name (e.g., domain.prefix_device_feature)
+            # instead of appending the prefix to the ID suffix (domain.device_prefix_feature).
+            self._attr_has_entity_name = False
+            
+            # If we are disabling has_entity_name, we need to ensure the base_name
+            # is fully qualified (includes device name if it was just a feature name).
+            # However, the logic above for base_name already handles this distinction
+            # based on whether it's a feature or main entity and whether it has a channel label.
+            # The only case where base_name might be "too simple" is if it was relying on
+            # the device name being prepended by HA (has_entity_name=True cases).
+            
+            if was_child_entity:
+                 # If it was going to be a child entity, base_name is just the feature name.
+                 # We need to prepend the device name/label to make it a full name before prefixing.
+                 device_label = self._device.get("label") or self._device.get("modelType") or self._device_id
+                 if base_name != device_label:
+                     base_name = f"{device_label} {base_name}"
+                 else:
+                     base_name = device_label
+
+            self._attr_name = self._apply_prefix(base_name)
+        else:
+            self._attr_name = base_name
 
     @property
     def _device(self) -> dict[str, Any]:

@@ -87,6 +87,7 @@ SERVICE_ACTIVATE_PARTY_MODE = "activate_party_mode"
 SERVICE_ACTIVATE_VACATION_MODE = "activate_vacation_mode"
 SERVICE_ACTIVATE_ECO_MODE = "activate_eco_mode"
 SERVICE_DEACTIVATE_ABSENCE_MODE = "deactivate_absence_mode"
+SERVICE_SWITCH_ON_WITH_TIME = "switch_on_with_time"
 
 # --- Preset Constants ---
 PRESET_ECO = "Eco"
@@ -99,6 +100,7 @@ ATTR_VOLUME = "volume"
 ATTR_RULE_ID = "rule_id"
 ATTR_ENABLED = "enabled"
 ATTR_END_TIME = "end_time"
+ATTR_ON_TIME = "on_time"
 
 # --- API Path Constants ---
 API_PATHS = {
@@ -221,7 +223,7 @@ HMIP_DEVICE_TYPE_TO_DEVICE_CLASS = {
     "PUSH_BUTTON_2": None,
     "DOOR_LOCK_DRIVE": None,
     "TEMPERATURE_HUMIDITY_SENSOR_OUTDOOR": None,
-    "TILT_VIBRATION_SENSOR": None,
+    "TILT_VIBRATION_SENSOR": None,  # Binary sensors handle this
     "GLASS_WALL_THERMOSTAT_CARBON": None,
     "SOIL_MOUNTURE_SENSOR_INTERFACE": None,
     "FLUSH_MOUNT_CONTACT_INTERFACE_1": None,

@@ -572,9 +572,12 @@ class HcuApiClient:
         return API_PATHS[base_path_key]
 
     # --- Specific Device Control Methods ---
-    async def async_set_switch_state(self, device_id: str, channel_index: int, is_on: bool) -> None:
+    async def async_set_switch_state(self, device_id: str, channel_index: int, is_on: bool, on_time: float | None = None) -> None:
         """Set the state of a switch channel."""
         body = {"on": is_on}
+        if on_time is not None:
+            body["onTime"] = on_time
+        
         await self.async_device_control(API_PATHS["SET_SWITCH_STATE"], device_id, channel_index, body)
 
     async def async_set_watering_switch_state(self, device_id: str, channel_index: int, is_on: bool) -> None:

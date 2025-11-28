@@ -40,12 +40,14 @@ from .const import (
     SERVICE_ACTIVATE_VACATION_MODE,
     SERVICE_ACTIVATE_ECO_MODE,
     SERVICE_DEACTIVATE_ABSENCE_MODE,
+    SERVICE_SWITCH_ON_WITH_TIME,
     ATTR_SOUND_FILE,
     ATTR_DURATION,
     ATTR_VOLUME,
     ATTR_RULE_ID,
     ATTR_ENABLED,
     ATTR_END_TIME,
+    ATTR_ON_TIME,
     EVENT_CHANNEL_TYPES,
     DEVICE_CHANNEL_EVENT_TYPES,
     DEVICE_CHANNEL_EVENT_ONLY_TYPES,
@@ -78,6 +80,7 @@ _INTEGRATION_SERVICES = [
     SERVICE_ACTIVATE_VACATION_MODE,
     SERVICE_ACTIVATE_ECO_MODE,
     SERVICE_DEACTIVATE_ABSENCE_MODE,
+    SERVICE_SWITCH_ON_WITH_TIME,
 ]
 
 
@@ -271,6 +274,37 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         except ValueError as err:
             _LOGGER.error("No HCU available for service call: %s", err)
 
+    async def handle_switch_on_with_time(call: ServiceCall) -> None:
+        """Handle the switch_on_with_time service call."""
+        if (on_time := call.data.get(ATTR_ON_TIME)) is None:
+            _LOGGER.error(
+                "Required attribute '%s' is missing for service call switch_on_with_time",
+                ATTR_ON_TIME,
+            )
+            return
+
+        for entity_id in call.data.get(ATTR_ENTITY_ID, []):
+            hcu_entity = _get_entity_from_entity_id(entity_id)
+
+            if not hcu_entity:
+                _LOGGER.warning(
+                    "Cannot turn on %s with time, as it is not found.",
+                    entity_id,
+                )
+                continue
+            
+            if not hasattr(hcu_entity, "async_turn_on_with_time"):
+                _LOGGER.warning(
+                    "Entity %s does not support timed on.",
+                    entity_id,
+                )
+                continue
+
+            try:
+                await hcu_entity.async_turn_on_with_time(on_time=on_time)
+            except (HcuApiError, ConnectionError) as err:
+                _LOGGER.error("Error calling switch_on_with_time for %s: %s", entity_id, err)
+
     # Define services and their handlers
     SERVICES = {
         SERVICE_PLAY_SOUND: handle_play_sound,
@@ -279,6 +313,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         SERVICE_ACTIVATE_VACATION_MODE: handle_activate_vacation_mode,
         SERVICE_ACTIVATE_ECO_MODE: handle_activate_eco_mode,
         SERVICE_DEACTIVATE_ABSENCE_MODE: handle_deactivate_absence_mode,
+        SERVICE_SWITCH_ON_WITH_TIME: handle_switch_on_with_time,
     }
 
     # Register services only once, even with multiple config entries

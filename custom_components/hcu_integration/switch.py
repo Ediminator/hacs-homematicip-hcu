@@ -7,9 +7,12 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
+import logging
 from .const import HMIP_DEVICE_TYPE_TO_DEVICE_CLASS
 from .entity import HcuBaseEntity, SwitchStateMixin, HcuSwitchingGroupBase
-from .api import HcuApiClient
+from .api import HcuApiClient, HcuApiError
+
+_LOGGER = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from . import HcuCoordinator
@@ -81,6 +84,28 @@ class HcuSwitch(SwitchStateMixin, HcuBaseEntity, SwitchEntity):
             volume=volume,
             duration=duration,
         )
+
+    async def async_turn_on_with_time(self, on_time: float) -> None:
+        """Turn the switch on for a specific duration."""
+        # Store previous state for rollback
+        previous_is_on = self._attr_is_on
+        previous_assumed_state = self._attr_assumed_state
+
+        # Optimistic update
+        self._attr_is_on = True
+        self._attr_assumed_state = True
+        self.async_write_ha_state()
+        
+        try:
+            await self._client.async_set_switch_state(
+                self._device_id, self._channel_index, True, on_time=on_time
+            )
+        except (HcuApiError, ConnectionError) as err:
+            _LOGGER.error("Failed to turn on %s with time: %s", self.name, err)
+            # Revert to previous state
+            self._attr_is_on = previous_is_on
+            self._attr_assumed_state = previous_assumed_state
+            self.async_write_ha_state()
 
 
 class HcuWateringSwitch(SwitchStateMixin, HcuBaseEntity, SwitchEntity):

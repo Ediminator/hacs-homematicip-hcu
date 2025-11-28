@@ -4,6 +4,35 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 
 ---
 
+## 1.17.4 - 2025-11-28
+
+### ✨ New Features
+
+**Climate Valve Visualization (#164)**
+- Added `valve_position` attribute to climate entities.
+- Returns the **maximum** valve position of all devices in the heating group, representing peak demand.
+
+**HmIP-STV Support (#163)**
+- Added support for Tilt/Vibration sensors (HmIP-STV).
+- Mapped `ACCELERATION_SENSOR_CHANNEL` to `HcuGenericSensor` feature to ensure correct entity creation.
+
+**OnTime Selection for Switches (#161)**
+- Added `hcu_integration.switch_on_with_time` service.
+- Allows turning on switches for a specific duration (in seconds).
+- Supports `on_time` parameter in `HcuApiClient`.
+
+### 🐛 Bug Fixes
+
+**Entity Prefix Fix (#158)**
+- Fixed issue where `entity_prefix` was not correctly applied to Entity IDs.
+- Logic now correctly handles prefixing for both main and child entities.
+
+**Robustness Improvements**
+- **Service Calls**: `switch_on_with_time` service now safely handles missing `entity_id` or `on_time` parameters with clear error logging.
+- **Entity Naming**: Simplified and corrected logic for constructing entity names with prefixes, ensuring consistent naming conventions.
+
+---
+
 ## 1.17.2 - 2025-11-17
 
 ### 🐛 Critical Bug Fixes

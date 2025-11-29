@@ -410,3 +410,34 @@ async def test_handle_incoming_message_config_update_request(api_client: HcuApiC
         await asyncio.sleep(0.01)
 
         mock_handler.assert_called_once_with(message_id)
+
+
+async def test_async_set_switch_state(api_client: HcuApiClient):
+    """Test async_set_switch_state selects correct API path."""
+    from custom_components.hcu_integration.const import API_PATHS
+
+    device_id = "device1"
+    channel_index = 1
+
+    # Mock async_device_control
+    with patch.object(api_client, "async_device_control", new_callable=AsyncMock) as mock_control:
+        # Test without on_time
+        await api_client.async_set_switch_state(device_id, channel_index, True)
+
+        mock_control.assert_called_with(
+            API_PATHS["SET_SWITCH_STATE"],
+            device_id,
+            channel_index,
+            {"on": True}
+        )
+
+        # Test with on_time
+        mock_control.reset_mock()
+        await api_client.async_set_switch_state(device_id, channel_index, True, on_time=10.0)
+
+        mock_control.assert_called_with(
+            API_PATHS["SET_SWITCH_STATE_WITH_TIME"],
+            device_id,
+            channel_index,
+            {"on": True, "onTime": 10.0}
+        )

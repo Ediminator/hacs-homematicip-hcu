@@ -577,10 +577,8 @@ class HcuApiClient:
         body = {"on": is_on}
         if on_time is not None:
             body["onTime"] = on_time
-            path = API_PATHS["SET_SWITCH_STATE_WITH_TIME"]
-        else:
-            path = API_PATHS["SET_SWITCH_STATE"]
         
+        path = self._get_api_path_with_ramp_time("SET_SWITCH_STATE", "SET_SWITCH_STATE_WITH_TIME", on_time)
         await self.async_device_control(path, device_id, channel_index, body)
 
     async def async_set_watering_switch_state(self, device_id: str, channel_index: int, is_on: bool) -> None:

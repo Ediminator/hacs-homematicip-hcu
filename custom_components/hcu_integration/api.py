@@ -575,6 +575,11 @@ class HcuApiClient:
     async def async_set_switch_state(self, device_id: str, channel_index: int, is_on: bool, on_time: float | None = None) -> None:
         """Set the state of a switch channel."""
         body = {"on": is_on}
+        
+        # Ignore on_time if switching off
+        if not is_on:
+            on_time = None
+
         if on_time is not None:
             body["onTime"] = on_time
         

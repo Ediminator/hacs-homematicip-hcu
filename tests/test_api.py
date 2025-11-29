@@ -413,14 +413,17 @@ async def test_handle_incoming_message_config_update_request(api_client: HcuApiC
 
 
 @pytest.mark.parametrize(
-    "on_time,expected_path_key,expected_extra_body",
+    "is_on,on_time,expected_path_key,expected_extra_body",
     [
-        (None, "SET_SWITCH_STATE", {}),
-        (10.0, "SET_SWITCH_STATE_WITH_TIME", {"onTime": 10.0}),
+        (True, None, "SET_SWITCH_STATE", {}),
+        (True, 10.0, "SET_SWITCH_STATE_WITH_TIME", {"onTime": 10.0}),
+        (False, None, "SET_SWITCH_STATE", {}),
+        (False, 10.0, "SET_SWITCH_STATE", {}),
     ],
 )
 async def test_async_set_switch_state(
     api_client: HcuApiClient,
+    is_on: bool,
     on_time: float | None,
     expected_path_key: str,
     expected_extra_body: dict,
@@ -430,7 +433,6 @@ async def test_async_set_switch_state(
 
     device_id = "device1"
     channel_index = 1
-    is_on = True
 
     # Mock async_device_control
     with patch.object(api_client, "async_device_control", new_callable=AsyncMock) as mock_control:

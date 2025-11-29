@@ -439,7 +439,7 @@ async def test_async_set_switch_state(
         )
 
         expected_body = {"on": is_on, **expected_extra_body}
-        
+
         mock_control.assert_called_with(
             API_PATHS[expected_path_key],
             device_id,

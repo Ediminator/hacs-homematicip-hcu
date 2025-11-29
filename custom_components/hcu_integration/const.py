@@ -134,6 +134,7 @@ API_PATHS = {
     "SET_SLATS_LEVEL": "/hmip/device/control/setSlatsLevel",
     "SET_SOUND_FILE": "/hmip/device/control/setSoundFileVolumeLevelWithTime",
     "SET_SWITCH_STATE": "/hmip/device/control/setSwitchState",
+    "SET_SWITCH_STATE_WITH_TIME": "/hmip/device/control/setSwitchStateWithTime",
     "SET_SWITCHING_GROUP_STATE": "/hmip/group/switching/setState",
     "SET_WATERING_SWITCH_STATE": "/hmip/device/control/setWateringSwitchState",
     "SET_ZONES_ACTIVATION": "/hmip/home/security/setExtendedZonesActivation",

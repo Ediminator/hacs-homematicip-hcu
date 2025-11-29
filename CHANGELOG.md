@@ -4,6 +4,16 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 
 ---
 
+## 1.17.5 - 2025-11-29
+
+### 🐛 Bug Fixes
+
+**Fix OnTime Selection Regression (Issue #161)**
+- Fixed a regression where the `switch_on_with_time` service was not correctly selecting the "WithTime" API endpoint.
+- Switches now correctly turn on for the specified duration.
+
+---
+
 ## 1.17.4 - 2025-11-28
 
 ### ✨ New Features

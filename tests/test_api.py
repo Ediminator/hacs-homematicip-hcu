@@ -410,3 +410,41 @@ async def test_handle_incoming_message_config_update_request(api_client: HcuApiC
         await asyncio.sleep(0.01)
 
         mock_handler.assert_called_once_with(message_id)
+
+
+@pytest.mark.parametrize(
+    "is_on,on_time,expected_path_key,expected_extra_body",
+    [
+        (True, None, "SET_SWITCH_STATE", {}),
+        (True, 10.0, "SET_SWITCH_STATE_WITH_TIME", {"onTime": 10.0}),
+        (False, None, "SET_SWITCH_STATE", {}),
+        (False, 10.0, "SET_SWITCH_STATE", {}),
+    ],
+)
+async def test_async_set_switch_state(
+    api_client: HcuApiClient,
+    is_on: bool,
+    on_time: float | None,
+    expected_path_key: str,
+    expected_extra_body: dict,
+):
+    """Test async_set_switch_state selects correct API path."""
+    from custom_components.hcu_integration.const import API_PATHS
+
+    device_id = "device1"
+    channel_index = 1
+
+    # Mock async_device_control
+    with patch.object(api_client, "async_device_control", new_callable=AsyncMock) as mock_control:
+        await api_client.async_set_switch_state(
+            device_id, channel_index, is_on, on_time=on_time
+        )
+
+        expected_body = {"on": is_on, **expected_extra_body}
+
+        mock_control.assert_called_with(
+            API_PATHS[expected_path_key],
+            device_id,
+            channel_index,
+            expected_body
+        )

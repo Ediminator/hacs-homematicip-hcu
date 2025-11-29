@@ -576,14 +576,13 @@ class HcuApiClient:
         """Set the state of a switch channel."""
         body = {"on": is_on}
         
-        # Ignore on_time if switching off
-        if not is_on:
-            on_time = None
+        # Determine effective on_time (ignored if switching off)
+        effective_on_time = on_time if is_on else None
 
-        if on_time is not None:
-            body["onTime"] = on_time
+        if effective_on_time is not None:
+            body["onTime"] = effective_on_time
         
-        path = self._get_api_path_with_optional_time("SET_SWITCH_STATE", "SET_SWITCH_STATE_WITH_TIME", on_time)
+        path = self._get_api_path_with_optional_time("SET_SWITCH_STATE", "SET_SWITCH_STATE_WITH_TIME", effective_on_time)
         await self.async_device_control(path, device_id, channel_index, body)
 
     async def async_set_watering_switch_state(self, device_id: str, channel_index: int, is_on: bool) -> None:

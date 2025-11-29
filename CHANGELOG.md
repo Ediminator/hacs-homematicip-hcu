@@ -4,6 +4,15 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 
 ---
 
+## 1.17.6 - 2025-11-29
+
+### 🐛 Bug Fixes
+
+**Fix Connectivity Entities Misassignment (Issue #120)**
+- Fixed an issue where `HmIP-WLAN-HAP` devices were not being correctly excluded from the HCU device group.
+- This caused connectivity entities (like `unreach`) to be assigned to the main HCU device instead of the WLAN Access Point.
+- Added `HmIP-WLAN-HAP` to the list of excluded device prefixes.
+
 ## 1.17.5 - 2025-11-29
 
 ### 🐛 Bug Fixes

@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import random
-from typing import TYPE_CHECKING, Any, cast
+from typing import Any, cast
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_TOKEN, Platform
@@ -38,9 +38,7 @@ from .services import (
     async_register_services,
     async_unregister_services,
 )
-
-if TYPE_CHECKING:
-    from . import event
+from . import event
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -127,7 +125,7 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
         super().__init__(hass, _LOGGER, name=DOMAIN, update_interval=None)
         self.client = client
         self.entities: dict[Platform, list[Any]] = {}
-        self._event_entities: dict[tuple[str, str], "event.TriggerableEvent"] = {}
+        self._event_entities: dict[tuple[str, str], event.TriggerableEvent] = {}
         self._connected_event = asyncio.Event()
 
     async def async_setup(self) -> bool:
@@ -196,10 +194,18 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
             return
 
         device_channel_event_ids = self._handle_device_channel_events(events)
+
+        # Capture old timestamps BEFORE state is updated by process_events
+        old_timestamps: dict[tuple[str, str], Any] = {
+            (dev_id, ch_idx): ch.get("lastStatusUpdate")
+            for dev_id, dev in self.client.state.get("devices", {}).items()
+            for ch_idx, ch in dev.get("functionalChannels", {}).items()
+        }
+
         updated_ids = self.client.process_events(events)
 
         event_channels = self._extract_event_channels(events)
-        self._detect_timestamp_based_button_presses(events, event_channels)
+        self._detect_timestamp_based_button_presses(events, event_channels, old_timestamps)
 
         all_updated = updated_ids | device_channel_event_ids
         if all_updated:
@@ -273,7 +279,7 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
         return event_channels
 
     def _detect_timestamp_based_button_presses(
-        self, events: dict[str, Any], event_channels: set[tuple[str, str]]
+        self, events: dict[str, Any], event_channels: set[tuple[str, str]], old_timestamps: dict[tuple[str, str], Any]
     ) -> None:
         """Detect button presses via timestamp changes (legacy devices)."""
         for event_data in events.values():
@@ -298,11 +304,9 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
                 if not new_timestamp:
                     continue
 
-                cached_device = self.client.state.get("devices", {}).get(device_id, {})
-                cached_channel = cached_device.get("functionalChannels", {}).get(ch_idx, {})
-                old_timestamp = cached_channel.get("lastStatusUpdate")
+                old_timestamp = old_timestamps.get((device_id, ch_idx))
 
-                if old_timestamp and new_timestamp != old_timestamp:
+                if old_timestamp is not None and new_timestamp != old_timestamp:
                     _LOGGER.debug(
                         "Timestamp button press: device=%s, channel=%s",
                         device_id, ch_idx,
@@ -323,8 +327,6 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
         self, device_id: str, channel_idx: str, event_type: str | None = None
     ) -> None:
         """Trigger an event entity for a device/channel."""
-        from . import event as event_module
-
         key = (device_id, channel_idx)
         entity = self._event_entities.get(key)
 
@@ -347,7 +349,7 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
                 )
                 return
 
-        if event_type and isinstance(entity, event_module.HcuButtonEvent):
+        if event_type and isinstance(entity, event.HcuButtonEvent):
             entity.handle_trigger(event_type)
         else:
             entity.handle_trigger()

@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 from homeassistant.const import ATTR_ENTITY_ID, ATTR_TEMPERATURE, Platform
 from homeassistant.core import HomeAssistant, ServiceCall, split_entity_id
+from homeassistant.util import dt as dt_util
 
 from .api import HcuApiClient, HcuApiError
 from .const import (
@@ -143,15 +144,25 @@ async def async_handle_activate_vacation_mode(hass: HomeAssistant, call: Service
     """Handle the activate_vacation_mode service call."""
     try:
         client = _get_client_for_service(hass)
+        end_time_str = call.data[ATTR_END_TIME]
+        
+        # Parse the datetime string provided by user
+        dt_obj = dt_util.parse_datetime(end_time_str)
+        if dt_obj is None:
+            raise ValueError(f"Invalid datetime string for end_time: {end_time_str}")
+        
+        # HCU API expects format 'YYYY_MM_DD HH:MM'
+        formatted_end_time = dt_obj.strftime("%Y_%m_%d %H:%M")
+        
         await client.async_activate_vacation(
             temperature=call.data[ATTR_TEMPERATURE],
-            end_time=call.data[ATTR_END_TIME],
+            end_time=formatted_end_time,
         )
-        _LOGGER.info("Activated vacation mode")
+        _LOGGER.info("Activated vacation mode until %s", end_time_str)
     except (HcuApiError, ConnectionError) as err:
         _LOGGER.error("Error activating vacation mode: %s", err)
     except ValueError as err:
-        _LOGGER.error("No HCU available: %s", err)
+        _LOGGER.error("Invalid parameter for vacation mode: %s", err)
 
 
 async def async_handle_activate_eco_mode(hass: HomeAssistant, call: ServiceCall) -> None:

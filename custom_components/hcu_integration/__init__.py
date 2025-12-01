@@ -205,7 +205,7 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
         updated_ids = self.client.process_events(events)
 
         event_channels = self._extract_event_channels(events)
-        self._detect_timestamp_based_button_presses(events, event_channels, old_timestamps)
+        self._detect_timestamp_based_button_presses(updated_ids, event_channels, old_timestamps)
 
         all_updated = updated_ids | device_channel_event_ids
         if all_updated:
@@ -279,20 +279,18 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
         return event_channels
 
     def _detect_timestamp_based_button_presses(
-        self, events: dict[str, Any], event_channels: set[tuple[str, str]], old_timestamps: dict[tuple[str, str], Any]
+        self, updated_ids: set[str], event_channels: set[tuple[str, str]], old_timestamps: dict[tuple[str, str], Any]
     ) -> None:
-        """Detect button presses via timestamp changes (legacy devices)."""
-        for event_data in events.values():
-            if not isinstance(event_data, dict):
-                continue
-
-            if event_data.get("pushEventType") != "DEVICE_CHANGED":
-                continue
-
-            device = event_data.get("device", {})
-            device_id = device.get("id")
-
-            if not device_id:
+        """Detect button presses via timestamp changes (legacy devices).
+        
+        Handles three cases:
+        1. Timestamp changed: new_timestamp != old_timestamp
+        2. Timestamp missing in new state but existed before -> legacy device button press
+        3. Both timestamps missing but channel is in event_channels -> possible button press
+        """
+        for device_id in updated_ids:
+            device = self.client.state.get("devices", {}).get(device_id)
+            if not device:
                 continue
 
             channels = device.get("functionalChannels", {})
@@ -301,15 +299,30 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
                     continue
 
                 new_timestamp = ch_data.get("lastStatusUpdate")
-                if not new_timestamp:
-                    continue
-
                 old_timestamp = old_timestamps.get((device_id, ch_idx))
 
-                if old_timestamp is not None and new_timestamp != old_timestamp:
+                # Determine if we should fire a button event:
+                # 1. If new timestamp exists and differs from old -> button press
+                # 2. If new timestamp is missing but old exists -> legacy device button press
+                # 3. If both are missing but channel is in event_channels -> possible button press
+                should_fire = False
+                
+                if new_timestamp is not None:
+                    # Normal case: timestamp exists, check if it changed
+                    if old_timestamp is None or new_timestamp != old_timestamp:
+                        should_fire = True
+                elif old_timestamp is not None:
+                    # Legacy case: no new timestamp but had old one - treat as button press
+                    should_fire = True
+                else:
+                    # Both missing but channel is in event - could be a button press
+                    # for devices that never report timestamps
+                    should_fire = True
+
+                if should_fire:
                     _LOGGER.debug(
-                        "Timestamp button press: device=%s, channel=%s",
-                        device_id, ch_idx,
+                        "Timestamp button press: device=%s, channel=%s (new_ts=%s, old_ts=%s)",
+                        device_id, ch_idx, new_timestamp, old_timestamp,
                     )
                     self._fire_button_event(device_id, ch_idx, "PRESS_SHORT")
                     self._trigger_event_entity(device_id, ch_idx)

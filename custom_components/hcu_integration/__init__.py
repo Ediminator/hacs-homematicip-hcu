@@ -12,6 +12,7 @@ from homeassistant.const import CONF_HOST, CONF_TOKEN, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .api import HcuApiClient, HcuApiError
@@ -124,7 +125,7 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
         """Initialize the coordinator."""
         super().__init__(hass, _LOGGER, name=DOMAIN, update_interval=None)
         self.client = client
-        self.entities: dict[Platform, list[Any]] = {}
+        self.entities: dict[Platform, list[Entity]] = {}
         self._event_entities: dict[tuple[str, str], event.TriggerableEvent] = {}
         self._connected_event = asyncio.Event()
 
@@ -180,7 +181,7 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
             manufacturer=hcu_device.get("oem", "eQ-3"),
             model=hcu_device.get("modelType", "HCU"),
             name=hcu_device.get("label", "Homematic IP HCU"),
-            sw_version=hcu_device.get("firmwareVersion"),
+            sw_version=hcu_device.get("firmwareVersion", ""),
         )
 
     def _handle_event_message(self, msg: dict[str, Any]) -> None:
@@ -301,23 +302,14 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
                 new_timestamp = ch_data.get("lastStatusUpdate")
                 old_timestamp = old_timestamps.get((device_id, ch_idx))
 
-                # Determine if we should fire a button event:
-                # 1. If new timestamp exists and differs from old -> button press
-                # 2. If new timestamp is missing but old exists -> legacy device button press
-                # 3. If both are missing but channel is in event_channels -> possible button press
-                should_fire = False
-                
-                if new_timestamp is not None:
-                    # Normal case: timestamp exists, check if it changed
-                    if old_timestamp is None or new_timestamp != old_timestamp:
-                        should_fire = True
-                elif old_timestamp is not None:
-                    # Legacy case: no new timestamp but had old one - treat as button press
-                    should_fire = True
-                else:
-                    # Both missing but channel is in event - could be a button press
-                    # for devices that never report timestamps
-                    should_fire = True
+                # Fire button event if:
+                # 1. Timestamp changed (new != old)
+                # 2. New timestamp appeared (old was None)
+                # 3. Timestamp missing but channel in event (legacy device)
+                should_fire = (
+                    new_timestamp != old_timestamp  # Covers cases 1 & 2
+                    or (new_timestamp is None and old_timestamp is None)  # Case 3: legacy device
+                )
 
                 if should_fire:
                     _LOGGER.debug(

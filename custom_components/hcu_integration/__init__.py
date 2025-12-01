@@ -1,87 +1,52 @@
+# custom_components/hcu_integration/__init__.py
 """The Homematic IP Local (HCU) integration."""
 from __future__ import annotations
 
-import aiohttp
 import asyncio
 import logging
-from typing import Any, cast
 import random
+from typing import TYPE_CHECKING, Any, cast
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
-    CONF_HOST,
-    CONF_TOKEN,
-    ATTR_ENTITY_ID,
-    Platform,
-    ATTR_TEMPERATURE,
-)
-from homeassistant.core import HomeAssistant, ServiceCall, split_entity_id
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.const import CONF_HOST, CONF_TOKEN, Platform
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.entity import Entity
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
-from homeassistant.util import dt as dt_util
 
 from .api import HcuApiClient, HcuApiError
 from .const import (
+    CONF_AUTH_PORT,
+    CONF_WEBSOCKET_PORT,
+    CHANNEL_TYPE_MULTI_MODE_INPUT_TRANSMITTER,
+    DEFAULT_HCU_AUTH_PORT,
+    DEFAULT_HCU_WEBSOCKET_PORT,
+    DEVICE_CHANNEL_EVENT_ONLY_TYPES,
+    DEVICE_CHANNEL_EVENT_TYPES,
     DOMAIN,
+    EVENT_CHANNEL_TYPES,
+    MULTI_FUNCTION_CHANNEL_DEVICES,
     PLATFORMS,
     WEBSOCKET_CONNECT_TIMEOUT,
     WEBSOCKET_RECONNECT_INITIAL_DELAY,
-    WEBSOCKET_RECONNECT_MAX_DELAY,
     WEBSOCKET_RECONNECT_JITTER_MAX,
-    CONF_AUTH_PORT,
-    CONF_WEBSOCKET_PORT,
-    DEFAULT_HCU_AUTH_PORT,
-    DEFAULT_HCU_WEBSOCKET_PORT,
-    SERVICE_PLAY_SOUND,
-    SERVICE_SET_RULE_STATE,
-    SERVICE_ACTIVATE_PARTY_MODE,
-    SERVICE_ACTIVATE_VACATION_MODE,
-    SERVICE_ACTIVATE_ECO_MODE,
-    SERVICE_DEACTIVATE_ABSENCE_MODE,
-    SERVICE_SWITCH_ON_WITH_TIME,
-    ATTR_SOUND_FILE,
-    ATTR_DURATION,
-    ATTR_VOLUME,
-    ATTR_RULE_ID,
-    ATTR_ENABLED,
-    ATTR_END_TIME,
-    ATTR_ON_TIME,
-    EVENT_CHANNEL_TYPES,
-    DEVICE_CHANNEL_EVENT_TYPES,
-    DEVICE_CHANNEL_EVENT_ONLY_TYPES,
-    CHANNEL_TYPE_MULTI_MODE_INPUT_TRANSMITTER,
-    MULTI_FUNCTION_CHANNEL_DEVICES,
+    WEBSOCKET_RECONNECT_MAX_DELAY,
 )
 from .discovery import async_discover_entities
-from . import event
+from .services import (
+    INTEGRATION_SERVICES,
+    async_register_services,
+    async_unregister_services,
+)
+
+if TYPE_CHECKING:
+    from . import event
 
 _LOGGER = logging.getLogger(__name__)
 
 type HcuData = dict[str, "HcuCoordinator"]
 
-# Track service registration across multiple config entries using entry IDs
 SERVICE_ENTRIES_KEY = f"{DOMAIN}_service_entries"
-
-# Platform mapping for entity lookup (defined once at module level)
-PLATFORM_MAP = {
-    "switch": Platform.SWITCH,
-    "light": Platform.LIGHT,
-    "climate": Platform.CLIMATE,
-    "button": Platform.BUTTON,
-}
-
-# List of integration services (single source of truth for registration/removal)
-_INTEGRATION_SERVICES = [
-    SERVICE_PLAY_SOUND,
-    SERVICE_SET_RULE_STATE,
-    SERVICE_ACTIVATE_PARTY_MODE,
-    SERVICE_ACTIVATE_VACATION_MODE,
-    SERVICE_ACTIVATE_ECO_MODE,
-    SERVICE_DEACTIVATE_ABSENCE_MODE,
-    SERVICE_SWITCH_ON_WITH_TIME,
-]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -106,662 +71,37 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if not await coordinator.async_setup():
         return False
 
-    coordinator.entities = await async_discover_entities(
-        hass, client, entry, coordinator
-    )
+    coordinator.entities = await async_discover_entities(hass, client, entry, coordinator)
 
-    # Build event entity lookup dictionary for efficient O(1) access
-    # Register all event entities that implement the TriggerableEvent protocol
     coordinator._event_entities = {
-        (event_entity._device_id, event_entity._channel_index_str): event_entity
-        for event_entity in coordinator.entities.get(Platform.EVENT, [])
-        if hasattr(event_entity, "handle_trigger")
+        (e._device_id, e._channel_index_str): e
+        for e in coordinator.entities.get(Platform.EVENT, [])
+        if hasattr(e, "handle_trigger")
     }
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
-    def _get_entity_from_entity_id(entity_id: str) -> Entity | None:
-        """Get entity object from entity_id across all coordinators.
-
-        Args:
-            entity_id: The entity ID to search for (e.g., "switch.my_switch")
-
-        Returns:
-            The Entity object if found, None otherwise
-        """
-        entity_domain, _ = split_entity_id(entity_id)
-        platform = PLATFORM_MAP.get(entity_domain)
-
-        # Return early if platform not supported
-        if not platform:
-            return None
-
-        # Search through all coordinators for this entity using generator expression
-        return next(
-            (
-                entity
-                for coordinator in hass.data[DOMAIN].values()
-                for entity in coordinator.entities.get(platform, [])
-                if hasattr(entity, "entity_id") and entity.entity_id == entity_id
-            ),
-            None,
-        )
-
-    def _get_client_for_service() -> HcuApiClient:
-        """Get the API client for service calls.
-
-        For services not tied to specific entities, we use the first available client.
-        All HCUs share the same home/rule/vacation settings.
-        """
-        for coordinator in hass.data[DOMAIN].values():
-            return coordinator.client
-        raise ValueError("No HCU client available")
-
-    async def handle_play_sound(call: ServiceCall) -> None:
-        """Handle the play_sound service call by delegating to the entity."""
-        for entity_id in call.data[ATTR_ENTITY_ID]:
-            hcu_entity = _get_entity_from_entity_id(entity_id)
-
-            if not hcu_entity or not hasattr(hcu_entity, "async_play_sound"):
-                _LOGGER.warning(
-                    "Cannot play sound on %s, as it is not a compatible Homematic IP Local (HCU) device with sound capability.",
-                    entity_id,
-                )
-                continue
-
-            try:
-                await hcu_entity.async_play_sound(
-                    sound_file=call.data[ATTR_SOUND_FILE],
-                    volume=call.data[ATTR_VOLUME],
-                    duration=call.data[ATTR_DURATION],
-                )
-            except (HcuApiError, ConnectionError) as err:
-                _LOGGER.error("Error calling play_sound for %s: %s", entity_id, err)
-
-    async def handle_set_rule_state(call: ServiceCall) -> None:
-        """Handle the set_rule_state service call."""
-        rule_id = call.data[ATTR_RULE_ID]
-        enabled = call.data[ATTR_ENABLED]
-        try:
-            client = _get_client_for_service()
-            await client.async_enable_simple_rule(rule_id=rule_id, enabled=enabled)
-            _LOGGER.info("Successfully set state for rule %s to %s", rule_id, enabled)
-        except (HcuApiError, ConnectionError) as err:
-            _LOGGER.error("Error setting state for rule %s: %s", rule_id, err)
-        except ValueError as err:
-            _LOGGER.error("No HCU available for service call: %s", err)
-
-    async def handle_activate_party_mode(call: ServiceCall) -> None:
-        """Handle the activate_party_mode service call."""
-        for entity_id in call.data[ATTR_ENTITY_ID]:
-            hcu_entity = _get_entity_from_entity_id(entity_id)
-
-            if not hcu_entity or not hasattr(hcu_entity, "async_activate_party_mode"):
-                _LOGGER.warning(
-                    "Cannot activate party mode on %s, as it is not a compatible Homematic IP Local (HCU) climate entity.",
-                    entity_id,
-                )
-                continue
-
-            temperature = call.data[ATTR_TEMPERATURE]
-            end_time_str = call.data.get(ATTR_END_TIME)
-            duration = call.data.get(ATTR_DURATION)
-
-            try:
-                await hcu_entity.async_activate_party_mode(
-                    temperature=temperature,
-                    end_time_str=end_time_str,
-                    duration=duration,
-                )
-            except (HcuApiError, ConnectionError) as err:
-                _LOGGER.error(
-                    "Error calling activate_party_mode for %s: %s", entity_id, err
-                )
-            except ValueError as err:
-                _LOGGER.error(
-                    "Invalid parameter for activate_party_mode for %s: %s",
-                    entity_id,
-                    err,
-                )
-
-    async def handle_activate_vacation_mode(call: ServiceCall) -> None:
-        """Handle the activate_vacation_mode service call."""
-        temperature = call.data[ATTR_TEMPERATURE]
-        end_time_str = call.data.get(ATTR_END_TIME)
-
-        try:
-            dt_obj = dt_util.parse_datetime(end_time_str)
-            if dt_obj is None:
-                raise ValueError(f"Invalid datetime string received: {end_time_str}")
-
-            formatted_end_time = dt_obj.strftime("%Y_%m_%d %H:%M")
-
-            client = _get_client_for_service()
-            await client.async_activate_vacation(
-                temperature=temperature, end_time=formatted_end_time
-            )
-            _LOGGER.info(
-                "Successfully activated vacation mode with temp %s until %s",
-                temperature,
-                end_time_str,
-            )
-        except (HcuApiError, ConnectionError) as err:
-            _LOGGER.error("Error activating vacation mode: %s", err)
-        except ValueError as err:
-            _LOGGER.error("Invalid parameter for vacation mode: %s", err)
-        except Exception:
-            _LOGGER.exception("Unexpected error during vacation mode activation.")
-
-    async def handle_activate_eco_mode(call: ServiceCall) -> None:
-        """Handle the activate_eco_mode service call."""
-        try:
-            client = _get_client_for_service()
-            await client.async_activate_absence_permanent()
-            _LOGGER.info("Successfully activated permanent absence (Eco mode).")
-        except (HcuApiError, ConnectionError) as err:
-            _LOGGER.error("Error activating permanent absence (Eco mode): %s", err)
-        except ValueError as err:
-            _LOGGER.error("No HCU available for service call: %s", err)
-
-    async def handle_deactivate_absence_mode(call: ServiceCall) -> None:
-        """Handle the deactivate_absence_mode service call."""
-        try:
-            client = _get_client_for_service()
-            await client.async_deactivate_absence()
-            _LOGGER.info("Successfully deactivated absence mode.")
-        except (HcuApiError, ConnectionError) as err:
-            _LOGGER.error("Error deactivating absence mode: %s", err)
-        except ValueError as err:
-            _LOGGER.error("No HCU available for service call: %s", err)
-
-    async def handle_switch_on_with_time(call: ServiceCall) -> None:
-        """Handle the switch_on_with_time service call."""
-        if (on_time := call.data.get(ATTR_ON_TIME)) is None:
-            _LOGGER.error(
-                "Required attribute '%s' is missing for service call switch_on_with_time",
-                ATTR_ON_TIME,
-            )
-            return
-
-        for entity_id in call.data.get(ATTR_ENTITY_ID, []):
-            hcu_entity = _get_entity_from_entity_id(entity_id)
-
-            if not hcu_entity:
-                _LOGGER.warning(
-                    "Cannot turn on %s with time, as it is not found.",
-                    entity_id,
-                )
-                continue
-            
-            if not hasattr(hcu_entity, "async_turn_on_with_time"):
-                _LOGGER.warning(
-                    "Entity %s does not support timed on.",
-                    entity_id,
-                )
-                continue
-
-            try:
-                await hcu_entity.async_turn_on_with_time(on_time=on_time)
-            except (HcuApiError, ConnectionError) as err:
-                _LOGGER.error("Error calling switch_on_with_time for %s: %s", entity_id, err)
-
-    # Define services and their handlers
-    SERVICES = {
-        SERVICE_PLAY_SOUND: handle_play_sound,
-        SERVICE_SET_RULE_STATE: handle_set_rule_state,
-        SERVICE_ACTIVATE_PARTY_MODE: handle_activate_party_mode,
-        SERVICE_ACTIVATE_VACATION_MODE: handle_activate_vacation_mode,
-        SERVICE_ACTIVATE_ECO_MODE: handle_activate_eco_mode,
-        SERVICE_DEACTIVATE_ABSENCE_MODE: handle_deactivate_absence_mode,
-        SERVICE_SWITCH_ON_WITH_TIME: handle_switch_on_with_time,
-    }
-
-    # Register services only once, even with multiple config entries
-    # Use a set to track active entry IDs (more robust than counter)
+    # Register services (only once for first config entry)
     service_entries: set[str] = hass.data.setdefault(SERVICE_ENTRIES_KEY, set())
-
     if not service_entries:
-        # First config entry - register all services
-        _LOGGER.debug("Registering HCU services for the first time")
-        # Ensure service registration and removal lists are consistent
-        assert set(SERVICES.keys()) == set(_INTEGRATION_SERVICES), (
-            "SERVICES and _INTEGRATION_SERVICES must contain the same service names"
-        )
-        for service_name, handler in SERVICES.items():
-            hass.services.async_register(DOMAIN, service_name, handler)
-    else:
-        _LOGGER.debug(
-            "HCU services already registered, skipping registration (active entries: %d)",
-            len(service_entries)
-        )
-
-    # Add this entry to the set of active entries
+        async_register_services(hass)
     service_entries.add(entry.entry_id)
 
     entry.add_update_listener(async_reload_entry)
-
     return True
-
-
-class HcuCoordinator(DataUpdateCoordinator[set[str]]):
-    """Manages the HCU API client and data updates."""
-
-    def __init__(self, hass: HomeAssistant, client: HcuApiClient, entry: ConfigEntry) -> None:
-        """Initialize the coordinator."""
-        super().__init__(
-            hass,
-            _LOGGER,
-            name=DOMAIN,
-            update_interval=None,
-        )
-        self.client = client
-        self.entry = entry
-        self.entities: dict[Platform, list] = {}
-        self._event_entities: dict[tuple[str, str], event.TriggerableEvent] = {}  # Maps (device_id, channel_idx) to triggerable event entity
-        self._connected_event = asyncio.Event()
-
-    async def async_setup(self) -> bool:
-        """Initialize the coordinator and establish the initial connection."""
-        self.entry.async_create_background_task(
-            self.hass, self._listen_for_events(), name="HCU WebSocket Listener"
-        )
-
-        _LOGGER.debug("Waiting for WebSocket connection to establish...")
-        try:
-            await asyncio.wait_for(
-                self._connected_event.wait(), timeout=WEBSOCKET_CONNECT_TIMEOUT
-            )
-        except asyncio.TimeoutError:
-            _LOGGER.error(
-                "Failed to establish WebSocket connection within %d seconds",
-                WEBSOCKET_CONNECT_TIMEOUT,
-            )
-            return False
-
-        try:
-            initial_state = await self.client.get_system_state()
-            if not initial_state or "devices" not in initial_state:
-                _LOGGER.error(
-                    "HCU is connected, but failed to get a valid initial state."
-                )
-                return False
-        except (HcuApiError, ConnectionError, asyncio.TimeoutError) as err:
-            _LOGGER.error(
-                "Failed to get initial state from HCU after connecting: %s", err
-            )
-            return False
-
-        self._register_hcu_device()
-
-        # Force an initial update for all devices, groups, and the home object
-        # This ensures entities are marked available and not stuck in "restored" state
-        _LOGGER.debug("Forcing initial state refresh for all entities")
-        state = self.client.state
-        all_ids = state.get("devices", {}).keys() | state.get("groups", {}).keys()
-        if home_id := state.get("home", {}).get("id"):
-            all_ids.add(home_id)
-        self.async_set_updated_data(all_ids)
-
-        return True
-
-    def _register_hcu_device(self) -> None:
-        """Register the HCU itself as a device in Home Assistant."""
-        device_registry = dr.async_get(self.hass)
-
-        hcu_device_id = self.client.hcu_device_id
-        if not hcu_device_id:
-            _LOGGER.warning("Could not determine HCU device ID (SGTIN) from state.")
-            return
-
-        hcu_device_data = self.client.state.get("devices", {}).get(hcu_device_id, {})
-        home_data = self.client.state.get("home", {})
-
-        device_registry.async_get_or_create(
-            config_entry_id=self.entry.entry_id,
-            identifiers={(DOMAIN, hcu_device_id)},
-            name=hcu_device_data.get("label") or "Homematic IP HCU",
-            manufacturer="eQ-3",
-            model=hcu_device_data.get("modelType") or "HCU",
-            sw_version=home_data.get("currentAPVersion"),
-        )
-
-    def _extract_event_channels(self, events: dict) -> set[tuple[str, str]]:
-        """Extract button channels that were updated in the events.
-
-        Returns a set of (device_id, channel_index) tuples for channels that
-        are of EVENT_CHANNEL_TYPES and were updated in the events.
-
-        Note: DEVICE_CHANNEL_EVENT type events are handled separately in
-        _handle_device_channel_events and should not be added here to avoid
-        duplicate event firing.
-
-        Note: SWITCH_CHANNEL with DOUBLE_INPUT_SWITCH (e.g., HmIP-BSL) should NOT
-        be included here because:
-        1. These channels fire DEVICE_CHANNEL_EVENT for actual button presses
-        2. Including them causes false button events when toggling the light via HA
-        3. The switch state changes (and timestamp updates) even when toggled programmatically
-
-        Note: Channels in DEVICE_CHANNEL_EVENT_ONLY_TYPES are excluded to prevent
-        false positives from configuration changes that update lastStatusUpdate timestamps.
-        """
-        event_channels = set()
-        for event in events.values():
-            # Only process DEVICE_CHANGED events here
-            # DEVICE_CHANNEL_EVENT events are handled separately in _handle_device_channel_events
-            if event.get("pushEventType") != "DEVICE_CHANGED":
-                continue
-
-            device_data = event.get("device", {})
-            device_id = device_data.get("id")
-            if not device_id:
-                continue
-
-            for ch_idx, ch_data in device_data.get("functionalChannels", {}).items():
-                channel_type = ch_data.get("functionalChannelType")
-
-                # Skip channels that exclusively use DEVICE_CHANNEL_EVENT
-                # to avoid false positives from configuration changes
-                if channel_type in DEVICE_CHANNEL_EVENT_ONLY_TYPES:
-                    continue
-
-                # Only process standard event channel types (KEY_CHANNEL, etc.)
-                # Do NOT include SWITCH_CHANNEL with DOUBLE_INPUT_SWITCH as it causes
-                # false events when the light is toggled
-                if channel_type in EVENT_CHANNEL_TYPES:
-                    event_channels.add((device_id, ch_idx))
-
-        return event_channels
-
-    def _fire_button_event(self, device_id: str, channel_idx: str, event_type: str) -> None:
-        """Fire a button event to Home Assistant."""
-        self.hass.bus.async_fire(
-            f"{DOMAIN}_event",
-            {
-                "device_id": device_id,
-                "channel": channel_idx,
-                "type": event_type,
-            },
-        )
-
-    def _trigger_event_entity(self, device_id: str, channel_idx: str, event_type: str | None = None) -> None:
-        """Trigger an event entity for a specific device/channel.
-
-        Uses the TriggerableEvent protocol to support any event entity type
-        without coordinator needing to know specific implementation details.
-        """
-        # Use O(1) dictionary lookup
-        key = (device_id, channel_idx)
-        entity = self._event_entities.get(key)
-
-        # Fallback: search entity list if not in dictionary (race condition during startup)
-        if not entity:
-            entity = next(
-                (
-                    event_entity
-                    for event_entity in self.entities.get(Platform.EVENT, [])
-                    if hasattr(event_entity, "handle_trigger")
-                    and event_entity._device_id == device_id
-                    and event_entity._channel_index_str == channel_idx
-                ),
-                None,
-            )
-            if entity:
-                # Cache the entity to avoid repeated O(n) lookups
-                self._event_entities[key] = entity
-            else:
-                _LOGGER.warning(
-                    "Event entity not found for device=%s, channel=%s",
-                    device_id, channel_idx
-                )
-                return
-
-        if event_type and isinstance(entity, event.HcuButtonEvent):
-            entity.handle_trigger(event_type)
-        else:
-            entity.handle_trigger()
-
-        _LOGGER.debug(
-            "Triggered event entity for device=%s, channel=%s",
-            device_id, channel_idx
-        )
-
-    def _handle_device_channel_events(self, events: dict) -> set[str]:
-        """Handle DEVICE_CHANNEL_EVENT type events (stateless buttons).
-
-        These events are fired by newer button devices that don't maintain state.
-        Examples: HmIP-WGS, HmIP-WRC6, HmIP-BSL. The events contain direct button press
-        information without requiring timestamp comparison.
-
-        Args:
-            events: Dictionary of event data from the HCU WebSocket message
-
-        Returns:
-            Set of device IDs that had DEVICE_CHANNEL_EVENT events
-        """
-        device_ids = set()
-        for event in events.values():
-            if event.get("pushEventType") != "DEVICE_CHANNEL_EVENT":
-                continue
-
-            if event.get("channelEventType") not in DEVICE_CHANNEL_EVENT_TYPES:
-                continue
-
-            device_id = event.get("deviceId")
-            channel_idx = event.get("functionalChannelIndex")
-            event_type = event.get("channelEventType")
-
-            if not device_id or channel_idx is None or not event_type:
-                _LOGGER.debug("Skipping incomplete device channel event: %s", event)
-                continue
-
-            # Add device ID to the set for coordinator state update
-            device_ids.add(device_id)
-
-            # Convert channel index to string for consistency
-            channel_idx_str = str(channel_idx)
-
-            # Get device info for enhanced logging
-            device = self.client.get_device_by_address(device_id) or {}
-            device_model = device.get("modelType", "Unknown")
-            device_type = device.get("type", "Unknown")
-            channel = device.get("functionalChannels", {}).get(channel_idx_str, {})
-            channel_type = channel.get("functionalChannelType", "Unknown")
-            channel_label = channel.get("label", f"Channel {channel_idx_str}")
-
-            # Define common log arguments once for both logging paths
-            common_log_args = (device_id, device_model, channel_idx_str, channel_label, channel_type, event_type)
-
-            # Fire legacy event for backward compatibility
-            self._fire_button_event(device_id, channel_idx_str, event_type)
-
-            # Prioritize triggering event entities for stateless buttons
-            # This provides richer events (e.g., press_short vs. press_long)
-            if (device_id, channel_idx_str) in self._event_entities:
-                self._trigger_event_entity(device_id, channel_idx_str, event_type)
-
-            # Check if this is a multi-function channel for enhanced logging
-            multi_func_info = MULTI_FUNCTION_CHANNEL_DEVICES.get(device_type, {}).get(channel_type)
-            if multi_func_info:
-                # Multi-function channel (e.g., HmIP-BSL button+light)
-                _LOGGER.info(
-                    "Button press on multi-function channel: device=%s (%s), channel=%s (%s, %s), "
-                    "event=%s, functions=%s",
-                    *common_log_args, multi_func_info.get("functions", [])
-                )
-            else:
-                # Standard single-function channel
-                _LOGGER.info(
-                    "Button press: device=%s (%s), channel=%s (%s, %s), event=%s",
-                    *common_log_args
-                )
-
-        return device_ids
-
-    def _should_fire_button_press(
-        self, new_timestamp: int | None, old_timestamp: int | None
-    ) -> tuple[bool, str]:
-        """Determine if a button press event should be fired based on timestamps.
-
-        Returns:
-            tuple: (should_fire, reason) where reason describes the detection method
-        """
-        if new_timestamp is not None and old_timestamp is not None:
-            if new_timestamp != old_timestamp:
-                return True, "timestamp change"
-        elif new_timestamp is None:
-            # No timestamp available, but channel was in event (stateless buttons)
-            return True, "stateless channel"
-
-        return False, ""
-
-    def _detect_timestamp_based_button_presses(
-        self, updated_ids: set[str], event_channels: set[tuple[str, str]], old_state: dict
-    ) -> None:
-        """Detect button presses by comparing timestamps after state update.
-
-        Processes channels that were identified as having button capabilities
-        (either standard event channels or special cases like SWITCH_CHANNEL
-        with DOUBLE_INPUT_SWITCH configuration).
-        """
-        for dev_id in updated_ids:
-            device = self.client.get_device_by_address(dev_id)
-            if not device:
-                continue
-
-            for ch_idx, channel in device.get("functionalChannels", {}).items():
-                # Only process channels that were in the raw events and identified as button-capable
-                # event_channels already contains the filtered set from _extract_event_channels
-                if (dev_id, ch_idx) not in event_channels:
-                    continue
-
-                # Check if button press should be fired based on timestamps
-                new_ts = channel.get("lastStatusUpdate")
-                old_ts = old_state.get(dev_id, {}).get(ch_idx)
-                should_fire, reason = self._should_fire_button_press(new_ts, old_ts)
-
-                if should_fire:
-                    channel_type = channel.get("functionalChannelType")
-
-                    # Fire legacy event for backward compatibility
-                    self._fire_button_event(dev_id, ch_idx, "press")
-
-                    # Set log label and trigger event entity if one exists
-                    if (dev_id, ch_idx) in self._event_entities:
-                        self._trigger_event_entity(dev_id, ch_idx)
-                        event_label = "Button entity press"
-                    else:
-                        event_label = "Legacy button press"
-
-                    _LOGGER.debug(
-                        "%s detected via %s: device=%s, channel=%s",
-                        event_label, reason, dev_id, ch_idx
-                    )
-
-    def _handle_event_message(self, message: dict) -> None:
-        """Process incoming WebSocket event messages from the HCU."""
-        if message.get("type") != "HMIP_SYSTEM_EVENT":
-            return
-
-        events = message.get("body", {}).get("eventTransaction", {}).get("events", {})
-        if not events:
-            return
-
-        # Handle immediate stateless button events (DEVICE_CHANNEL_EVENT)
-        # Returns set of device IDs that need UI updates
-        device_channel_event_ids = self._handle_device_channel_events(events)
-
-        # Extract which event channels were updated for timestamp-based detection
-        event_channels = self._extract_event_channels(events)
-
-        # Store old timestamps before state update
-        old_state = {
-            dev_id: {
-                ch_idx: ch.get("lastStatusUpdate")
-                for ch_idx, ch in dev.get("functionalChannels", {}).items()
-            }
-            for dev_id, dev in self.client.state.get("devices", {}).items()
-        }
-
-        # Process events and update state (DEVICE_CHANGED, GROUP_CHANGED, HOME_CHANGED)
-        updated_ids = self.client.process_events(events)
-
-        # Merge device IDs from DEVICE_CHANNEL_EVENT (for UI updates)
-        updated_ids.update(device_channel_event_ids)
-
-        # Detect button presses via timestamp changes
-        self._detect_timestamp_based_button_presses(updated_ids, event_channels, old_state)
-
-        if updated_ids:
-            self.async_set_updated_data(updated_ids)
-
-    async def _listen_for_events(self) -> None:
-        """Maintain a persistent WebSocket connection with automatic reconnection."""
-        reconnect_delay = WEBSOCKET_RECONNECT_INITIAL_DELAY
-
-        while True:
-            try:
-                if not self.client.is_connected:
-                    _LOGGER.info("Connecting to HCU WebSocket...")
-                    await self.client.connect()
-                    self.client.register_event_callback(self._handle_event_message)
-
-                    self._connected_event.set()
-                    reconnect_delay = WEBSOCKET_RECONNECT_INITIAL_DELAY
-
-                await self.client.listen()
-
-            except (
-                aiohttp.ClientError,
-                asyncio.TimeoutError,
-                ConnectionAbortedError,
-            ) as e:
-                _LOGGER.warning(
-                    "WebSocket listener disconnected: %s. Reconnecting in %d seconds.",
-                    e,
-                    reconnect_delay,
-                )
-            except asyncio.CancelledError:
-                _LOGGER.info("WebSocket listener task cancelled.")
-                break
-            except Exception:
-                _LOGGER.exception(
-                    "Unexpected error in WebSocket listener. Reconnecting in %d seconds.",
-                    reconnect_delay,
-                )
-
-            if self.client.is_connected:
-                await self.client.disconnect()
-
-            self._connected_event.clear()
-
-            jitter = random.uniform(0, WEBSOCKET_RECONNECT_JITTER_MAX)
-            await asyncio.sleep(reconnect_delay + jitter)
-
-            reconnect_delay = min(reconnect_delay * 2, WEBSOCKET_RECONNECT_MAX_DELAY)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     coordinator: HcuCoordinator = hass.data[DOMAIN][entry.entry_id]
 
-    # Handle service cleanup BEFORE removing coordinator to avoid race conditions
-    # Check if SERVICE_ENTRIES_KEY exists before manipulating it
     if SERVICE_ENTRIES_KEY in hass.data:
         service_entries: set[str] = hass.data[SERVICE_ENTRIES_KEY]
         service_entries.discard(entry.entry_id)
 
-        # Only remove services when the last config entry is unloaded
         if not service_entries:
-            _LOGGER.debug("Unregistering HCU services (last config entry)")
-            for service_name in _INTEGRATION_SERVICES:
-                hass.services.async_remove(DOMAIN, service_name)
-            # Clean up the set
+            async_unregister_services(hass)
             hass.data.pop(SERVICE_ENTRIES_KEY, None)
-        else:
-            _LOGGER.debug(
-                "Keeping HCU services registered (remaining config entries: %d)",
-                len(service_entries)
-            )
 
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
@@ -775,3 +115,270 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Reload config entry when options are updated."""
     await hass.config_entries.async_reload(entry.entry_id)
+
+
+class HcuCoordinator(DataUpdateCoordinator[set[str]]):
+    """Manages the HCU API client and data updates."""
+
+    def __init__(
+        self, hass: HomeAssistant, client: HcuApiClient, entry: ConfigEntry
+    ) -> None:
+        """Initialize the coordinator."""
+        super().__init__(hass, _LOGGER, name=DOMAIN, update_interval=None)
+        self.client = client
+        self.entities: dict[Platform, list[Any]] = {}
+        self._event_entities: dict[tuple[str, str], "event.TriggerableEvent"] = {}
+        self._connected_event = asyncio.Event()
+
+    async def async_setup(self) -> bool:
+        """Initialize the coordinator and establish the initial connection."""
+        self.config_entry.async_create_background_task(
+            self.hass, self._listen_for_events(), name="HCU WebSocket Listener"
+        )
+
+        _LOGGER.debug("Waiting for WebSocket connection...")
+        try:
+            await asyncio.wait_for(
+                self._connected_event.wait(), timeout=WEBSOCKET_CONNECT_TIMEOUT
+            )
+        except asyncio.TimeoutError:
+            _LOGGER.error(
+                "WebSocket connection timeout after %ds", WEBSOCKET_CONNECT_TIMEOUT
+            )
+            return False
+
+        try:
+            initial_state = await self.client.get_system_state()
+            if not initial_state or "devices" not in initial_state:
+                _LOGGER.error("Connected but failed to get valid initial state")
+                return False
+        except (HcuApiError, ConnectionError, asyncio.TimeoutError) as err:
+            _LOGGER.error("Failed to get initial state: %s", err)
+            return False
+
+        self._register_hcu_device()
+
+        state = self.client.state
+        all_ids = set(state.get("devices", {}).keys()) | set(state.get("groups", {}).keys())
+        if home_id := state.get("home", {}).get("id"):
+            all_ids.add(home_id)
+        self.async_set_updated_data(all_ids)
+
+        return True
+
+    def _register_hcu_device(self) -> None:
+        """Register the HCU as a device in Home Assistant."""
+        device_registry = dr.async_get(self.hass)
+        hcu_device_id = self.client.hcu_device_id
+
+        if not hcu_device_id:
+            _LOGGER.warning("Could not determine HCU device ID from state")
+            return
+
+        hcu_device = self.client.state.get("devices", {}).get(hcu_device_id, {})
+        device_registry.async_get_or_create(
+            config_entry_id=self.config_entry.entry_id,
+            identifiers={(DOMAIN, hcu_device_id)},
+            manufacturer=hcu_device.get("oem", "eQ-3"),
+            model=hcu_device.get("modelType", "HCU"),
+            name=hcu_device.get("label", "Homematic IP HCU"),
+            sw_version=hcu_device.get("firmwareVersion"),
+        )
+
+    def _handle_event_message(self, msg: dict[str, Any]) -> None:
+        """Process incoming event messages from the HCU."""
+        if msg.get("type") != "HMIP_SYSTEM_EVENT":
+            return
+
+        body = msg.get("body", {})
+        events = body.get("eventTransaction", {}).get("events", {})
+        if not events:
+            return
+
+        device_channel_event_ids = self._handle_device_channel_events(events)
+        updated_ids = self.client.process_events(events)
+
+        event_channels = self._extract_event_channels(events)
+        self._detect_timestamp_based_button_presses(events, event_channels)
+
+        all_updated = updated_ids | device_channel_event_ids
+        if all_updated:
+            self.async_set_updated_data(all_updated)
+
+    def _handle_device_channel_events(self, events: dict[str, Any]) -> set[str]:
+        """Handle DEVICE_CHANNEL_EVENT type events (stateless buttons)."""
+        updated_device_ids: set[str] = set()
+
+        for event_data in events.values():
+            if not isinstance(event_data, dict):
+                continue
+
+            if event_data.get("pushEventType") != "DEVICE_CHANNEL_EVENT":
+                continue
+
+            device_id = event_data.get("deviceId")
+            channel_idx = str(event_data.get("channelIndex", ""))
+            event_type = event_data.get("channelEventType")
+
+            if not all([device_id, channel_idx, event_type]):
+                continue
+
+            if event_type not in DEVICE_CHANNEL_EVENT_TYPES:
+                _LOGGER.debug("Unknown channel event type: %s", event_type)
+                continue
+
+            _LOGGER.debug(
+                "Button event: device=%s, channel=%s, type=%s",
+                device_id, channel_idx, event_type,
+            )
+
+            self._fire_button_event(device_id, channel_idx, event_type)
+            self._trigger_event_entity(device_id, channel_idx, event_type)
+            updated_device_ids.add(device_id)
+
+        return updated_device_ids
+
+    def _extract_event_channels(self, events: dict[str, Any]) -> set[tuple[str, str]]:
+        """Extract channels that support button events from DEVICE_CHANGED events."""
+        event_channels: set[tuple[str, str]] = set()
+
+        for event_data in events.values():
+            if not isinstance(event_data, dict):
+                continue
+
+            if event_data.get("pushEventType") != "DEVICE_CHANGED":
+                continue
+
+            device = event_data.get("device", {})
+            device_id = device.get("id")
+            device_type = device.get("type", "")
+
+            if not device_id:
+                continue
+
+            channels = device.get("functionalChannels", {})
+            for ch_idx, ch_data in channels.items():
+                channel_type = ch_data.get("functionalChannelType", "")
+
+                if channel_type in DEVICE_CHANNEL_EVENT_ONLY_TYPES:
+                    continue
+
+                if channel_type == CHANNEL_TYPE_MULTI_MODE_INPUT_TRANSMITTER:
+                    if device_type in MULTI_FUNCTION_CHANNEL_DEVICES:
+                        continue
+
+                if channel_type in EVENT_CHANNEL_TYPES:
+                    event_channels.add((device_id, ch_idx))
+
+        return event_channels
+
+    def _detect_timestamp_based_button_presses(
+        self, events: dict[str, Any], event_channels: set[tuple[str, str]]
+    ) -> None:
+        """Detect button presses via timestamp changes (legacy devices)."""
+        for event_data in events.values():
+            if not isinstance(event_data, dict):
+                continue
+
+            if event_data.get("pushEventType") != "DEVICE_CHANGED":
+                continue
+
+            device = event_data.get("device", {})
+            device_id = device.get("id")
+
+            if not device_id:
+                continue
+
+            channels = device.get("functionalChannels", {})
+            for ch_idx, ch_data in channels.items():
+                if (device_id, ch_idx) not in event_channels:
+                    continue
+
+                new_timestamp = ch_data.get("lastStatusUpdate")
+                if not new_timestamp:
+                    continue
+
+                cached_device = self.client.state.get("devices", {}).get(device_id, {})
+                cached_channel = cached_device.get("functionalChannels", {}).get(ch_idx, {})
+                old_timestamp = cached_channel.get("lastStatusUpdate")
+
+                if old_timestamp and new_timestamp != old_timestamp:
+                    _LOGGER.debug(
+                        "Timestamp button press: device=%s, channel=%s",
+                        device_id, ch_idx,
+                    )
+                    self._fire_button_event(device_id, ch_idx, "PRESS_SHORT")
+                    self._trigger_event_entity(device_id, ch_idx)
+
+    def _fire_button_event(
+        self, device_id: str, channel_idx: str, event_type: str
+    ) -> None:
+        """Fire a button event to Home Assistant event bus."""
+        self.hass.bus.async_fire(
+            f"{DOMAIN}_event",
+            {"device_id": device_id, "channel": channel_idx, "type": event_type},
+        )
+
+    def _trigger_event_entity(
+        self, device_id: str, channel_idx: str, event_type: str | None = None
+    ) -> None:
+        """Trigger an event entity for a device/channel."""
+        from . import event as event_module
+
+        key = (device_id, channel_idx)
+        entity = self._event_entities.get(key)
+
+        if not entity:
+            entity = next(
+                (
+                    e
+                    for e in self.entities.get(Platform.EVENT, [])
+                    if hasattr(e, "handle_trigger")
+                    and e._device_id == device_id
+                    and e._channel_index_str == channel_idx
+                ),
+                None,
+            )
+            if entity:
+                self._event_entities[key] = entity
+            else:
+                _LOGGER.warning(
+                    "Event entity not found: device=%s, channel=%s", device_id, channel_idx
+                )
+                return
+
+        if event_type and isinstance(entity, event_module.HcuButtonEvent):
+            entity.handle_trigger(event_type)
+        else:
+            entity.handle_trigger()
+
+    async def _listen_for_events(self) -> None:
+        """WebSocket listener with auto-reconnection."""
+        reconnect_delay = WEBSOCKET_RECONNECT_INITIAL_DELAY
+
+        while True:
+            try:
+                await self.client.connect()
+                self.client.register_event_callback(self._handle_event_message)
+                self._connected_event.set()
+                reconnect_delay = WEBSOCKET_RECONNECT_INITIAL_DELAY
+
+                _LOGGER.info("WebSocket connected to HCU")
+                await self.client.listen()
+
+            except ConnectionError as e:
+                _LOGGER.warning("WebSocket disconnected: %s. Reconnecting in %ds", e, reconnect_delay)
+            except asyncio.CancelledError:
+                _LOGGER.info("WebSocket listener cancelled")
+                break
+            except Exception:
+                _LOGGER.exception("WebSocket error. Reconnecting in %ds", reconnect_delay)
+
+            if self.client.is_connected:
+                await self.client.disconnect()
+
+            self._connected_event.clear()
+
+            jitter = random.uniform(0, WEBSOCKET_RECONNECT_JITTER_MAX)
+            await asyncio.sleep(reconnect_delay + jitter)
+            reconnect_delay = min(reconnect_delay * 2, WEBSOCKET_RECONNECT_MAX_DELAY)

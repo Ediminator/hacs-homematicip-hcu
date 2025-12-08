@@ -145,11 +145,6 @@ async def async_handle_activate_vacation_mode(hass: HomeAssistant, call: Service
     """Handle the activate_vacation_mode service call."""
     try:
         client = _get_client_for_service(hass)
-    except ValueError as err:
-        _LOGGER.error("Error activating vacation mode: %s", err)
-        return
-
-    try:
         end_time_str = call.data[ATTR_END_TIME]
         
         # Parse the datetime string provided by user
@@ -167,8 +162,8 @@ async def async_handle_activate_vacation_mode(hass: HomeAssistant, call: Service
         _LOGGER.info("Activated vacation mode until %s", end_time_str)
     except (HcuApiError, ConnectionError) as err:
         _LOGGER.error("Error activating vacation mode: %s", err)
-    except ValueError as err:
-        _LOGGER.error("Invalid parameter for vacation mode: %s", err)
+    except (HcuApiError, ConnectionError, ValueError) as err:
+        _LOGGER.error("Error activating vacation mode: %s", err)
 
 
 async def async_handle_activate_eco_mode(hass: HomeAssistant, call: ServiceCall) -> None:

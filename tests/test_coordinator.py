@@ -18,13 +18,13 @@ async def coordinator(hass: HomeAssistant, mock_hcu_client: MagicMock, mock_conf
     return coordinator
 
 
-def test_coordinator_initialization(coordinator: HcuCoordinator, mock_hcu_client: MagicMock):
+async def test_coordinator_initialization(coordinator: HcuCoordinator, mock_hcu_client: MagicMock):
     """Test coordinator initialization."""
     assert coordinator.client == mock_hcu_client
     assert coordinator.entities == {}
 
 
-def test_extract_event_channels(coordinator: HcuCoordinator):
+async def test_extract_event_channels(coordinator: HcuCoordinator):
     """Test extraction of event channels from events."""
     events = {
         "event1": {
@@ -200,7 +200,7 @@ async def test_handle_event_message_full_flow(coordinator: HcuCoordinator, hass:
     assert len(events_fired) == 1
 
 
-def test_handle_event_message_ignores_non_event_types(coordinator: HcuCoordinator):
+async def test_handle_event_message_ignores_non_event_types(coordinator: HcuCoordinator):
     """Test that non-HMIP_SYSTEM_EVENT messages are ignored."""
     message = {"type": "OTHER_TYPE", "body": {}}
 
@@ -208,7 +208,7 @@ def test_handle_event_message_ignores_non_event_types(coordinator: HcuCoordinato
     coordinator._handle_event_message(message)
 
 
-def test_handle_event_message_empty_events(coordinator: HcuCoordinator):
+async def test_handle_event_message_empty_events(coordinator: HcuCoordinator):
     """Test handling message with no events."""
     message = {
         "type": "HMIP_SYSTEM_EVENT",

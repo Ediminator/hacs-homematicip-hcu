@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 
 from homeassistant.const import ATTR_ENTITY_ID, ATTR_TEMPERATURE, Platform
 from homeassistant.core import HomeAssistant, ServiceCall, split_entity_id
+from homeassistant.helpers.entity_component import EntityComponent
 from homeassistant.util import dt as dt_util
 
 from .api import HcuApiClient, HcuApiError
@@ -55,22 +56,22 @@ INTEGRATION_SERVICES = [
 
 
 def _get_entity_from_entity_id(hass: HomeAssistant, entity_id: str) -> Entity | None:
-    """Get entity object from entity_id across all coordinators."""
+    """Get entity object from entity_id using the entity component for efficiency."""
     entity_domain, _ = split_entity_id(entity_id)
-    platform = PLATFORM_MAP.get(entity_domain)
 
-    if not platform:
-        return None
+    # Use the entity component for a direct and efficient lookup.
+    # This is the standard Home Assistant way and avoids iterating all entities.
+    if (component := hass.data.get(entity_domain)) and isinstance(
+        component, EntityComponent
+    ):
+        return component.get_entity(entity_id)
 
-    return next(
-        (
-            entity
-            for coordinator in hass.data.get(DOMAIN, {}).values()
-            for entity in coordinator.entities.get(platform, [])
-            if hasattr(entity, "entity_id") and entity.entity_id == entity_id
-        ),
-        None,
+    _LOGGER.warning(
+        "Could not find entity component for domain %s. Entity %s might not be found.",
+        entity_domain,
+        entity_id,
     )
+    return None
 
 
 def _get_client_for_service(hass: HomeAssistant) -> HcuApiClient:
@@ -160,8 +161,10 @@ async def async_handle_activate_vacation_mode(hass: HomeAssistant, call: Service
             end_time=formatted_end_time,
         )
         _LOGGER.info("Activated vacation mode until %s", end_time_str)
-    except (HcuApiError, ConnectionError, ValueError) as err:
+    except (HcuApiError, ConnectionError) as err:
         _LOGGER.error("Error activating vacation mode: %s", err)
+    except ValueError as err:
+        _LOGGER.error("Invalid parameter for vacation mode: %s", err)
 
 
 async def async_handle_activate_eco_mode(hass: HomeAssistant, call: ServiceCall) -> None:

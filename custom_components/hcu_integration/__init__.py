@@ -224,11 +224,13 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
                 continue
 
             device_id = event_data.get("deviceId")
-            channel_idx = str(event_data.get("channelIndex", ""))
+            channel_idx_val = event_data.get("channelIndex")
             event_type = event_data.get("channelEventType")
 
-            if not all([device_id, channel_idx, event_type]):
+            if not device_id or channel_idx_val is None or not event_type:
                 continue
+
+            channel_idx = str(channel_idx_val)
 
             if event_type not in DEVICE_CHANNEL_EVENT_TYPES:
                 _LOGGER.debug("Unknown channel event type: %s", event_type)

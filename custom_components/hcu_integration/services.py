@@ -75,10 +75,9 @@ def _get_entity_from_entity_id(hass: HomeAssistant, entity_id: str) -> Entity | 
 
 def _get_client_for_service(hass: HomeAssistant) -> HcuApiClient:
     """Get the API client for service calls."""
-    try:
-        return next(iter(hass.data.get(DOMAIN, {}).values())).client
-    except StopIteration as err:
-        raise ValueError("No HCU client available") from err
+    for coordinator in hass.data.get(DOMAIN, {}).values():
+        return coordinator.client
+    raise ValueError("No HCU client available")
 
 
 async def async_handle_play_sound(hass: HomeAssistant, call: ServiceCall) -> None:

@@ -226,10 +226,14 @@ def async_register_services(hass: HomeAssistant) -> None:
     }
 
     for service_name, handler in service_handlers.items():
+
+        async def _service_handler(call: ServiceCall, h=handler) -> None:
+            await h(hass, call)
+
         hass.services.async_register(
             DOMAIN,
             service_name,
-            lambda call, h=handler: h(hass, call),
+            _service_handler,
         )
 
     _LOGGER.debug("Registered %d HCU services", len(service_handlers))

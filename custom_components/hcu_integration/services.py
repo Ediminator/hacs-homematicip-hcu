@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING
 
 from homeassistant.const import ATTR_ENTITY_ID, ATTR_TEMPERATURE, Platform
 from homeassistant.core import HomeAssistant, ServiceCall, split_entity_id
-from homeassistant.helpers.entity_component import EntityComponent
 from homeassistant.util import dt as dt_util
 
 from .api import HcuApiClient, HcuApiError
@@ -35,14 +34,6 @@ if TYPE_CHECKING:
 
 _LOGGER = logging.getLogger(__name__)
 
-# Platform mapping for entity lookup
-PLATFORM_MAP = {
-    "switch": Platform.SWITCH,
-    "light": Platform.LIGHT,
-    "climate": Platform.CLIMATE,
-    "button": Platform.BUTTON,
-}
-
 # Single source of truth for service names
 INTEGRATION_SERVICES = [
     SERVICE_PLAY_SOUND,
@@ -56,22 +47,22 @@ INTEGRATION_SERVICES = [
 
 
 def _get_entity_from_entity_id(hass: HomeAssistant, entity_id: str) -> Entity | None:
-    """Get entity object from entity_id using the entity component for efficiency."""
+    """Get entity object from entity_id across all coordinators."""
     entity_domain, _ = split_entity_id(entity_id)
+    platform = PLATFORM_MAP.get(entity_domain)
 
-    # Use the entity component for a direct and efficient lookup.
-    # This is the standard Home Assistant way and avoids iterating all entities.
-    if (component := hass.data.get(entity_domain)) and isinstance(
-        component, EntityComponent
-    ):
-        return component.get_entity(entity_id)
+    if not platform:
+        return None
 
-    _LOGGER.warning(
-        "Could not find entity component for domain %s. Entity %s might not be found.",
-        entity_domain,
-        entity_id,
+    return next(
+        (
+            entity
+            for coordinator in hass.data.get(DOMAIN, {}).values()
+            for entity in coordinator.entities.get(platform, [])
+            if hasattr(entity, "entity_id") and entity.entity_id == entity_id
+        ),
+        None,
     )
-    return None
 
 
 def _get_client_for_service(hass: HomeAssistant) -> HcuApiClient:

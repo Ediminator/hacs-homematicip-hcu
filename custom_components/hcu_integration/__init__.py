@@ -224,13 +224,11 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
                 continue
 
             device_id = event_data.get("deviceId")
-            channel_idx_val = event_data.get("channelIndex")
+            channel_idx = str(event_data.get("channelIndex", ""))
             event_type = event_data.get("channelEventType")
 
-            if not device_id or channel_idx_val is None or not event_type:
+            if not all([device_id, channel_idx, event_type]):
                 continue
-
-            channel_idx = str(channel_idx_val)
 
             if event_type not in DEVICE_CHANNEL_EVENT_TYPES:
                 _LOGGER.debug("Unknown channel event type: %s", event_type)
@@ -375,7 +373,7 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
                 _LOGGER.info("WebSocket connected to HCU")
                 await self.client.listen()
 
-            except ConnectionError as e:
+            except (aiohttp.ClientError, asyncio.TimeoutError, ConnectionError) as e:
                 _LOGGER.warning("WebSocket disconnected: %s. Reconnecting in %ds", e, reconnect_delay)
             except asyncio.CancelledError:
                 _LOGGER.info("WebSocket listener cancelled")

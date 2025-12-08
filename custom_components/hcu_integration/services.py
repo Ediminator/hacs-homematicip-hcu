@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from functools import partial
 from typing import TYPE_CHECKING
 
 from homeassistant.const import ATTR_ENTITY_ID, ATTR_TEMPERATURE, Platform
@@ -226,14 +227,10 @@ def async_register_services(hass: HomeAssistant) -> None:
     }
 
     for service_name, handler in service_handlers.items():
-
-        async def _service_handler(call: ServiceCall, h=handler) -> None:
-            await h(hass, call)
-
         hass.services.async_register(
             DOMAIN,
             service_name,
-            _service_handler,
+            partial(handler, hass),
         )
 
     _LOGGER.debug("Registered %d HCU services", len(service_handlers))

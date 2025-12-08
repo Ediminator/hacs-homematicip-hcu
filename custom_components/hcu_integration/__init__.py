@@ -316,7 +316,7 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
                         "Timestamp button press: device=%s, channel=%s (new_ts=%s, old_ts=%s)",
                         device_id, ch_idx, new_timestamp, old_timestamp,
                     )
-                    self._fire_button_event(device_id, ch_idx, "PRESS")
+                    self._fire_button_event(device_id, ch_idx, "PRESS_SHORT")
                     self._trigger_event_entity(device_id, ch_idx)
 
     def _fire_button_event(

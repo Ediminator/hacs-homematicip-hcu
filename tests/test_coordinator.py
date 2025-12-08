@@ -18,13 +18,13 @@ async def coordinator(hass: HomeAssistant, mock_hcu_client: MagicMock, mock_conf
     return coordinator
 
 
-async def test_coordinator_initialization(coordinator: HcuCoordinator, mock_hcu_client: MagicMock):
+def test_coordinator_initialization(coordinator: HcuCoordinator, mock_hcu_client: MagicMock):
     """Test coordinator initialization."""
     assert coordinator.client == mock_hcu_client
     assert coordinator.entities == {}
 
 
-async def test_extract_event_channels(coordinator: HcuCoordinator):
+def test_extract_event_channels(coordinator: HcuCoordinator):
     """Test extraction of event channels from events."""
     events = {
         "event1": {
@@ -80,7 +80,7 @@ async def test_handle_device_channel_events(coordinator: HcuCoordinator, hass: H
             "pushEventType": "DEVICE_CHANNEL_EVENT",
             "channelEventType": "PRESS_SHORT",
             "deviceId": "device1",
-            "channelIndex": "1",  # Fixed: code expects channelIndex, not functionalChannelIndex
+            "functionalChannelIndex": "1",
         },
     }
 
@@ -94,6 +94,27 @@ async def test_handle_device_channel_events(coordinator: HcuCoordinator, hass: H
     assert event.data["type"] == "PRESS_SHORT"
 
 
+def test_should_fire_button_press_timestamp_changed(coordinator: HcuCoordinator):
+    """Test button press detection when timestamp changes."""
+    should_fire, reason = coordinator._should_fire_button_press(1000, 900)
+    assert should_fire is True
+    assert reason == "timestamp change"
+
+
+def test_should_fire_button_press_stateless(coordinator: HcuCoordinator):
+    """Test button press detection for stateless channels."""
+    should_fire, reason = coordinator._should_fire_button_press(None, None)
+    assert should_fire is True
+    assert reason == "stateless channel"
+
+
+def test_should_fire_button_press_no_change(coordinator: HcuCoordinator):
+    """Test button press detection when timestamp hasn't changed."""
+    should_fire, reason = coordinator._should_fire_button_press(1000, 1000)
+    assert should_fire is False
+    assert reason == ""
+
+
 async def test_detect_timestamp_based_button_presses(coordinator: HcuCoordinator, hass: HomeAssistant):
     """Test timestamp-based button press detection."""
     events_fired = []
@@ -103,7 +124,7 @@ async def test_detect_timestamp_based_button_presses(coordinator: HcuCoordinator
 
     hass.bus.async_listen(f"{DOMAIN}_event", capture_event)
 
-    # Setup mock device data in client.state
+    # Setup mock device data
     device_data = {
         "id": "device1",
         "functionalChannels": {
@@ -114,14 +135,12 @@ async def test_detect_timestamp_based_button_presses(coordinator: HcuCoordinator
         },
     }
 
-    coordinator.client.state = {
-        "devices": {
-            "device1": device_data
-        }
-    }
+    coordinator.client.get_device_by_address = MagicMock(return_value=device_data)
 
     old_state = {
-        ("device1", "1"): 1000,  # Old timestamp
+        "device1": {
+            "1": 1000,  # Old timestamp
+        }
     }
 
     event_channels = {("device1", "1")}
@@ -170,13 +189,7 @@ async def test_handle_event_message_full_flow(coordinator: HcuCoordinator, hass:
             },
         },
     }
-
-    # process_events usually updates the state, so we simulate that
-    def mock_process_events(events):
-        coordinator.client.state["devices"]["device1"] = updated_device
-        return {"device1"}
-
-    coordinator.client.process_events = MagicMock(side_effect=mock_process_events)
+    coordinator.client.get_device_by_address = MagicMock(return_value=updated_device)
 
     # Simulate receiving an event message
     message = {
@@ -200,7 +213,7 @@ async def test_handle_event_message_full_flow(coordinator: HcuCoordinator, hass:
     assert len(events_fired) == 1
 
 
-async def test_handle_event_message_ignores_non_event_types(coordinator: HcuCoordinator):
+def test_handle_event_message_ignores_non_event_types(coordinator: HcuCoordinator):
     """Test that non-HMIP_SYSTEM_EVENT messages are ignored."""
     message = {"type": "OTHER_TYPE", "body": {}}
 
@@ -208,7 +221,7 @@ async def test_handle_event_message_ignores_non_event_types(coordinator: HcuCoor
     coordinator._handle_event_message(message)
 
 
-async def test_handle_event_message_empty_events(coordinator: HcuCoordinator):
+def test_handle_event_message_empty_events(coordinator: HcuCoordinator):
     """Test handling message with no events."""
     message = {
         "type": "HMIP_SYSTEM_EVENT",

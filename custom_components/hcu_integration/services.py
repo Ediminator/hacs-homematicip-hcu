@@ -95,8 +95,8 @@ async def async_handle_play_sound(hass: HomeAssistant, call: ServiceCall) -> Non
         try:
             await entity.async_play_sound(
                 sound_file=call.data[ATTR_SOUND_FILE],
-                volume=call.data.get(ATTR_VOLUME),
-                duration=call.data.get(ATTR_DURATION),
+                volume=call.data[ATTR_VOLUME],
+                duration=call.data[ATTR_DURATION],
             )
         except (HcuApiError, ConnectionError) as err:
             _LOGGER.error("Error playing sound on %s: %s", entity_id, err)
@@ -145,6 +145,11 @@ async def async_handle_activate_vacation_mode(hass: HomeAssistant, call: Service
     """Handle the activate_vacation_mode service call."""
     try:
         client = _get_client_for_service(hass)
+    except ValueError as err:
+        _LOGGER.error("Error activating vacation mode: %s", err)
+        return
+
+    try:
         end_time_str = call.data[ATTR_END_TIME]
         
         # Parse the datetime string provided by user

@@ -7,7 +7,6 @@ import logging
 import random
 from typing import Any, cast
 
-import aiohttp
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_TOKEN, Platform
 from homeassistant.core import HomeAssistant
@@ -317,7 +316,7 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
                         "Timestamp button press: device=%s, channel=%s (new_ts=%s, old_ts=%s)",
                         device_id, ch_idx, new_timestamp, old_timestamp,
                     )
-                    self._fire_button_event(device_id, ch_idx, "press")
+                    self._fire_button_event(device_id, ch_idx, "PRESS_SHORT")
                     self._trigger_event_entity(device_id, ch_idx)
 
     def _fire_button_event(
@@ -374,7 +373,7 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
                 _LOGGER.info("WebSocket connected to HCU")
                 await self.client.listen()
 
-            except (ConnectionError, aiohttp.ClientError, asyncio.TimeoutError) as e:
+            except ConnectionError as e:
                 _LOGGER.warning("WebSocket disconnected: %s. Reconnecting in %ds", e, reconnect_delay)
             except asyncio.CancelledError:
                 _LOGGER.info("WebSocket listener cancelled")

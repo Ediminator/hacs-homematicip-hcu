@@ -160,8 +160,6 @@ async def async_handle_activate_vacation_mode(hass: HomeAssistant, call: Service
             end_time=formatted_end_time,
         )
         _LOGGER.info("Activated vacation mode until %s", end_time_str)
-    except (HcuApiError, ConnectionError) as err:
-        _LOGGER.error("Error activating vacation mode: %s", err)
     except (HcuApiError, ConnectionError, ValueError) as err:
         _LOGGER.error("Error activating vacation mode: %s", err)
 

@@ -195,6 +195,11 @@ async def async_discover_entities(
                 if mapping.get("class") == "HcuHomeSensor":
                     continue
 
+                # Skip dutyCycleLevel sensor for the main HCU device to avoid redundancy
+                # with the home-level dutyCycle sensor (HcuHomeSensor)
+                if feature == "dutyCycleLevel" and device_data.get("id") == client.hcu_device_id:
+                    continue
+
                 # Skip features with null values to prevent broken sensors
                 if channel_data[feature] is None:
                     _LOGGER.debug(

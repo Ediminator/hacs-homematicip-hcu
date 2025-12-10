@@ -4,6 +4,27 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 
 ---
 
+## 1.18.2 - 2025-12-10
+
+### 🐛 Bug Fixes
+
+**Fix Missing Direct Connection Groups (Issue #146)**
+
+Fixed an issue where user-created "Direct Connection" groups (Direktverknüpfungen) of type `SWITCHING` or `LIGHT` were missing from Home Assistant.
+
+**Root Cause:**
+These groups were incorrectly filtered out by logic intended to suppress redundant auto-created "Room Groups", which share the same `metaGroupId` property as Direct Connections.
+
+**What Changed:**
+- The filter excluding `SWITCHING` and `LIGHT` groups with `metaGroupId` has been removed.
+- Direct Connection groups are now correctly discovered and created as entities.
+- **Note:** This may also expose auto-created Room Groups as entities, which were previously suppressed.
+
+**Impact:**
+- ✅ User-created Direct Connection groups are now available in Home Assistant.
+
+---
+
 ## 1.18.1 - 2025-12-01
 
 ### 🐛 Bug Fixes

@@ -294,9 +294,15 @@ class HcuLight(HcuBaseEntity, LightEntity):
             )
         else:
             # Simple Dimmer or Switch
-            await self._client.async_set_dim_level(
-                self._device_id, self._channel_index, dim_level, ramp_time
-            )
+            # Check if this is a simple ON/OFF switch masquerading as a light
+            if self.supported_color_modes == {ColorMode.ONOFF}:
+                await self._client.async_set_switch_state(
+                    self._device_id, self._channel_index, True, kwargs.get(ATTR_TRANSITION)
+                )
+            else:
+                await self._client.async_set_dim_level(
+                    self._device_id, self._channel_index, dim_level, ramp_time
+                )
 
     async def async_turn_off(self, **kwargs) -> None:
         """Turn the light off."""
@@ -328,7 +334,13 @@ class HcuLight(HcuBaseEntity, LightEntity):
                 payload
             )
         else:
-            await self._client.async_set_dim_level(self._device_id, self._channel_index, 0.0, ramp_time)
+            # Check if this is a simple ON/OFF switch masquerading as a light
+            if self.supported_color_modes == {ColorMode.ONOFF}:
+                await self._client.async_set_switch_state(
+                    self._device_id, self._channel_index, False, ramp_time
+                )
+            else:
+                await self._client.async_set_dim_level(self._device_id, self._channel_index, 0.0, ramp_time)
 
 
 class HcuNotificationLight(HcuBaseEntity, LightEntity):

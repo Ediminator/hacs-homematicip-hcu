@@ -80,7 +80,7 @@ async def test_handle_device_channel_events(coordinator: HcuCoordinator, hass: H
             "pushEventType": "DEVICE_CHANNEL_EVENT",
             "channelEventType": "PRESS_SHORT",
             "deviceId": "device1",
-            "functionalChannelIndex": "1",
+            "channelIndex": "1",  # Changed from functionalChannelIndex to channelIndex
         },
     }
 
@@ -92,27 +92,6 @@ async def test_handle_device_channel_events(coordinator: HcuCoordinator, hass: H
     assert event.data["device_id"] == "device1"
     assert event.data["channel"] == "1"
     assert event.data["type"] == "PRESS_SHORT"
-
-
-def test_should_fire_button_press_timestamp_changed(coordinator: HcuCoordinator):
-    """Test button press detection when timestamp changes."""
-    should_fire, reason = coordinator._should_fire_button_press(1000, 900)
-    assert should_fire is True
-    assert reason == "timestamp change"
-
-
-def test_should_fire_button_press_stateless(coordinator: HcuCoordinator):
-    """Test button press detection for stateless channels."""
-    should_fire, reason = coordinator._should_fire_button_press(None, None)
-    assert should_fire is True
-    assert reason == "stateless channel"
-
-
-def test_should_fire_button_press_no_change(coordinator: HcuCoordinator):
-    """Test button press detection when timestamp hasn't changed."""
-    should_fire, reason = coordinator._should_fire_button_press(1000, 1000)
-    assert should_fire is False
-    assert reason == ""
 
 
 async def test_detect_timestamp_based_button_presses(coordinator: HcuCoordinator, hass: HomeAssistant):
@@ -135,12 +114,14 @@ async def test_detect_timestamp_based_button_presses(coordinator: HcuCoordinator
         },
     }
 
-    coordinator.client.get_device_by_address = MagicMock(return_value=device_data)
+    coordinator.client.state = {
+        "devices": {
+            "device1": device_data
+        }
+    }
 
     old_state = {
-        "device1": {
-            "1": 1000,  # Old timestamp
-        }
+        ("device1", "1"): 1000,  # Old timestamp
     }
 
     event_channels = {("device1", "1")}
@@ -152,7 +133,7 @@ async def test_detect_timestamp_based_button_presses(coordinator: HcuCoordinator
     assert len(events_fired) == 1
     event = events_fired[0]
     assert event.data["device_id"] == "device1"
-    assert event.data["type"] == "press"
+    assert event.data["type"] == "PRESS_SHORT"
 
 
 async def test_handle_event_message_full_flow(coordinator: HcuCoordinator, hass: HomeAssistant):
@@ -182,6 +163,7 @@ async def test_handle_event_message_full_flow(coordinator: HcuCoordinator, hass:
 
     updated_device = {
         "id": "device1",
+        "type": "WALL_MOUNTED_TRANSMITTER_CHANNEL",
         "functionalChannels": {
             "1": {
                 "functionalChannelType": "WALL_MOUNTED_TRANSMITTER_CHANNEL",
@@ -189,7 +171,15 @@ async def test_handle_event_message_full_flow(coordinator: HcuCoordinator, hass:
             },
         },
     }
-    coordinator.client.get_device_by_address = MagicMock(return_value=updated_device)
+
+    # We need to simulate that client.state is updated AFTER extracting old timestamps but BEFORE detect
+    # In the actual code, process_events does this update.
+    # Here we can mock process_events to update the state side-effect
+    def update_state(events):
+        coordinator.client.state["devices"]["device1"]["functionalChannels"]["1"]["lastStatusUpdate"] = 2000
+        return {"device1"}
+
+    coordinator.client.process_events = MagicMock(side_effect=update_state)
 
     # Simulate receiving an event message
     message = {

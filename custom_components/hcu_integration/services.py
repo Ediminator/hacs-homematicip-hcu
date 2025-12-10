@@ -34,6 +34,14 @@ if TYPE_CHECKING:
 
 _LOGGER = logging.getLogger(__name__)
 
+# Platform mapping for entity lookup
+PLATFORM_MAP = {
+    "switch": Platform.SWITCH,
+    "light": Platform.LIGHT,
+    "climate": Platform.CLIMATE,
+    "button": Platform.BUTTON,
+}
+
 # Single source of truth for service names
 INTEGRATION_SERVICES = [
     SERVICE_PLAY_SOUND,

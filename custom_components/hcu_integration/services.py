@@ -226,6 +226,9 @@ def async_register_services(hass: HomeAssistant) -> None:
         SERVICE_SWITCH_ON_WITH_TIME: async_handle_switch_on_with_time,
     }
 
+    assert set(service_handlers.keys()) == set(INTEGRATION_SERVICES), \
+        "Service handler keys must match INTEGRATION_SERVICES list"
+
     for service_name, handler in service_handlers.items():
         hass.services.async_register(
             DOMAIN,

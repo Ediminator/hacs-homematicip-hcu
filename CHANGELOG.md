@@ -59,7 +59,7 @@ The event message path was incorrectly simplified during refactoring. Events fro
 # Before (broken)
 events = body.get("events", {})
 
-# After (correct)  
+# After (correct)
 events = body.get("eventTransaction", {}).get("events", {})
 ```
 

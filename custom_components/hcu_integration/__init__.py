@@ -268,13 +268,18 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
                 channel_type = ch_data.get("functionalChannelType", "")
 
                 if channel_type in DEVICE_CHANNEL_EVENT_ONLY_TYPES:
-                    continue
+                    # HmIP-WKP (Keypad) does not send DEVICE_CHANNEL_EVENT when in a group.
+                    # We must allow timestamp-based detection for this device type.
+                    if device_type != "HmIP-WKP":
+                        continue
 
                 if channel_type == CHANNEL_TYPE_MULTI_MODE_INPUT_TRANSMITTER:
                     if device_type in MULTI_FUNCTION_CHANNEL_DEVICES:
                         continue
 
                 if channel_type in EVENT_CHANNEL_TYPES:
+                    event_channels.add((device_id, ch_idx))
+                elif device_type == "HmIP-WKP" and channel_type == "KEY_CHANNEL":
                     event_channels.add((device_id, ch_idx))
 
         return event_channels

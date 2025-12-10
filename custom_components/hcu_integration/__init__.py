@@ -373,7 +373,7 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
                 _LOGGER.info("WebSocket connected to HCU")
                 await self.client.listen()
 
-            except ConnectionError as e:
+            except (ConnectionError, asyncio.TimeoutError) as e:
                 _LOGGER.warning("WebSocket disconnected: %s. Reconnecting in %ds", e, reconnect_delay)
             except asyncio.CancelledError:
                 _LOGGER.info("WebSocket listener cancelled")

@@ -152,7 +152,7 @@ async def async_handle_activate_vacation_mode(hass: HomeAssistant, call: Service
         if dt_obj is None:
             raise ValueError(f"Invalid datetime string for end_time: {end_time_str}")
         
-        # HCU API expects format 'YYYY_MM_DD HH:MM'
+        # HCU API expects format 'YYYY_%m_%d %H:%M'
         formatted_end_time = dt_obj.strftime("%Y_%m_%d %H:%M")
         
         await client.async_activate_vacation(

@@ -4,6 +4,84 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 
 ---
 
+## 1.18.0 - 2025-12-01
+
+### 🏗️ Architecture Refactoring
+
+**Extracted Service Handlers to Dedicated Module**
+
+Improved code organization and maintainability by extracting all service handlers from `__init__.py` into a new `services.py` module.
+
+#### What Changed
+
+1. **New `services.py` Module**
+   - All 7 service handlers moved to dedicated module
+   - `async_handle_play_sound()`
+   - `async_handle_set_rule_state()`
+   - `async_handle_activate_party_mode()`
+   - `async_handle_activate_vacation_mode()`
+   - `async_handle_activate_eco_mode()`
+   - `async_handle_deactivate_absence_mode()`
+   - `async_handle_switch_on_with_time()`
+   - Added `async_register_services()` and `async_unregister_services()` functions
+   - Single source of truth for `INTEGRATION_SERVICES` list
+
+2. **Slimmed Down `__init__.py`**
+   - Reduced from ~550+ lines to ~385 lines
+   - `async_setup_entry()` reduced from ~200 lines to ~40 lines
+   - Removed 9 nested function definitions
+   - Cleaner imports and better separation of concerns
+   - `HcuCoordinator` class now focused solely on WebSocket/event handling
+
+#### Benefits
+
+- ✅ Better code organization following Home Assistant best practices
+- ✅ Service handlers are now testable in isolation
+- ✅ Easier to maintain and extend
+- ✅ Reduced complexity in main integration file
+
+### 🐛 Bug Fixes
+
+**Fix Entity State Updates Not Being Received (Critical)**
+
+Fixed a critical bug introduced during refactoring where entities (alarm panel, sensors, switches, etc.) would not receive state updates from the HCU after commands were sent.
+
+**Root Cause:**
+The event message path was incorrectly simplified during refactoring. Events from the HCU WebSocket are nested at `body.eventTransaction.events`, not `body.events`.
+
+**What Was Broken:**
+- Alarm control panel stuck in "Arming" state after activation
+- All entity states not updating from HCU push events
+- Only initial state was displayed, no real-time updates
+
+**What Was Fixed:**
+```python
+# Before (broken)
+events = body.get("events", {})
+
+# After (correct)
+events = body.get("eventTransaction", {}).get("events", {})
+```
+
+**Impact:**
+- ✅ All entities now receive real-time state updates
+- ✅ Alarm panel correctly shows Armed/Disarmed states
+- ✅ All device state changes reflected immediately in Home Assistant
+
+### 🔧 Code Quality Improvements
+
+- Removed unused imports from `__init__.py`
+- Standardized type hints across service module
+- Improved logging messages for conciseness
+- Removed redundant `self.entry` attribute (using `self.config_entry` from base class)
+
+### 📝 Files Changed
+
+- `custom_components/hcu_integration/__init__.py` - Major refactoring, slimmed down
+- `custom_components/hcu_integration/services.py` - **NEW FILE** - Service handlers module
+
+---
+
 ## 1.17.6 - 2025-11-29
 
 ### 🐛 Bug Fixes

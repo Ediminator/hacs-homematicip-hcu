@@ -789,7 +789,7 @@ HMIP_OPTICAL_SIGNAL_BEHAVIOURS = (
     "ON",
     "BLINKING_MIDDLE",
     "FLASH_MIDDLE",
-    "BILLOWING_MIDDLE",
+    "BILLOW_MIDDLE",
 )
 
 # Siren tone options for HmIP-ASIR2 and compatible devices

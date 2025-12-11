@@ -4,6 +4,46 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 
 ---
 
+## 1.18.2 - 2025-12-10
+
+### 🐛 Bug Fixes
+
+**Fix Missing Direct Connection Groups (Issue #146)**
+
+Fixed an issue where user-created "Direct Connection" groups (Direktverknüpfungen) of type `SWITCHING` or `LIGHT` were missing from Home Assistant.
+
+**Root Cause:**
+These groups were incorrectly filtered out by logic intended to suppress redundant auto-created "Room Groups", which share the same `metaGroupId` property as Direct Connections.
+
+**What Changed:**
+- The filter excluding `SWITCHING` and `LIGHT` groups with `metaGroupId` has been removed.
+- Direct Connection groups are now correctly discovered and created as entities.
+- **Note:** This may also expose auto-created Room Groups as entities, which were previously suppressed.
+
+**Impact:**
+- ✅ User-created Direct Connection groups are now available in Home Assistant.
+
+---
+
+## 1.18.1 - 2025-12-01
+
+### 🐛 Bug Fixes
+
+**Fix Redundant Duty Cycle Sensors for HCU (Issue #120)**
+
+Fixed an issue where redundant "Duty Cycle Level" sensors were created for the main HCU device, duplicating the information already provided by the "HCU Duty Cycle" entity.
+
+**What Changed:**
+- The `dutyCycleLevel` sensor (created from device channel data) is now suppressed for the main HCU device.
+- The `dutyCycle` sensor (created from the Home object data) remains the primary source for this information for the HCU.
+- Access Points (HmIP-HAP) and other devices will continue to have their individual `dutyCycleLevel` sensors.
+
+**Impact:**
+- ✅ Cleaner entity list with no duplicate duty cycle sensors for the HCU.
+- ✅ Resolves user confusion regarding two identical sensors.
+
+---
+
 ## 1.18.0 - 2025-12-01
 
 ### 🏗️ Architecture Refactoring
@@ -1859,7 +1899,7 @@ If you have HmIP-WGS or HmIP-WRC6 devices (or similar button devices that weren'
 * **Duplicate Siren Entities:** Removed a redundant mapping for `acousticAlarmActive` that was causing duplicate siren switch entities to be created for some devices.
 
 ### ✨ Improvements
-* **Modernized Stateless Button Handling:** Refactored how stateless buttons (e.g., wall switches like `HmIP-BRC2`, remote controls like `HmIP-KRC4`) are handled. These devices no longer create button entities and instead fire `hcu_integration_event` on the Home Assistant event bus. This aligns with Home Assistant's standard approach for stateless device triggers and provides better flexibility in automations. See the README for automation examples.
+* **Modernized Stateless Button Handling:** Refactored how stateless buttons (e.g., wall switches like `HmIP-BRC2`, remote controls like `HmIP-KRC4`) are handled. These devices no longer create button entities and instead fire `hcu_integration_event` on the Home Assistant event bus, which is the standard and more flexible way to handle stateless device triggers in automations. See the README for automation examples.
 * **Instant UI Updates for Absence Modes:** Implemented proactive state synchronization for Vacation and Eco modes. When you activate an absence mode from Home Assistant, related entities (such as `binary_sensor.vacation_mode`) now update instantly, matching the behavior of the official Homematic IP app for a more responsive user experience.
 * **Enhanced Device Compatibility:** Added numerous new device types and channel type definitions to improve device mapping accuracy and ensure better support for future Homematic IP devices.
 

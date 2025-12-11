@@ -290,7 +290,7 @@ async def async_discover_entities(
             # However, user-created "Direct Connections" also have metaGroupId (issue #146).
             # We now allow them to be discovered. If users find room groups redundant,
             # we may need a more specific filter or an option in the future.
-            if group_type in ("SWITCHING", "LIGHT") and "metaGroupId" in group_data:
+            if group_type in ("SWITCHING", "LIGHT", "EXTENDED_LINKED_SWITCHING") and "metaGroupId" in group_data:
                 _LOGGER.debug(
                     "Discovering %s group '%s' (id: %s) despite having metaGroupId (likely Direct Connection or Room Group)",
                     group_type,

@@ -4,6 +4,18 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 
 ---
 
+## 1.18.3 - 2025-12-11
+
+### 🐛 Bug Fixes
+
+**Fix Missing Direct Connection Groups (Issue #146)**
+
+Fix missing entities for `EXTENDED_LINKED_SWITCHING` (Light) and `EXTENDED_LINKED_SHUTTER` (Cover) groups (Issue #146).
+
+Ensure "Direct Connections" (user-created groups) are discovered even if they have a `metaGroupId`.
+
+---
+
 ## 1.18.2 - 2025-12-10
 
 ### 🐛 Bug Fixes

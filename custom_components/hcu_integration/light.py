@@ -448,5 +448,6 @@ class HcuLightGroup(HcuSwitchingGroupBase, LightEntity):
         super().__init__(coordinator, client, group_data)
 
         # Light groups typically only support on/off for the group
+        # (even if they contain dimmers, the group control is usually simple)
         self._attr_supported_color_modes = {ColorMode.ONOFF}
         self._attr_color_mode = ColorMode.ONOFF

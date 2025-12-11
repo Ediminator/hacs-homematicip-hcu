@@ -195,6 +195,11 @@ async def async_discover_entities(
                 if mapping.get("class") == "HcuHomeSensor":
                     continue
 
+                # Skip dutyCycleLevel sensor for the main HCU device to avoid redundancy
+                # with the home-level dutyCycle sensor (HcuHomeSensor)
+                if feature == "dutyCycleLevel" and device_data.get("id") == client.hcu_device_id:
+                    continue
+
                 # Skip features with null values to prevent broken sensors
                 if channel_data[feature] is None:
                     _LOGGER.debug(
@@ -257,6 +262,8 @@ async def async_discover_entities(
         "SHUTTER": (Platform.COVER, cover.HcuCoverGroup, {}),
         "SWITCHING": (Platform.SWITCH, switch.HcuSwitchGroup, {}),
         "LIGHT": (Platform.LIGHT, light.HcuLightGroup, {}),
+        "EXTENDED_LINKED_SWITCHING": (Platform.LIGHT, light.HcuLightGroup, {}),
+        "EXTENDED_LINKED_SHUTTER": (Platform.COVER, cover.HcuCoverGroup, {}),
     }
 
     # Track group discovery statistics for diagnostics
@@ -279,19 +286,17 @@ async def async_discover_entities(
             continue
 
         if mapping := group_type_mapping.get(group_type):
-            # Skip auto-created meta groups for SWITCHING and LIGHT
-            # These are created automatically by HCU for rooms and provide unexpected entities
-            # User-created functional groups don't have metaGroupId and will still be discovered
-            if group_type in ("SWITCHING", "LIGHT"):
-                if "metaGroupId" in group_data:
-                    _LOGGER.debug(
-                        "Skipping auto-created meta %s group '%s' (id: %s)",
-                        group_type,
-                        group_label,
-                        group_id
-                    )
-                    groups_skipped_meta += 1
-                    continue
+            # Previously we skipped groups with metaGroupId assuming they were only auto-created room groups.
+            # However, user-created "Direct Connections" also have metaGroupId (issue #146).
+            # We now allow them to be discovered. If users find room groups redundant,
+            # we may need a more specific filter or an option in the future.
+            if group_type in ("SWITCHING", "LIGHT", "EXTENDED_LINKED_SWITCHING") and "metaGroupId" in group_data:
+                _LOGGER.debug(
+                    "Discovering %s group '%s' (id: %s) despite having metaGroupId (likely Direct Connection or Room Group)",
+                    group_type,
+                    group_label,
+                    group_id
+                )
 
             platform, entity_class, extra_kwargs = mapping
             entities[platform].append(

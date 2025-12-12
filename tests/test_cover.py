@@ -60,13 +60,15 @@ async def test_cover_group_properties_blind(mock_coordinator, mock_hcu_client):
         "primaryShadingLevel": 0.25,
         "secondaryShadingLevel": 0.75,
         "shutterLevel": 0.0, # Should be ignored
-        "slatsLevel": 0.0, # Should be ignored
     }
     
     mock_hcu_client.get_group_by_id = MagicMock(return_value=group_data)
 
     cover = HcuCoverGroup(mock_coordinator, mock_hcu_client, group_data)
     
+    # Verify supported features include TILT
+    assert cover.supported_features & CoverEntityFeature.SET_TILT_POSITION
+
     # 0.25 level = 75% open
     assert cover.current_cover_position == 75
     

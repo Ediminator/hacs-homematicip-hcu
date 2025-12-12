@@ -240,7 +240,7 @@ class HcuCoverGroup(HcuGroupBaseEntity, CoverEntity):
         
         # FIX: Use self._group (property) to check capabilities, or fallback to group_data
         # This ensures we don't crash if group_data is stale
-        if "slatsLevel" in self._group:
+        if "secondaryShadingLevel" in self._group:
             self._attr_supported_features |= CoverEntityFeature.SET_TILT_POSITION
 
     @property

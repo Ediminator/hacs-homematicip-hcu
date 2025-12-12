@@ -72,9 +72,11 @@ class HcuCover(HcuBaseEntity, CoverEntity):
     @property
     def current_cover_position(self) -> int | None:
         """Return current position of cover. 0 is closed, 100 is open."""
-        level = self.get_parameter_value("LEVEL")
+        level = self._channel.get("shutterLevel")
         if level is not None:
-            return int(level * 100)
+            # shutterLevel: 0.0 = open, 1.0 = closed
+            # HA position: 0 = closed, 100 = open
+            return round((1.0 - level) * 100)
         return None
 
     @property
@@ -82,10 +84,12 @@ class HcuCover(HcuBaseEntity, CoverEntity):
         """Return current tilt position of cover."""
         if self._attr_device_class != CoverDeviceClass.BLIND:
             return None
-            
-        level = self.get_parameter_value("LEVEL_2") # Slats level
+
+        level = self._channel.get("slatsLevel")
         if level is not None:
-            return int(level * 100)
+            # slatsLevel: 0.0 = open, 1.0 = closed
+            # HA position: 0 = closed, 100 = open
+            return round((1.0 - level) * 100)
         return None
 
     @property
@@ -98,48 +102,58 @@ class HcuCover(HcuBaseEntity, CoverEntity):
 
     async def async_open_cover(self, **kwargs: Any) -> None:
         """Open the cover."""
-        await self._client.async_set_device_parameter(
-            self._device_id, self._channel_index, "LEVEL", 1.0
+        # shutterLevel: 0.0 = open, 1.0 = closed
+        await self._client.async_set_shutter_level(
+            self._device_id, self._channel_index, 0.0
         )
 
     async def async_close_cover(self, **kwargs: Any) -> None:
         """Close cover."""
-        await self._client.async_set_device_parameter(
-            self._device_id, self._channel_index, "LEVEL", 0.0
+        # shutterLevel: 0.0 = open, 1.0 = closed
+        await self._client.async_set_shutter_level(
+            self._device_id, self._channel_index, 1.0
         )
 
     async def async_stop_cover(self, **kwargs: Any) -> None:
         """Stop the cover."""
-        await self._client.async_stop_device(self._device_id, self._channel_index)
+        await self._client.async_stop_cover(self._device_id, self._channel_index)
 
     async def async_set_cover_position(self, **kwargs: Any) -> None:
         """Move the cover to a specific position."""
         position = kwargs.get(ATTR_POSITION, 100)
-        await self._client.async_set_device_parameter(
-            self._device_id, self._channel_index, "LEVEL", position / 100.0
+        # HA position: 0 = closed, 100 = open
+        # shutterLevel: 0.0 = open, 1.0 = closed
+        shutter_level = round((100 - position) / 100.0, 2)
+        await self._client.async_set_shutter_level(
+            self._device_id, self._channel_index, shutter_level
         )
-        
+
     async def async_open_cover_tilt(self, **kwargs: Any) -> None:
         """Open the cover tilt."""
-        await self._client.async_set_device_parameter(
-            self._device_id, self._channel_index, "LEVEL_2", 1.0
+        # slatsLevel: 0.0 = open, 1.0 = closed
+        await self._client.async_set_slats_level(
+            self._device_id, self._channel_index, 0.0
         )
 
     async def async_close_cover_tilt(self, **kwargs: Any) -> None:
         """Close the cover tilt."""
-        await self._client.async_set_device_parameter(
-            self._device_id, self._channel_index, "LEVEL_2", 0.0
+        # slatsLevel: 0.0 = open, 1.0 = closed
+        await self._client.async_set_slats_level(
+            self._device_id, self._channel_index, 1.0
         )
 
     async def async_stop_cover_tilt(self, **kwargs: Any) -> None:
-        """Stop the cover."""
-        await self._client.async_stop_device(self._device_id, self._channel_index)
+        """Stop the cover tilt."""
+        await self._client.async_stop_cover(self._device_id, self._channel_index)
 
     async def async_set_cover_tilt_position(self, **kwargs: Any) -> None:
         """Move the cover tilt to a specific position."""
         position = kwargs.get(ATTR_TILT_POSITION, 100)
-        await self._client.async_set_device_parameter(
-            self._device_id, self._channel_index, "LEVEL_2", position / 100.0
+        # HA position: 0 = closed, 100 = open
+        # slatsLevel: 0.0 = open, 1.0 = closed
+        slats_level = round((100 - position) / 100.0, 2)
+        await self._client.async_set_slats_level(
+            self._device_id, self._channel_index, slats_level
         )
 
 
@@ -271,9 +285,9 @@ class HcuCoverGroup(HcuGroupBaseEntity, CoverEntity):
     def current_cover_position(self) -> int | None:
         """Return current position of cover."""
         # Groups might expose 'primaryShadingLevel' or similar
-        level = self._group_data.get("primaryShadingLevel")
+        level = self._group.get("primaryShadingLevel")
         if level is not None:
-             return int((1.0 - level) * 100)
+            return round((1.0 - level) * 100)
         return None
 
     @property

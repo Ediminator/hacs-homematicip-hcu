@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import device_registry as dr
 
 from . import (
     alarm_control_panel,
@@ -26,6 +27,7 @@ from .api import HcuApiClient
 from .const import (
     CHANNEL_TYPE_MULTI_MODE_INPUT_TRANSMITTER,
     DEACTIVATED_BY_DEFAULT_DEVICES,
+    DOMAIN,
     DUTY_CYCLE_BINARY_SENSOR_MAPPING,
     HMIP_CHANNEL_TYPE_TO_ENTITY,
     HMIP_FEATURE_TO_ENTITY,
@@ -283,6 +285,27 @@ async def async_discover_entities(
                 group_type,
                 group_label or "unknown"
             )
+            continue
+
+        # Skip groups with no channels (zombie groups)
+        # These are groups that exist in the HCU but contain no devices.
+        # They should not be exposed as entities (issue #185).
+        # We explicitly check for False/None/Empty list
+        if not group_data.get("channels"):
+            _LOGGER.debug(
+                "Skipping group without channels (zombie): %s (id: %s)",
+                group_label,
+                group_id
+            )
+
+            # Cleanup: If this group exists in the device registry, remove it.
+            # This handles cases where the group was previously discovered (and created as a device)
+            # but is now empty/zombie.
+            dev_reg = dr.async_get(hass)
+            if device := dev_reg.async_get_device(identifiers={(DOMAIN, group_id)}):
+                _LOGGER.debug("Removing zombie group device from registry: %s (id: %s)", group_label, group_id)
+                dev_reg.async_remove_device(device.id)
+
             continue
 
         if mapping := group_type_mapping.get(group_type):

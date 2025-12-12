@@ -133,9 +133,11 @@ class HcuCover(HcuBaseEntity, CoverEntity):
         slats_level = round((100 - position) / 100.0, 2)
         
         # Pass current shutter level if available, as per API docs
-        # Implementation handles the extra argument if provided
+        # We must fetch the level using the dynamic property to support both shutterLevel and primaryShadingLevel
+        current_level = self._channel.get(self._level_property)
+        
         await self._client.async_set_slats_level(
-            self._device_id, self._channel_index, slats_level
+            self._device_id, self._channel_index, slats_level, shutter_level=current_level
         )
 
 

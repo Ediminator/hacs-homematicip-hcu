@@ -171,3 +171,34 @@ async def test_cover_device_blind_class(mock_coordinator, mock_hcu_client):
     
     assert cover.device_class == CoverDeviceClass.BLIND
     assert cover.supported_features & CoverEntityFeature.SET_TILT_POSITION
+
+async def test_cover_device_tilt_passes_shutter_level(mock_coordinator, mock_hcu_client):
+    """Test that setting tilt position passes the current shutter level."""
+    # Setup device using primaryShadingLevel to verify dynamic property usage
+    device_data = {
+        "id": "device-id",
+        "type": "HMIP-BBL", 
+        "functionalChannels": {
+            "1": {
+                "label": "Blind Channel",
+                "primaryShadingLevel": 0.4, # 40% closed (60% open)
+                "slatsLevel": 0.0,
+            }
+        }
+    }
+    
+    mock_hcu_client.async_set_slats_level = AsyncMock()
+    mock_hcu_client.get_device_by_address = MagicMock(return_value=device_data)
+    
+    cover = HcuCover(mock_coordinator, mock_hcu_client, device_data, "1")
+    
+    # Verify level property detection
+    assert cover._level_property == "primaryShadingLevel"
+    
+    # Set tilt to 50% (0.5 level)
+    await cover.async_set_cover_tilt_position(tilt_position=50)
+    
+    # Check if async_set_slats_level was called with correct shutter_level
+    mock_hcu_client.async_set_slats_level.assert_called_once_with(
+        "device-id", 1, 0.5, shutter_level=0.4
+    )

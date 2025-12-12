@@ -291,7 +291,7 @@ async def async_discover_entities(
         # These are groups that exist in the HCU but contain no devices.
         # They should not be exposed as entities (issue #185).
         # We explicitly check for False/None/Empty list
-        if not group_data.get("channels"):
+        if not (channels := group_data.get("channels")) or not isinstance(channels, (list, dict)):
             _LOGGER.debug(
                 "Skipping group without channels (zombie): %s (id: %s)",
                 group_label,

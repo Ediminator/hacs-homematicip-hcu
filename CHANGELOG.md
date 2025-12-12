@@ -4,6 +4,35 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 
 ---
 
+## 1.18.4 - 2025-12-12
+
+### 🐛 Bug Fixes
+
+**Fix Cover Entities Regression (Issue #207)**
+
+Fixed a critical regression where roller shutter devices (HmIP-BROLL, HmIP-FROLL) and cover groups became unavailable after updating to version 1.18.3.
+
+**Root Cause:**
+The `HcuCover` class was using non-existent methods and incorrect property references:
+- Used `get_parameter_value("LEVEL")` instead of `self._channel.get("shutterLevel")`
+- Used `async_set_device_parameter()` instead of `async_set_shutter_level()`
+- Used `async_stop_device()` instead of `async_stop_cover()`
+- `HcuCoverGroup` referenced `_group_data` instead of the correct `_group` property
+
+**What Changed:**
+- Fixed `HcuCover` to use correct channel data access (`shutterLevel`, `slatsLevel`)
+- Fixed `HcuCover` to use correct API methods for shutter control
+- Fixed `HcuCoverGroup` to use correct `_group` property
+- Corrected position conversion between HomematicIP (0.0=open, 1.0=closed) and Home Assistant (0=closed, 100=open)
+- Added `round()` for more accurate position conversions
+
+**Impact:**
+- ✅ Roller shutter devices (HmIP-BROLL, HmIP-FROLL) now work correctly
+- ✅ Cover groups (SHUTTER, EXTENDED_LINKED_SHUTTER) now work correctly
+- ✅ Position reporting and control functions properly
+
+---
+
 ## 1.18.3 - 2025-12-11
 
 ### 🐛 Bug Fixes

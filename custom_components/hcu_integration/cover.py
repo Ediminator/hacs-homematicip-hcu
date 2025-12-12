@@ -80,6 +80,7 @@ class HcuCover(HcuBaseEntity, CoverEntity):
                 | CoverEntityFeature.CLOSE_TILT
                 | CoverEntityFeature.STOP_TILT
             )
+            self._attr_device_class = CoverDeviceClass.BLIND
 
     @property
     def current_cover_position(self) -> int | None:

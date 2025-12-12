@@ -150,3 +150,24 @@ async def test_cover_tilt_rounding(mock_coordinator, mock_hcu_client):
     
     device_data["functionalChannels"]["1"]["slatsLevel"] = 0.506
     assert cover.current_cover_tilt_position == 49
+
+async def test_cover_device_blind_class(mock_coordinator, mock_hcu_client):
+    """Test device class detection for blind devices."""
+    device_data = {
+        "id": "device-id",
+        "type": "HMIP-BBL", # Blind
+        "functionalChannels": {
+            "1": {
+                "label": "Blind Channel",
+                "shutterLevel": 0.0,
+                "slatsLevel": 0.0,
+            }
+        }
+    }
+    
+    mock_hcu_client.get_device_by_address = MagicMock(return_value=device_data)
+    
+    cover = HcuCover(mock_coordinator, mock_hcu_client, device_data, "1")
+    
+    assert cover.device_class == CoverDeviceClass.BLIND
+    assert cover.supported_features & CoverEntityFeature.SET_TILT_POSITION

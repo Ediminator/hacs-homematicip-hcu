@@ -307,7 +307,7 @@ async def async_discover_entities(
                 try:
                     dev_reg.async_remove_device(device.id)
                 except Exception as e:
-                    _LOGGER.warning("Failed to remove zombie group device %s: %s", group_id, e)
+                    _LOGGER.warning("Failed to remove zombie group device %s: %s", group_id, e, exc_info=True)
 
             continue
 

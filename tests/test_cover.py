@@ -40,6 +40,9 @@ async def test_cover_group_properties_shutter(mock_coordinator, mock_hcu_client)
 
     cover = HcuCoverGroup(mock_coordinator, mock_hcu_client, group_data)
     
+    # Verify device class is SHUTTER
+    assert cover.device_class == CoverDeviceClass.SHUTTER
+    
     # Check initial position
     assert cover.current_cover_position == 100 
     
@@ -71,6 +74,9 @@ async def test_cover_group_properties_blind(mock_coordinator, mock_hcu_client):
     assert cover.supported_features & CoverEntityFeature.OPEN_TILT
     assert cover.supported_features & CoverEntityFeature.CLOSE_TILT
     assert cover.supported_features & CoverEntityFeature.STOP_TILT
+    
+    # Verify device class is BLIND
+    assert cover.device_class == CoverDeviceClass.BLIND
 
     # 0.25 level = 75% open
     assert cover.current_cover_position == 75

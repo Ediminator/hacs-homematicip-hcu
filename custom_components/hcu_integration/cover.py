@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING, Any
 from homeassistant.components.cover import (
     ATTR_POSITION,
     ATTR_TILT_POSITION,
+    CoverDeviceClass,
     CoverEntity,
     CoverEntityFeature,
 )
@@ -250,6 +251,9 @@ class HcuCoverGroup(HcuGroupBaseEntity, CoverEntity):
                 | CoverEntityFeature.CLOSE_TILT
                 | CoverEntityFeature.STOP_TILT
             )
+            self._attr_device_class = CoverDeviceClass.BLIND
+        else:
+            self._attr_device_class = CoverDeviceClass.SHUTTER
 
     @property
     def current_cover_position(self) -> int | None:

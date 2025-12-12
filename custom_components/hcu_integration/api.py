@@ -639,6 +639,18 @@ class HcuApiClient:
                 current_level = channel.get("shutterLevel")
                 if current_level is not None:
                     body["shutterLevel"] = current_level
+                else:
+                    _LOGGER.warning(
+                        "Could not determine shutterLevel for device %s channel %s. "
+                        "setSlatsLevel API call may fail or behave unexpectedly.",
+                        device_id, channel_index
+                    )
+            else:
+                _LOGGER.warning(
+                    "Device %s not found in state cache. "
+                    "setSlatsLevel API call may fail or behave unexpectedly.",
+                    device_id
+                )
 
         await self.async_device_control(API_PATHS["SET_SLATS_LEVEL"], device_id, channel_index, body)
 

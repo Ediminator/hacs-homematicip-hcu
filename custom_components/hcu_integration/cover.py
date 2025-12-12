@@ -73,7 +73,12 @@ class HcuCover(HcuBaseEntity, CoverEntity):
         
         # Check for tilt support
         if "slatsLevel" in self._channel:
-            self._attr_supported_features |= CoverEntityFeature.SET_TILT_POSITION
+            self._attr_supported_features |= (
+                CoverEntityFeature.SET_TILT_POSITION
+                | CoverEntityFeature.OPEN_TILT
+                | CoverEntityFeature.CLOSE_TILT
+                | CoverEntityFeature.STOP_TILT
+            )
 
     @property
     def current_cover_position(self) -> int | None:
@@ -125,10 +130,8 @@ class HcuCover(HcuBaseEntity, CoverEntity):
         self._attr_assumed_state = True
         slats_level = round((100 - position) / 100.0, 2)
         
-        # Improvement: Pass current shutter level if available, as per API docs
-        # This requires the updated api.py logic I provided previously, 
-        # but works with the old one too if the extra arg is ignored/handled there.
-        # For safety with standard api.py, we call the client method which should handle it.
+        # Pass current shutter level if available, as per API docs
+        # Implementation handles the extra argument if provided
         await self._client.async_set_slats_level(
             self._device_id, self._channel_index, slats_level
         )
@@ -238,10 +241,15 @@ class HcuCoverGroup(HcuGroupBaseEntity, CoverEntity):
             | CoverEntityFeature.SET_POSITION
         )
         
-        # FIX: Use self._group (property) to check capabilities, or fallback to group_data
-        # This ensures we don't crash if group_data is stale
+        # Use self._group (property) to check capabilities.
+        # The property handles missing group data safely by returning an empty dict.
         if "secondaryShadingLevel" in self._group:
-            self._attr_supported_features |= CoverEntityFeature.SET_TILT_POSITION
+            self._attr_supported_features |= (
+                CoverEntityFeature.SET_TILT_POSITION
+                | CoverEntityFeature.OPEN_TILT
+                | CoverEntityFeature.CLOSE_TILT
+                | CoverEntityFeature.STOP_TILT
+            )
 
     @property
     def current_cover_position(self) -> int | None:

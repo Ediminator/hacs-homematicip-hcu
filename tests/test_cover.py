@@ -66,8 +66,11 @@ async def test_cover_group_properties_blind(mock_coordinator, mock_hcu_client):
 
     cover = HcuCoverGroup(mock_coordinator, mock_hcu_client, group_data)
     
-    # Verify supported features include TILT
+    # Verify supported features include all TILT capabilities
     assert cover.supported_features & CoverEntityFeature.SET_TILT_POSITION
+    assert cover.supported_features & CoverEntityFeature.OPEN_TILT
+    assert cover.supported_features & CoverEntityFeature.CLOSE_TILT
+    assert cover.supported_features & CoverEntityFeature.STOP_TILT
 
     # 0.25 level = 75% open
     assert cover.current_cover_position == 75

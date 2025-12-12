@@ -616,8 +616,31 @@ class HcuApiClient:
         """Set primary shading level for SHADING_CHANNEL devices (e.g., HmIP-HDM1)."""
         await self.async_device_control(API_PATHS["SET_PRIMARY_SHADING_LEVEL"], device_id, channel_index, {"primaryShadingLevel": shading_level})
 
-    async def async_set_slats_level(self, device_id: str, channel_index: int, slats_level: float) -> None:
-        await self.async_device_control(API_PATHS["SET_SLATS_LEVEL"], device_id, channel_index, {"slatsLevel": slats_level})
+    async def async_set_slats_level(self, device_id: str, channel_index: int, slats_level: float, shutter_level: float | None = None) -> None:
+        """Set slats (tilt) level for blind devices.
+
+        Args:
+            device_id: The device SGTIN
+            channel_index: The channel index
+            slats_level: The slats/tilt level (0.0 = open, 1.0 = closed)
+            shutter_level: The shutter level to maintain (0.0 = open, 1.0 = closed).
+                          If None, current level from device state is used.
+        """
+        body: dict[str, float] = {"slatsLevel": slats_level}
+
+        # Include shutterLevel as required by API spec
+        if shutter_level is not None:
+            body["shutterLevel"] = shutter_level
+        else:
+            # Try to get current shutter level from device state
+            device = self.get_device_by_address(device_id)
+            if device:
+                channel = device.get("functionalChannels", {}).get(str(channel_index), {})
+                current_level = channel.get("shutterLevel")
+                if current_level is not None:
+                    body["shutterLevel"] = current_level
+
+        await self.async_device_control(API_PATHS["SET_SLATS_LEVEL"], device_id, channel_index, body)
 
     async def async_stop_cover(self, device_id: str, channel_index: int) -> None:
         await self.async_device_control(API_PATHS["STOP_COVER"], device_id, channel_index)

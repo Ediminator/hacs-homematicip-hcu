@@ -83,7 +83,16 @@ async def test_cover_group_properties_blind(mock_coordinator, mock_hcu_client):
     # 0.75 level = 25% open (tilt)
     assert cover.current_cover_tilt_position == 25
 
-async def test_cover_device_rounding(mock_coordinator, mock_hcu_client):
+@pytest.mark.parametrize(
+    "level, expected_position",
+    [
+        (0.004, 100),  # (1 - 0.004) * 100 = 99.6 -> round(99.6) = 100
+        (0.006, 99),   # (1 - 0.006) * 100 = 99.4 -> round(99.4) = 99
+    ],
+)
+async def test_cover_device_rounding(
+    mock_coordinator, mock_hcu_client, level, expected_position
+):
     """Test rounding logic for single devices."""
     device_data = {
         "id": "device-id",
@@ -91,38 +100,37 @@ async def test_cover_device_rounding(mock_coordinator, mock_hcu_client):
         "functionalChannels": {
             "1": {
                 "label": "Shutter Channel",
-                "shutterLevel": 0.004, # 0.4% -> Should round to 0% closed -> 100% open
+                "shutterLevel": level,
             }
-        }
+        },
     }
-    
-    mock_hcu_client.get_device_by_address = MagicMock(return_value=device_data)
-    
-    # Test 1: 0.4% level -> 99.6% open -> round to 100
-    # 0.004 level means (1 - 0.004) * 100 = 0.996 * 100 = 99.6 -> round(99.6) = 100
-    cover = HcuCover(mock_coordinator, mock_hcu_client, device_data, "1")
-    assert cover.current_cover_position == 100
-    
-    # Test 2: 0.6% level -> 99.4% open -> round to 99
-    # 0.006 level means (1 - 0.006) * 100 = 0.994 * 100 = 99.4 -> round(99.4) = 99
-    device_data["functionalChannels"]["1"]["shutterLevel"] = 0.006
-    assert cover.current_cover_position == 99
 
-async def test_cover_group_rounding(mock_coordinator, mock_hcu_client):
+    mock_hcu_client.get_device_by_address = MagicMock(return_value=device_data)
+
+    cover = HcuCover(mock_coordinator, mock_hcu_client, device_data, "1")
+    assert cover.current_cover_position == expected_position
+
+@pytest.mark.parametrize(
+    "level, expected_position",
+    [
+        (0.004, 100),  # 0.4% -> 99.6% open -> 100
+        (0.006, 99),   # 0.6% -> 99.4% open -> 99
+    ],
+)
+async def test_cover_group_rounding(
+    mock_coordinator, mock_hcu_client, level, expected_position
+):
     """Test rounding logic for groups."""
     group_data = {
         "id": "group-id",
         "type": "SHUTTER",
-        "primaryShadingLevel": 0.004, # 0.4% -> 99.6% open -> 100
+        "primaryShadingLevel": level,
     }
-    
+
     mock_hcu_client.get_group_by_id = MagicMock(return_value=group_data)
 
     cover = HcuCoverGroup(mock_coordinator, mock_hcu_client, group_data)
-    assert cover.current_cover_position == 100
-    
-    group_data["primaryShadingLevel"] = 0.006 # 0.6% -> 99.4% open -> 99
-    assert cover.current_cover_position == 99
+    assert cover.current_cover_position == expected_position
 
 async def test_cover_tilt_rounding(mock_coordinator, mock_hcu_client):
     """Test rounding logic for tilt (device)."""

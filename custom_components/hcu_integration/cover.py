@@ -79,7 +79,7 @@ class HcuCover(HcuBaseEntity, CoverEntity):
     def current_cover_position(self) -> int | None:
         """Return current position of cover."""
         level = self._channel.get(self._level_property)
-        return int((1 - level) * 100) if level is not None else None
+        return round((1 - level) * 100) if level is not None else None
 
     @property
     def current_cover_tilt_position(self) -> int | None:
@@ -87,7 +87,7 @@ class HcuCover(HcuBaseEntity, CoverEntity):
         if "slatsLevel" not in self._channel:
             return None
         level = self._channel.get("slatsLevel")
-        return int((1 - level) * 100) if level is not None else None
+        return round((1 - level) * 100) if level is not None else None
 
     @property
     def is_closed(self) -> bool | None:
@@ -246,16 +246,16 @@ class HcuCoverGroup(HcuGroupBaseEntity, CoverEntity):
     @property
     def current_cover_position(self) -> int | None:
         """Return current position of cover group."""
-        level = self._group.get("shutterLevel")
-        return int((1 - level) * 100) if level is not None else None
+        level = self._group.get("primaryShadingLevel")
+        return round((1 - level) * 100) if level is not None else None
 
     @property
     def current_cover_tilt_position(self) -> int | None:
         """Return current tilt position of cover group."""
-        if "slatsLevel" not in self._group:
+        if "secondaryShadingLevel" not in self._group:
             return None
-        level = self._group.get("slatsLevel")
-        return int((1 - level) * 100) if level is not None else None
+        level = self._group.get("secondaryShadingLevel")
+        return round((1 - level) * 100) if level is not None else None
 
     @property
     def is_closed(self) -> bool | None:

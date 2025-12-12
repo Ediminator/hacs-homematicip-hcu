@@ -1,0 +1,2 @@
+class DeviceEntryType:
+    SERVICE = "service"

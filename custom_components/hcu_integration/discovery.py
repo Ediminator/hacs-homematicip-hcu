@@ -8,6 +8,8 @@ from typing import TYPE_CHECKING, Any
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import device_registry as dr
+import asyncio
 
 from . import (
     alarm_control_panel,
@@ -26,6 +28,7 @@ from .api import HcuApiClient
 from .const import (
     CHANNEL_TYPE_MULTI_MODE_INPUT_TRANSMITTER,
     DEACTIVATED_BY_DEFAULT_DEVICES,
+    DOMAIN,
     DUTY_CYCLE_BINARY_SENSOR_MAPPING,
     HMIP_CHANNEL_TYPE_TO_ENTITY,
     HMIP_FEATURE_TO_ENTITY,
@@ -271,6 +274,9 @@ async def async_discover_entities(
     groups_skipped_meta = 0
     groups_unknown_type = 0
 
+    # Fetch device registry once before iterating groups
+    dev_reg = dr.async_get(hass)
+
     for group_data in state.get("groups", {}).values():
         group_type = group_data.get("type")
         group_id = group_data.get("id")
@@ -283,6 +289,41 @@ async def async_discover_entities(
                 group_type,
                 group_label or "unknown"
             )
+            continue
+
+        # Skip and clean up groups with no channels (zombie groups)
+        # These are groups that exist in the HCU but contain no devices.
+        # They should not be exposed as entities and existing ones should be removed (issue #185).
+        channels = group_data.get("channels")
+
+        # A group is a zombie if 'channels' is not a non-empty list.
+        if not (isinstance(channels, list) and channels):
+            if not isinstance(channels, list) and channels is not None:
+                _LOGGER.warning(
+                    "Group '%s' (id: %s) has a 'channels' attribute that is not a list: %s. Treating as zombie.",
+                    group_label,
+                    group_id,
+                    type(channels).__name__,
+                )
+            else:  # This covers None or an empty list.
+                _LOGGER.debug(
+                    "Skipping group without channels (zombie): %s (id: %s)",
+                    group_label,
+                    group_id,
+                )
+
+            # Cleanup: If this group exists in the device registry, remove it.
+            # This handles cases where the group was previously discovered (and created as a device)
+            # but is now empty/zombie.
+            if device := dev_reg.async_get_device(identifiers={(DOMAIN, group_id)}):
+                _LOGGER.debug("Removing zombie group device from registry: %s (id: %s)", group_label, group_id)
+                try:
+                    dev_reg.async_remove_device(device.id)
+                except asyncio.CancelledError:
+                    raise
+                except Exception:
+                    _LOGGER.warning("Failed to remove zombie group device '%s' (id: %s)", group_label, group_id, exc_info=True)
+
             continue
 
         if mapping := group_type_mapping.get(group_type):

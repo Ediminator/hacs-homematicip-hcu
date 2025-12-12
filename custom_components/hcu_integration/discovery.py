@@ -287,30 +287,27 @@ async def async_discover_entities(
             )
             continue
 
-        # Skip groups with no channels (zombie groups)
+        # Skip and clean up groups with no channels (zombie groups)
         # These are groups that exist in the HCU but contain no devices.
-        # They should not be exposed as entities (issue #185).
+        # They should not be exposed as entities and existing ones should be removed (issue #185).
         channels = group_data.get("channels")
-        if channels is not None and not isinstance(channels, list):
-            _LOGGER.warning(
-                "Group '%s' (id: %s) has a 'channels' attribute that is not a list: %s. Treating as zombie.",
-                group_label,
-                group_id,
-                type(channels).__name__,
-            )
-        elif not channels:
-            # Explicitly check for empty list or None
-            _LOGGER.debug(
-                "Skipping group without channels (zombie): %s (id: %s)",
-                group_label,
-                group_id
-            )
-        else:
-            # Valid group with channels
-            pass
 
-        # Cleanup for zombies (empty list, None, or invalid type)
-        if not channels or not isinstance(channels, list):
+        # A group is a zombie if 'channels' is not a non-empty list.
+        if not (isinstance(channels, list) and channels):
+            if not isinstance(channels, list) and channels is not None:
+                _LOGGER.warning(
+                    "Group '%s' (id: %s) has a 'channels' attribute that is not a list: %s. Treating as zombie.",
+                    group_label,
+                    group_id,
+                    type(channels).__name__,
+                )
+            else:  # This covers None or an empty list.
+                _LOGGER.debug(
+                    "Skipping group without channels (zombie): %s (id: %s)",
+                    group_label,
+                    group_id,
+                )
+
             # Cleanup: If this group exists in the device registry, remove it.
             # This handles cases where the group was previously discovered (and created as a device)
             # but is now empty/zombie.

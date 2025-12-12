@@ -9,6 +9,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
+import asyncio
 
 from . import (
     alarm_control_panel,
@@ -318,6 +319,8 @@ async def async_discover_entities(
                 _LOGGER.debug("Removing zombie group device from registry: %s (id: %s)", group_label, group_id)
                 try:
                     dev_reg.async_remove_device(device.id)
+                except asyncio.CancelledError:
+                    raise
                 except Exception:
                     _LOGGER.warning("Failed to remove zombie group device '%s' (id: %s)", group_label, group_id, exc_info=True)
 

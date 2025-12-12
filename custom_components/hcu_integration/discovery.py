@@ -304,7 +304,10 @@ async def async_discover_entities(
             dev_reg = dr.async_get(hass)
             if device := dev_reg.async_get_device(identifiers={(DOMAIN, group_id)}):
                 _LOGGER.debug("Removing zombie group device from registry: %s (id: %s)", group_label, group_id)
-                dev_reg.async_remove_device(device.id)
+                try:
+                    dev_reg.async_remove_device(device.id)
+                except Exception as e:
+                    _LOGGER.warning("Failed to remove zombie group device %s: %s", group_id, e)
 
             continue
 

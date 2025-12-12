@@ -76,7 +76,7 @@ class HcuCover(HcuBaseEntity, CoverEntity):
         if level is not None:
             # shutterLevel: 0.0 = open, 1.0 = closed
             # HA position: 0 = closed, 100 = open
-            return int((1.0 - level) * 100)
+            return round((1.0 - level) * 100)
         return None
 
     @property
@@ -89,7 +89,7 @@ class HcuCover(HcuBaseEntity, CoverEntity):
         if level is not None:
             # slatsLevel: 0.0 = open, 1.0 = closed
             # HA position: 0 = closed, 100 = open
-            return int((1.0 - level) * 100)
+            return round((1.0 - level) * 100)
         return None
 
     @property
@@ -287,7 +287,7 @@ class HcuCoverGroup(HcuGroupBaseEntity, CoverEntity):
         # Groups might expose 'primaryShadingLevel' or similar
         level = self._group.get("primaryShadingLevel")
         if level is not None:
-             return int((1.0 - level) * 100)
+            return round((1.0 - level) * 100)
         return None
 
     @property

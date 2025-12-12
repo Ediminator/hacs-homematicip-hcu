@@ -1,5 +1,6 @@
 # custom_components/hcu_integration/cover.py
 from typing import TYPE_CHECKING, Any
+import logging
 from homeassistant.components.cover import (
     ATTR_POSITION,
     ATTR_TILT_POSITION,
@@ -18,6 +19,8 @@ from .api import HcuApiClient
 
 if TYPE_CHECKING:
     from . import HcuCoordinator
+
+_LOGGER = logging.getLogger(__name__)
 
 
 
@@ -141,7 +144,13 @@ class HcuCover(HcuBaseEntity, CoverEntity):
         # Pass current shutter level if available, as per API docs
         # We must fetch the level using the dynamic property to support both shutterLevel and primaryShadingLevel
         current_level = self._channel.get(self._level_property)
-        
+        if current_level is None:
+            _LOGGER.warning(
+                "Cannot set tilt position for %s: current level unknown",
+                self.name,
+            )
+            return
+
         await self._client.async_set_slats_level(
             self._device_id, self._channel_index, slats_level, shutter_level=current_level
         )

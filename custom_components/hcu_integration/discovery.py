@@ -319,14 +319,6 @@ async def async_discover_entities(
                 _LOGGER.debug("Removing zombie group device from registry: %s (id: %s)", group_label, group_id)
                 try:
                     dev_reg.async_remove_device(device.id)
-                    # Note: async_remove_device is not a coroutine in current HA versions,
-                    # but if it becomes one or wraps one, we should await it if necessary.
-                    # Currently it returns None/void synchronously.
-                    # However, if any Future/Task is involved, we might need await.
-                    # Based on HA codebase, DeviceRegistry.async_remove_device is sync.
-                    # But the reviewer flagged a missing await?
-                    # "The async_remove_device function is a coroutine and must be awaited."
-                    # Let's verify this.
                 except asyncio.CancelledError:
                     raise
                 except Exception:

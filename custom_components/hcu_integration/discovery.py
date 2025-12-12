@@ -290,14 +290,27 @@ async def async_discover_entities(
         # Skip groups with no channels (zombie groups)
         # These are groups that exist in the HCU but contain no devices.
         # They should not be exposed as entities (issue #185).
-        # We explicitly check for False/None/Empty list
-        if not (channels := group_data.get("channels")) or not isinstance(channels, list):
+        channels = group_data.get("channels")
+        if channels is not None and not isinstance(channels, list):
+            _LOGGER.warning(
+                "Group '%s' (id: %s) has a 'channels' attribute that is not a list: %s. Treating as zombie.",
+                group_label,
+                group_id,
+                type(channels).__name__,
+            )
+        elif not channels:
+            # Explicitly check for empty list or None
             _LOGGER.debug(
                 "Skipping group without channels (zombie): %s (id: %s)",
                 group_label,
                 group_id
             )
+        else:
+            # Valid group with channels
+            pass
 
+        # Cleanup for zombies (empty list, None, or invalid type)
+        if not channels or not isinstance(channels, list):
             # Cleanup: If this group exists in the device registry, remove it.
             # This handles cases where the group was previously discovered (and created as a device)
             # but is now empty/zombie.

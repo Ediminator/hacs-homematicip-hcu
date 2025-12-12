@@ -12,6 +12,6 @@ class HVACMode:
     HEAT_COOL = "heat_cool"
     AUTO = "auto"
     DRY = "dry"
-    FAN_only = "fan_only"
+    FAN_ONLY = "fan_only"
 
 PRESET_BOOST = "boost"

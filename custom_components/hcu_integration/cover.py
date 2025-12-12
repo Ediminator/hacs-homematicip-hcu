@@ -239,7 +239,7 @@ class HcuCoverGroup(HcuGroupBaseEntity, CoverEntity):
         coordinator: "HcuCoordinator",
         client: HcuApiClient,
         group_data: dict[str, Any],
-    ):
+    ) -> None:
         """Initialize the HCU Cover group."""
         super().__init__(coordinator, client, group_data)
 
@@ -279,7 +279,9 @@ class HcuCoverGroup(HcuGroupBaseEntity, CoverEntity):
     def is_closed(self) -> bool | None:
         """Return if the cover group is closed."""
         position = self.current_cover_position
-        return position == 0 if position is not None else None
+        if position is None:
+            return None
+        return position == 0
 
     async def async_open_cover(self, **kwargs: Any) -> None:
         """Open the cover group."""

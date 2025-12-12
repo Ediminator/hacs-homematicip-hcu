@@ -1,6 +1,5 @@
 """Tests for the HCU Cover platform."""
 from unittest.mock import AsyncMock, MagicMock
-from pytest import approx
 import pytest
 
 from homeassistant.components.cover import (

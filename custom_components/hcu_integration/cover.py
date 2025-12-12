@@ -20,6 +20,14 @@ if TYPE_CHECKING:
     from . import HcuCoordinator
 
 
+
+def _level_to_position(level: float | None) -> int | None:
+    """Convert HCU level (0.0-1.0, 1.0 is closed) to Home Assistant position (0-100, 0 is closed)."""
+    if level is None:
+        return None
+    return round((1 - level) * 100)
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     config_entry: ConfigEntry,
@@ -85,16 +93,14 @@ class HcuCover(HcuBaseEntity, CoverEntity):
     @property
     def current_cover_position(self) -> int | None:
         """Return current position of cover."""
-        level = self._channel.get(self._level_property)
-        return round((1 - level) * 100) if level is not None else None
+        return _level_to_position(self._channel.get(self._level_property))
 
     @property
     def current_cover_tilt_position(self) -> int | None:
         """Return current tilt position of cover."""
         if "slatsLevel" not in self._channel:
             return None
-        level = self._channel.get("slatsLevel")
-        return round((1 - level) * 100) if level is not None else None
+        return _level_to_position(self._channel.get("slatsLevel"))
 
     @property
     def is_closed(self) -> bool | None:
@@ -233,7 +239,6 @@ class HcuCoverGroup(HcuGroupBaseEntity, CoverEntity):
         coordinator: "HcuCoordinator",
         client: HcuApiClient,
         group_data: dict[str, Any],
-        **kwargs: Any,
     ):
         """Initialize the HCU Cover group."""
         super().__init__(coordinator, client, group_data)
@@ -261,16 +266,14 @@ class HcuCoverGroup(HcuGroupBaseEntity, CoverEntity):
     @property
     def current_cover_position(self) -> int | None:
         """Return current position of cover group."""
-        level = self._group.get("primaryShadingLevel")
-        return round((1 - level) * 100) if level is not None else None
+        return _level_to_position(self._group.get("primaryShadingLevel"))
 
     @property
     def current_cover_tilt_position(self) -> int | None:
         """Return current tilt position of cover group."""
         if "secondaryShadingLevel" not in self._group:
             return None
-        level = self._group.get("secondaryShadingLevel")
-        return round((1 - level) * 100) if level is not None else None
+        return _level_to_position(self._group.get("secondaryShadingLevel"))
 
     @property
     def is_closed(self) -> bool | None:

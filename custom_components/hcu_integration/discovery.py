@@ -273,6 +273,9 @@ async def async_discover_entities(
     groups_skipped_meta = 0
     groups_unknown_type = 0
 
+    # Fetch device registry once before iterating groups
+    dev_reg = dr.async_get(hass)
+
     for group_data in state.get("groups", {}).values():
         group_type = group_data.get("type")
         group_id = group_data.get("id")
@@ -311,12 +314,11 @@ async def async_discover_entities(
             # Cleanup: If this group exists in the device registry, remove it.
             # This handles cases where the group was previously discovered (and created as a device)
             # but is now empty/zombie.
-            dev_reg = dr.async_get(hass)
             if device := dev_reg.async_get_device(identifiers={(DOMAIN, group_id)}):
                 _LOGGER.debug("Removing zombie group device from registry: %s (id: %s)", group_label, group_id)
                 try:
                     dev_reg.async_remove_device(device.id)
-                except Exception as e:
+                except Exception:
                     _LOGGER.warning("Failed to remove zombie group device '%s' (id: %s)", group_label, group_id, exc_info=True)
 
             continue

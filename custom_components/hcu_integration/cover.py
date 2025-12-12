@@ -123,7 +123,7 @@ class HcuCover(HcuBaseEntity, CoverEntity):
         position = kwargs.get(ATTR_POSITION, 100)
         # HA position: 0 = closed, 100 = open
         # shutterLevel: 0.0 = open, 1.0 = closed
-        shutter_level = (100 - position) / 100.0
+        shutter_level = round((100 - position) / 100.0, 2)
         await self._client.async_set_shutter_level(
             self._device_id, self._channel_index, shutter_level
         )
@@ -151,7 +151,7 @@ class HcuCover(HcuBaseEntity, CoverEntity):
         position = kwargs.get(ATTR_TILT_POSITION, 100)
         # HA position: 0 = closed, 100 = open
         # slatsLevel: 0.0 = open, 1.0 = closed
-        slats_level = (100 - position) / 100.0
+        slats_level = round((100 - position) / 100.0, 2)
         await self._client.async_set_slats_level(
             self._device_id, self._channel_index, slats_level
         )

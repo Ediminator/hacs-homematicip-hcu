@@ -22,6 +22,13 @@ if TYPE_CHECKING:
 
 _LOGGER = logging.getLogger(__name__)
 
+# Tilt feature flags used by both individual covers and cover groups
+TILT_FEATURES = (
+    CoverEntityFeature.SET_TILT_POSITION
+    | CoverEntityFeature.OPEN_TILT
+    | CoverEntityFeature.CLOSE_TILT
+    | CoverEntityFeature.STOP_TILT
+)
 
 
 def _level_to_position(level: float | None) -> int | None:
@@ -89,12 +96,7 @@ class HcuCover(HcuBaseEntity, CoverEntity):
         slats_level = self._channel.get("slatsLevel")
         device_name = self._device.get("label", self._device_id)
         if slats_level is not None:
-            self._attr_supported_features |= (
-                CoverEntityFeature.SET_TILT_POSITION
-                | CoverEntityFeature.OPEN_TILT
-                | CoverEntityFeature.CLOSE_TILT
-                | CoverEntityFeature.STOP_TILT
-            )
+            self._attr_supported_features |= TILT_FEATURES
             self._attr_device_class = CoverDeviceClass.BLIND
             _LOGGER.debug(
                 "Device %s channel %s detected as BLIND with tilt support (slatsLevel=%s)",
@@ -285,12 +287,7 @@ class HcuCoverGroup(HcuGroupBaseEntity, CoverEntity):
         secondary_level = self._group.get("secondaryShadingLevel")
         group_name = self._group.get("label", self._group_id)
         if secondary_level is not None:
-            self._attr_supported_features |= (
-                CoverEntityFeature.SET_TILT_POSITION
-                | CoverEntityFeature.OPEN_TILT
-                | CoverEntityFeature.CLOSE_TILT
-                | CoverEntityFeature.STOP_TILT
-            )
+            self._attr_supported_features |= TILT_FEATURES
             self._attr_device_class = CoverDeviceClass.BLIND
             _LOGGER.debug(
                 "Group %s detected as BLIND with tilt support (secondaryShadingLevel=%s)",

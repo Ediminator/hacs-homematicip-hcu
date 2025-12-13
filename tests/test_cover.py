@@ -9,7 +9,7 @@ from homeassistant.components.cover import (
     CoverEntityFeature,
 )
 
-from custom_components.hcu_integration.cover import HcuCover, HcuCoverGroup
+from custom_components.hcu_integration.cover import HcuCover, HcuCoverGroup, TILT_FEATURES
 from custom_components.hcu_integration.const import API_PATHS
 
 # Feature constants for test assertions
@@ -18,13 +18,6 @@ BASIC_COVER_FEATURES = (
     | CoverEntityFeature.CLOSE
     | CoverEntityFeature.STOP
     | CoverEntityFeature.SET_POSITION
-)
-
-TILT_FEATURES = (
-    CoverEntityFeature.SET_TILT_POSITION
-    | CoverEntityFeature.OPEN_TILT
-    | CoverEntityFeature.CLOSE_TILT
-    | CoverEntityFeature.STOP_TILT
 )
 
 

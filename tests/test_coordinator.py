@@ -9,10 +9,10 @@ from homeassistant.config_entries import ConfigEntry
 
 from custom_components.hcu_integration import HcuCoordinator
 from custom_components.hcu_integration.const import (
-    DOMAIN, 
-    EVENT_CHANNEL_TYPES,
     CHANNEL_TYPE_MULTI_MODE_INPUT,
     CHANNEL_TYPE_MULTI_MODE_INPUT_TRANSMITTER,
+    DOMAIN,
+    EVENT_CHANNEL_TYPES,
 )
 
 

@@ -52,8 +52,8 @@ def test_extract_event_channels(coordinator: HcuCoordinator):
     assert ("device1", "2") not in result
 
 
-def test_extract_event_channels_excludes_multi_mode_input(coordinator: HcuCoordinator):
-    """Test that MULTI_MODE_INPUT_CHANNEL is NOT extracted as an event channel (Issue #183)."""
+def test_extract_event_channels_excludes_multi_mode_channels(coordinator: HcuCoordinator):
+    """Test that multi-mode input channels are NOT extracted as event channels (Issue #183)."""
     events = {
         "event1": {
             "pushEventType": "DEVICE_CHANGED",

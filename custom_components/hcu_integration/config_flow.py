@@ -23,6 +23,7 @@ from .const import (
     DEFAULT_HCU_WEBSOCKET_PORT,
     PLUGIN_ID,
     PLUGIN_FRIENDLY_NAME,
+    MANUFACTURER_EQ3,
     CONF_PIN,
     CONF_COMFORT_TEMPERATURE,
     DEFAULT_COMFORT_TEMPERATURE,
@@ -350,7 +351,7 @@ class HcuOptionsFlowHandler(OptionsFlow):
         if client and client.state:
             for device in client.state.get("devices", {}).values():
                 manufacturer = get_device_manufacturer(device)
-                if manufacturer != "eQ-3":
+                if manufacturer != MANUFACTURER_EQ3:
                     third_party_oems.add(manufacturer)
 
         schema = {

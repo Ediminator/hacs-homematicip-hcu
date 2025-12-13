@@ -4,6 +4,35 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 
 ---
 
+## 1.18.5 - 2025-12-13
+
+### 🐛 Bug Fixes
+
+**Fix Cover Entity Behavior and Test Improvements**
+
+Addresses comprehensive feedback for PR #210, improving `HcuCoverGroup` logic, rounding precision, validity checks, and test coverage.
+
+**What Changed:**
+- **Cover Groups:**
+  - `HcuCoverGroup` now correctly uses `primaryShadingLevel` (position) and `secondaryShadingLevel` (tilt), fixing errors from using device-specific properties.
+  - Added explicit support for `OPEN_TILT`, `CLOSE_TILT`, and `STOP_TILT` capabilities.
+  - Dynamic `device_class` assignment: `BLIND` if tilt supported, otherwise `SHUTTER`.
+- **Logic & Safety:**
+  - Improved `round()` logic for position calculations to prevent off-by-one errors (e.g. 99.6% -> 100%).
+  - Added robustness checks to `async_set_cover_tilt_position` to prevent crashes when current level is unknown.
+  - Added proper logging configuration to `cover.py`.
+- **Testing:**
+  - Major refactoring of `tests/test_cover.py` to use `pytest.mark.parametrize` for cleaner, more robust tests.
+  - Added specific test cases for group properties, device class detection, and tilt-level passing.
+
+**Impact:**
+- ✅ Reliable control and status reporting for Cover Groups.
+- ✅ Correct `device_class` icons and behaviors in Home Assistant UI.
+- ✅ More accurate position feedback.
+- ✅ Enhanced error handling and stability.
+
+---
+
 ## 1.18.4 - 2025-12-12
 
 ### 🐛 Bug Fixes

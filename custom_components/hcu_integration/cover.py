@@ -1,5 +1,6 @@
 # custom_components/hcu_integration/cover.py
 from typing import TYPE_CHECKING, Any
+import logging
 from homeassistant.components.cover import (
     ATTR_POSITION,
     ATTR_TILT_POSITION,
@@ -18,6 +19,16 @@ from .api import HcuApiClient
 
 if TYPE_CHECKING:
     from . import HcuCoordinator
+
+_LOGGER = logging.getLogger(__name__)
+
+
+
+def _level_to_position(level: float | None) -> int | None:
+    """Convert HCU level (0.0-1.0, 1.0 is closed) to Home Assistant position (0-100, 0 is closed)."""
+    if level is None:
+        return None
+    return round((1 - level) * 100)
 
 
 async def async_setup_entry(
@@ -47,12 +58,24 @@ class HcuCover(HcuBaseEntity, CoverEntity):
         **kwargs: Any,
     ):
         super().__init__(coordinator, client, device_data, channel_index)
-        
-        # Determine device class based on device type
-        device_type = device_data.get("type")
+
+        # CRITICAL FIX: Explicitly call naming helper (restored from working version)
+        self._set_entity_name(channel_label=self._channel.get("label"))
+
+        self._attr_unique_id = f"{self._device_id}_{self._channel_index}_cover"
+
+        device_type = self._device.get("type")
         self._attr_device_class = HMIP_DEVICE_TYPE_TO_DEVICE_CLASS.get(device_type)
-        
-        # Set supported features based on device class/capabilities
+
+        # CRITICAL FIX: Restore dynamic level property detection
+        # Some devices use primaryShadingLevel, others (BROLL/FROLL) use shutterLevel
+        if "primaryShadingLevel" in self._channel:
+            self._async_set_level = self._client.async_set_primary_shading_level
+            self._level_property = "primaryShadingLevel"
+        else:
+            self._async_set_level = self._client.async_set_shutter_level
+            self._level_property = "shutterLevel"
+
         self._attr_supported_features = (
             CoverEntityFeature.OPEN
             | CoverEntityFeature.CLOSE
@@ -60,37 +83,27 @@ class HcuCover(HcuBaseEntity, CoverEntity):
             | CoverEntityFeature.SET_POSITION
         )
         
-        # Blinds support tilt
-        if self._attr_device_class == CoverDeviceClass.BLIND:
+        # Check for tilt support
+        if "slatsLevel" in self._channel:
             self._attr_supported_features |= (
-                CoverEntityFeature.OPEN_TILT
+                CoverEntityFeature.SET_TILT_POSITION
+                | CoverEntityFeature.OPEN_TILT
                 | CoverEntityFeature.CLOSE_TILT
                 | CoverEntityFeature.STOP_TILT
-                | CoverEntityFeature.SET_TILT_POSITION
             )
+            self._attr_device_class = CoverDeviceClass.BLIND
 
     @property
     def current_cover_position(self) -> int | None:
-        """Return current position of cover. 0 is closed, 100 is open."""
-        level = self._channel.get("shutterLevel")
-        if level is not None:
-            # shutterLevel: 0.0 = open, 1.0 = closed
-            # HA position: 0 = closed, 100 = open
-            return round((1.0 - level) * 100)
-        return None
+        """Return current position of cover."""
+        return _level_to_position(self._channel.get(self._level_property))
 
     @property
     def current_cover_tilt_position(self) -> int | None:
         """Return current tilt position of cover."""
-        if self._attr_device_class != CoverDeviceClass.BLIND:
+        if "slatsLevel" not in self._channel:
             return None
-
-        level = self._channel.get("slatsLevel")
-        if level is not None:
-            # slatsLevel: 0.0 = open, 1.0 = closed
-            # HA position: 0 = closed, 100 = open
-            return round((1.0 - level) * 100)
-        return None
+        return _level_to_position(self._channel.get("slatsLevel"))
 
     @property
     def is_closed(self) -> bool | None:
@@ -102,58 +115,44 @@ class HcuCover(HcuBaseEntity, CoverEntity):
 
     async def async_open_cover(self, **kwargs: Any) -> None:
         """Open the cover."""
-        # shutterLevel: 0.0 = open, 1.0 = closed
-        await self._client.async_set_shutter_level(
-            self._device_id, self._channel_index, 0.0
-        )
+        self._attr_assumed_state = True
+        await self._async_set_level(self._device_id, self._channel_index, 0.0)
 
     async def async_close_cover(self, **kwargs: Any) -> None:
         """Close cover."""
-        # shutterLevel: 0.0 = open, 1.0 = closed
-        await self._client.async_set_shutter_level(
-            self._device_id, self._channel_index, 1.0
-        )
+        self._attr_assumed_state = True
+        await self._async_set_level(self._device_id, self._channel_index, 1.0)
 
     async def async_stop_cover(self, **kwargs: Any) -> None:
         """Stop the cover."""
+        self._attr_assumed_state = True
         await self._client.async_stop_cover(self._device_id, self._channel_index)
 
     async def async_set_cover_position(self, **kwargs: Any) -> None:
         """Move the cover to a specific position."""
         position = kwargs.get(ATTR_POSITION, 100)
-        # HA position: 0 = closed, 100 = open
-        # shutterLevel: 0.0 = open, 1.0 = closed
+        self._attr_assumed_state = True
         shutter_level = round((100 - position) / 100.0, 2)
-        await self._client.async_set_shutter_level(
-            self._device_id, self._channel_index, shutter_level
-        )
-
-    async def async_open_cover_tilt(self, **kwargs: Any) -> None:
-        """Open the cover tilt."""
-        # slatsLevel: 0.0 = open, 1.0 = closed
-        await self._client.async_set_slats_level(
-            self._device_id, self._channel_index, 0.0
-        )
-
-    async def async_close_cover_tilt(self, **kwargs: Any) -> None:
-        """Close the cover tilt."""
-        # slatsLevel: 0.0 = open, 1.0 = closed
-        await self._client.async_set_slats_level(
-            self._device_id, self._channel_index, 1.0
-        )
-
-    async def async_stop_cover_tilt(self, **kwargs: Any) -> None:
-        """Stop the cover tilt."""
-        await self._client.async_stop_cover(self._device_id, self._channel_index)
+        await self._async_set_level(self._device_id, self._channel_index, shutter_level)
 
     async def async_set_cover_tilt_position(self, **kwargs: Any) -> None:
         """Move the cover tilt to a specific position."""
         position = kwargs.get(ATTR_TILT_POSITION, 100)
-        # HA position: 0 = closed, 100 = open
-        # slatsLevel: 0.0 = open, 1.0 = closed
+        self._attr_assumed_state = True
         slats_level = round((100 - position) / 100.0, 2)
+        
+        # Pass current shutter level if available, as per API docs
+        # We must fetch the level using the dynamic property to support both shutterLevel and primaryShadingLevel
+        current_level = self._channel.get(self._level_property)
+        if current_level is None:
+            _LOGGER.warning(
+                "Cannot set tilt position for %s: current level unknown",
+                self.name,
+            )
+            return
+
         await self._client.async_set_slats_level(
-            self._device_id, self._channel_index, slats_level
+            self._device_id, self._channel_index, slats_level, shutter_level=current_level
         )
 
 
@@ -240,7 +239,7 @@ class HcuGarageDoorCover(HcuBaseEntity, CoverEntity):
 
 
 class HcuCoverGroup(HcuGroupBaseEntity, CoverEntity):
-    """Representation of a Homematic IP HCU cover group."""
+    """Representation of an HCU Cover (shutter or blind) group."""
 
     PLATFORM = Platform.COVER
 
@@ -249,19 +248,9 @@ class HcuCoverGroup(HcuGroupBaseEntity, CoverEntity):
         coordinator: "HcuCoordinator",
         client: HcuApiClient,
         group_data: dict[str, Any],
-        **kwargs: Any,
     ) -> None:
-        """Initialize the HCU cover group."""
+        """Initialize the HCU Cover group."""
         super().__init__(coordinator, client, group_data)
-
-        group_type = group_data.get("type")
-        
-        # Default to Shutter, check for Blind
-        self._attr_device_class = CoverDeviceClass.SHUTTER
-        if group_type == "BLIND":
-            self._attr_device_class = CoverDeviceClass.BLIND
-        elif group_type == "EXTENDED_LINKED_SHUTTER":
-            self._attr_device_class = CoverDeviceClass.SHUTTER
 
         self._attr_supported_features = (
             CoverEntityFeature.OPEN
@@ -269,33 +258,39 @@ class HcuCoverGroup(HcuGroupBaseEntity, CoverEntity):
             | CoverEntityFeature.STOP
             | CoverEntityFeature.SET_POSITION
         )
-
-        if self._attr_device_class == CoverDeviceClass.BLIND:
+        
+        # Use self._group (property) to check capabilities.
+        # The property handles missing group data safely by returning an empty dict.
+        if "secondaryShadingLevel" in self._group:
             self._attr_supported_features |= (
-                CoverEntityFeature.OPEN_TILT
+                CoverEntityFeature.SET_TILT_POSITION
+                | CoverEntityFeature.OPEN_TILT
                 | CoverEntityFeature.CLOSE_TILT
                 | CoverEntityFeature.STOP_TILT
-                | CoverEntityFeature.SET_TILT_POSITION
             )
-            
-        # Initialize assumed state
-        self._attr_assumed_state = True
+            self._attr_device_class = CoverDeviceClass.BLIND
+        else:
+            self._attr_device_class = CoverDeviceClass.SHUTTER
 
     @property
     def current_cover_position(self) -> int | None:
-        """Return current position of cover."""
-        # Groups might expose 'primaryShadingLevel' or similar
-        level = self._group.get("primaryShadingLevel")
-        if level is not None:
-            return round((1.0 - level) * 100)
-        return None
+        """Return current position of cover group."""
+        return _level_to_position(self._group.get("primaryShadingLevel"))
+
+    @property
+    def current_cover_tilt_position(self) -> int | None:
+        """Return current tilt position of cover group."""
+        if "secondaryShadingLevel" not in self._group:
+            return None
+        return _level_to_position(self._group.get("secondaryShadingLevel"))
 
     @property
     def is_closed(self) -> bool | None:
-        """Return if the cover is closed or not."""
-        if self.current_cover_position is not None:
-            return self.current_cover_position == 0
-        return None
+        """Return if the cover group is closed."""
+        position = self.current_cover_position
+        if position is None:
+            return None
+        return position == 0
 
     async def async_open_cover(self, **kwargs: Any) -> None:
         """Open the cover group."""

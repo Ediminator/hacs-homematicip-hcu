@@ -41,20 +41,22 @@ def get_device_manufacturer(device_data: dict) -> str:
     plugin_id = device_data.get("pluginId")
     if plugin_id == "de.eq3.plugin.hue":
         return "Philips Hue"
-        
-    # 3. Check Device Type/Archetype for generic "External" status
-    # "PLUGIN_EXTERNAL" strongly implies a 3rd party integration
-    if device_data.get("type") == "PLUGIN_EXTERNAL":
-        return "3rd Party"
 
-    # 4. Heuristics based on model type (Fallback)
+    # 3. Heuristics based on model type (Specific Hue check)
+    # Check this BEFORE generic "PLUGIN_EXTERNAL" to catch Hue devices that might
+    # lack the specific pluginId but have "Hue" in the model name.
     model_type = device_data.get("modelType", "")
     
     if "Hue" in model_type:
         return "Philips Hue"
-    
+        
+    # 4. Check Device Type/Archetype for generic "External" status
+    # "PLUGIN_EXTERNAL" strongly implies a 3rd party integration
+    if device_data.get("type") == "PLUGIN_EXTERNAL":
+        return "3rd Party"
+
     # 5. Check for standard Homematic IP prefix
-    if model_type.startswith("HmIP-") or model_type.startswith("HM-") or model_type.startswith("ALPHA-"):
+    if model_type.startswith(("HmIP-", "HM-", "ALPHA-")):
         return "eQ-3"
         
     # 6. Default

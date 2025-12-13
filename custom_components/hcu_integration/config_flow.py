@@ -4,6 +4,7 @@ import logging
 import aiohttp
 import asyncio
 import voluptuous as vol
+import string
 from typing import Any, TYPE_CHECKING
 from datetime import datetime, timedelta
 
@@ -500,10 +501,7 @@ class HcuOptionsFlowHandler(OptionsFlow):
                 # Note: We aggressive remove devices if the option is disabled,
                 # regardless of previous state, to ensure cleanup.
                 if self.config_entry.options.get(key, True):
-                    oem_name = key.replace("import_", "").replace("_", " ").title()
-                    # Handle "3rd Pary" case where title() messes up "3rd"
-                    if oem_name == "3Rd Party":
-                        oem_name = "3rd Party"
+                    oem_name = string.capwords(key.replace("import_", "").replace("_", " "))
                     disabled_oems.add(oem_name)
 
         if not disabled_oems:
@@ -520,26 +518,23 @@ class HcuOptionsFlowHandler(OptionsFlow):
                 (x[1] for x in device.identifiers if x[0] == DOMAIN), None
             )
             
-            should_remove = False
+            manufacturer_to_check = None
             
             if device_id:
                 # Look up fresh device data
                 device_data = client.get_device_by_address(device_id)
                 if device_data:
-                    real_manufacturer = get_device_manufacturer(device_data)
-                    if real_manufacturer in disabled_oems:
-                        should_remove = True
+                    manufacturer_to_check = get_device_manufacturer(device_data)
                 else:
                     # Fallback for devices not in current state (maybe disconnected?)
                     # Trust the registry, or skip? Safest is to check registry as fallback.
-                    if device.manufacturer in disabled_oems:
-                        should_remove = True
-            
-            if should_remove:
+                    manufacturer_to_check = device.manufacturer
+
+            if manufacturer_to_check and manufacturer_to_check in disabled_oems:
                 _LOGGER.info(
                     "Removing device %s (%s) as its manufacturer (%s) has been disabled via options.",
                     device.name,
                     device.id,
-                    device_id, # Log the HCU device ID as well
+                    manufacturer_to_check,
                 )
                 device_registry.async_remove_device(device.id)

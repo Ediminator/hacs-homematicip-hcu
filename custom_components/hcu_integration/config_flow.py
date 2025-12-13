@@ -366,10 +366,19 @@ class HcuOptionsFlowHandler(OptionsFlow):
 
         for oem in sorted(list(third_party_oems)):
             option_key = f"import_{oem.replace(' ', '_')}"
+            
+            # Migration logic: Check for old lowercase key and migrate value if present
+            # This handles the breaking change where we stopped lowercasing keys
+            old_option_key = f"import_{oem.lower().replace(' ', '_')}"
+            default_value = self.config_entry.options.get(option_key, True)
+            
+            if old_option_key in self.config_entry.options and option_key not in self.config_entry.options:
+                default_value = self.config_entry.options[old_option_key]
+                
             schema[
                 vol.Required(
                     option_key,
-                    default=self.config_entry.options.get(option_key, True),
+                    default=default_value,
                 )
             ] = bool
 
@@ -519,21 +528,20 @@ class HcuOptionsFlowHandler(OptionsFlow):
             )
             
             manufacturer_to_check = None
-            
-            if device_id:
-                # Look up fresh device data
-                device_data = client.get_device_by_address(device_id)
-                if device_data:
-                    manufacturer_to_check = get_device_manufacturer(device_data)
+            device_data = client.get_device_by_address(device_id) if device_id else None
+
+            if device_data:
+                manufacturer_to_check = get_device_manufacturer(device_data)
+            else:
+                # Fallback for devices not in current state (maybe disconnected?)
+                # OR if device_id was not found in identifiers.
+                # The registry manufacturer might be stale ("eQ-3" for a Hue device)
+                # if registered with an older version.
+                # As a secondary fallback, check the model name from the registry.
+                if device.model and HUE_MODEL_TOKEN in device.model:
+                    manufacturer_to_check = MANUFACTURER_HUE
                 else:
-                    # Fallback for devices not in current state (maybe disconnected?)
-                    # The registry manufacturer might be stale ("eQ-3" for a Hue device)
-                    # if registered with an older version.
-                    # As a secondary fallback, check the model name from the registry.
-                    if device.model and HUE_MODEL_TOKEN in device.model:
-                        manufacturer_to_check = MANUFACTURER_HUE
-                    else:
-                        manufacturer_to_check = device.manufacturer
+                    manufacturer_to_check = device.manufacturer
 
             if manufacturer_to_check and manufacturer_to_check in disabled_oems:
                 _LOGGER.info(

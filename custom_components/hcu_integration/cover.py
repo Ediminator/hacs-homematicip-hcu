@@ -87,6 +87,7 @@ class HcuCover(HcuBaseEntity, CoverEntity):
         # value. The HCU API returns this key for all blind-capable devices (like DRBL4),
         # but with None value when slats/tilt are not actually configured.
         slats_level = self._channel.get("slatsLevel")
+        device_name = self._device.get("label", self._device_id)
         if slats_level is not None:
             self._attr_supported_features |= (
                 CoverEntityFeature.SET_TILT_POSITION
@@ -97,9 +98,18 @@ class HcuCover(HcuBaseEntity, CoverEntity):
             self._attr_device_class = CoverDeviceClass.BLIND
             _LOGGER.debug(
                 "Device %s channel %s detected as BLIND with tilt support (slatsLevel=%s)",
-                self._device.get("label", self._device_id),
+                device_name,
                 self._channel_index,
                 slats_level,
+            )
+        elif self._attr_device_class == CoverDeviceClass.BLIND:
+            # Device type mapping classified this as BLIND, but no tilt support is
+            # available (slatsLevel is None). Reclassify as SHUTTER for consistency.
+            self._attr_device_class = CoverDeviceClass.SHUTTER
+            _LOGGER.debug(
+                "Device %s channel %s reclassified from BLIND to SHUTTER (no tilt support)",
+                device_name,
+                self._channel_index,
             )
 
     @property

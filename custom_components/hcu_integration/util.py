@@ -41,34 +41,30 @@ def get_device_manufacturer(device_data: dict) -> str:
 
     Corrects cases where 3rd party devices (like Philips Hue) are reported as 'eQ-3'.
     """
-    # 1. Trust explicit OEM if it's not the default "eQ-3"
-    oem = device_data.get("oem")
-    if oem and oem != MANUFACTURER_EQ3:
-        return oem
-
-    # 2. Check Plugin ID (Strongest Signal for external devices)
+    # 1. Check for Hue-specific identifiers first, as they are the most reliable.
     plugin_id = device_data.get("pluginId")
     if plugin_id == PLUGIN_ID_HUE:
         return MANUFACTURER_HUE
 
-    # 3. Heuristics based on model type (Specific Hue check)
-    # Check this BEFORE generic "PLUGIN_EXTERNAL" to catch Hue devices that might
-    # lack the specific pluginId but have "Hue" in the model name.
     model_type = device_data.get("modelType", "")
-
     if HUE_MODEL_TOKEN in model_type:
         return MANUFACTURER_HUE
 
-    # 4. Check Device Type/Archetype for generic "External" status
+    # 2. Trust explicit OEM if it's not the default "eQ-3"
+    oem = device_data.get("oem")
+    if oem and oem != MANUFACTURER_EQ3:
+        return oem
+
+    # 3. Check Device Type/Archetype for generic "External" status
     # "PLUGIN_EXTERNAL" strongly implies a 3rd party integration
     if device_data.get("type") == DEVICE_TYPE_PLUGIN_EXTERNAL:
         return MANUFACTURER_3RD_PARTY
 
-    # 5. Check for standard Homematic IP prefix
+    # 4. Check for standard Homematic IP prefix
     if model_type.startswith(HOMEMATIC_MODEL_PREFIXES):
         return MANUFACTURER_EQ3
 
-    # 6. Default
+    # 5. Default
     # If it has no 'oem' field and didn't match above, we assume it's a standard device
     # (or legacy one) and return "eQ-3" to match previous behavior
     return MANUFACTURER_EQ3

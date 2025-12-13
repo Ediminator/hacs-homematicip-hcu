@@ -234,10 +234,13 @@ async def test_cover_group_with_none_secondary_shading_level(mock_coordinator, m
     assert cover.device_class == CoverDeviceClass.SHUTTER
 
     # Verify tilt features are NOT supported
-    assert not (cover.supported_features & CoverEntityFeature.SET_TILT_POSITION)
-    assert not (cover.supported_features & CoverEntityFeature.OPEN_TILT)
-    assert not (cover.supported_features & CoverEntityFeature.CLOSE_TILT)
-    assert not (cover.supported_features & CoverEntityFeature.STOP_TILT)
+    tilt_features = (
+        CoverEntityFeature.SET_TILT_POSITION
+        | CoverEntityFeature.OPEN_TILT
+        | CoverEntityFeature.CLOSE_TILT
+        | CoverEntityFeature.STOP_TILT
+    )
+    assert not (cover.supported_features & tilt_features)
 
     # Verify tilt position returns None
     assert cover.current_cover_tilt_position is None
@@ -273,10 +276,13 @@ async def test_cover_device_with_none_slats_level(mock_coordinator, mock_hcu_cli
     cover = HcuCover(mock_coordinator, mock_hcu_client, device_data, "1")
 
     # Verify tilt features are NOT supported (slatsLevel is None)
-    assert not (cover.supported_features & CoverEntityFeature.SET_TILT_POSITION)
-    assert not (cover.supported_features & CoverEntityFeature.OPEN_TILT)
-    assert not (cover.supported_features & CoverEntityFeature.CLOSE_TILT)
-    assert not (cover.supported_features & CoverEntityFeature.STOP_TILT)
+    tilt_features = (
+        CoverEntityFeature.SET_TILT_POSITION
+        | CoverEntityFeature.OPEN_TILT
+        | CoverEntityFeature.CLOSE_TILT
+        | CoverEntityFeature.STOP_TILT
+    )
+    assert not (cover.supported_features & tilt_features)
 
     # Verify tilt position returns None
     assert cover.current_cover_tilt_position is None

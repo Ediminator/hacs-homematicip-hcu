@@ -273,6 +273,7 @@ class HcuCoverGroup(HcuGroupBaseEntity, CoverEntity):
         # (non-None) value. The HCU API returns this key for all shutter groups, but with
         # None value for groups containing only roller shutters (BROLL) without tilt support.
         secondary_level = self._group.get("secondaryShadingLevel")
+        group_name = self._group.get("label", self._group_id)
         if secondary_level is not None:
             self._attr_supported_features |= (
                 CoverEntityFeature.SET_TILT_POSITION
@@ -283,14 +284,14 @@ class HcuCoverGroup(HcuGroupBaseEntity, CoverEntity):
             self._attr_device_class = CoverDeviceClass.BLIND
             _LOGGER.debug(
                 "Group %s detected as BLIND with tilt support (secondaryShadingLevel=%s)",
-                self._group.get("label", self._group_id),
+                group_name,
                 secondary_level,
             )
         else:
             self._attr_device_class = CoverDeviceClass.SHUTTER
             _LOGGER.debug(
                 "Group %s detected as SHUTTER without tilt support",
-                self._group.get("label", self._group_id),
+                group_name,
             )
 
     @property

@@ -8,7 +8,12 @@ from homeassistant.core import HomeAssistant
 from homeassistant.config_entries import ConfigEntry
 
 from custom_components.hcu_integration import HcuCoordinator
-from custom_components.hcu_integration.const import DOMAIN, EVENT_CHANNEL_TYPES
+from custom_components.hcu_integration.const import (
+    DOMAIN, 
+    EVENT_CHANNEL_TYPES,
+    CHANNEL_TYPE_MULTI_MODE_INPUT,
+    CHANNEL_TYPE_MULTI_MODE_INPUT_TRANSMITTER,
+)
 
 
 @pytest.fixture
@@ -55,8 +60,8 @@ def test_extract_event_channels_excludes_multi_mode_input(coordinator: HcuCoordi
             "device": {
                 "id": "device1",
                 "functionalChannels": {
-                    "1": {"functionalChannelType": "MULTI_MODE_INPUT_CHANNEL"},
-                    "2": {"functionalChannelType": "MULTI_MODE_INPUT_TRANSMITTER"},
+                    "1": {"functionalChannelType": CHANNEL_TYPE_MULTI_MODE_INPUT},
+                    "2": {"functionalChannelType": CHANNEL_TYPE_MULTI_MODE_INPUT_TRANSMITTER},
                 },
             },
         },

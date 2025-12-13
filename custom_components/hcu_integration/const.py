@@ -59,6 +59,7 @@ DOCS_URL_LOCK_PIN_CONFIG = "https://github.com/Ediminator/hacs-homematicip-hcu#s
 
 # --- Channel Type Constants ---
 CHANNEL_TYPE_MULTI_MODE_INPUT_TRANSMITTER = "MULTI_MODE_INPUT_TRANSMITTER"
+CHANNEL_TYPE_MULTI_MODE_INPUT = "MULTI_MODE_INPUT_CHANNEL"
 CHANNEL_TYPE_ALARM_SIREN = "ALARM_SIREN_CHANNEL"
 
 # --- API and Plugin Constants ---
@@ -667,7 +668,7 @@ DUTY_CYCLE_BINARY_SENSOR_MAPPING = {
 DEVICE_CHANNEL_EVENT_ONLY_TYPES = {
     "SINGLE_KEY_CHANNEL",  # HmIP-BRC2, HmIP-WRC2 - sends explicit DEVICE_CHANNEL_EVENT
     "KEY_CHANNEL",  # Modern remote controls - sends explicit DEVICE_CHANNEL_EVENT
-    "MULTI_MODE_INPUT_CHANNEL",  # HmIP-FCI1/6 etc. - sends explicit DEVICE_CHANNEL_EVENT
+    CHANNEL_TYPE_MULTI_MODE_INPUT,  # HmIP-FCI1/6 etc. - sends explicit DEVICE_CHANNEL_EVENT
     CHANNEL_TYPE_MULTI_MODE_INPUT_TRANSMITTER,  # HmIP-FCI1/6 etc. - sends explicit DEVICE_CHANNEL_EVENT
 }
 
@@ -729,7 +730,7 @@ HMIP_CHANNEL_TYPE_TO_ENTITY = {
     "KEY_REMOTE_CONTROL_CHANNEL": {"class": "HcuButtonEvent"},
     "SWITCH_INPUT_CHANNEL": {"class": "HcuButtonEvent"},
     "SINGLE_KEY_CHANNEL": {"class": "HcuButtonEvent"},
-    "MULTI_MODE_INPUT_CHANNEL": {"class": "HcuButtonEvent"},
+    CHANNEL_TYPE_MULTI_MODE_INPUT: {"class": "HcuButtonEvent"},
     # Channel types that were missing from the v1.17.0 fix - now restored:
     "BRAND_REMOTE_CONTROL": {"class": "HcuButtonEvent"},
     "BRAND_WALL_MOUNTED_TRANSMITTER": {"class": "HcuButtonEvent"},

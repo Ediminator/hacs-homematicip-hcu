@@ -83,8 +83,11 @@ class HcuCover(HcuBaseEntity, CoverEntity):
             | CoverEntityFeature.SET_POSITION
         )
         
-        # Check for tilt support
-        if "slatsLevel" in self._channel:
+        # Check for tilt support: slatsLevel must be present AND have a valid (non-None)
+        # value. The HCU API returns this key for all blind-capable devices (like DRBL4),
+        # but with None value when slats/tilt are not actually configured.
+        slats_level = self._channel.get("slatsLevel")
+        if slats_level is not None:
             self._attr_supported_features |= (
                 CoverEntityFeature.SET_TILT_POSITION
                 | CoverEntityFeature.OPEN_TILT
@@ -92,6 +95,12 @@ class HcuCover(HcuBaseEntity, CoverEntity):
                 | CoverEntityFeature.STOP_TILT
             )
             self._attr_device_class = CoverDeviceClass.BLIND
+            _LOGGER.debug(
+                "Device %s channel %s detected as BLIND with tilt support (slatsLevel=%s)",
+                self._device.get("label", self._device_id),
+                self._channel_index,
+                slats_level,
+            )
 
     @property
     def current_cover_position(self) -> int | None:
@@ -101,9 +110,10 @@ class HcuCover(HcuBaseEntity, CoverEntity):
     @property
     def current_cover_tilt_position(self) -> int | None:
         """Return current tilt position of cover."""
-        if "slatsLevel" not in self._channel:
+        slats_level = self._channel.get("slatsLevel")
+        if slats_level is None:
             return None
-        return _level_to_position(self._channel.get("slatsLevel"))
+        return _level_to_position(slats_level)
 
     @property
     def is_closed(self) -> bool | None:

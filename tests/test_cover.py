@@ -244,3 +244,45 @@ async def test_cover_group_with_none_secondary_shading_level(mock_coordinator, m
 
     # Verify position still works correctly
     assert cover.current_cover_position == 100  # 0.0 level = fully open
+
+
+async def test_cover_device_with_none_slats_level(mock_coordinator, mock_hcu_client):
+    """Test that devices with slatsLevel=None are classified as SHUTTER.
+
+    This tests the fix for issue #207: HmIPW-DRBL4 devices were incorrectly
+    displayed as blinds because the API returns slatsLevel key with None value
+    for channels without tilt/slats configured.
+    """
+    device_data = {
+        "id": "device-id",
+        "type": "WIRED_BLIND_4",  # HmIPW-DRBL4
+        "label": "02_DRBL4",
+        "functionalChannels": {
+            "1": {
+                "label": "Channel 1",
+                "functionalChannelType": "BLIND_CHANNEL",
+                "shutterLevel": 0.5,
+                "slatsLevel": None,  # Key present but None - no tilt configured
+                "slatsReferenceTime": 0.0,
+            }
+        },
+    }
+
+    mock_hcu_client.get_device_by_address = MagicMock(return_value=device_data)
+
+    cover = HcuCover(mock_coordinator, mock_hcu_client, device_data, "1")
+
+    # Verify tilt features are NOT supported (slatsLevel is None)
+    assert not (cover.supported_features & CoverEntityFeature.SET_TILT_POSITION)
+    assert not (cover.supported_features & CoverEntityFeature.OPEN_TILT)
+    assert not (cover.supported_features & CoverEntityFeature.CLOSE_TILT)
+    assert not (cover.supported_features & CoverEntityFeature.STOP_TILT)
+
+    # Verify tilt position returns None
+    assert cover.current_cover_tilt_position is None
+
+    # Verify basic cover features still work
+    assert cover.supported_features & CoverEntityFeature.OPEN
+    assert cover.supported_features & CoverEntityFeature.CLOSE
+    assert cover.supported_features & CoverEntityFeature.SET_POSITION
+    assert cover.current_cover_position == 50  # 0.5 level = 50% open

@@ -4,6 +4,13 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 
 ---
 
+## 1.18.6 - 2025-12-13
+
+### 🔧 Improvements
+
+**Refactor Test Assertions**
+- Simplified feature assertions in `test_cover.py` to use strict equality checks, addressing code review feedback.
+
 ## 1.18.5 - 2025-12-13
 
 ### 🐛 Bug Fixes

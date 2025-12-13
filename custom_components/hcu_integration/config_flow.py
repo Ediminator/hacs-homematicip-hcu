@@ -31,7 +31,7 @@ from .const import (
     CONF_PLATFORM_OVERRIDES,
     ATTR_END_TIME,
 )
-from .util import create_unverified_ssl_context
+from .util import create_unverified_ssl_context, get_device_manufacturer
 
 if TYPE_CHECKING:
     from . import HcuCoordinator
@@ -348,8 +348,9 @@ class HcuOptionsFlowHandler(OptionsFlow):
 
         if client and client.state:
             for device in client.state.get("devices", {}).values():
-                if (oem := device.get("oem")) and oem != "eQ-3":
-                    third_party_oems.add(oem)
+                manufacturer = get_device_manufacturer(device)
+                if manufacturer != "eQ-3":
+                    third_party_oems.add(manufacturer)
 
         schema = {
             vol.Optional(
@@ -497,6 +498,8 @@ class HcuOptionsFlowHandler(OptionsFlow):
         )
 
         for device in all_devices:
+            # We compare loosely trying to match the manufacturer logic
+            # Note: device.manufacturer from registry might be 'eQ-3' if not yet updated
             if device.manufacturer in disabled_oems:
                 _LOGGER.info(
                     "Removing device %s (%s) as its manufacturer (%s) has been disabled via options.",

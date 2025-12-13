@@ -36,6 +36,7 @@ from .const import (
     PLATFORMS,
     EVENT_CHANNEL_TYPES,
 )
+from .util import get_device_manufacturer
 
 if TYPE_CHECKING:
     from . import HcuCoordinator
@@ -89,6 +90,19 @@ async def async_discover_entities(
     }
 
     for device_data in state.get("devices", {}).values():
+        # Check if manufacturer is disabled via options
+        manufacturer = get_device_manufacturer(device_data)
+        if manufacturer != "eQ-3":
+            option_key = f"import_{manufacturer.lower().replace(' ', '_')}"
+            if not config_entry.options.get(option_key, True):
+                _LOGGER.debug(
+                    "Skipping device %s (%s) as manufacturer %s is disabled",
+                    device_data.get("id"),
+                    device_data.get("label"),
+                    manufacturer,
+                )
+                continue
+
         for channel_index, channel_data in device_data.get("functionalChannels", {}).items():
             processed_features = set()
             is_deactivated_by_default = device_data.get("type") in DEACTIVATED_BY_DEFAULT_DEVICES

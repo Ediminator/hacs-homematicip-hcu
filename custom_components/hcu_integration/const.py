@@ -184,6 +184,10 @@ HMIP_DEVICE_HAS_EVENT = {
     "HmIP-WRC2": {"channels": [1, 2]},
     "HmIP-BRC2": {"channels": [1, 2, 3, 4]},
     "HmIP-WRC6-A": {"channels": [1, 2, 3, 4, 5, 6]},
+    "HmIP-FCI6": {"channels": [1, 2, 3, 4, 5, 6]},
+    "HmIPW-DRI16": {
+        "channels": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
+    },
 }
 
 # Devices that require a generic button event entity
@@ -191,6 +195,10 @@ GENERIC_BUTTON_DEVICES = {
     "HmIP-WRC2": {"channels": [1, 2]},
     "HmIP-BRC2": {"channels": [1, 2, 3, 4]},
     "HmIP-WRC6-A": {"channels": [1, 2, 3, 4, 5, 6]},
+    "HmIP-FCI6": {"channels": [1, 2, 3, 4, 5, 6]},
+    "HmIPW-DRI16": {
+        "channels": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
+    },
 }
 
 HMIP_DEVICE_TYPE_TO_DEVICE_CLASS = {

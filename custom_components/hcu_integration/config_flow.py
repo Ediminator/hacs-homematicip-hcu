@@ -481,13 +481,29 @@ class HcuOptionsFlowHandler(OptionsFlow):
     async def _handle_device_removal(self, user_input: dict[str, Any]) -> None:
         """Remove devices from the registry for OEMs that have been disabled."""
         device_registry = dr.async_get(self.hass)
+        
+        # Get the HCU client to check actual device data
+        # The registry might have stale manufacturer info (e.g. "eQ-3" for Hue devices)
+        coordinator: "HcuCoordinator" | None = self.hass.data[DOMAIN].get(
+            self.config_entry.entry_id
+        )
+        client: HcuApiClient | None = coordinator.client if coordinator else None
+
+        if not client:
+            _LOGGER.warning("Cannot check device details for removal: HCU client not available")
+            return
 
         disabled_oems = set()
         for key, value in user_input.items():
             if key.startswith("import_") and not value:
                 # Check if this is a new change (was previously True or not set)
+                # Note: We aggressive remove devices if the option is disabled,
+                # regardless of previous state, to ensure cleanup.
                 if self.config_entry.options.get(key, True):
                     oem_name = key.replace("import_", "").replace("_", " ").title()
+                    # Handle "3rd Pary" case where title() messes up "3rd"
+                    if oem_name == "3Rd Party":
+                        oem_name = "3rd Party"
                     disabled_oems.add(oem_name)
 
         if not disabled_oems:
@@ -498,13 +514,32 @@ class HcuOptionsFlowHandler(OptionsFlow):
         )
 
         for device in all_devices:
-            # We compare loosely trying to match the manufacturer logic
-            # Note: device.manufacturer from registry might be 'eQ-3' if not yet updated
-            if device.manufacturer in disabled_oems:
+            # Resolve the real manufacturer using live data from the HCU
+            # Device registry identifiers are tuples like (DOMAIN, device_id)
+            device_id = next(
+                (x[1] for x in device.identifiers if x[0] == DOMAIN), None
+            )
+            
+            should_remove = False
+            
+            if device_id:
+                # Look up fresh device data
+                device_data = client.get_device_by_address(device_id)
+                if device_data:
+                    real_manufacturer = get_device_manufacturer(device_data)
+                    if real_manufacturer in disabled_oems:
+                        should_remove = True
+                else:
+                    # Fallback for devices not in current state (maybe disconnected?)
+                    # Trust the registry, or skip? Safest is to check registry as fallback.
+                    if device.manufacturer in disabled_oems:
+                        should_remove = True
+            
+            if should_remove:
                 _LOGGER.info(
                     "Removing device %s (%s) as its manufacturer (%s) has been disabled via options.",
                     device.name,
                     device.id,
-                    device.manufacturer,
+                    device_id, # Log the HCU device ID as well
                 )
                 device_registry.async_remove_device(device.id)

@@ -22,6 +22,13 @@ if TYPE_CHECKING:
 
 _LOGGER = logging.getLogger(__name__)
 
+# Tilt feature flags used by both individual covers and cover groups
+TILT_FEATURES = (
+    CoverEntityFeature.SET_TILT_POSITION
+    | CoverEntityFeature.OPEN_TILT
+    | CoverEntityFeature.CLOSE_TILT
+    | CoverEntityFeature.STOP_TILT
+)
 
 
 def _level_to_position(level: float | None) -> int | None:
@@ -83,15 +90,29 @@ class HcuCover(HcuBaseEntity, CoverEntity):
             | CoverEntityFeature.SET_POSITION
         )
         
-        # Check for tilt support
-        if "slatsLevel" in self._channel:
-            self._attr_supported_features |= (
-                CoverEntityFeature.SET_TILT_POSITION
-                | CoverEntityFeature.OPEN_TILT
-                | CoverEntityFeature.CLOSE_TILT
-                | CoverEntityFeature.STOP_TILT
-            )
+        # Check for tilt support: slatsLevel must be present AND have a valid (non-None)
+        # value. The HCU API returns this key for all blind-capable devices (like DRBL4),
+        # but with None value when slats/tilt are not actually configured.
+        slats_level = self._channel.get("slatsLevel")
+        device_name = self._device.get("label", self._device_id)
+        if slats_level is not None:
+            self._attr_supported_features |= TILT_FEATURES
             self._attr_device_class = CoverDeviceClass.BLIND
+            _LOGGER.debug(
+                "Device %s channel %s detected as BLIND with tilt support (slatsLevel=%s)",
+                device_name,
+                self._channel_index,
+                slats_level,
+            )
+        elif self._attr_device_class == CoverDeviceClass.BLIND:
+            # Device type mapping classified this as BLIND, but no tilt support is
+            # available (slatsLevel is None). Reclassify as SHUTTER for consistency.
+            self._attr_device_class = CoverDeviceClass.SHUTTER
+            _LOGGER.debug(
+                "Device %s channel %s reclassified from BLIND to SHUTTER (no tilt support)",
+                device_name,
+                self._channel_index,
+            )
 
     @property
     def current_cover_position(self) -> int | None:
@@ -101,8 +122,6 @@ class HcuCover(HcuBaseEntity, CoverEntity):
     @property
     def current_cover_tilt_position(self) -> int | None:
         """Return current tilt position of cover."""
-        if "slatsLevel" not in self._channel:
-            return None
         return _level_to_position(self._channel.get("slatsLevel"))
 
     @property
@@ -259,18 +278,25 @@ class HcuCoverGroup(HcuGroupBaseEntity, CoverEntity):
             | CoverEntityFeature.SET_POSITION
         )
         
-        # Use self._group (property) to check capabilities.
-        # The property handles missing group data safely by returning an empty dict.
-        if "secondaryShadingLevel" in self._group:
-            self._attr_supported_features |= (
-                CoverEntityFeature.SET_TILT_POSITION
-                | CoverEntityFeature.OPEN_TILT
-                | CoverEntityFeature.CLOSE_TILT
-                | CoverEntityFeature.STOP_TILT
-            )
+        # Check for tilt support: secondaryShadingLevel must be present AND have a valid
+        # (non-None) value. The HCU API returns this key for all shutter groups, but with
+        # None value for groups containing only roller shutters (BROLL) without tilt support.
+        secondary_level = self._group.get("secondaryShadingLevel")
+        group_name = self._group.get("label", self._group_id)
+        if secondary_level is not None:
+            self._attr_supported_features |= TILT_FEATURES
             self._attr_device_class = CoverDeviceClass.BLIND
+            _LOGGER.debug(
+                "Group %s detected as BLIND with tilt support (secondaryShadingLevel=%s)",
+                group_name,
+                secondary_level,
+            )
         else:
             self._attr_device_class = CoverDeviceClass.SHUTTER
+            _LOGGER.debug(
+                "Group %s detected as SHUTTER without tilt support",
+                group_name,
+            )
 
     @property
     def current_cover_position(self) -> int | None:
@@ -280,8 +306,6 @@ class HcuCoverGroup(HcuGroupBaseEntity, CoverEntity):
     @property
     def current_cover_tilt_position(self) -> int | None:
         """Return current tilt position of cover group."""
-        if "secondaryShadingLevel" not in self._group:
-            return None
         return _level_to_position(self._group.get("secondaryShadingLevel"))
 
     @property

@@ -9,8 +9,17 @@ from homeassistant.components.cover import (
     CoverEntityFeature,
 )
 
-from custom_components.hcu_integration.cover import HcuCover, HcuCoverGroup
+from custom_components.hcu_integration.cover import HcuCover, HcuCoverGroup, TILT_FEATURES
 from custom_components.hcu_integration.const import API_PATHS
+
+# Feature constants for test assertions
+BASIC_COVER_FEATURES = (
+    CoverEntityFeature.OPEN
+    | CoverEntityFeature.CLOSE
+    | CoverEntityFeature.STOP
+    | CoverEntityFeature.SET_POSITION
+)
+
 
 @pytest.fixture
 def mock_coordinator():
@@ -209,3 +218,76 @@ async def test_cover_device_tilt_passes_shutter_level(mock_coordinator, mock_hcu
     mock_hcu_client.async_set_slats_level.assert_called_once_with(
         "device-id", 1, 0.5, shutter_level=0.4
     )
+
+
+async def test_cover_group_with_none_secondary_shading_level(mock_coordinator, mock_hcu_client):
+    """Test that groups with secondaryShadingLevel=None are classified as SHUTTER.
+
+    This tests the fix for issue #207: BROLL-only groups were incorrectly imported
+    as blinds because the API returns secondaryShadingLevel key with None value
+    for groups without tilt support.
+    """
+    group_data = {
+        "id": "group-id",
+        "type": "SHUTTER",
+        "label": "BROLL Group",
+        "primaryShadingLevel": 0.0,
+        "secondaryShadingLevel": None,  # Key present but None - no tilt support
+    }
+
+    mock_hcu_client.get_group_by_id = MagicMock(return_value=group_data)
+
+    cover = HcuCoverGroup(mock_coordinator, mock_hcu_client, group_data)
+
+    # Verify device class is SHUTTER (not BLIND)
+    assert cover.device_class == CoverDeviceClass.SHUTTER
+
+    # Verify basic cover features are supported
+    assert cover.supported_features == BASIC_COVER_FEATURES
+
+    # Verify tilt position returns None
+    assert cover.current_cover_tilt_position is None
+
+    # Verify position still works correctly
+    assert cover.current_cover_position == 100  # 0.0 level = fully open
+
+
+async def test_cover_device_with_none_slats_level(mock_coordinator, mock_hcu_client):
+    """Test that devices with slatsLevel=None are reclassified from BLIND to SHUTTER.
+
+    This tests the fix for issue #207: HmIPW-DRBL4 devices were incorrectly
+    displayed as blinds because the API returns slatsLevel key with None value
+    for channels without tilt/slats configured. Devices initially classified as
+    BLIND (from device type mapping) but without actual tilt support should be
+    reclassified as SHUTTER.
+    """
+    device_data = {
+        "id": "device-id",
+        "type": "WIRED_DIN_RAIL_BLIND_4",  # Mapped to BLIND in const.py
+        "label": "02_DRBL4",
+        "functionalChannels": {
+            "1": {
+                "label": "Channel 1",
+                "functionalChannelType": "BLIND_CHANNEL",
+                "shutterLevel": 0.5,
+                "slatsLevel": None,  # Key present but None - no tilt configured
+                "slatsReferenceTime": 0.0,
+            }
+        },
+    }
+
+    mock_hcu_client.get_device_by_address = MagicMock(return_value=device_data)
+
+    cover = HcuCover(mock_coordinator, mock_hcu_client, device_data, "1")
+
+    # Verify device class is SHUTTER (reclassified from BLIND due to no tilt support)
+    assert cover.device_class == CoverDeviceClass.SHUTTER
+
+    # Verify basic cover features are supported
+    assert cover.supported_features == BASIC_COVER_FEATURES
+
+    # Verify tilt position returns None
+    assert cover.current_cover_tilt_position is None
+
+    # Verify position works correctly
+    assert cover.current_cover_position == 50  # 0.5 level = 50% open

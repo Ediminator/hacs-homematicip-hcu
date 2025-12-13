@@ -4,6 +4,19 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 
 ---
 
+## 1.18.6 - 2025-12-13
+
+### 🐛 Bug Fixes
+
+**Fix Shutter Group Classification**
+- Fixed an issue where cover groups containing only shutter devices (e.g. HmIP-BROLL) were incorrectly classified as `BLIND` because `secondaryShadingLevel` (tilt) was present but `None` in the API response.
+- These groups are now correctly classified as `SHUTTER` with appropriate features.
+
+### 🔧 Improvements
+
+**Refactor Test Assertions**
+- Simplified feature assertions in `test_cover.py` to use strict equality checks, addressing code review feedback.
+
 ## 1.18.5 - 2025-12-13
 
 ### 🐛 Bug Fixes

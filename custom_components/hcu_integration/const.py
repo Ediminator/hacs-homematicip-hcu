@@ -51,8 +51,18 @@ DEFAULT_HCU_AUTH_PORT = 6969
 DEFAULT_HCU_WEBSOCKET_PORT = 9001
 CONF_COMFORT_TEMPERATURE = "comfort_temperature"
 DEFAULT_COMFORT_TEMPERATURE = 21.0
-DEFAULT_MIN_TEMP = 5.0
 DEFAULT_MAX_TEMP = 30.0
+
+# --- Manufacturer Constants ---
+MANUFACTURER_EQ3 = "eQ-3"
+MANUFACTURER_HUE = "Philips Hue"
+MANUFACTURER_3RD_PARTY = "3rd Party"
+
+# --- Device Identification Constants ---
+PLUGIN_ID_HUE = "de.eq3.plugin.hue"
+DEVICE_TYPE_PLUGIN_EXTERNAL = "PLUGIN_EXTERNAL"
+HUE_MODEL_TOKEN = "Hue"
+HOMEMATIC_MODEL_PREFIXES = ("HmIP-", "HM-", "ALPHA-")
 
 # --- Documentation URLs ---
 DOCS_URL_LOCK_PIN_CONFIG = "https://github.com/Ediminator/hacs-homematicip-hcu#step-4-configure-door-lock-pin-optional"

@@ -35,6 +35,7 @@ from .const import (
     MULTI_FUNCTION_CHANNEL_DEVICES,
     PLATFORMS,
     EVENT_CHANNEL_TYPES,
+    MANUFACTURER_EQ3,
 )
 from .util import get_device_manufacturer
 
@@ -92,7 +93,7 @@ async def async_discover_entities(
     for device_data in state.get("devices", {}).values():
         # Check if manufacturer is disabled via options
         manufacturer = get_device_manufacturer(device_data)
-        if manufacturer != "eQ-3":
+        if manufacturer != MANUFACTURER_EQ3:
             option_key = f"import_{manufacturer.lower().replace(' ', '_')}"
             if not config_entry.options.get(option_key, True):
                 _LOGGER.debug(

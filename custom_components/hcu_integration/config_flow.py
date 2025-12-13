@@ -24,6 +24,8 @@ from .const import (
     PLUGIN_ID,
     PLUGIN_FRIENDLY_NAME,
     MANUFACTURER_EQ3,
+    MANUFACTURER_HUE,
+    HUE_MODEL_TOKEN,
     CONF_PIN,
     CONF_COMFORT_TEMPERATURE,
     DEFAULT_COMFORT_TEMPERATURE,
@@ -526,8 +528,13 @@ class HcuOptionsFlowHandler(OptionsFlow):
                     manufacturer_to_check = get_device_manufacturer(device_data)
                 else:
                     # Fallback for devices not in current state (maybe disconnected?)
-                    # Trust the registry, or skip? Safest is to check registry as fallback.
-                    manufacturer_to_check = device.manufacturer
+                    # The registry manufacturer might be stale ("eQ-3" for a Hue device)
+                    # if registered with an older version.
+                    # As a secondary fallback, check the model name from the registry.
+                    if device.model and HUE_MODEL_TOKEN in device.model:
+                        manufacturer_to_check = MANUFACTURER_HUE
+                    else:
+                        manufacturer_to_check = device.manufacturer
 
             if manufacturer_to_check and manufacturer_to_check in disabled_oems:
                 _LOGGER.info(

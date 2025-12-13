@@ -243,10 +243,7 @@ async def test_cover_group_with_none_secondary_shading_level(mock_coordinator, m
     assert cover.device_class == CoverDeviceClass.SHUTTER
 
     # Verify basic cover features are supported
-    assert cover.supported_features & BASIC_COVER_FEATURES == BASIC_COVER_FEATURES
-
-    # Verify tilt features are NOT supported
-    assert not (cover.supported_features & TILT_FEATURES)
+    assert cover.supported_features == BASIC_COVER_FEATURES
 
     # Verify tilt position returns None
     assert cover.current_cover_tilt_position is None
@@ -287,10 +284,7 @@ async def test_cover_device_with_none_slats_level(mock_coordinator, mock_hcu_cli
     assert cover.device_class == CoverDeviceClass.SHUTTER
 
     # Verify basic cover features are supported
-    assert cover.supported_features & BASIC_COVER_FEATURES == BASIC_COVER_FEATURES
-
-    # Verify tilt features are NOT supported (slatsLevel is None)
-    assert not (cover.supported_features & TILT_FEATURES)
+    assert cover.supported_features == BASIC_COVER_FEATURES
 
     # Verify tilt position returns None
     assert cover.current_cover_tilt_position is None

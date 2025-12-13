@@ -4,7 +4,6 @@ import logging
 import aiohttp
 import asyncio
 import voluptuous as vol
-import string
 from typing import Any, TYPE_CHECKING
 from datetime import datetime, timedelta
 
@@ -366,7 +365,7 @@ class HcuOptionsFlowHandler(OptionsFlow):
         }
 
         for oem in sorted(list(third_party_oems)):
-            option_key = f"import_{oem.lower().replace(' ', '_')}"
+            option_key = f"import_{oem.replace(' ', '_')}"
             schema[
                 vol.Required(
                     option_key,
@@ -502,7 +501,7 @@ class HcuOptionsFlowHandler(OptionsFlow):
             if key.startswith("import_") and not value:
                 # Note: We aggressively remove devices if the option is disabled,
                 # regardless of previous state, to ensure cleanup.
-                oem_name = string.capwords(key.replace("import_", "").replace("_", " "))
+                oem_name = key.replace("import_", "").replace("_", " ")
                 disabled_oems.add(oem_name)
 
         if not disabled_oems:

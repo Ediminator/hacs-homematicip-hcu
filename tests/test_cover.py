@@ -209,3 +209,38 @@ async def test_cover_device_tilt_passes_shutter_level(mock_coordinator, mock_hcu
     mock_hcu_client.async_set_slats_level.assert_called_once_with(
         "device-id", 1, 0.5, shutter_level=0.4
     )
+
+
+async def test_cover_group_with_none_secondary_shading_level(mock_coordinator, mock_hcu_client):
+    """Test that groups with secondaryShadingLevel=None are classified as SHUTTER.
+
+    This tests the fix for issue #207: BROLL-only groups were incorrectly imported
+    as blinds because the API returns secondaryShadingLevel key with None value
+    for groups without tilt support.
+    """
+    group_data = {
+        "id": "group-id",
+        "type": "SHUTTER",
+        "label": "BROLL Group",
+        "primaryShadingLevel": 0.0,
+        "secondaryShadingLevel": None,  # Key present but None - no tilt support
+    }
+
+    mock_hcu_client.get_group_by_id = MagicMock(return_value=group_data)
+
+    cover = HcuCoverGroup(mock_coordinator, mock_hcu_client, group_data)
+
+    # Verify device class is SHUTTER (not BLIND)
+    assert cover.device_class == CoverDeviceClass.SHUTTER
+
+    # Verify tilt features are NOT supported
+    assert not (cover.supported_features & CoverEntityFeature.SET_TILT_POSITION)
+    assert not (cover.supported_features & CoverEntityFeature.OPEN_TILT)
+    assert not (cover.supported_features & CoverEntityFeature.CLOSE_TILT)
+    assert not (cover.supported_features & CoverEntityFeature.STOP_TILT)
+
+    # Verify tilt position returns None
+    assert cover.current_cover_tilt_position is None
+
+    # Verify position still works correctly
+    assert cover.current_cover_position == 100  # 0.0 level = fully open

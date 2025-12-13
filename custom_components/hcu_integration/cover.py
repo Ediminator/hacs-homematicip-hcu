@@ -259,9 +259,11 @@ class HcuCoverGroup(HcuGroupBaseEntity, CoverEntity):
             | CoverEntityFeature.SET_POSITION
         )
         
-        # Use self._group (property) to check capabilities.
-        # The property handles missing group data safely by returning an empty dict.
-        if "secondaryShadingLevel" in self._group:
+        # Check for tilt support: secondaryShadingLevel must be present AND have a valid
+        # (non-None) value. The HCU API returns this key for all shutter groups, but with
+        # None value for groups containing only roller shutters (BROLL) without tilt support.
+        secondary_level = self._group.get("secondaryShadingLevel")
+        if secondary_level is not None:
             self._attr_supported_features |= (
                 CoverEntityFeature.SET_TILT_POSITION
                 | CoverEntityFeature.OPEN_TILT
@@ -269,8 +271,17 @@ class HcuCoverGroup(HcuGroupBaseEntity, CoverEntity):
                 | CoverEntityFeature.STOP_TILT
             )
             self._attr_device_class = CoverDeviceClass.BLIND
+            _LOGGER.debug(
+                "Group %s detected as BLIND with tilt support (secondaryShadingLevel=%s)",
+                self._group.get("label", self._group_id),
+                secondary_level,
+            )
         else:
             self._attr_device_class = CoverDeviceClass.SHUTTER
+            _LOGGER.debug(
+                "Group %s detected as SHUTTER without tilt support",
+                self._group.get("label", self._group_id),
+            )
 
     @property
     def current_cover_position(self) -> int | None:
@@ -280,9 +291,10 @@ class HcuCoverGroup(HcuGroupBaseEntity, CoverEntity):
     @property
     def current_cover_tilt_position(self) -> int | None:
         """Return current tilt position of cover group."""
-        if "secondaryShadingLevel" not in self._group:
+        secondary_level = self._group.get("secondaryShadingLevel")
+        if secondary_level is None:
             return None
-        return _level_to_position(self._group.get("secondaryShadingLevel"))
+        return _level_to_position(secondary_level)
 
     @property
     def is_closed(self) -> bool | None:

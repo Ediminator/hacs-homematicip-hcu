@@ -47,6 +47,30 @@ def test_extract_event_channels(coordinator: HcuCoordinator):
     assert ("device1", "2") not in result
 
 
+def test_extract_event_channels_excludes_multi_mode_input(coordinator: HcuCoordinator):
+    """Test that MULTI_MODE_INPUT_CHANNEL is NOT extracted as an event channel (Issue #183)."""
+    events = {
+        "event1": {
+            "pushEventType": "DEVICE_CHANGED",
+            "device": {
+                "id": "device1",
+                "functionalChannels": {
+                    "1": {"functionalChannelType": "MULTI_MODE_INPUT_CHANNEL"},
+                    "2": {"functionalChannelType": "MULTI_MODE_INPUT_TRANSMITTER"},
+                },
+            },
+        },
+    }
+
+    result = coordinator._extract_event_channels(events)
+
+    # These channels should NOT be extracted because they are now in DEVICE_CHANNEL_EVENT_ONLY_TYPES
+    # and should be excluded from timestamp-based detection
+    assert ("device1", "1") not in result
+    assert ("device1", "2") not in result
+
+
+
 async def test_fire_button_event(coordinator: HcuCoordinator, hass: HomeAssistant):
     """Test firing a button event."""
     events_fired = []

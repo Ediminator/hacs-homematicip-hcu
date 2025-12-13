@@ -667,6 +667,8 @@ DUTY_CYCLE_BINARY_SENSOR_MAPPING = {
 DEVICE_CHANNEL_EVENT_ONLY_TYPES = {
     "SINGLE_KEY_CHANNEL",  # HmIP-BRC2, HmIP-WRC2 - sends explicit DEVICE_CHANNEL_EVENT
     "KEY_CHANNEL",  # Modern remote controls - sends explicit DEVICE_CHANNEL_EVENT
+    "MULTI_MODE_INPUT_CHANNEL",  # HmIP-FCI1/6 etc. - sends explicit DEVICE_CHANNEL_EVENT
+    CHANNEL_TYPE_MULTI_MODE_INPUT_TRANSMITTER,  # HmIP-FCI1/6 etc. - sends explicit DEVICE_CHANNEL_EVENT
 }
 
 # Channel types for timestamp-based button detection
@@ -676,8 +678,6 @@ EVENT_CHANNEL_TYPES = {
     "WALL_MOUNTED_TRANSMITTER_CHANNEL",
     "KEY_REMOTE_CONTROL_CHANNEL",
     "SWITCH_INPUT_CHANNEL",
-    "MULTI_MODE_INPUT_CHANNEL",
-    CHANNEL_TYPE_MULTI_MODE_INPUT_TRANSMITTER,
     # Channel types that were missing from the v1.17.0 fix:
     "BRAND_REMOTE_CONTROL",  # Used by some button devices
     "BRAND_WALL_MOUNTED_TRANSMITTER",  # Used by some wall-mounted switches

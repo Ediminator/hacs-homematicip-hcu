@@ -270,9 +270,7 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
                 if channel_type in DEVICE_CHANNEL_EVENT_ONLY_TYPES:
                     continue
 
-                if channel_type == CHANNEL_TYPE_MULTI_MODE_INPUT_TRANSMITTER:
-                    if device_type in MULTI_FUNCTION_CHANNEL_DEVICES:
-                        continue
+
 
                 if channel_type in EVENT_CHANNEL_TYPES:
                     event_channels.add((device_id, ch_idx))

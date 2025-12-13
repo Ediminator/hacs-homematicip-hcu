@@ -4,6 +4,20 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 
 ---
 
+## 1.18.7 - 2025-12-13
+
+### 🐛 Bug Fixes
+
+**Fix False Button Press Events (Issue #183)**
+- Fixed an issue where "ghost" button press events were triggered for multi-mode input channels during configuration updates or cyclic status reports.
+- `MULTI_MODE_INPUT_CHANNEL` types are now correctly excluded from timestamp-based event detection and rely solely on explicit device channel events.
+
+### ✨ New Features
+
+**Expanded Button Device Support**
+- Added explicit support for `HmIP-FCI6` (Contact Interface 6-channel) and `HmIPW-DRI16` (Wired Input Module 16-channel) to generic button event discovery.
+- These devices will now properly create event entities for button presses.
+
 ## 1.18.6 - 2025-12-13
 
 ### 🐛 Bug Fixes

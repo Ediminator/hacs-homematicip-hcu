@@ -497,12 +497,10 @@ class HcuOptionsFlowHandler(OptionsFlow):
         disabled_oems = set()
         for key, value in user_input.items():
             if key.startswith("import_") and not value:
-                # Check if this is a new change (was previously True or not set)
-                # Note: We aggressive remove devices if the option is disabled,
+                # Note: We aggressively remove devices if the option is disabled,
                 # regardless of previous state, to ensure cleanup.
-                if self.config_entry.options.get(key, True):
-                    oem_name = string.capwords(key.replace("import_", "").replace("_", " "))
-                    disabled_oems.add(oem_name)
+                oem_name = string.capwords(key.replace("import_", "").replace("_", " "))
+                disabled_oems.add(oem_name)
 
         if not disabled_oems:
             return

@@ -122,10 +122,7 @@ class HcuCover(HcuBaseEntity, CoverEntity):
     @property
     def current_cover_tilt_position(self) -> int | None:
         """Return current tilt position of cover."""
-        slats_level = self._channel.get("slatsLevel")
-        if slats_level is None:
-            return None
-        return _level_to_position(slats_level)
+        return _level_to_position(self._channel.get("slatsLevel"))
 
     @property
     def is_closed(self) -> bool | None:
@@ -309,10 +306,7 @@ class HcuCoverGroup(HcuGroupBaseEntity, CoverEntity):
     @property
     def current_cover_tilt_position(self) -> int | None:
         """Return current tilt position of cover group."""
-        secondary_level = self._group.get("secondaryShadingLevel")
-        if secondary_level is None:
-            return None
-        return _level_to_position(secondary_level)
+        return _level_to_position(self._group.get("secondaryShadingLevel"))
 
     @property
     def is_closed(self) -> bool | None:

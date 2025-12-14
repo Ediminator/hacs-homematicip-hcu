@@ -4,6 +4,7 @@ import logging
 import aiohttp
 import asyncio
 import voluptuous as vol
+from urllib.parse import quote, unquote
 from typing import Any, TYPE_CHECKING
 from datetime import datetime, timedelta
 
@@ -22,6 +23,9 @@ from .const import (
     DEFAULT_HCU_WEBSOCKET_PORT,
     PLUGIN_ID,
     PLUGIN_FRIENDLY_NAME,
+    MANUFACTURER_EQ3,
+    MANUFACTURER_HUE,
+    HUE_MODEL_TOKEN,
     CONF_PIN,
     CONF_COMFORT_TEMPERATURE,
     DEFAULT_COMFORT_TEMPERATURE,
@@ -31,7 +35,7 @@ from .const import (
     CONF_PLATFORM_OVERRIDES,
     ATTR_END_TIME,
 )
-from .util import create_unverified_ssl_context
+from .util import create_unverified_ssl_context, get_device_manufacturer
 
 if TYPE_CHECKING:
     from . import HcuCoordinator
@@ -318,7 +322,6 @@ class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
             if not (await response.json()).get("clientId"):
                 raise ValueError("HCU did not confirm the authToken.")
 
-
 class HcuOptionsFlowHandler(OptionsFlow):
     """Handle an options flow for the HCU integration."""
 
@@ -330,6 +333,16 @@ class HcuOptionsFlowHandler(OptionsFlow):
             step_id="init",
             menu_options=["global_settings", "lock_pin", "vacation"],
         )
+
+    def _get_third_party_oems(self, client: "HcuApiClient | None") -> set[str]:
+        """Discover third-party OEMs from the HCU state."""
+        third_party_oems = set()
+        if client and client.state:
+            for device in client.state.get("devices", {}).values():
+                manufacturer = get_device_manufacturer(device)
+                if manufacturer != MANUFACTURER_EQ3:
+                    third_party_oems.add(manufacturer)
+        return third_party_oems
 
     async def async_step_global_settings(
         self, user_input: dict[str, Any] | None = None
@@ -344,12 +357,8 @@ class HcuOptionsFlowHandler(OptionsFlow):
             self.config_entry.entry_id
         )
         client: HcuApiClient | None = coordinator.client if coordinator else None
-        third_party_oems = set()
-
-        if client and client.state:
-            for device in client.state.get("devices", {}).values():
-                if (oem := device.get("oem")) and oem != "eQ-3":
-                    third_party_oems.add(oem)
+        
+        third_party_oems = self._get_third_party_oems(client)
 
         schema = {
             vol.Optional(
@@ -361,11 +370,26 @@ class HcuOptionsFlowHandler(OptionsFlow):
         }
 
         for oem in sorted(list(third_party_oems)):
-            option_key = f"import_{oem.lower().replace(' ', '_')}"
+            option_key = f"import_{quote(oem)}"
+            
+            # Migration logic: Check for old keys and migrate value if present
+            # Format 1 (Round <9): lowercase with underscores
+            old_key_v1 = f"import_{oem.lower().replace(' ', '_')}"
+            # Format 2 (Round 9-12): original case with underscores (lossy)
+            old_key_v2 = f"import_{oem.replace(' ', '_')}"
+
+            default_value = self.config_entry.options.get(option_key, True)
+            
+            # Check v2 first (most recent), then v1
+            if old_key_v2 in self.config_entry.options and option_key not in self.config_entry.options:
+                default_value = self.config_entry.options[old_key_v2]
+            elif old_key_v1 in self.config_entry.options and option_key not in self.config_entry.options:
+                default_value = self.config_entry.options[old_key_v1]
+                
             schema[
                 vol.Required(
                     option_key,
-                    default=self.config_entry.options.get(option_key, True),
+                    default=default_value,
                 )
             ] = bool
 
@@ -480,14 +504,41 @@ class HcuOptionsFlowHandler(OptionsFlow):
     async def _handle_device_removal(self, user_input: dict[str, Any]) -> None:
         """Remove devices from the registry for OEMs that have been disabled."""
         device_registry = dr.async_get(self.hass)
+        
+        # Get the HCU client to check actual device data
+        # The registry might have stale manufacturer info (e.g. "eQ-3" for Hue devices)
+        coordinator: "HcuCoordinator" | None = self.hass.data[DOMAIN].get(
+            self.config_entry.entry_id
+        )
+        client: HcuApiClient | None = coordinator.client if coordinator else None
+
+        if not client:
+            _LOGGER.warning("Cannot check device details for removal: HCU client not available")
+            return
+
+        # Re-discover OEMs to correctly map option keys back to manufacturer names.
+        # This avoids issues with names containing underscores.
+        third_party_oems = self._get_third_party_oems(client)
+
+        key_to_oem_map = {f"import_{quote(oem)}": oem for oem in third_party_oems}
 
         disabled_oems = set()
         for key, value in user_input.items():
             if key.startswith("import_") and not value:
-                # Check if this is a new change (was previously True or not set)
-                if self.config_entry.options.get(key, True):
-                    oem_name = key.replace("import_", "").replace("_", " ").title()
+                # Note: We aggressively remove devices if the option is disabled,
+                # regardless of previous state, to ensure cleanup.
+                if oem_name := key_to_oem_map.get(key):
                     disabled_oems.add(oem_name)
+                else:
+                    # Fallback for an OEM that may have disappeared since the form was rendered.
+                    # We use unquote to robustly reverse the key generation.
+                    oem_name_fallback = unquote(key.replace("import_", ""))
+                    disabled_oems.add(oem_name_fallback)
+                    _LOGGER.debug(
+                        "Could not map key '%s' to a known OEM. Using fallback name: '%s'",
+                        key,
+                        oem_name_fallback,
+                    )
 
         if not disabled_oems:
             return
@@ -497,11 +548,33 @@ class HcuOptionsFlowHandler(OptionsFlow):
         )
 
         for device in all_devices:
-            if device.manufacturer in disabled_oems:
+            # Resolve the real manufacturer using live data from the HCU
+            # Device registry identifiers are tuples like (DOMAIN, device_id)
+            device_id = next(
+                (x[1] for x in device.identifiers if x[0] == DOMAIN), None
+            )
+            
+            manufacturer_to_check = None
+            device_data = client.get_device_by_address(device_id) if device_id else None
+
+            if device_data:
+                manufacturer_to_check = get_device_manufacturer(device_data)
+            else:
+                # Fallback for devices not in current state (maybe disconnected?)
+                # OR if device_id was not found in identifiers.
+                # The registry manufacturer might be stale ("eQ-3" for a Hue device)
+                # if registered with an older version.
+                # As a secondary fallback, check the model name from the registry.
+                if device.model and HUE_MODEL_TOKEN in device.model:
+                    manufacturer_to_check = MANUFACTURER_HUE
+                else:
+                    manufacturer_to_check = device.manufacturer
+
+            if manufacturer_to_check and manufacturer_to_check in disabled_oems:
                 _LOGGER.info(
                     "Removing device %s (%s) as its manufacturer (%s) has been disabled via options.",
                     device.name,
                     device.id,
-                    device.manufacturer,
+                    manufacturer_to_check,
                 )
                 device_registry.async_remove_device(device.id)

@@ -369,7 +369,7 @@ class HcuOptionsFlowHandler(OptionsFlow):
             ): vol.Coerce(float),
         }
 
-        for oem in sorted(list(third_party_oems)):
+        for oem in sorted(third_party_oems):
             option_key = f"import_{quote(oem)}"
             
             # Migration logic: Check for old keys and migrate value if present
@@ -380,11 +380,13 @@ class HcuOptionsFlowHandler(OptionsFlow):
 
             default_value = self.config_entry.options.get(option_key, True)
             
-            # Check v2 first (most recent), then v1
-            if old_key_v2 in self.config_entry.options and option_key not in self.config_entry.options:
-                default_value = self.config_entry.options[old_key_v2]
-            elif old_key_v1 in self.config_entry.options and option_key not in self.config_entry.options:
-                default_value = self.config_entry.options[old_key_v1]
+            # Check for migration if the new key is missing
+            if option_key not in self.config_entry.options:
+                # Check v2 first (most recent), then v1
+                if old_key_v2 in self.config_entry.options:
+                    default_value = self.config_entry.options[old_key_v2]
+                elif old_key_v1 in self.config_entry.options:
+                    default_value = self.config_entry.options[old_key_v1]
                 
             schema[
                 vol.Required(

@@ -4,6 +4,7 @@ import logging
 import aiohttp
 import asyncio
 import voluptuous as vol
+from urllib.parse import quote, unquote
 from typing import Any, TYPE_CHECKING
 from datetime import datetime, timedelta
 
@@ -321,7 +322,6 @@ class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
             if not (await response.json()).get("clientId"):
                 raise ValueError("HCU did not confirm the authToken.")
 
-
 class HcuOptionsFlowHandler(OptionsFlow):
     """Handle an options flow for the HCU integration."""
 
@@ -370,15 +370,21 @@ class HcuOptionsFlowHandler(OptionsFlow):
         }
 
         for oem in sorted(list(third_party_oems)):
-            option_key = f"import_{oem.replace(' ', '_')}"
+            option_key = f"import_{quote(oem)}"
             
-            # Migration logic: Check for old lowercase key and migrate value if present
-            # This handles the breaking change where we stopped lowercasing keys
-            old_option_key = f"import_{oem.lower().replace(' ', '_')}"
+            # Migration logic: Check for old keys and migrate value if present
+            # Format 1 (Round <9): lowercase with underscores
+            old_key_v1 = f"import_{oem.lower().replace(' ', '_')}"
+            # Format 2 (Round 9-12): original case with underscores (lossy)
+            old_key_v2 = f"import_{oem.replace(' ', '_')}"
+
             default_value = self.config_entry.options.get(option_key, True)
             
-            if old_option_key in self.config_entry.options and option_key not in self.config_entry.options:
-                default_value = self.config_entry.options[old_option_key]
+            # Check v2 first (most recent), then v1
+            if old_key_v2 in self.config_entry.options and option_key not in self.config_entry.options:
+                default_value = self.config_entry.options[old_key_v2]
+            elif old_key_v1 in self.config_entry.options and option_key not in self.config_entry.options:
+                default_value = self.config_entry.options[old_key_v1]
                 
             schema[
                 vol.Required(
@@ -514,7 +520,7 @@ class HcuOptionsFlowHandler(OptionsFlow):
         # This avoids issues with names containing underscores.
         third_party_oems = self._get_third_party_oems(client)
 
-        key_to_oem_map = {f"import_{oem.replace(' ', '_')}": oem for oem in third_party_oems}
+        key_to_oem_map = {f"import_{quote(oem)}": oem for oem in third_party_oems}
 
         disabled_oems = set()
         for key, value in user_input.items():
@@ -525,7 +531,8 @@ class HcuOptionsFlowHandler(OptionsFlow):
                     disabled_oems.add(oem_name)
                 else:
                     # Fallback for an OEM that may have disappeared since the form was rendered.
-                    oem_name_fallback = key.replace("import_", "").replace("_", " ")
+                    # We use unquote to robustly reverse the key generation.
+                    oem_name_fallback = unquote(key.replace("import_", ""))
                     disabled_oems.add(oem_name_fallback)
                     _LOGGER.debug(
                         "Could not map key '%s' to a known OEM. Using fallback name: '%s'",

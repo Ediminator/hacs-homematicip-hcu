@@ -10,6 +10,7 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 import asyncio
+from urllib.parse import quote
 
 from . import (
     alarm_control_panel,
@@ -94,7 +95,7 @@ async def async_discover_entities(
         # Check if manufacturer is disabled via options
         manufacturer = get_device_manufacturer(device_data)
         if manufacturer != MANUFACTURER_EQ3:
-            option_key = f"import_{manufacturer.replace(' ', '_')}"
+            option_key = f"import_{quote(manufacturer)}"
             if not config_entry.options.get(option_key, True):
                 _LOGGER.debug(
                     "Skipping device %s (%s) as manufacturer %s is disabled",

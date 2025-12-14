@@ -334,6 +334,16 @@ class HcuOptionsFlowHandler(OptionsFlow):
             menu_options=["global_settings", "lock_pin", "vacation"],
         )
 
+    def _get_third_party_oems(self, client: "HcuApiClient | None") -> set[str]:
+        """Discover third-party OEMs from the HCU state."""
+        third_party_oems = set()
+        if client and client.state:
+            for device in client.state.get("devices", {}).values():
+                manufacturer = get_device_manufacturer(device)
+                if manufacturer != MANUFACTURER_EQ3:
+                    third_party_oems.add(manufacturer)
+        return third_party_oems
+
     async def async_step_global_settings(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
@@ -347,13 +357,8 @@ class HcuOptionsFlowHandler(OptionsFlow):
             self.config_entry.entry_id
         )
         client: HcuApiClient | None = coordinator.client if coordinator else None
-        third_party_oems = set()
-
-        if client and client.state:
-            for device in client.state.get("devices", {}).values():
-                manufacturer = get_device_manufacturer(device)
-                if manufacturer != MANUFACTURER_EQ3:
-                    third_party_oems.add(manufacturer)
+        
+        third_party_oems = self._get_third_party_oems(client)
 
         schema = {
             vol.Optional(
@@ -507,12 +512,7 @@ class HcuOptionsFlowHandler(OptionsFlow):
 
         # Re-discover OEMs to correctly map option keys back to manufacturer names.
         # This avoids issues with names containing underscores.
-        third_party_oems = set()
-        if client and client.state:
-            for device in client.state.get("devices", {}).values():
-                manufacturer = get_device_manufacturer(device)
-                if manufacturer != MANUFACTURER_EQ3:
-                    third_party_oems.add(manufacturer)
+        third_party_oems = self._get_third_party_oems(client)
 
         key_to_oem_map = {f"import_{oem.replace(' ', '_')}": oem for oem in third_party_oems}
 

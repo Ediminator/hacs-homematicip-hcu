@@ -576,29 +576,11 @@ class HcuOptionsFlowHandler(OptionsFlow):
             _LOGGER.warning("Cannot check device details for removal: HCU client not available")
             return
 
-        # Re-discover OEMs to correctly map option keys back to manufacturer names.
-        # This avoids issues with names containing underscores.
-        third_party_oems = get_third_party_oems(client)
-
-        key_to_oem_map = {f"import_{quote(oem)}": oem for oem in third_party_oems}
-
-        disabled_oems = set()
-        for key, value in user_input.items():
-            if key.startswith("import_") and not value:
-                # Note: We aggressively remove devices if the option is disabled,
-                # regardless of previous state, to ensure cleanup.
-                if oem_name := key_to_oem_map.get(key):
-                    disabled_oems.add(oem_name)
-                else:
-                    # Fallback for an OEM that may have disappeared since the form was rendered.
-                    # We use unquote to robustly reverse the key generation.
-                    oem_name_fallback = unquote(key.replace("import_", ""))
-                    disabled_oems.add(oem_name_fallback)
-                    _LOGGER.debug(
-                        "Could not map key '%s' to a known OEM. Using fallback name: '%s'",
-                        key,
-                        oem_name_fallback,
-                    )
+        disabled_oems = {
+            unquote(key.replace("import_", ""))
+            for key, value in user_input.items()
+            if key.startswith("import_") and not value
+        }
 
         if not disabled_oems:
             return

@@ -319,39 +319,16 @@ async def async_discover_entities(
             )
             continue
 
-        # Skip and clean up groups with no channels (zombie groups)
+        # Skip groups with no channels (zombie groups)
         # These are groups that exist in the HCU but contain no devices.
-        # They should not be exposed as entities and existing ones should be removed (issue #185).
+        # They should not be exposed as entities.
         channels = group_data.get("channels")
-
-        # A group is a zombie if 'channels' is not a non-empty list.
         if not (isinstance(channels, list) and channels):
-            if not isinstance(channels, list) and channels is not None:
-                _LOGGER.warning(
-                    "Group '%s' (id: %s) has a 'channels' attribute that is not a list: %s. Treating as zombie.",
-                    group_label,
-                    group_id,
-                    type(channels).__name__,
-                )
-            else:  # This covers None or an empty list.
-                _LOGGER.debug(
-                    "Skipping group without channels (zombie): %s (id: %s)",
-                    group_label,
-                    group_id,
-                )
-
-            # Cleanup: If this group exists in the device registry, remove it.
-            # This handles cases where the group was previously discovered (and created as a device)
-            # but is now empty/zombie.
-            if device := dev_reg.async_get_device(identifiers={(DOMAIN, group_id)}):
-                _LOGGER.debug("Removing zombie group device from registry: %s (id: %s)", group_label, group_id)
-                try:
-                    dev_reg.async_remove_device(device.id)
-                except asyncio.CancelledError:
-                    raise
-                except Exception:
-                    _LOGGER.warning("Failed to remove zombie group device '%s' (id: %s)", group_label, group_id, exc_info=True)
-
+            _LOGGER.debug(
+                "Skipping group without channels: %s (id: %s)",
+                group_label,
+                group_id,
+            )
             continue
 
         if mapping := group_type_mapping.get(group_type):
@@ -415,5 +392,65 @@ async def async_discover_entities(
             groups_skipped_meta,
             groups_unknown_type
         )
+
+    # -------------------------------------------------------------------------
+    # Device Registry Cleanup (Fix for Issue #185)
+    # -------------------------------------------------------------------------
+    # Remove devices from the registry that are no longer present in the HCU state
+    # or are considered invalid (e.g. empty groups).
+
+    valid_device_ids = set()
+
+    # Add HCU device ID
+    if client.hcu_device_id:
+        valid_device_ids.add(client.hcu_device_id)
+
+    # Add valid physical devices
+    if "devices" in state:
+        valid_device_ids.update(state["devices"].keys())
+
+    # Add valid groups (only non-empty ones)
+    for group_id, group_data in state.get("groups", {}).items():
+        channels = group_data.get("channels")
+        if isinstance(channels, list) and channels:
+            valid_device_ids.add(group_id)
+
+    # Find and remove orphaned devices
+    # We iterate over all devices in the registry associated with this config entry
+    # and check if they correspond to a valid ID in the current state.
+
+    # Get all devices for this config entry
+    # Note: Accessing dev_reg.devices directly as it's a dict of DeviceEntry
+    entry_devices = [
+        device for device in dev_reg.devices.values()
+        if config_entry.entry_id in device.config_entries
+    ]
+
+    for device in entry_devices:
+        # Check if device has an identifier in our domain
+        hcu_identifier = next(
+            (id_val for domain, id_val in device.identifiers if domain == DOMAIN),
+            None
+        )
+
+        # If it's a HCU device/group but not in our valid list, remove it
+        if hcu_identifier and hcu_identifier not in valid_device_ids:
+            _LOGGER.info(
+                "Removing orphaned device from registry: %s (id: %s, HCU ID: %s)",
+                device.name,
+                device.id,
+                hcu_identifier
+            )
+            try:
+                dev_reg.async_remove_device(device.id)
+            except (asyncio.CancelledError, ConnectionError):
+                raise
+            except Exception:
+                _LOGGER.warning(
+                    "Failed to remove orphaned device '%s' (id: %s)",
+                    device.name,
+                    device.id,
+                    exc_info=True
+                )
 
     return entities

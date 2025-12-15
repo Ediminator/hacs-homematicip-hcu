@@ -10,6 +10,7 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 import asyncio
+from urllib.parse import quote
 
 from . import (
     alarm_control_panel,
@@ -35,7 +36,9 @@ from .const import (
     MULTI_FUNCTION_CHANNEL_DEVICES,
     PLATFORMS,
     EVENT_CHANNEL_TYPES,
+    MANUFACTURER_EQ3,
 )
+from .util import get_device_manufacturer
 
 if TYPE_CHECKING:
     from . import HcuCoordinator
@@ -89,6 +92,31 @@ async def async_discover_entities(
     }
 
     for device_data in state.get("devices", {}).values():
+        # Check if manufacturer is disabled via options
+        manufacturer = get_device_manufacturer(device_data)
+        if manufacturer != MANUFACTURER_EQ3:
+            # Check for new disabled_oems list (v1.19.0+)
+            disabled_oems = config_entry.options.get("disabled_oems")
+            
+            is_disabled = False
+            if disabled_oems is not None:
+                 if manufacturer in disabled_oems:
+                     is_disabled = True
+            else:
+                # Fallback to legacy keys (pre-v1.19.0)
+                option_key = f"import_{quote(manufacturer)}"
+                if not config_entry.options.get(option_key, True):
+                    is_disabled = True
+
+            if is_disabled:
+                _LOGGER.debug(
+                    "Skipping device %s (%s) as manufacturer %s is disabled",
+                    device_data.get("id"),
+                    device_data.get("label"),
+                    manufacturer,
+                )
+                continue
+
         for channel_index, channel_data in device_data.get("functionalChannels", {}).items():
             processed_features = set()
             is_deactivated_by_default = device_data.get("type") in DEACTIVATED_BY_DEFAULT_DEVICES

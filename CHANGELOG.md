@@ -4,6 +4,33 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 
 ---
 
+## 1.19.0 - 2025-12-15
+
+### ✨ New Features
+
+**Initial Configuration OEM Selection**
+
+Added a new step to the initial configuration flow that allows users to select which third-party OEMs (like Philips Hue) to import *before* the integration is fully set up.
+- **Improved UX**: Uses a clean multi-select list instead of individual boolean toggles, improving readability (e.g., "Philips Hue" instead of "import_Philips%20Hue").
+- Users can now filter out unwanted third-party bridges immediately.
+- The same selection logic is available in "Configure" options after setup to change these settings later.
+
+### 🐛 Bug Fixes
+
+**Correct 3rd Party Device Identification (Issue #177)**
+
+Fixed incorrect identification of third-party devices (like Philips Hue) which were previously defaulting to "eQ-3" manufacturer.
+- Devices now correctly report their actual manufacturer (e.g., "Philips Hue").
+- Enhanced detection logic prioritizes explicit OEM fields and specific Hue model identifiers.
+- Fixed handling of manufacturer names with spaces or special characters in the Options flow.
+
+### 🔧 Improvements
+
+**Robust Device Removal**
+
+- Improved logic for removing devices when their OEM is disabled in options.
+- Device removal now works reliably even if the HCU is temporarily unreachable, using robust fallback identification.
+- Refactored internal logic for cleaner code and better maintainability.
 ## 1.18.7 - 2025-12-13
 
 ### 🐛 Bug Fixes

@@ -9,6 +9,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN, CONF_ENTITY_PREFIX
 from .api import HcuApiClient, HcuApiError
+from .util import get_device_manufacturer
 
 if TYPE_CHECKING:
     from . import HcuCoordinator
@@ -189,7 +190,7 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, E
         return DeviceInfo(
             identifiers={(DOMAIN, self._device_id)},
             name=self._device.get("label", "Unknown Device"),
-            manufacturer=self._device.get("oem", "eQ-3"),
+            manufacturer=get_device_manufacturer(self._device),
             model=self._device.get("modelType"),
             sw_version=self._device.get("firmwareVersion"),
             via_device=(DOMAIN, hcu_device_id),

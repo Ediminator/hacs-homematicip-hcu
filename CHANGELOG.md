@@ -31,6 +31,59 @@ Fixed incorrect identification of third-party devices (like Philips Hue) which w
 - Improved logic for removing devices when their OEM is disabled in options.
 - Device removal now works reliably even if the HCU is temporarily unreachable, using robust fallback identification.
 - Refactored internal logic for cleaner code and better maintainability.
+## 1.18.7 - 2025-12-13
+
+### 🐛 Bug Fixes
+
+**Fix False Button Press Events (Issue #183)**
+- Fixed an issue where "ghost" button press events were triggered for multi-mode input channels during configuration updates or cyclic status reports.
+- `MULTI_MODE_INPUT_CHANNEL` types are now correctly excluded from timestamp-based event detection and rely solely on explicit device channel events.
+
+### ✨ New Features
+
+**Expanded Button Device Support**
+- Added explicit support for `HmIP-FCI6` (Contact Interface 6-channel) and `HmIPW-DRI16` (Wired Input Module 16-channel) to generic button event discovery.
+- These devices will now properly create event entities for button presses.
+
+## 1.18.6 - 2025-12-13
+
+### 🐛 Bug Fixes
+
+**Fix Shutter Group Classification**
+- Fixed an issue where cover groups containing only shutter devices (e.g. HmIP-BROLL) were incorrectly classified as `BLIND` because `secondaryShadingLevel` (tilt) was present but `None` in the API response.
+- These groups are now correctly classified as `SHUTTER` with appropriate features.
+
+### 🔧 Improvements
+
+**Refactor Test Assertions**
+- Simplified feature assertions in `test_cover.py` to use strict equality checks, addressing code review feedback.
+
+## 1.18.5 - 2025-12-13
+
+### 🐛 Bug Fixes
+
+**Fix Cover Entity Behavior and Test Improvements**
+
+Addresses comprehensive feedback for PR #210, improving `HcuCoverGroup` logic, rounding precision, validity checks, and test coverage.
+
+**What Changed:**
+- **Cover Groups:**
+  - `HcuCoverGroup` now correctly uses `primaryShadingLevel` (position) and `secondaryShadingLevel` (tilt), fixing errors from using device-specific properties.
+  - Added explicit support for `OPEN_TILT`, `CLOSE_TILT`, and `STOP_TILT` capabilities.
+  - Dynamic `device_class` assignment: `BLIND` if tilt supported, otherwise `SHUTTER`.
+- **Logic & Safety:**
+  - Improved `round()` logic for position calculations to prevent off-by-one errors (e.g. 99.6% -> 100%).
+  - Added robustness checks to `async_set_cover_tilt_position` to prevent crashes when current level is unknown.
+  - Added proper logging configuration to `cover.py`.
+- **Testing:**
+  - Major refactoring of `tests/test_cover.py` to use `pytest.mark.parametrize` for cleaner, more robust tests.
+  - Added specific test cases for group properties, device class detection, and tilt-level passing.
+
+**Impact:**
+- ✅ Reliable control and status reporting for Cover Groups.
+- ✅ Correct `device_class` icons and behaviors in Home Assistant UI.
+- ✅ More accurate position feedback.
+- ✅ Enhanced error handling and stability.
 
 ---
 

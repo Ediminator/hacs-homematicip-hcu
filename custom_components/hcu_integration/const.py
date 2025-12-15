@@ -70,6 +70,7 @@ DOCS_URL_LOCK_PIN_CONFIG = "https://github.com/Ediminator/hacs-homematicip-hcu#s
 
 # --- Channel Type Constants ---
 CHANNEL_TYPE_MULTI_MODE_INPUT_TRANSMITTER = "MULTI_MODE_INPUT_TRANSMITTER"
+CHANNEL_TYPE_MULTI_MODE_INPUT = "MULTI_MODE_INPUT_CHANNEL"
 CHANNEL_TYPE_ALARM_SIREN = "ALARM_SIREN_CHANNEL"
 
 # --- API and Plugin Constants ---
@@ -194,6 +195,10 @@ HMIP_DEVICE_HAS_EVENT = {
     "HmIP-WRC2": {"channels": [1, 2]},
     "HmIP-BRC2": {"channels": [1, 2, 3, 4]},
     "HmIP-WRC6-A": {"channels": [1, 2, 3, 4, 5, 6]},
+    "HmIP-FCI6": {"channels": [1, 2, 3, 4, 5, 6]},
+    "HmIPW-DRI16": {
+        "channels": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
+    },
 }
 
 # Devices that require a generic button event entity
@@ -201,6 +206,10 @@ GENERIC_BUTTON_DEVICES = {
     "HmIP-WRC2": {"channels": [1, 2]},
     "HmIP-BRC2": {"channels": [1, 2, 3, 4]},
     "HmIP-WRC6-A": {"channels": [1, 2, 3, 4, 5, 6]},
+    "HmIP-FCI6": {"channels": [1, 2, 3, 4, 5, 6]},
+    "HmIPW-DRI16": {
+        "channels": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
+    },
 }
 
 HMIP_DEVICE_TYPE_TO_DEVICE_CLASS = {
@@ -678,6 +687,8 @@ DUTY_CYCLE_BINARY_SENSOR_MAPPING = {
 DEVICE_CHANNEL_EVENT_ONLY_TYPES = {
     "SINGLE_KEY_CHANNEL",  # HmIP-BRC2, HmIP-WRC2 - sends explicit DEVICE_CHANNEL_EVENT
     "KEY_CHANNEL",  # Modern remote controls - sends explicit DEVICE_CHANNEL_EVENT
+    CHANNEL_TYPE_MULTI_MODE_INPUT,  # HmIP-FCI1/6 etc. - sends explicit DEVICE_CHANNEL_EVENT
+    CHANNEL_TYPE_MULTI_MODE_INPUT_TRANSMITTER,  # HmIP-FCI1/6 etc. - sends explicit DEVICE_CHANNEL_EVENT
 }
 
 # Channel types for timestamp-based button detection
@@ -687,8 +698,6 @@ EVENT_CHANNEL_TYPES = {
     "WALL_MOUNTED_TRANSMITTER_CHANNEL",
     "KEY_REMOTE_CONTROL_CHANNEL",
     "SWITCH_INPUT_CHANNEL",
-    "MULTI_MODE_INPUT_CHANNEL",
-    CHANNEL_TYPE_MULTI_MODE_INPUT_TRANSMITTER,
     # Channel types that were missing from the v1.17.0 fix:
     "BRAND_REMOTE_CONTROL",  # Used by some button devices
     "BRAND_WALL_MOUNTED_TRANSMITTER",  # Used by some wall-mounted switches
@@ -740,7 +749,7 @@ HMIP_CHANNEL_TYPE_TO_ENTITY = {
     "KEY_REMOTE_CONTROL_CHANNEL": {"class": "HcuButtonEvent"},
     "SWITCH_INPUT_CHANNEL": {"class": "HcuButtonEvent"},
     "SINGLE_KEY_CHANNEL": {"class": "HcuButtonEvent"},
-    "MULTI_MODE_INPUT_CHANNEL": {"class": "HcuButtonEvent"},
+    CHANNEL_TYPE_MULTI_MODE_INPUT: {"class": "HcuButtonEvent"},
     # Channel types that were missing from the v1.17.0 fix - now restored:
     "BRAND_REMOTE_CONTROL": {"class": "HcuButtonEvent"},
     "BRAND_WALL_MOUNTED_TRANSMITTER": {"class": "HcuButtonEvent"},

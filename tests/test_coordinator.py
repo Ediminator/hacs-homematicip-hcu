@@ -8,7 +8,12 @@ from homeassistant.core import HomeAssistant
 from homeassistant.config_entries import ConfigEntry
 
 from custom_components.hcu_integration import HcuCoordinator
-from custom_components.hcu_integration.const import DOMAIN, EVENT_CHANNEL_TYPES
+from custom_components.hcu_integration.const import (
+    CHANNEL_TYPE_MULTI_MODE_INPUT,
+    CHANNEL_TYPE_MULTI_MODE_INPUT_TRANSMITTER,
+    DOMAIN,
+    EVENT_CHANNEL_TYPES,
+)
 
 
 @pytest.fixture
@@ -45,6 +50,30 @@ def test_extract_event_channels(coordinator: HcuCoordinator):
     assert ("device1", "1") in result
     # SWITCH_MEASURING should not be extracted (not an event channel type)
     assert ("device1", "2") not in result
+
+
+def test_extract_event_channels_excludes_multi_mode_channels(coordinator: HcuCoordinator):
+    """Test that multi-mode input channels are NOT extracted as event channels (Issue #183)."""
+    events = {
+        "event1": {
+            "pushEventType": "DEVICE_CHANGED",
+            "device": {
+                "id": "device1",
+                "functionalChannels": {
+                    "1": {"functionalChannelType": CHANNEL_TYPE_MULTI_MODE_INPUT},
+                    "2": {"functionalChannelType": CHANNEL_TYPE_MULTI_MODE_INPUT_TRANSMITTER},
+                },
+            },
+        },
+    }
+
+    result = coordinator._extract_event_channels(events)
+
+    # These channels should NOT be extracted because they are now in DEVICE_CHANNEL_EVENT_ONLY_TYPES
+    # and should be excluded from timestamp-based detection
+    assert ("device1", "1") not in result
+    assert ("device1", "2") not in result
+
 
 
 async def test_fire_button_event(coordinator: HcuCoordinator, hass: HomeAssistant):

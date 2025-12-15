@@ -216,12 +216,10 @@ class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             # Merge selection into options
-            existing_options = self._config_data.get("options", {})
-            self._config_data["options"] = {**existing_options, **user_input}
             return self.async_create_entry(
                 title="Homematic IP Local (HCU)",
                 data=self._config_data,
-                options=self._config_data["options"],
+                options=user_input,
             )
 
         schema = {}

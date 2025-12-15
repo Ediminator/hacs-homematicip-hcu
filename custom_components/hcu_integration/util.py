@@ -46,25 +46,27 @@ def get_device_manufacturer(device_data: dict) -> str:
     if plugin_id == PLUGIN_ID_HUE:
         return MANUFACTURER_HUE
 
-    model_type = device_data.get("modelType", "")
-    if HUE_MODEL_TOKEN in model_type:
-        return MANUFACTURER_HUE
-
     # 2. Trust explicit OEM if it's not the default "eQ-3"
+    # This is more accurate than loose model name matching
     oem = device_data.get("oem")
     if oem and oem != MANUFACTURER_EQ3:
         return oem
 
-    # 3. Check Device Type/Archetype for generic "External" status
+    # 3. Check loose model name match for Hue
+    model_type = device_data.get("modelType", "")
+    if HUE_MODEL_TOKEN in model_type:
+        return MANUFACTURER_HUE
+
+    # 4. Check Device Type/Archetype for generic "External" status
     # "PLUGIN_EXTERNAL" strongly implies a 3rd party integration
     if device_data.get("type") == DEVICE_TYPE_PLUGIN_EXTERNAL:
         return MANUFACTURER_3RD_PARTY
 
-    # 4. Check for standard Homematic IP prefix
+    # 5. Check for standard Homematic IP prefix
     if model_type.startswith(HOMEMATIC_MODEL_PREFIXES):
         return MANUFACTURER_EQ3
 
-    # 5. Default
+    # 6. Default
     # If it has no 'oem' field and didn't match above, we assume it's a standard device
     # (or legacy one) and return "eQ-3" to match previous behavior
     return MANUFACTURER_EQ3

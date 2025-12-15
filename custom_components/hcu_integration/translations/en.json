@@ -23,6 +23,13 @@
                 "data": {
                     "pin": "PIN"
                 }
+            },
+            "select_oems": {
+                "title": "Select Manufacturers",
+                "description": "Select the third-party manufacturers you want to import devices from.",
+                "data": {
+                    "selected_oems": "Manufacturers to Import"
+                }
             }
         },
         "error": {
@@ -55,7 +62,8 @@
                 "data": {
                     "comfort_temperature": "Default Comfort Temperature (for Party Mode)",
                     "import_sytronic": "Import Sytronic devices",
-                    "import_novotronic": "Import Novotronic devices"
+                    "import_novotronic": "Import Novotronic devices",
+                    "selected_oems": "Manufacturers to Import"
                 }
             },
             "lock_pin": {

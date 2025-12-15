@@ -406,8 +406,7 @@ async def async_discover_entities(
         valid_device_ids.add(client.hcu_device_id)
 
     # Add valid physical devices
-    if "devices" in state:
-        valid_device_ids.update(state["devices"].keys())
+    valid_device_ids.update(state.get("devices", {}).keys())
 
     # Add valid groups (only non-empty ones)
     for group_id, group_data in state.get("groups", {}).items():
@@ -420,11 +419,7 @@ async def async_discover_entities(
     # and check if they correspond to a valid ID in the current state.
 
     # Get all devices for this config entry
-    # Note: Accessing dev_reg.devices directly as it's a dict of DeviceEntry
-    entry_devices = [
-        device for device in dev_reg.devices.values()
-        if config_entry.entry_id in device.config_entries
-    ]
+    entry_devices = dr.async_entries_for_config_entry(dev_reg, config_entry.entry_id)
 
     for device in entry_devices:
         # Check if device has an identifier in our domain

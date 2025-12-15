@@ -11,6 +11,7 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 **Initial Configuration OEM Selection**
 
 Added a new step to the initial configuration flow that allows users to select which third-party OEMs (like Philips Hue) to import *before* the integration is fully set up.
+- **Improved UX**: Uses a clean multi-select list instead of individual boolean toggles, improving readability (e.g., "Philips Hue" instead of "import_Philips%20Hue").
 - Users can now filter out unwanted third-party bridges immediately.
 - The same selection logic is available in "Configure" options after setup to change these settings later.
 

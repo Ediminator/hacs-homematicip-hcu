@@ -215,17 +215,34 @@ class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
             )
 
         if user_input is not None:
-            # Merge selection into options
+            # User input contains 'selected_oems' (list of strings).
+            # Convert to disabled_oems (those NOT selected).
+            selected = set(user_input.get("selected_oems", []))
+            disabled_oems = list(third_party_oems - selected)
+            
             return self.async_create_entry(
                 title="Homematic IP Local (HCU)",
                 data=self._config_data,
-                options=user_input,
+                options={"disabled_oems": disabled_oems},
             )
 
-        schema = {}
-        for oem in sorted(third_party_oems):
-            option_key = f"import_{quote(oem)}"
-            schema[vol.Required(option_key, default=True)] = bool
+        third_party_oems_list = sorted(third_party_oems)
+        
+        # Default: All selected (IMPORT everything by default)
+        default_selected = third_party_oems_list
+
+        schema = {
+            vol.Required(
+                "selected_oems",
+                default=default_selected,
+            ): selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=third_party_oems_list,
+                    multiple=True,
+                    mode=selector.SelectSelectorMode.LIST,
+                )
+            )
+        }
 
         return self.async_show_form(
             step_id="select_oems",
@@ -406,17 +423,63 @@ class HcuOptionsFlowHandler(OptionsFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
         """Manage the global settings (comfort temp and OEM toggles)."""
-        if user_input is not None:
-            await self._handle_device_removal(user_input)
-            new_options = {**self.config_entry.options, **user_input}
-            return self.async_create_entry(title="", data=new_options)
-
         coordinator: "HcuCoordinator" | None = self.hass.data[DOMAIN].get(
             self.config_entry.entry_id
         )
         client: HcuApiClient | None = coordinator.client if coordinator else None
         
         third_party_oems = get_third_party_oems(client)
+        third_party_oems_list = sorted(third_party_oems)
+
+        if user_input is not None:
+            # Calculate disabled OEMs from inverted selection
+            selected = set(user_input.get("selected_oems", []))
+            disabled_oems = list(third_party_oems - selected)
+            
+            await self._handle_device_removal(disabled_oems)
+            
+            # Clean up old boolean keys if present to avoid clutter
+            new_options = {**self.config_entry.options}
+            # Remove old keys
+            keys_to_remove = [k for k in new_options if k.startswith("import_")]
+            for k in keys_to_remove:
+                new_options.pop(k)
+
+            # Update new values
+            new_options[CONF_COMFORT_TEMPERATURE] = user_input[CONF_COMFORT_TEMPERATURE]
+            new_options["disabled_oems"] = disabled_oems
+
+            return self.async_create_entry(title="", data=new_options)
+
+        # Determine currently enabled OEMs (for pre-selection)
+        # Check for new list format first
+        disabled_oems = set(self.config_entry.options.get("disabled_oems", []))
+        
+        # Backward compatibility: Check old boolean keys if new list not found (or empty? no, empty is valid)
+        # If "disabled_oems" key is missing entirely, check legacy keys.
+        if "disabled_oems" not in self.config_entry.options:
+             for oem in third_party_oems:
+                option_key = f"import_{quote(oem)}"
+                # Migration logic: Check for old keys
+                # Format 1 (Round <9): lowercase with underscores
+                old_key_v1 = f"import_{oem.lower().replace(' ', '_')}"
+                # Format 2 (Round 9-12): original case with underscores (lossy)
+                old_key_v2 = f"import_{oem.replace(' ', '_')}"
+
+                is_enabled = self.config_entry.options.get(option_key, True)
+                
+                # Check for migration if the new key is missing
+                if option_key not in self.config_entry.options:
+                    if old_key_v2 in self.config_entry.options:
+                        is_enabled = self.config_entry.options[old_key_v2]
+                    elif old_key_v1 in self.config_entry.options:
+                        is_enabled = self.config_entry.options[old_key_v1]
+                
+                if not is_enabled:
+                    disabled_oems.add(oem)
+
+        # Pre-select everything that is NOT disabled
+        default_selected = [oem for oem in third_party_oems_list if oem not in disabled_oems]
 
         schema = {
             vol.Optional(
@@ -425,33 +488,17 @@ class HcuOptionsFlowHandler(OptionsFlow):
                     CONF_COMFORT_TEMPERATURE, DEFAULT_COMFORT_TEMPERATURE
                 ),
             ): vol.Coerce(float),
-        }
-
-        for oem in sorted(third_party_oems):
-            option_key = f"import_{quote(oem)}"
-            
-            # Migration logic: Check for old keys and migrate value if present
-            # Format 1 (Round <9): lowercase with underscores
-            old_key_v1 = f"import_{oem.lower().replace(' ', '_')}"
-            # Format 2 (Round 9-12): original case with underscores (lossy)
-            old_key_v2 = f"import_{oem.replace(' ', '_')}"
-
-            default_value = self.config_entry.options.get(option_key, True)
-            
-            # Check for migration if the new key is missing
-            if option_key not in self.config_entry.options:
-                # Check v2 first (most recent), then v1
-                if old_key_v2 in self.config_entry.options:
-                    default_value = self.config_entry.options[old_key_v2]
-                elif old_key_v1 in self.config_entry.options:
-                    default_value = self.config_entry.options[old_key_v1]
-                
-            schema[
-                vol.Required(
-                    option_key,
-                    default=default_value,
+            vol.Required(
+                "selected_oems",
+                default=default_selected,
+            ): selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=third_party_oems_list,
+                    multiple=True,
+                    mode=selector.SelectSelectorMode.LIST,
                 )
-            ] = bool
+            )
+        }
 
         return self.async_show_form(
             step_id="global_settings", data_schema=vol.Schema(schema)
@@ -561,8 +608,11 @@ class HcuOptionsFlowHandler(OptionsFlow):
             errors=errors,
         )
 
-    async def _handle_device_removal(self, user_input: dict[str, Any]) -> None:
+    async def _handle_device_removal(self, disabled_oems: list[str] | set[str]) -> None:
         """Remove devices from the registry for OEMs that have been disabled."""
+        if not disabled_oems:
+            return
+
         device_registry = dr.async_get(self.hass)
         
         # Get the HCU client to check actual device data
@@ -575,15 +625,8 @@ class HcuOptionsFlowHandler(OptionsFlow):
         if not client:
             _LOGGER.warning("Cannot check device details for removal: HCU client not available")
             return
-
-        disabled_oems = {
-            unquote(key.replace("import_", ""))
-            for key, value in user_input.items()
-            if key.startswith("import_") and not value
-        }
-
-        if not disabled_oems:
-            return
+            
+        disabled_oems_set = set(disabled_oems)
 
         all_devices = dr.async_entries_for_config_entry(
             device_registry, self.config_entry.entry_id
@@ -612,7 +655,7 @@ class HcuOptionsFlowHandler(OptionsFlow):
                 else:
                     manufacturer_to_check = device.manufacturer
 
-            if manufacturer_to_check and manufacturer_to_check in disabled_oems:
+            if manufacturer_to_check and manufacturer_to_check in disabled_oems_set:
                 _LOGGER.info(
                     "Removing device %s (%s) as its manufacturer (%s) has been disabled via options.",
                     device.name,

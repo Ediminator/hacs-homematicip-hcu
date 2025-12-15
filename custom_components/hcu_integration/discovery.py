@@ -95,8 +95,20 @@ async def async_discover_entities(
         # Check if manufacturer is disabled via options
         manufacturer = get_device_manufacturer(device_data)
         if manufacturer != MANUFACTURER_EQ3:
-            option_key = f"import_{quote(manufacturer)}"
-            if not config_entry.options.get(option_key, True):
+            # Check for new disabled_oems list (v1.19.0+)
+            disabled_oems = config_entry.options.get("disabled_oems")
+            
+            is_disabled = False
+            if disabled_oems is not None:
+                 if manufacturer in disabled_oems:
+                     is_disabled = True
+            else:
+                # Fallback to legacy keys (pre-v1.19.0)
+                option_key = f"import_{quote(manufacturer)}"
+                if not config_entry.options.get(option_key, True):
+                    is_disabled = True
+
+            if is_disabled:
                 _LOGGER.debug(
                     "Skipping device %s (%s) as manufacturer %s is disabled",
                     device_data.get("id"),

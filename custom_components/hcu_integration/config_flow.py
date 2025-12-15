@@ -59,6 +59,17 @@ async def async_will_remove_config_entry(
     )
 
 
+def get_third_party_oems(client: "HcuApiClient | None") -> set[str]:
+    """Discover third-party OEMs from the HCU state."""
+    third_party_oems = set()
+    if client and client.state:
+        for device in client.state.get("devices", {}).values():
+            manufacturer = get_device_manufacturer(device)
+            if manufacturer != MANUFACTURER_EQ3:
+                third_party_oems.add(manufacturer)
+    return third_party_oems
+
+
 class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle a config flow for the Homematic IP HCU Integration."""
 
@@ -133,21 +144,14 @@ class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
                     host,
                 )
 
-                final_data = {
-                    CONF_HOST: self._config_data["host"],
-                    CONF_AUTH_PORT: self._config_data["auth_port"],
-                    CONF_WEBSOCKET_PORT: self._config_data["websocket_port"],
-                    CONF_TOKEN: auth_token,
-                }
-
+                # Save token and prefix to config data
+                self._config_data[CONF_TOKEN] = auth_token
+                
                 # Add entity prefix if provided
                 if prefix := self._config_data.get(CONF_ENTITY_PREFIX, "").strip():
-                    final_data[CONF_ENTITY_PREFIX] = prefix
+                    self._config_data[CONF_ENTITY_PREFIX] = prefix
 
-                return self.async_create_entry(
-                    title="Homematic IP Local (HCU)",
-                    data=final_data,
-                )
+                return await self.async_step_select_oems()
 
             except (aiohttp.ClientError, asyncio.TimeoutError):
                 errors["base"] = "cannot_connect"
@@ -163,6 +167,72 @@ class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
             data_schema=vol.Schema({vol.Required("activation_key"): str}),
             description_placeholders={"hcu_ip": host},
             errors=errors,
+        )
+
+    async def async_step_select_oems(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Step to select third-party OEMs to import capabilities from."""
+        host = self._config_data[CONF_HOST]
+        token = self._config_data[CONF_TOKEN]
+        auth_port = self._config_data[CONF_AUTH_PORT]
+        websocket_port = self._config_data[CONF_WEBSOCKET_PORT]
+
+        # Use valid args for HcuApiClient
+        session = aiohttp_client.async_get_clientsession(self.hass)
+        client = HcuApiClient(
+            self.hass,
+            host,
+            token,
+            session,
+            auth_port=auth_port,
+            websocket_port=websocket_port,
+        )
+
+        try:
+            # We need to connect to get the system state to find OEMs
+            await client.connect()
+            try:
+                await client.get_system_state()
+            finally:
+                if client.is_connected:
+                    await client.disconnect()
+        except (HcuApiError, ConnectionError, asyncio.TimeoutError, aiohttp.ClientError):
+            _LOGGER.warning(
+                "Failed to connect to HCU during OEM selection. Proceeding without selection."
+            )
+            return self.async_create_entry(
+                title="Homematic IP Local (HCU)",
+                data=self._config_data,
+            )
+
+        third_party_oems = get_third_party_oems(client)
+
+        if not third_party_oems:
+            return self.async_create_entry(
+                title="Homematic IP Local (HCU)",
+                data=self._config_data,
+            )
+
+        if user_input is not None:
+            # Merge selection into options
+            existing_options = self._config_data.get("options", {})
+            self._config_data["options"] = {**existing_options, **user_input}
+            return self.async_create_entry(
+                title="Homematic IP Local (HCU)",
+                data=self._config_data,
+                options=self._config_data["options"],
+            )
+
+        schema = {}
+        for oem in sorted(third_party_oems):
+            option_key = f"import_{quote(oem)}"
+            schema[vol.Required(option_key, default=True)] = bool
+
+        return self.async_show_form(
+            step_id="select_oems",
+            data_schema=vol.Schema(schema),
+            description_placeholders={},
         )
 
     async def async_step_reauth(
@@ -334,16 +404,6 @@ class HcuOptionsFlowHandler(OptionsFlow):
             menu_options=["global_settings", "lock_pin", "vacation"],
         )
 
-    def _get_third_party_oems(self, client: "HcuApiClient | None") -> set[str]:
-        """Discover third-party OEMs from the HCU state."""
-        third_party_oems = set()
-        if client and client.state:
-            for device in client.state.get("devices", {}).values():
-                manufacturer = get_device_manufacturer(device)
-                if manufacturer != MANUFACTURER_EQ3:
-                    third_party_oems.add(manufacturer)
-        return third_party_oems
-
     async def async_step_global_settings(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
@@ -358,7 +418,7 @@ class HcuOptionsFlowHandler(OptionsFlow):
         )
         client: HcuApiClient | None = coordinator.client if coordinator else None
         
-        third_party_oems = self._get_third_party_oems(client)
+        third_party_oems = get_third_party_oems(client)
 
         schema = {
             vol.Optional(
@@ -520,7 +580,7 @@ class HcuOptionsFlowHandler(OptionsFlow):
 
         # Re-discover OEMs to correctly map option keys back to manufacturer names.
         # This avoids issues with names containing underscores.
-        third_party_oems = self._get_third_party_oems(client)
+        third_party_oems = get_third_party_oems(client)
 
         key_to_oem_map = {f"import_{quote(oem)}": oem for oem in third_party_oems}
 

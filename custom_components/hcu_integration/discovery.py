@@ -399,20 +399,14 @@ async def async_discover_entities(
     # Remove devices from the registry that are no longer present in the HCU state
     # or are considered invalid (e.g. empty groups).
 
-    valid_device_ids = set()
-
-    # Add HCU device ID
-    if client.hcu_device_id:
-        valid_device_ids.add(client.hcu_device_id)
-
     # Add valid physical devices
     valid_device_ids.update(state.get("devices", {}).keys())
 
     # Add valid groups (only non-empty ones)
-    for group_id, group_data in state.get("groups", {}).items():
-        channels = group_data.get("channels")
-        if isinstance(channels, list) and channels:
-            valid_device_ids.add(group_id)
+    valid_device_ids.update(
+        group_id for group_id, group_data in state.get("groups", {}).items()
+        if (channels := group_data.get("channels")) and isinstance(channels, list)
+    )
 
     # Find and remove orphaned devices
     # We iterate over all devices in the registry associated with this config entry

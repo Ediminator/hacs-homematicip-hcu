@@ -336,9 +336,9 @@ async def async_discover_entities(
             )
             continue
 
-        valid_device_ids.add(group_id)
-
         if mapping := group_type_mapping.get(group_type):
+            valid_device_ids.add(group_id)
+
             # Previously we skipped groups with metaGroupId assuming they were only auto-created room groups.
             # However, user-created "Direct Connections" also have metaGroupId (issue #146).
             # We now allow them to be discovered. If users find room groups redundant,

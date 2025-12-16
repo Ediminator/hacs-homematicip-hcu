@@ -405,7 +405,7 @@ async def async_discover_entities(
     # Add valid groups (only non-empty ones)
     valid_device_ids.update(
         group_id for group_id, group_data in state.get("groups", {}).items()
-        if (channels := group_data.get("channels")) and isinstance(channels, list) and len(channels) > 0
+        if (channels := group_data.get("channels")) and isinstance(channels, list)
     )
 
     # Find and remove orphaned devices
@@ -413,7 +413,10 @@ async def async_discover_entities(
     # and check if they correspond to a valid ID in the current state.
 
     # Get all devices for this config entry
-    entry_devices = dr.async_entries_for_config_entry(dev_reg, config_entry.entry_id)
+    entry_devices = [
+        device for device in dev_reg.devices.values()
+        if config_entry.entry_id in device.config_entries
+    ]
 
     for device in entry_devices:
         # Check if device has an identifier in our domain

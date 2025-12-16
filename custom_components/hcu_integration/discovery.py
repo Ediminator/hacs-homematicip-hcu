@@ -406,10 +406,6 @@ async def async_discover_entities(
     # Remove devices from the registry that are no longer present in the HCU state
     # or are considered invalid (e.g. empty groups).
 
-    # Add valid physical devices
-    # Note: valid_device_ids was initialized with physical devices at start of function
-    # and populated with valid group IDs during the group loop above.
-
 
     # Find and remove orphaned devices
     # We iterate over all devices in the registry associated with this config entry

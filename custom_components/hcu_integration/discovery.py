@@ -405,7 +405,7 @@ async def async_discover_entities(
     # Add valid groups (only non-empty ones)
     valid_device_ids.update(
         group_id for group_id, group_data in state.get("groups", {}).items()
-        if (channels := group_data.get("channels")) and isinstance(channels, list)
+        if (channels := group_data.get("channels")) and isinstance(channels, list) and len(channels) > 0
     )
 
     # Find and remove orphaned devices
@@ -436,9 +436,10 @@ async def async_discover_entities(
                 raise
             except Exception:
                 _LOGGER.warning(
-                    "Failed to remove orphaned device '%s' (id: %s)",
+                    "Failed to remove orphaned device '%s' (id: %s, HCU ID: %s)",
                     device.name,
                     device.id,
+                    hcu_identifier,
                     exc_info=True
                 )
 

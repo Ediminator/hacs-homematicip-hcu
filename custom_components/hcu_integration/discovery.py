@@ -438,7 +438,7 @@ async def async_discover_entities(
             )
             try:
                 dev_reg.async_remove_device(device.id)
-            except (asyncio.CancelledError, ConnectionError):
+            except asyncio.CancelledError:
                 raise
             except Exception:
                 _LOGGER.warning(

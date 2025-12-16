@@ -293,7 +293,7 @@ async def async_discover_entities(
         "SHUTTER": (Platform.COVER, cover.HcuCoverGroup, {}),
         "SWITCHING": (Platform.SWITCH, switch.HcuSwitchGroup, {}),
         "LIGHT": (Platform.LIGHT, light.HcuLightGroup, {}),
-        "EXTENDED_LINKED_SWITCHING": (Platform.LIGHT, light.HcuLightGroup, {}),
+        "EXTENDED_LINKED_SWITCHING": (Platform.SWITCH, switch.HcuSwitchGroup, {}),
         "EXTENDED_LINKED_SHUTTER": (Platform.COVER, cover.HcuCoverGroup, {}),
     }
 

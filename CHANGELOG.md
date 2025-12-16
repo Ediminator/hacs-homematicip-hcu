@@ -4,6 +4,18 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 
 ---
 
+## 1.19.1 - 2025-12-16
+
+### 🐛 Bug Fixes
+
+**Fix Zombie Groups and Registry Cleanup (Issue #185)**
+
+Fixed an issue where "zombie" groups (empty groups or groups deleted in HCU) persisted in the Home Assistant device registry as orphaned entities.
+
+- **Automated Registry Cleanup**: Implemented a robust cleanup mechanism that automatically removes devices and groups from the Home Assistant registry if they are no longer reported by the HCU API.
+- **Initialization Fix**: Fixed a bug where the `config_entry` was not correctly accessible in the `HcuCoordinator`, which could cause issues during entity setup.
+- **Improved Group Logic**: Refined the logic for identifying valid groups to ensure only functional groups are discovered.
+
 ## 1.19.0 - 2025-12-15
 
 ### ✨ New Features

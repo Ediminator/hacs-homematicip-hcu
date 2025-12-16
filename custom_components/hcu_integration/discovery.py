@@ -301,6 +301,11 @@ async def async_discover_entities(
     groups_discovered = 0
     groups_skipped_meta = 0
     groups_unknown_type = 0
+    
+    # Initialize valid device IDs with physical devices (and HCU itself if present in devices)
+    # We will also add valid group IDs to this set during the group discovery loop to avoid
+    # a second iteration over groups later.
+    valid_device_ids = set(state.get("devices", {}).keys())
 
     # Fetch device registry once before iterating groups
     dev_reg = dr.async_get(hass)
@@ -330,6 +335,8 @@ async def async_discover_entities(
                 group_id,
             )
             continue
+
+        valid_device_ids.add(group_id)
 
         if mapping := group_type_mapping.get(group_type):
             # Previously we skipped groups with metaGroupId assuming they were only auto-created room groups.
@@ -400,13 +407,9 @@ async def async_discover_entities(
     # or are considered invalid (e.g. empty groups).
 
     # Add valid physical devices
-    valid_device_ids.update(state.get("devices", {}).keys())
+    # Note: valid_device_ids was initialized with physical devices at start of function
+    # and populated with valid group IDs during the group loop above.
 
-    # Add valid groups (only non-empty ones)
-    valid_device_ids.update(
-        group_id for group_id, group_data in state.get("groups", {}).items()
-        if (channels := group_data.get("channels")) and isinstance(channels, list) and channels
-    )
 
     # Find and remove orphaned devices
     # We iterate over all devices in the registry associated with this config entry

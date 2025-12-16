@@ -416,7 +416,7 @@ async def async_discover_entities(
     # and check if they correspond to a valid ID in the current state.
 
     # Get all devices for this config entry
-    entry_devices = dr.async_entries_for_config_entry(dev_reg, config_entry.entry_id)
+    entry_devices = dr.async_get_devices_for_config_entry(dev_reg, config_entry.entry_id)
 
     for device in entry_devices:
         # Check if device has an identifier in our domain

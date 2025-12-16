@@ -328,7 +328,16 @@ async def async_discover_entities(
         # These are groups that exist in the HCU but contain no devices.
         # They should not be exposed as entities.
         channels = group_data.get("channels")
-        if not (isinstance(channels, list) and channels):
+        if channels is not None and not isinstance(channels, list):
+             _LOGGER.warning(
+                "Group '%s' (id: %s) has malformed 'channels' data (expected list, got %s) - skipping",
+                group_label,
+                group_id,
+                type(channels).__name__
+            )
+             continue
+
+        if not channels:
             _LOGGER.debug(
                 "Skipping group without channels: %s (id: %s)",
                 group_label,

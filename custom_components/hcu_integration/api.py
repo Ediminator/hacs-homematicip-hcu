@@ -23,7 +23,7 @@ from .util import create_unverified_ssl_context
 _LOGGER = logging.getLogger(__name__)
 
 # Model type prefixes for auxiliary access points (not primary HCU controllers)
-HAP_DRAP_PREFIXES = ("HmIP-HAP", "HmIP-DRAP", "HmIP-WLAN-HAP")
+HAP_DRAP_PREFIXES = ("HmIP-HAP", "HmIP-DRAP", "HmIP-WLAN-HAP", "HmIPW-DRAP")
 
 
 class HcuApiError(Exception):

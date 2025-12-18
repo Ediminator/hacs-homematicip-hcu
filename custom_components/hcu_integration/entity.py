@@ -189,14 +189,14 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, E
     
         model_type = self._device.get("modelType")
     
-        device_info_kwargs = dict(
-            identifiers={(DOMAIN, self._device_id)},
-            name=self._device.get("label", "Unknown Device"),
-            manufacturer=get_device_manufacturer(self._device),
-            model=self._device.get("modelType"),
-            sw_version=self._device.get("firmwareVersion"),
-            via_device=(DOMAIN, hcu_device_id),
-        )
+        device_info_kwargs = {
+            "identifiers": {(DOMAIN, self._device_id)},
+            "name": self._device.get("label", "Unknown Device"),
+            "manufacturer": get_device_manufacturer(self._device),
+            "model": self._device.get("modelType"),
+            "sw_version": self._device.get("firmwareVersion"),
+            "via_device": (DOMAIN, hcu_device_id),
+        }
     
         if model_type and model_type.startswith("HmIP"):
             device_info_kwargs["serial_number"] = self._device_id

@@ -86,6 +86,8 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
                 profile_name = profile.get("name")
     
                 effective_name = profile_name or self._name_from_profile_index(profile_index)
+                if profile_index == self._default_profile_index:
+                    self._default_profile_name = effective_name
                 self._profiles[effective_name] = profile_index
     
         self._attr_preset_modes = [
@@ -95,15 +97,15 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
             *self._profiles.keys(),
         ]
     
-    def _name_from_profile_index(self, profile_index: str) -> str:
+    def _name_from_profile_index(self, profile_index: str | None) -> str:
         if profile_index == "PROFILE_1":
             return "Standard"
     
-        m = re.match(r"PROFILE_(\d+)$", profile_index or "")
+        m = re.match(r"PROFILE_(\d+)", profile_index or "")
         if m:
             return f"Alternativprofil {int(m.group(1)) - 1}"
     
-        return profile_index
+        return profile_index or ""
         
     @callback
     def _handle_coordinator_update(self) -> None:

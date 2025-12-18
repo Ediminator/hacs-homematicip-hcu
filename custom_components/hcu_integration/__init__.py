@@ -129,6 +129,7 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
         self.entities: dict[Platform, list[Entity]] = {}
         self._event_entities: dict[tuple[str, str], event.TriggerableEvent] = {}
         self._connected_event = asyncio.Event()
+        self._initial_state_loaded = False
 
     async def async_setup(self) -> bool:
         """Initialize the coordinator and establish the initial connection."""
@@ -164,6 +165,9 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
             all_ids.add(home_id)
         self.async_set_updated_data(all_ids)
 
+        self.async_set_updated_data(all_ids)
+
+        self._initial_state_loaded = True
         return True
 
     def _register_hcu_device(self) -> None:
@@ -192,7 +196,9 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
 
         # Prevent race condition: Ignore events if initial state is not yet loaded
         # This prevents false positive timestamp detection during startup/reload
-        if not self.client.state.get("devices"):
+        # Prevent race condition: Ignore events if initial state is not yet loaded
+        # This prevents false positive timestamp detection during startup/reload
+        if not self._initial_state_loaded:
             _LOGGER.debug("Ignoring event as initial system state is not yet loaded")
             return
 

@@ -176,7 +176,7 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, E
         """Return the latest channel data from the parent device's data structure."""
         return self._device.get("functionalChannels", {}).get(self._channel_index_str, {})
 
-     @property
+    @property
     def device_info(self) -> DeviceInfo:
         """Return device information for the Home Assistant device registry."""
         hcu_device_id = self._client.hcu_device_id
@@ -192,8 +192,8 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, E
         device_info_kwargs = dict(
             identifiers={(DOMAIN, self._device_id)},
             name=self._device.get("label", "Unknown Device"),
-            manufacturer=self._device.get("oem", "eQ-3"),
-            model=model_type,
+            manufacturer=get_device_manufacturer(self._device)
+            model=self._device.get("modelType"),
             sw_version=self._device.get("firmwareVersion"),
             via_device=(DOMAIN, hcu_device_id),
         )

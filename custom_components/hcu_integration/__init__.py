@@ -165,8 +165,6 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
             all_ids.add(home_id)
         self.async_set_updated_data(all_ids)
 
-        self.async_set_updated_data(all_ids)
-
         self._initial_state_loaded = True
         return True
 

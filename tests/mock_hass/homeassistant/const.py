@@ -1,4 +1,6 @@
-class Platform:
+from enum import Enum
+
+class Platform(Enum):
     COVER = "cover"
     BINARY_SENSOR = "binary_sensor"
     SENSOR = "sensor"
@@ -11,7 +13,6 @@ class Platform:
     EVENT = "event"
     LOCK = "lock"
     SIREN = "siren"
-    # Add others as needed
 
 CONF_HOST = "host"
 CONF_TOKEN = "token"

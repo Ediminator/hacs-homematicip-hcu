@@ -124,6 +124,7 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
     ) -> None:
         """Initialize the coordinator."""
         super().__init__(hass, _LOGGER, name=DOMAIN, update_interval=None)
+        self.config_entry = entry
         self.client = client
         self.entities: dict[Platform, list[Entity]] = {}
         self._event_entities: dict[tuple[str, str], event.TriggerableEvent] = {}

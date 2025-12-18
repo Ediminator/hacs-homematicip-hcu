@@ -293,7 +293,7 @@ async def async_discover_entities(
         "SHUTTER": (Platform.COVER, cover.HcuCoverGroup, {}),
         "SWITCHING": (Platform.SWITCH, switch.HcuSwitchGroup, {}),
         "LIGHT": (Platform.LIGHT, light.HcuLightGroup, {}),
-        "EXTENDED_LINKED_SWITCHING": (Platform.LIGHT, light.HcuLightGroup, {}),
+        "EXTENDED_LINKED_SWITCHING": (Platform.SWITCH, switch.HcuSwitchGroup, {}),
         "EXTENDED_LINKED_SHUTTER": (Platform.COVER, cover.HcuCoverGroup, {}),
     }
 
@@ -301,6 +301,11 @@ async def async_discover_entities(
     groups_discovered = 0
     groups_skipped_meta = 0
     groups_unknown_type = 0
+    
+    # Initialize valid device IDs with physical devices (and HCU itself if present in devices)
+    # We will also add valid group IDs to this set during the group discovery loop to avoid
+    # a second iteration over groups later.
+    valid_device_ids = set(state.get("devices", {}).keys())
 
     # Fetch device registry once before iterating groups
     dev_reg = dr.async_get(hass)
@@ -319,42 +324,30 @@ async def async_discover_entities(
             )
             continue
 
-        # Skip and clean up groups with no channels (zombie groups)
+        # Skip groups with no channels (zombie groups)
         # These are groups that exist in the HCU but contain no devices.
-        # They should not be exposed as entities and existing ones should be removed (issue #185).
+        # They should not be exposed as entities.
         channels = group_data.get("channels")
+        if channels is not None and not isinstance(channels, list):
+            _LOGGER.warning(
+                "Group '%s' (id: %s) has malformed 'channels' data (expected list, got %s) - skipping",
+                group_label,
+                group_id,
+                type(channels).__name__
+            )
+            continue
 
-        # A group is a zombie if 'channels' is not a non-empty list.
-        if not (isinstance(channels, list) and channels):
-            if not isinstance(channels, list) and channels is not None:
-                _LOGGER.warning(
-                    "Group '%s' (id: %s) has a 'channels' attribute that is not a list: %s. Treating as zombie.",
-                    group_label,
-                    group_id,
-                    type(channels).__name__,
-                )
-            else:  # This covers None or an empty list.
-                _LOGGER.debug(
-                    "Skipping group without channels (zombie): %s (id: %s)",
-                    group_label,
-                    group_id,
-                )
-
-            # Cleanup: If this group exists in the device registry, remove it.
-            # This handles cases where the group was previously discovered (and created as a device)
-            # but is now empty/zombie.
-            if device := dev_reg.async_get_device(identifiers={(DOMAIN, group_id)}):
-                _LOGGER.debug("Removing zombie group device from registry: %s (id: %s)", group_label, group_id)
-                try:
-                    dev_reg.async_remove_device(device.id)
-                except asyncio.CancelledError:
-                    raise
-                except Exception:
-                    _LOGGER.warning("Failed to remove zombie group device '%s' (id: %s)", group_label, group_id, exc_info=True)
-
+        if not channels:
+            _LOGGER.debug(
+                "Skipping group without channels: %s (id: %s)",
+                group_label,
+                group_id,
+            )
             continue
 
         if mapping := group_type_mapping.get(group_type):
+            valid_device_ids.add(group_id)
+
             # Previously we skipped groups with metaGroupId assuming they were only auto-created room groups.
             # However, user-created "Direct Connections" also have metaGroupId (issue #146).
             # We now allow them to be discovered. If users find room groups redundant,
@@ -415,5 +408,47 @@ async def async_discover_entities(
             groups_skipped_meta,
             groups_unknown_type
         )
+
+    # -------------------------------------------------------------------------
+    # Device Registry Cleanup (Fix for Issue #185)
+    # -------------------------------------------------------------------------
+    # Remove devices from the registry that are no longer present in the HCU state
+    # or are considered invalid (e.g. empty groups).
+
+
+    # Find and remove orphaned devices
+    # We iterate over all devices in the registry associated with this config entry
+    # and check if they correspond to a valid ID in the current state.
+
+    # Get all devices for this config entry
+    entry_devices = dr.async_entries_for_config_entry(dev_reg, config_entry.entry_id)
+
+    for device in entry_devices:
+        # Check if device has an identifier in our domain
+        hcu_identifier = next(
+            (id_val for domain, id_val in device.identifiers if domain == DOMAIN),
+            None
+        )
+
+        # If it's a HCU device/group but not in our valid list, remove it
+        if hcu_identifier and hcu_identifier not in valid_device_ids:
+            _LOGGER.info(
+                "Removing orphaned device from registry: %s (id: %s, HCU ID: %s)",
+                device.name,
+                device.id,
+                hcu_identifier
+            )
+            try:
+                dev_reg.async_remove_device(device.id)
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                _LOGGER.warning(
+                    "Failed to remove orphaned device '%s' (id: %s, HCU ID: %s)",
+                    device.name,
+                    device.id,
+                    hcu_identifier,
+                    exc_info=True
+                )
 
     return entities

@@ -186,12 +186,14 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, E
             return DeviceInfo(
                 identifiers={(DOMAIN, hcu_device_id)},
             )
+        
+        model_type = self._device.get("modelType")
     
         device_info_kwargs = dict(
             identifiers={(DOMAIN, self._device_id)},
             name=self._device.get("label", "Unknown Device"),
             manufacturer=get_device_manufacturer(self._device),
-            model=self._device.get("modelType"),
+            model=model_type,
             sw_version=self._device.get("firmwareVersion"),
             via_device=(DOMAIN, hcu_device_id),
         )

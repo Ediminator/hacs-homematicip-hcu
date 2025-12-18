@@ -504,11 +504,6 @@ HMIP_FEATURE_TO_ENTITY = {
         "state_class": SensorStateClass.MEASUREMENT,
         "entity_registry_enabled_default": False,
     },
-    "accelerationSensorMode": {
-        "class": "HcuGenericSensor",
-        "name": "Acceleration Sensor Mode",
-        "icon": "mdi:axis-arrow",
-    },
     "accelerationSensorValueX": {
         "class": "HcuGenericSensor",
         "name": "Acceleration X",
@@ -530,11 +525,30 @@ HMIP_FEATURE_TO_ENTITY = {
         "state_class": SensorStateClass.MEASUREMENT,
         "entity_registry_enabled_default": False,
     },
+    "accelerationSensorTriggered": {
+        "class": "HcuBinarySensor",
+        "name": "Acceleration Sensor Triggered",
+        "icon": "mdi:accelerometer",
+        "device_class": BinarySensorDeviceClass.VIBRATION,
+    },
     "accelerationSensorEventCounter": {
         "class": "HcuGenericSensor",
         "name": "Acceleration Events",
         "icon": "mdi:counter",
         "state_class": SensorStateClass.TOTAL_INCREASING,
+        "entity_registry_enabled_default": False,
+    },
+    "tiltState": {
+        "class": "HcuGenericSensor",
+        "name": "Tilt State",
+        "icon": "mdi:axis-z-rotate-clockwise",
+    },
+    "absoluteAngle": {
+        "class": "HcuGenericSensor",
+        "name": "Absolute Angle",
+        "icon": "mdi:angle-acute",
+        "unit": DEGREE,
+        "state_class": SensorStateClass.MEASUREMENT,
         "entity_registry_enabled_default": False,
     },
     "mainsVoltage": {

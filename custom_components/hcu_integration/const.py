@@ -547,6 +547,7 @@ HMIP_FEATURE_TO_ENTITY = {
         "class": "HcuGenericSensor",
         "name": "Absolute Angle",
         "icon": "mdi:angle-acuteangle-acute",
+        "state_class": SensorStateClass.MEASUREMENT,
         "entity_registry_enabled_default": False,
     },
     "mainsVoltage": {

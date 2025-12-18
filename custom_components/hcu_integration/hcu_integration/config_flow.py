@@ -1,0 +1,665 @@
+# custom_components/hcu_integration/config_flow.py
+"""Config flow for the Homematic IP Local (HCU) integration."""
+import logging
+import aiohttp
+import asyncio
+import voluptuous as vol
+from urllib.parse import quote, unquote
+from typing import Any, TYPE_CHECKING
+from datetime import datetime, timedelta
+
+from homeassistant.config_entries import ConfigEntry, ConfigFlow, OptionsFlow
+from homeassistant.const import CONF_HOST, CONF_TOKEN, ATTR_TEMPERATURE
+from homeassistant.core import callback, HomeAssistant
+from homeassistant.data_entry_flow import FlowResult
+from homeassistant.helpers import aiohttp_client, device_registry as dr
+from homeassistant.helpers import selector
+from homeassistant.util import dt as dt_util
+
+from .api import HcuApiClient, HcuApiError
+from .const import (
+    DOMAIN,
+    DEFAULT_HCU_AUTH_PORT,
+    DEFAULT_HCU_WEBSOCKET_PORT,
+    PLUGIN_ID,
+    PLUGIN_FRIENDLY_NAME,
+    MANUFACTURER_EQ3,
+    MANUFACTURER_HUE,
+    HUE_MODEL_TOKEN,
+    CONF_PIN,
+    CONF_COMFORT_TEMPERATURE,
+    DEFAULT_COMFORT_TEMPERATURE,
+    CONF_AUTH_PORT,
+    CONF_WEBSOCKET_PORT,
+    CONF_ENTITY_PREFIX,
+    CONF_PLATFORM_OVERRIDES,
+    ATTR_END_TIME,
+)
+from .util import create_unverified_ssl_context, get_device_manufacturer
+
+if TYPE_CHECKING:
+    from . import HcuCoordinator
+
+_LOGGER = logging.getLogger(__name__)
+
+
+async def async_setup(hass: HomeAssistant, config: dict):
+    """Set up the HCU component."""
+    return True
+
+
+async def async_will_remove_config_entry(
+    hass: HomeAssistant, config_entry: ConfigEntry
+) -> None:
+    """Handle removal of a config entry."""
+    _LOGGER.warning(
+        "The HCU integration has been removed. For security, please manually delete the "
+        "'Home Assistant Integration' client from your Homematic IP smartphone app "
+        "or HCUweb to revoke the old API token."
+    )
+
+
+def get_third_party_oems(client: "HcuApiClient | None") -> set[str]:
+    """Discover third-party OEMs from the HCU state."""
+    third_party_oems = set()
+    if client and client.state:
+        for device in client.state.get("devices", {}).values():
+            manufacturer = get_device_manufacturer(device)
+            if manufacturer != MANUFACTURER_EQ3:
+                third_party_oems.add(manufacturer)
+    return third_party_oems
+
+
+class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
+    """Handle a config flow for the Homematic IP HCU Integration."""
+
+    VERSION = 1
+    reauth_entry: ConfigEntry | None = None
+
+    _config_data: dict[str, Any] = {}
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(
+        config_entry: ConfigEntry,
+    ) -> "HcuOptionsFlowHandler":
+        """Get the options flow for this handler."""
+        return HcuOptionsFlowHandler()
+
+    async def async_step_user(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Handle the initial setup step where the user provides the host and ports."""
+        if user_input is not None:
+            host = user_input[CONF_HOST]
+            await self.async_set_unique_id(host)
+            self._abort_if_unique_id_configured(updates={CONF_HOST: host})
+
+            self._config_data = user_input
+
+            return await self.async_step_auth()
+
+        return self.async_show_form(
+            step_id="user",
+            data_schema=vol.Schema(
+                {
+                    vol.Required("host", default=self.context.get("host", "")): str,
+                    vol.Optional(CONF_ENTITY_PREFIX, default=""): str,
+                    vol.Required(
+                        "auth_port", default=DEFAULT_HCU_AUTH_PORT
+                    ): int,
+                    vol.Required(
+                        "websocket_port", default=DEFAULT_HCU_WEBSOCKET_PORT
+                    ): int,
+                }
+            ),
+            description_placeholders={
+                "info": "Entity prefix is optional. Use it for multi-home setups to distinguish entities (e.g., 'House1' will create 'House1 Living Room')."
+            },
+        )
+
+    async def async_step_auth(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Handle the authentication step where the user provides an activation key."""
+        errors = {}
+        host = self._config_data["host"]
+        auth_port = self._config_data["auth_port"]
+
+        if user_input is not None:
+            activation_key = user_input["activation_key"]
+            session = aiohttp_client.async_get_clientsession(self.hass)
+            ssl_context = await create_unverified_ssl_context(self.hass)
+
+            try:
+                auth_token = await self._async_get_auth_token(
+                    session, host, auth_port, activation_key, ssl_context
+                )
+                await self._async_confirm_auth_token(
+                    session, host, auth_port, activation_key, auth_token, ssl_context
+                )
+
+                _LOGGER.info(
+                    "Successfully received and confirmed auth token from HCU at %s",
+                    host,
+                )
+
+                # Save token and prefix to config data
+                self._config_data[CONF_TOKEN] = auth_token
+                
+                # Add entity prefix if provided
+                if prefix := self._config_data.get(CONF_ENTITY_PREFIX, "").strip():
+                    self._config_data[CONF_ENTITY_PREFIX] = prefix
+
+                return await self.async_step_select_oems()
+
+            except (aiohttp.ClientError, asyncio.TimeoutError):
+                errors["base"] = "cannot_connect"
+            except ValueError as err:
+                _LOGGER.error("Invalid response from HCU: %s", err)
+                errors["base"] = "invalid_key"
+            except Exception:
+                _LOGGER.exception("An unexpected error occurred during handshake")
+                errors["base"] = "unknown"
+
+        return self.async_show_form(
+            step_id="auth",
+            data_schema=vol.Schema({vol.Required("activation_key"): str}),
+            description_placeholders={"hcu_ip": host},
+            errors=errors,
+        )
+
+    async def async_step_select_oems(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Step to select third-party OEMs to import capabilities from."""
+        host = self._config_data[CONF_HOST]
+        token = self._config_data[CONF_TOKEN]
+        auth_port = self._config_data[CONF_AUTH_PORT]
+        websocket_port = self._config_data[CONF_WEBSOCKET_PORT]
+
+        # Use valid args for HcuApiClient
+        session = aiohttp_client.async_get_clientsession(self.hass)
+        client = HcuApiClient(
+            self.hass,
+            host,
+            token,
+            session,
+            auth_port=auth_port,
+            websocket_port=websocket_port,
+        )
+
+        try:
+            # We need to connect to get the system state to find OEMs
+            await client.connect()
+            try:
+                await client.get_system_state()
+            finally:
+                if client.is_connected:
+                    await client.disconnect()
+        except (HcuApiError, ConnectionError, asyncio.TimeoutError, aiohttp.ClientError):
+            _LOGGER.warning(
+                "Failed to connect to HCU during OEM selection. Proceeding without selection."
+            )
+            return self.async_create_entry(
+                title="Homematic IP Local (HCU)",
+                data=self._config_data,
+            )
+
+        third_party_oems = get_third_party_oems(client)
+
+        if not third_party_oems:
+            return self.async_create_entry(
+                title="Homematic IP Local (HCU)",
+                data=self._config_data,
+            )
+
+        if user_input is not None:
+            # User input contains 'selected_oems' (list of strings).
+            # Convert to disabled_oems (those NOT selected).
+            selected = set(user_input.get("selected_oems", []))
+            disabled_oems = list(third_party_oems - selected)
+            
+            return self.async_create_entry(
+                title="Homematic IP Local (HCU)",
+                data=self._config_data,
+                options={"disabled_oems": disabled_oems},
+            )
+
+        third_party_oems_list = sorted(third_party_oems)
+        
+        # Default: All selected (IMPORT everything by default)
+        default_selected = third_party_oems_list
+
+        schema = {
+            vol.Required(
+                "selected_oems",
+                default=default_selected,
+            ): selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=third_party_oems_list,
+                    multiple=True,
+                    mode=selector.SelectSelectorMode.LIST,
+                )
+            )
+        }
+
+        return self.async_show_form(
+            step_id="select_oems",
+            data_schema=vol.Schema(schema),
+            description_placeholders={},
+        )
+
+    async def async_step_reauth(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Handle a reauthentication flow."""
+        self.reauth_entry = self.hass.config_entries.async_get_entry(
+            self.context["entry_id"]
+        )
+        return await self.async_step_reauth_confirm()
+
+    async def async_step_reauth_confirm(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Handle the PIN reauthentication form."""
+        if user_input is not None and self.reauth_entry:
+            new_data = {**self.reauth_entry.data, CONF_PIN: user_input[CONF_PIN]}
+            self.hass.config_entries.async_update_entry(
+                self.reauth_entry, data=new_data
+            )
+            await self.hass.config_entries.async_reload(self.reauth_entry.entry_id)
+            return self.async_abort(reason="reauth_successful")
+
+        return self.async_show_form(
+            step_id="reauth_confirm",
+            data_schema=vol.Schema({vol.Required(CONF_PIN): str}),
+            description_placeholders={
+                "info": "Your door lock requires a PIN for operation. Please enter the PIN you configured in your Homematic IP app."
+            },
+        )
+
+    async def async_step_reconfigure(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Handle a reconfiguration flow for changing HCU connection details."""
+        entry = self.hass.config_entries.async_get_entry(self.context["entry_id"])
+        errors = {}
+
+        if user_input is not None:
+            new_host = user_input[CONF_HOST]
+            new_auth_port = user_input[CONF_AUTH_PORT]
+            new_websocket_port = user_input[CONF_WEBSOCKET_PORT]
+
+            listener_task = None
+            client = None
+            try:
+                session = aiohttp_client.async_get_clientsession(self.hass)
+                client = HcuApiClient(
+                    self.hass,
+                    new_host,
+                    entry.data[CONF_TOKEN],
+                    session,
+                    new_auth_port,
+                    new_websocket_port,
+                )
+
+                await client.connect()
+                listener_task = self.hass.async_create_task(client.listen())
+                await client.get_system_state()
+
+                self.hass.config_entries.async_update_entry(
+                    entry,
+                    data={
+                        **entry.data,
+                        CONF_HOST: new_host,
+                        CONF_AUTH_PORT: new_auth_port,
+                        CONF_WEBSOCKET_PORT: new_websocket_port,
+                    },
+                )
+                await self.hass.config_entries.async_reload(entry.entry_id)
+                return self.async_abort(reason="reconfigure_successful")
+
+            except (
+                HcuApiError,
+                ConnectionError,
+                asyncio.TimeoutError,
+                aiohttp.ClientError,
+            ):
+                _LOGGER.error("Failed to connect to new HCU host/port combination")
+                errors["base"] = "cannot_connect"
+            except ValueError as err:
+                _LOGGER.error("Invalid configuration or response: %s", err)
+                errors["base"] = "invalid_config"
+            except Exception:
+                _LOGGER.exception("Unexpected error during reconfiguration.")
+                errors["base"] = "unknown"
+            finally:
+                if listener_task:
+                    listener_task.cancel()
+                if client and client.is_connected:
+                    await client.disconnect()
+
+        return self.async_show_form(
+            step_id="reconfigure",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(CONF_HOST, default=entry.data[CONF_HOST]): str,
+                    vol.Required(
+                        CONF_AUTH_PORT,
+                        default=entry.data.get(CONF_AUTH_PORT, DEFAULT_HCU_AUTH_PORT),
+                    ): int,
+                    vol.Required(
+                        CONF_WEBSOCKET_PORT,
+                        default=entry.data.get(
+                            CONF_WEBSOCKET_PORT, DEFAULT_HCU_WEBSOCKET_PORT
+                        ),
+                    ): int,
+                }
+            ),
+            errors=errors,
+        )
+
+    async def _async_get_auth_token(
+        self,
+        session: aiohttp.ClientSession,
+        host: str,
+        port: int,
+        key: str,
+        ssl_context,
+    ) -> str:
+        """Request a new auth token from the HCU."""
+        url = f"https://{host}:{port}/hmip/auth/requestConnectApiAuthToken"
+        headers = {"VERSION": "12"}
+        body = {
+            "activationKey": key,
+            "pluginId": PLUGIN_ID,
+            "friendlyName": PLUGIN_FRIENDLY_NAME,
+        }
+
+        async with session.post(
+            url, headers=headers, json=body, ssl=ssl_context
+        ) as response:
+            response.raise_for_status()
+            data = await response.json()
+            if not (token := data.get("authToken")):
+                raise ValueError("No authToken in HCU response")
+            return token
+
+    async def _async_confirm_auth_token(
+        self,
+        session: aiohttp.ClientSession,
+        host: str,
+        port: int,
+        key: str,
+        token: str,
+        ssl_context,
+    ) -> None:
+        """Confirm the new auth token with the HCU."""
+        url = f"https://{host}:{port}/hmip/auth/confirmConnectApiAuthToken"
+        headers = {"VERSION": "12"}
+        body = {"activationKey": key, "authToken": token}
+
+        async with session.post(
+            url, headers=headers, json=body, ssl=ssl_context
+        ) as response:
+            response.raise_for_status()
+            if not (await response.json()).get("clientId"):
+                raise ValueError("HCU did not confirm the authToken.")
+
+class HcuOptionsFlowHandler(OptionsFlow):
+    """Handle an options flow for the HCU integration."""
+
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Manage the options for the integration."""
+        return self.async_show_menu(
+            step_id="init",
+            menu_options=["global_settings", "lock_pin", "vacation"],
+        )
+
+    async def async_step_global_settings(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Manage the global settings (comfort temp and OEM toggles)."""
+        coordinator: "HcuCoordinator" | None = self.hass.data[DOMAIN].get(
+            self.config_entry.entry_id
+        )
+        client: HcuApiClient | None = coordinator.client if coordinator else None
+        
+        third_party_oems = get_third_party_oems(client)
+        third_party_oems_list = sorted(third_party_oems)
+
+        if user_input is not None:
+            # Calculate disabled OEMs from inverted selection
+            selected = set(user_input.get("selected_oems", []))
+            disabled_oems = list(third_party_oems - selected)
+            
+            await self._handle_device_removal(disabled_oems)
+            
+            # Clean up old boolean keys if present to avoid clutter
+            new_options = {**self.config_entry.options}
+            # Remove old keys
+            keys_to_remove = [k for k in new_options if k.startswith("import_")]
+            for k in keys_to_remove:
+                new_options.pop(k)
+
+            # Update new values
+            new_options[CONF_COMFORT_TEMPERATURE] = user_input[CONF_COMFORT_TEMPERATURE]
+            new_options["disabled_oems"] = disabled_oems
+
+            return self.async_create_entry(title="", data=new_options)
+
+        # Determine currently enabled OEMs (for pre-selection)
+        # Check for new list format first
+        disabled_oems = set(self.config_entry.options.get("disabled_oems", []))
+        
+        # Backward compatibility: Check old boolean keys if new list not found (or empty? no, empty is valid)
+        # If "disabled_oems" key is missing entirely, check legacy keys.
+        if "disabled_oems" not in self.config_entry.options:
+             for oem in third_party_oems:
+                option_key = f"import_{quote(oem)}"
+                # Migration logic: Check for old keys
+                # Format 1 (Round <9): lowercase with underscores
+                old_key_v1 = f"import_{oem.lower().replace(' ', '_')}"
+                # Format 2 (Round 9-12): original case with underscores (lossy)
+                old_key_v2 = f"import_{oem.replace(' ', '_')}"
+
+                is_enabled = self.config_entry.options.get(option_key, True)
+                
+                # Check for migration if the new key is missing
+                if option_key not in self.config_entry.options:
+                    if old_key_v2 in self.config_entry.options:
+                        is_enabled = self.config_entry.options[old_key_v2]
+                    elif old_key_v1 in self.config_entry.options:
+                        is_enabled = self.config_entry.options[old_key_v1]
+                
+                if not is_enabled:
+                    disabled_oems.add(oem)
+
+        # Pre-select everything that is NOT disabled
+        default_selected = [oem for oem in third_party_oems_list if oem not in disabled_oems]
+
+        schema = {
+            vol.Optional(
+                CONF_COMFORT_TEMPERATURE,
+                default=self.config_entry.options.get(
+                    CONF_COMFORT_TEMPERATURE, DEFAULT_COMFORT_TEMPERATURE
+                ),
+            ): vol.Coerce(float),
+            vol.Required(
+                "selected_oems",
+                default=default_selected,
+            ): selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=third_party_oems_list,
+                    multiple=True,
+                    mode=selector.SelectSelectorMode.LIST,
+                )
+            )
+        }
+
+        return self.async_show_form(
+            step_id="global_settings", data_schema=vol.Schema(schema)
+        )
+
+    async def async_step_lock_pin(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Configure the lock PIN."""
+        if user_input is not None:
+            pin_value = user_input.get(CONF_PIN, "").strip()
+            
+            # Update config entry data with the new PIN (or remove it if empty)
+            new_data = {**self.config_entry.data}
+            if pin_value:
+                new_data[CONF_PIN] = pin_value
+            else:
+                new_data.pop(CONF_PIN, None)
+                
+            self.hass.config_entries.async_update_entry(
+                self.config_entry, data=new_data
+            )
+            
+            # Reload to apply changes
+            await self.hass.config_entries.async_reload(self.config_entry.entry_id)
+            return self.async_create_entry(title="", data={})
+
+        current_pin = self.config_entry.data.get(CONF_PIN, "")
+        
+        return self.async_show_form(
+            step_id="lock_pin",
+            data_schema=vol.Schema(
+                {
+                    vol.Optional(CONF_PIN, default=current_pin): str,
+                }
+            ),
+            description_placeholders={
+                "info": (
+                    "Some door locks require a PIN for operation. "
+                    "If your locks work without a PIN, leave this field empty. "
+                    "If you receive 'INVALID_AUTHORIZATION_PIN' errors, enter the PIN you configured in your Homematic IP app here."
+                )
+            },
+        )
+
+    async def async_step_vacation(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Handle activating vacation mode."""
+        errors: dict[str, str] = {}
+
+        coordinator: "HcuCoordinator" | None = self.hass.data[DOMAIN].get(
+            self.config_entry.entry_id
+        )
+        client: HcuApiClient | None = coordinator.client if coordinator else None
+
+        if not client:
+            _LOGGER.error("HCU client not available")
+            return self.async_abort(reason="internal_error")
+
+        if user_input is not None:
+            try:
+                end_time_str = user_input[ATTR_END_TIME]
+                end_time_dt = datetime.fromisoformat(end_time_str)
+                ha_tz = dt_util.get_time_zone(self.hass.config.time_zone)
+                local_end_time = end_time_dt.astimezone(ha_tz)
+                formatted_end_time = local_end_time.strftime("%Y_%m_%d %H:%M")
+                temperature = user_input[ATTR_TEMPERATURE]
+
+                await client.async_activate_vacation(
+                    temperature=temperature, end_time=formatted_end_time
+                )
+
+                return self.async_create_entry(title="", data={})
+
+            except HcuApiError as err:
+                _LOGGER.error("Failed to activate vacation mode: %s", err)
+                errors["base"] = "api_error"
+            except ConnectionError:
+                errors["base"] = "cannot_connect"
+            except (ValueError, TypeError) as err:
+                _LOGGER.error("Invalid date/time format or temperature: %s", err)
+                errors["base"] = "invalid_data"
+            except Exception:
+                _LOGGER.exception("Unexpected error activating vacation mode")
+                errors["base"] = "unknown"
+
+        default_end_time = datetime.now() + timedelta(days=7)
+        default_temp = self.config_entry.options.get(
+            CONF_COMFORT_TEMPERATURE, DEFAULT_COMFORT_TEMPERATURE
+        )
+
+        return self.async_show_form(
+            step_id="vacation",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(
+                        ATTR_TEMPERATURE,
+                        default=default_temp,
+                    ): vol.All(vol.Coerce(float), vol.Range(min=5.0, max=30.0)),
+                    vol.Required(
+                        ATTR_END_TIME,
+                        default=default_end_time.strftime("%Y-%m-%d %H:%M"),
+                    ): selector.DateTimeSelector(),
+                }
+            ),
+            errors=errors,
+        )
+
+    async def _handle_device_removal(self, disabled_oems: list[str] | set[str]) -> None:
+        """Remove devices from the registry for OEMs that have been disabled."""
+        if not disabled_oems:
+            return
+
+        device_registry = dr.async_get(self.hass)
+        
+        # Get the HCU client to check actual device data
+        # The registry might have stale manufacturer info (e.g. "eQ-3" for Hue devices)
+        coordinator: "HcuCoordinator" | None = self.hass.data[DOMAIN].get(
+            self.config_entry.entry_id
+        )
+        client: HcuApiClient | None = coordinator.client if coordinator else None
+
+        if not client:
+            _LOGGER.warning("Cannot check device details for removal: HCU client not available")
+            return
+            
+        disabled_oems_set = set(disabled_oems)
+
+        all_devices = dr.async_entries_for_config_entry(
+            device_registry, self.config_entry.entry_id
+        )
+
+        for device in all_devices:
+            # Resolve the real manufacturer using live data from the HCU
+            # Device registry identifiers are tuples like (DOMAIN, device_id)
+            device_id = next(
+                (x[1] for x in device.identifiers if x[0] == DOMAIN), None
+            )
+            
+            manufacturer_to_check = None
+            device_data = client.get_device_by_address(device_id) if device_id else None
+
+            if device_data:
+                manufacturer_to_check = get_device_manufacturer(device_data)
+            else:
+                # Fallback for devices not in current state (maybe disconnected?)
+                # OR if device_id was not found in identifiers.
+                # The registry manufacturer might be stale ("eQ-3" for a Hue device)
+                # if registered with an older version.
+                # As a secondary fallback, check the model name from the registry.
+                if device.model and HUE_MODEL_TOKEN in device.model:
+                    manufacturer_to_check = MANUFACTURER_HUE
+                else:
+                    manufacturer_to_check = device.manufacturer
+
+            if manufacturer_to_check and manufacturer_to_check in disabled_oems_set:
+                _LOGGER.info(
+                    "Removing device %s (%s) as its manufacturer (%s) has been disabled via options.",
+                    device.name,
+                    device.id,
+                    manufacturer_to_check,
+                )
+                device_registry.async_remove_device(device.id)

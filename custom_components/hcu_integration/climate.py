@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from typing import TYPE_CHECKING, Any
 from datetime import timedelta
 
@@ -69,31 +70,41 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
         """Initialize the HCU Climate entity."""
         super().__init__(coordinator, client, group_data)
         self._config_entry = config_entry
+        
         self._default_profile_name = "Standard"
         self._default_profile_index = "PROFILE_1"
 
-        self._profiles: dict[str, str] = {}
+        self._rebuild_profiles_and_presets()
+        self._update_attributes_from_group_data()
+
+    def _rebuild_profiles_and_presets(self) -> None:
+        self._profiles = {}
+    
         for profile in self._group.get("profiles", {}).values():
             if profile.get("enabled") and profile.get("visible"):
                 profile_index = profile["index"]
                 profile_name = profile.get("name")
-
-                if profile_index == "PROFILE_1":
-                    # Always include PROFILE_1, name it 'Standard' if unnamed
-                    self._default_profile_name = profile_name or "Standard"
-                    self._profiles[self._default_profile_name] = profile_index
-                elif profile_name:  # Only include other profiles if they have a name
-                    self._profiles[profile_name] = profile_index
-
+    
+                effective_name = profile_name or self._name_from_profile_index(profile_index)
+                self._profiles[effective_name] = profile_index
+    
         self._attr_preset_modes = [
             PRESET_BOOST,
             PRESET_ECO,
             PRESET_PARTY,
             *self._profiles.keys(),
         ]
-
-        self._update_attributes_from_group_data()
-
+    
+    def _name_from_profile_index(self, profile_index: str) -> str:
+        if profile_index == "PROFILE_1":
+            return "Standard"
+    
+        m = re.match(r"PROFILE_(\d+)$", profile_index or "")
+        if m:
+            return f"Alternativprofil {int(m.group(1)) - 1}"
+    
+        return profile_index
+        
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""

@@ -277,14 +277,7 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
                 if channel_type in DEVICE_CHANNEL_EVENT_ONLY_TYPES:
                     continue
 
-                # Defensive check: explicit string literal exclusion for problematic channel type
-                # This ensures it's skipped even if constant resolution implies otherwise
-                if channel_type == "MULTI_MODE_INPUT_CHANNEL":
-                    _LOGGER.debug(
-                        "Defensively excluding channel type %s from timestamp detection (device=%s, channel=%s)",
-                        channel_type, device_id, ch_idx
-                    )
-                    continue
+
 
                 if channel_type in EVENT_CHANNEL_TYPES:
                     _LOGGER.debug(

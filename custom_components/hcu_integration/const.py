@@ -528,7 +528,8 @@ HMIP_FEATURE_TO_ENTITY = {
     "accelerationSensorTriggered": {
         "class": "HcuBinarySensor",
         "name": "Acceleration Sensor Triggered",
-        "icon": "mdi:axis-arrow",
+        "icon": "mdi:accelerometer",
+        "device_class": BinarySensorDeviceClass.VIBRATION,
     },
     "accelerationSensorEventCounter": {
         "class": "HcuGenericSensor",
@@ -540,12 +541,12 @@ HMIP_FEATURE_TO_ENTITY = {
     "tiltState": {
         "class": "HcuGenericSensor",
         "name": "Tilt State",
-        "icon": "mdi:axis-arrow",
+        "icon": "mdi:axis-z-rotate-clockwise",
     },
     "absoluteAngle": {
         "class": "HcuGenericSensor",
         "name": "Absolute Angle",
-        "icon": "mdi:axis-arrow",
+        "icon": "mdi:angle-acuteangle-acute",
     },
     "mainsVoltage": {
         "class": "HcuGenericSensor",

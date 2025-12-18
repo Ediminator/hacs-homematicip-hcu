@@ -187,8 +187,6 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, E
                 identifiers={(DOMAIN, hcu_device_id)},
             )
     
-        model_type = self._device.get("modelType")
-    
         device_info_kwargs = dict(
             identifiers={(DOMAIN, self._device_id)},
             name=self._device.get("label", "Unknown Device"),

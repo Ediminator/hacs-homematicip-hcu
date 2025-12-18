@@ -190,6 +190,12 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
         if msg.get("type") != "HMIP_SYSTEM_EVENT":
             return
 
+        # Prevent race condition: Ignore events if initial state is not yet loaded
+        # This prevents false positive timestamp detection during startup/reload
+        if not self.client.state.get("devices"):
+            _LOGGER.debug("Ignoring event as initial system state is not yet loaded")
+            return
+
         body = msg.get("body", {})
         events = body.get("eventTransaction", {}).get("events", {})
         if not events:
@@ -271,9 +277,20 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
                 if channel_type in DEVICE_CHANNEL_EVENT_ONLY_TYPES:
                     continue
 
-
+                # Defensive check: explicit string literal exclusion for problematic channel type
+                # This ensures it's skipped even if constant resolution implies otherwise
+                if channel_type == "MULTI_MODE_INPUT_CHANNEL":
+                    _LOGGER.debug(
+                        "Defensively excluding channel type %s from timestamp detection (device=%s, channel=%s)",
+                        channel_type, device_id, ch_idx
+                    )
+                    continue
 
                 if channel_type in EVENT_CHANNEL_TYPES:
+                    _LOGGER.debug(
+                        "Including channel for timestamp detection: device=%s, channel=%s, type=%s",
+                        device_id, ch_idx, channel_type
+                    )
                     event_channels.add((device_id, ch_idx))
 
         return event_channels

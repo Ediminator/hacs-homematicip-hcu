@@ -370,9 +370,7 @@ class HcuNotificationLight(HcuBaseEntity, LightEntity):
     @property
     def is_on(self) -> bool:
         """Return True if the light is on."""
-        # For BSL-like devices, opticalSignalBehaviour being OFF means the light is off,
-        # regardless of dimLevel.
-
+       
         dim_level = self._channel.get("dimLevel")
         if dim_level is not None:
             return dim_level > 0.0

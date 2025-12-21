@@ -175,26 +175,33 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, E
     def _channel(self) -> dict[str, Any]:
         """Return the latest channel data from the parent device's data structure."""
         return self._device.get("functionalChannels", {}).get(self._channel_index_str, {})
-
+        
     @property
     def device_info(self) -> DeviceInfo:
         """Return device information for the Home Assistant device registry."""
         hcu_device_id = self._client.hcu_device_id
-
+    
         # If the entity belongs to the HCU itself, link it to the main HCU device
         if self._device_id in self._client.hcu_part_device_ids:
             return DeviceInfo(
                 identifiers={(DOMAIN, hcu_device_id)},
             )
-
-        return DeviceInfo(
+        
+        model_type = self._device.get("modelType")
+    
+        device_info_kwargs = dict(
             identifiers={(DOMAIN, self._device_id)},
             name=self._device.get("label", "Unknown Device"),
             manufacturer=get_device_manufacturer(self._device),
-            model=self._device.get("modelType"),
+            model=model_type,
             sw_version=self._device.get("firmwareVersion"),
             via_device=(DOMAIN, hcu_device_id),
         )
+    
+        if model_type and model_type.startswith("HmIP"):
+            device_info_kwargs["serial_number"] = self._device_id
+
+        return DeviceInfo(**device_info_kwargs)
 
     @property
     def available(self) -> bool:

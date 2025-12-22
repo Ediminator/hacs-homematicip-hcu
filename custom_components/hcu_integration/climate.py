@@ -238,11 +238,14 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
         """Return the current HVAC action."""
         valve_pos = self.current_valve_position
         if valve_pos is None:
-            return None  # oder HVACAction.IDLE, wenn du lieber nie None willst
+            return None  # or HVACAction.IDLE if you prefer to never return None
     
-        # Optional: Attribute setzen, aber NICHT hier, besser in extra_state_attributes
+        target_temp = self._attr_target_temperature  # alternatively: self.target_temperature
+        if target_temp is not None and target_temp <= 5.0:
+            return HVACAction.OFF  # use <= 5.0 if 5°C should already be OFF
+    
         return HVACAction.HEATING if valve_pos > 0.0 else HVACAction.IDLE
-        
+    
     async def async_set_temperature(self, **kwargs: Any) -> None:
         """Set new target temperature."""
         temperature = kwargs.get(ATTR_TEMPERATURE)

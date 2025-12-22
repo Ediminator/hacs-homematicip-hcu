@@ -53,8 +53,7 @@ def get_device_manufacturer(device_data: dict) -> str:
         return oem
 
     # 3. Check loose model name match for Hue
-    model_type_raw = device_data.get("modelType")
-    model_type = model_type_raw if isinstance(model_type_raw, str) else ""
+    model_type = device_data.get("modelType") or ""
     if HUE_MODEL_TOKEN in model_type:
         return MANUFACTURER_HUE
 

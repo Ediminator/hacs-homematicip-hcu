@@ -302,7 +302,6 @@ class HcuLight(HcuBaseEntity, LightEntity):
         """Turn the light off."""
         ramp_time = kwargs.get(ATTR_TRANSITION)
         
-        # For BSL devices, we set optical signal to OFF to ensure it goes dark
         if self._has_simple_rgb and self._supports_optical_signal:
             payload = {
                 # Preserve color state, set dim to 0, and set signal to OFF
@@ -369,9 +368,6 @@ class HcuNotificationLight(HcuBaseEntity, LightEntity):
     @property
     def is_on(self) -> bool:
         """Return True if the light is on."""
-        # For BSL-like devices, opticalSignalBehaviour being OFF means the light is off,
-        # regardless of dimLevel.
-
         dim_level = self._channel.get("dimLevel")
         if dim_level is not None:
             return dim_level > 0.0
@@ -381,7 +377,7 @@ class HcuNotificationLight(HcuBaseEntity, LightEntity):
     def brightness(self) -> int | None:
         """Return the brightness (0-255)."""
         dim_level = self._channel.get("dimLevel")
-        return int(dim_level * 255)
+        return int(dim_level * 255) if dim_level is not None else None
 
     @property
     def hs_color(self) -> tuple[float, float] | None:

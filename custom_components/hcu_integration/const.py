@@ -144,6 +144,7 @@ API_PATHS = {
     "SET_SIMPLE_RGB_COLOR_STATE": "/hmip/device/control/setSimpleRGBColorDimLevel",
     "SET_SIMPLE_RGB_COLOR_STATE_WITH_TIME": "/hmip/device/control/setSimpleRGBColorDimLevelWithTime",
     "SET_OPTICAL_SIGNAL_BEHAVIOUR_WITH_TIME": "/hmip/device/control/setOpticalSignalWithTime",
+    "SET_OPTICAL_SIGNAL_BEHAVIOUR": "/hmip/device/control/setOpticalSignal",
     "SET_SLATS_LEVEL": "/hmip/device/control/setSlatsLevel",
     "SET_SOUND_FILE": "/hmip/device/control/setSoundFileVolumeLevelWithTime",
     "SET_SWITCH_STATE": "/hmip/device/control/setSwitchState",

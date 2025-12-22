@@ -259,10 +259,12 @@ class HcuLight(HcuBaseEntity, LightEntity):
                 "dimLevel": dim_level
             }
             if optical_signal:
+                payload["opticalSignalBehaviour"] = optical_signal
                 if ramp_time is not None:
                     payload["rampTime"] = ramp_time
-                payload["opticalSignalBehaviour"] = optical_signal
-                path = API_PATHS["SET_OPTICAL_SIGNAL_BEHAVIOUR_WITH_TIME"]
+                    path = API_PATHS["SET_OPTICAL_SIGNAL_BEHAVIOUR_WITH_TIME"]
+                else:
+                    path = API_PATHS["SET_OPTICAL_SIGNAL_BEHAVIOUR"]
             else:
                 # 4. Determine Path (With or Without Time)
                 if ramp_time is not None:

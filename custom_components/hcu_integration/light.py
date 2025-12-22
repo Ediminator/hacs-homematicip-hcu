@@ -426,7 +426,7 @@ class HcuNotificationLight(HcuBaseEntity, LightEntity):
         # Fallback for color if missing or black (default to white)
         if not rgb_color or rgb_color == HMIP_COLOR_BLACK:
             rgb_color = HMIP_COLOR_WHITE
-                
+        
         payload = {
             "simpleRGBColorState": rgb_color,
             "dimLevel": dim_level

@@ -139,6 +139,8 @@ API_PATHS = {
     "SET_HUE": "/hmip/device/control/setHueSaturationDimLevel",
     "SET_HUE_WITH_TIME": "/hmip/device/control/setHueSaturationDimLevelWithTime",
     "SET_LOCK_STATE": "/hmip/device/control/setLockState",
+    "SET_OPTICAL_SIGNAL_BEHAVIOUR": "/hmip/device/control/setOpticalSignal",
+    "SET_OPTICAL_SIGNAL_BEHAVIOUR_WITH_TIME": "/hmip/device/control/setOpticalSignalWithTime",
     "SET_PRIMARY_SHADING_LEVEL": "/hmip/device/control/setPrimaryShadingLevel",  # For SHADING_CHANNEL devices (e.g., HmIP-HDM1)
     "SET_SHUTTER_LEVEL": "/hmip/device/control/setShutterLevel",
     "SET_SIMPLE_RGB_COLOR_STATE": "/hmip/device/control/setSimpleRGBColorDimLevel",
@@ -738,6 +740,7 @@ HMIP_CHANNEL_TYPE_TO_ENTITY = {
     "RGBW_AUTOMATION_CHANNEL": {"class": "HcuLight"},
     "UNIVERSAL_LIGHT_CHANNEL": {"class": "HcuLight"},
     "NOTIFICATION_LIGHT_CHANNEL": {"class": "HcuLight"},
+    "OPTICAL_SIGNAL_CHANNEL": {"class": "HcuLight"},
     "NOTIFICATION_MP3_SOUND_CHANNEL": {"class": "HcuNotificationLight"},
     "BACKLIGHT_CHANNEL": {"class": "HcuLight"},
     "ALARM_SIREN_CHANNEL": {"class": "HcuSiren"},

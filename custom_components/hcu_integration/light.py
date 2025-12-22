@@ -302,7 +302,6 @@ class HcuLight(HcuBaseEntity, LightEntity):
         """Turn the light off."""
         ramp_time = kwargs.get(ATTR_TRANSITION)
         
-        # For BSL devices, we set optical signal to OFF to ensure it goes dark
         if self._has_simple_rgb and self._supports_optical_signal:
             payload = {
                 # Preserve color state, set dim to 0, and set signal to OFF
@@ -368,21 +367,26 @@ class HcuNotificationLight(HcuBaseEntity, LightEntity):
 
     @property
     def is_on(self) -> bool:
-        """Return True if the notification light is on."""
-        rgb_state = self._channel.get("simpleRGBColorState")
-        return rgb_state is not None and rgb_state != HMIP_COLOR_BLACK
+        """Return True if the light is on."""
+        dim_level = self._channel.get("dimLevel")
+        if dim_level is not None:
+            return dim_level > 0.0
+        return self._channel.get("on", False)
 
     @property
-    def brightness(self) -> int:
-        """Return the brightness (notification lights are always full brightness when on)."""
-        return 255 if self.is_on else 0
+    def brightness(self) -> int | None:
+        """Return the brightness (0-255)."""
+        dim_level = self._channel.get("dimLevel")
+        return int(dim_level * 255) if dim_level is not None else None
 
     @property
     def hs_color(self) -> tuple[float, float] | None:
         """Return the hue and saturation based on the current RGB color state."""
         rgb_state = self._channel.get("simpleRGBColorState")
-        if not rgb_state or rgb_state == HMIP_COLOR_BLACK:
-            return None
+        if rgb_state and rgb_state in HMIP_RGB_COLOR_MAP:
+            return HMIP_RGB_COLOR_MAP[rgb_state]
+        return None
+            
 
         if rgb_state in self._COLOR_MAP:
             h, s, _ = self._COLOR_MAP[rgb_state]
@@ -399,17 +403,39 @@ class HcuNotificationLight(HcuBaseEntity, LightEntity):
 
     async def async_turn_on(self, **kwargs) -> None:
         """Turn the notification light on."""
-        color = HMIP_COLOR_WHITE
+        
+        # Default to current brightness if the light is on, otherwise 100%.
+        current_brightness = self.brightness if self.is_on else None
 
+        if ATTR_BRIGHTNESS in kwargs:
+            target_brightness = kwargs[ATTR_BRIGHTNESS]
+        elif current_brightness is not None:
+            target_brightness = current_brightness
+        else:
+            target_brightness = 255  # 100%
+        
+        # Clamp + compute dim level
+        target_brightness = max(0, min(255, int(target_brightness)))
+        dim_level = target_brightness / 255.0
+
+        # 1. Determine Color
+        rgb_color = self._channel.get("simpleRGBColorState")
         if ATTR_HS_COLOR in kwargs:
-            hs_color = kwargs[ATTR_HS_COLOR]
-            color = self._hs_to_simple_rgb(hs_color)
-
+            rgb_color = self._hs_to_simple_rgb(kwargs[ATTR_HS_COLOR])
+            
+        # Fallback for color if missing or black (default to white)
+        if not rgb_color or rgb_color == HMIP_COLOR_BLACK:
+            rgb_color = HMIP_COLOR_WHITE
+        
+        payload = {
+            "simpleRGBColorState": rgb_color,
+            "dimLevel": dim_level
+        }
         await self._client.async_device_control(
             API_PATHS["SET_SIMPLE_RGB_COLOR_STATE"],
             self._device_id,
             self._channel_index,
-            {"simpleRGBColorState": color}
+            payload
         )
 
     async def async_turn_off(self, **kwargs) -> None:

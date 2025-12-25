@@ -358,10 +358,6 @@ class HcuSwitchingGroupBase(SwitchingGroupMixin, HcuGroupBaseEntity):
         """Initialize the switching group base."""
         super().__init__(coordinator, client, group_data)
         self._init_switching_group_state(group_data)
-
-    @property
-    def extra_state_attributes(self) -> dict[str, Any]:
-        return {"is_group": True}
     
     @callback
     def _handle_coordinator_update(self) -> None:

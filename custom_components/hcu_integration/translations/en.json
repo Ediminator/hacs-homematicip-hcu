@@ -191,7 +191,7 @@
             "fields": {
                 "on_time": {
                     "name": "On time",
-                    "description": "The duration in seconds for which the switch should stay on. Range: 0.1–16383 s"
+                    "description": "The duration in seconds for which the switch should stay on. Range: 0,1–16383 s"
                 }
             }
         }
@@ -200,15 +200,15 @@
         "light": {
             "hcu_light": {
                 "state_attributes": {
-                  "effect": {
-                    "state": {
-                      "OFF": "Off",
-                      "ON": "Steady on",
-                      "BLINKING_MIDDLE": "Blinking",
-                      "FLASH_MIDDLE": "Flashing",
-                      "BILLOW_MIDDLE": "Pulsing"
+                    "effect": {
+                        "state": {
+                            "OFF": "Off",
+                            "ON": "Steady on",
+                            "BLINKING_MIDDLE": "Blinking",
+                            "FLASH_MIDDLE": "Flashing",
+                            "BILLOW_MIDDLE": "Pulsing"
+                        }
                     }
-                  }
                 }
             }
         }

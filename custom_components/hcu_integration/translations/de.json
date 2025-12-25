@@ -191,7 +191,7 @@
             "fields": {
                 "on_time": {
                     "name": "Einschaltdauer",
-                    "description": "Die Dauer in Sekunden, für die der Schalter eingeschaltet bleiben soll. Format. 0.1 - 16383 s"
+                    "description": "Die Dauer in Sekunden, für die der Schalter eingeschaltet bleiben soll. Format. 0,1 - 16383 s"
                 }
             }
         }
@@ -200,15 +200,15 @@
         "light": {
             "hcu_light": {
                 "state_attributes": {
-                  "effect": {
-                    "state": {
-                      "OFF": "Aus",
-                      "ON": "Dauerhaft leuchten",
-                      "BLINKING_MIDDLE": "Blinken",
-                      "FLASH_MIDDLE": "Blitzen",
-                      "BILLOW_MIDDLE": "Pulsieren"
+                    "effect": {
+                        "state": {
+                            "OFF": "Aus",
+                            "ON": "Dauerhaft leuchten",
+                            "BLINKING_MIDDLE": "Blinken",
+                            "FLASH_MIDDLE": "Blitzen",
+                            "BILLOW_MIDDLE": "Pulsieren"
+                        }
                     }
-                  }
                 }
             }
         }

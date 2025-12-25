@@ -277,7 +277,11 @@ class HcuGroupBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMix
             model=model_name,
             via_device=(DOMAIN, hcu_device_id),
         )
-
+    
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        return {"is_group": True}
+    
     @property
     def available(self) -> bool:
         """Return True if the entity is available."""
@@ -355,6 +359,10 @@ class HcuSwitchingGroupBase(SwitchingGroupMixin, HcuGroupBaseEntity):
         super().__init__(coordinator, client, group_data)
         self._init_switching_group_state(group_data)
 
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        return {"is_group": True}
+    
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""

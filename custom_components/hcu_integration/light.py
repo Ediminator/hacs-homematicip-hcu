@@ -101,6 +101,8 @@ class HcuLight(HcuBaseEntity, LightEntity):
     """Representation of a Homematic IP light."""
 
     PLATFORM = Platform.LIGHT
+    _attr_has_entity_name = True
+    _attr_translation_key = "hcu_light"
 
     def __init__(
         self,

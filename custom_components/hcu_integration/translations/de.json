@@ -184,6 +184,33 @@
                     "description": "Die Dauer in Sekunden für den Party-Modus. Wird nur verwendet, wenn Endzeitpunkt nicht angegeben ist."
                 }
             }
+        },
+        "switch_on_with_time": {
+            "name": "Einschalten mit Einschaltdauer",
+            "description": "Schaltet einen Schalter für eine bestimmte Dauer ein",
+            "fields": {
+                "on_time": {
+                    "name": "Einschaltdauer",
+                    "description": "Die Dauer in Sekunden, für die der Schalter eingeschaltet bleiben soll. Format. 0 - 108000 s"
+                }
+            }
+        }
+    },
+    "entity": {
+        "light": {
+            "hcu_light": {
+                "state_attributes": {
+                  "effect": {
+                    "state": {
+                      "OFF": "Aus",
+                      "ON": "Dauerhaft leuchten",
+                      "BLINKING_MIDDLE": "Blinken",
+                      "FLASH_MIDDLE": "Blitzen",
+                      "BILLOW_MIDDLE": "Pulsieren"
+                    }
+                  }
+                }
+            }
         }
     }
 }

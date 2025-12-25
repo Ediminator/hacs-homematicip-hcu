@@ -184,6 +184,33 @@
                     "description": "The duration in seconds for the party mode. Only used if end_time is not specified."
                 }
             }
+        },
+        "switch_on_with_time": {
+            "name": "Turn on with time",
+            "description": "Turns a switch on for a specific duration",
+            "fields": {
+                "on_time": {
+                    "name": "On time",
+                    "description": "The duration in seconds for which the switch should stay on. Range: 0,1 – 16383 s"
+                }
+            }
+        }
+    },
+    "entity": {
+        "light": {
+            "hcu_light": {
+                "state_attributes": {
+                    "effect": {
+                        "state": {
+                            "OFF": "Off",
+                            "ON": "Steady on",
+                            "BLINKING_MIDDLE": "Blinking",
+                            "FLASH_MIDDLE": "Flashing",
+                            "BILLOW_MIDDLE": "Pulsing"
+                        }
+                    }
+                }
+            }
         }
     }
 }

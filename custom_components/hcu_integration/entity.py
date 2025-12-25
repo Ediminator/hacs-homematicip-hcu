@@ -280,7 +280,7 @@ class HcuGroupBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMix
     
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        return {"is_group": True}
+        return (super().extra_state_attributes or {}) | {"is_group": True}
     
     @property
     def available(self) -> bool:

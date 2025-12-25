@@ -191,7 +191,7 @@
             "fields": {
                 "on_time": {
                     "name": "On time",
-                    "description": "The duration in seconds for which the switch should stay on. Range: 0,1–16383 s"
+                    "description": "The duration in seconds for which the switch should stay on. Range: 0,1 – 16383 s"
                 }
             }
         }

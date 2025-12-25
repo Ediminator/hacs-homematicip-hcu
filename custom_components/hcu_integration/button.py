@@ -124,7 +124,7 @@ class HcuDoorImpulseButton(HcuBaseEntity, ButtonEntity):
         # Set entity name using the centralized naming helper
         self._set_entity_name(channel_label=self._channel.get("label"))
 
-        self._attr_unique_id = f"{self._device_id}_{self._channel_index}_toggle"
+        self._attr_unique_id = f"{self._device_id}_{self._channel_index}_impulse"
 
     async def async_press(self) -> None:
         """Trigger the door impulse (sends x s pulse to open garage door)."""

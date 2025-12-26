@@ -221,11 +221,11 @@ async def async_handle_send_api_command(hass: HomeAssistant, call: ServiceCall) 
     path = call.data.get(ATTR_PATH)
 
     if body is None:
-        _LOGGER.error("Required attribute '%s' missing for send_api_command", BODY)
+        _LOGGER.error("Required attribute '%s' missing for send_api_command", ATTR_BODY)
         return
     
     if path is None:
-        _LOGGER.error("Required attribute '%s' missing for send_api_command", PATH)
+        _LOGGER.error("Required attribute '%s' missing for send_api_command", ATTR_PATH)
         return
     
     try:

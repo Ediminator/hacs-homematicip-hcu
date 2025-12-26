@@ -236,7 +236,7 @@ async def async_handle_send_api_command(hass: HomeAssistant, call: ServiceCall) 
         )
         
     except (HcuApiError, ConnectionError) as err:
-        _LOGGER.error("Error calling send_api_command for %s: %s", device_id, err)
+        _LOGGER.error("Error calling send_api_command for path %s: %s", path, err)
     
 def async_register_services(hass: HomeAssistant) -> None:
     """Register all HCU integration services."""

@@ -194,6 +194,20 @@
                     "description": "Die Dauer in Sekunden, für die der Schalter eingeschaltet bleiben soll. Bereich: 0,1 - 16383 s"
                 }
             }
+        },
+        "send_api_command": {
+            "name": "Sende API Befehl",
+            "description": "Sende einfachen API Befehl zur HCU. Siehe API Dokumentation von EQ3",
+            "fields": {
+                "path": {
+                    "name": "Anfrage Pfad",
+                    "description": "Anfrage Pfad Beispiel: '/hmip/device/control/setOpticalSignal'"
+                },
+                "body": {
+                    "name": "Anfrage Body",
+                    "description": "Anfrage Body"
+                }
+            }
         }
     },
     "entity": {

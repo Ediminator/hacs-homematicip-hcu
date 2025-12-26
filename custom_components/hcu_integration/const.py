@@ -100,6 +100,7 @@ SERVICE_ACTIVATE_VACATION_MODE = "activate_vacation_mode"
 SERVICE_ACTIVATE_ECO_MODE = "activate_eco_mode"
 SERVICE_DEACTIVATE_ABSENCE_MODE = "deactivate_absence_mode"
 SERVICE_SWITCH_ON_WITH_TIME = "switch_on_with_time"
+SERVICE_SEND_API_COMMAND = "send_api_command"
 
 # --- Preset Constants ---
 PRESET_ECO = "Eco"
@@ -113,6 +114,8 @@ ATTR_RULE_ID = "rule_id"
 ATTR_ENABLED = "enabled"
 ATTR_END_TIME = "end_time"
 ATTR_ON_TIME = "on_time"
+ATTR_PATH = "path"
+ATTR_BODY = "body"
 
 # --- API Path Constants ---
 API_PATHS = {

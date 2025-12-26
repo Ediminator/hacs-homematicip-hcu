@@ -194,6 +194,20 @@
                     "description": "The duration in seconds for which the switch should stay on. Range: 0,1 – 16383 s"
                 }
             }
+        },
+        "send_api_command": {
+            "name": "Send API Command",
+            "description": "Send a simple API command to the HCU. See EQ3's API documentation.",
+            "fields": {
+                "path": {
+                    "name": "Request Path",
+                    "description": "Request path example: '/hmip/device/control/setOpticalSignal'"
+                },
+                "body": {
+                    "name": "Request Body",
+                    "description": "Request body"
+                }
+            }
         }
     },
     "entity": {

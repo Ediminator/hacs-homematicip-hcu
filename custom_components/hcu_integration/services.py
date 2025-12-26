@@ -19,6 +19,8 @@ from .const import (
     ATTR_RULE_ID,
     ATTR_SOUND_FILE,
     ATTR_VOLUME,
+    ATTR_PATH,
+    ATTR_BODY,
     DOMAIN,
     SERVICE_ACTIVATE_ECO_MODE,
     SERVICE_ACTIVATE_PARTY_MODE,
@@ -27,6 +29,7 @@ from .const import (
     SERVICE_PLAY_SOUND,
     SERVICE_SET_RULE_STATE,
     SERVICE_SWITCH_ON_WITH_TIME,
+    SERVICE_SEND_API_COMMAND,
 )
 
 if TYPE_CHECKING:
@@ -51,6 +54,7 @@ INTEGRATION_SERVICES = [
     SERVICE_ACTIVATE_ECO_MODE,
     SERVICE_DEACTIVATE_ABSENCE_MODE,
     SERVICE_SWITCH_ON_WITH_TIME,
+    SERVICE_SEND_API_COMMAND,
 ]
 
 
@@ -189,7 +193,6 @@ async def async_handle_deactivate_absence_mode(hass: HomeAssistant, call: Servic
     except ValueError as err:
         _LOGGER.error("No HCU available: %s", err)
 
-
 async def async_handle_switch_on_with_time(hass: HomeAssistant, call: ServiceCall) -> None:
     """Handle the switch_on_with_time service call."""
     on_time = call.data.get(ATTR_ON_TIME)
@@ -213,7 +216,28 @@ async def async_handle_switch_on_with_time(hass: HomeAssistant, call: ServiceCal
         except (HcuApiError, ConnectionError) as err:
             _LOGGER.error("Error calling switch_on_with_time for %s: %s", entity_id, err)
 
+async def async_handle_send_api_command(hass: HomeAssistant, call: ServiceCall) ->  None:
+    body = call.data.get(ATTR_BODY)
+    path = call.data.get(ATTR_PATH)
 
+    if body is None:
+        _LOGGER.error("Required attribute '%s' missing for send_api_command", BODY)
+        return
+    
+    if path is None:
+        _LOGGER.error("Required attribute '%s' missing for send_api_command", PATH)
+        return
+    
+    try:
+        client = _get_client_for_service(hass)
+        await client.async_send_api_command(
+            path=path,
+            body=body,
+        )
+        
+    except (HcuApiError, ConnectionError) as err:
+        _LOGGER.error("Error calling send_api_command for %s: %s", device_id, err)
+    
 def async_register_services(hass: HomeAssistant) -> None:
     """Register all HCU integration services."""
     service_handlers = {
@@ -224,6 +248,7 @@ def async_register_services(hass: HomeAssistant) -> None:
         SERVICE_ACTIVATE_ECO_MODE: async_handle_activate_eco_mode,
         SERVICE_DEACTIVATE_ABSENCE_MODE: async_handle_deactivate_absence_mode,
         SERVICE_SWITCH_ON_WITH_TIME: async_handle_switch_on_with_time,
+        SERVICE_SEND_API_COMMAND: async_handle_send_api_command,
     }
 
     assert set(service_handlers.keys()) == set(INTEGRATION_SERVICES), \
@@ -237,8 +262,7 @@ def async_register_services(hass: HomeAssistant) -> None:
         )
 
     _LOGGER.debug("Registered %d HCU services", len(service_handlers))
-
-
+    
 def async_unregister_services(hass: HomeAssistant) -> None:
     """Unregister all HCU integration services."""
     for service_name in INTEGRATION_SERVICES:

@@ -205,7 +205,7 @@
                 },
                 "body": {
                     "name": "Request Body",
-                    "description": "Request body"
+                    "description": "The request body as an object of key-value pairs."
                 }
             }
         }

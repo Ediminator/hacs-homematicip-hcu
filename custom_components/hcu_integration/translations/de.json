@@ -205,7 +205,7 @@
                 },
                 "body": {
                     "name": "Anfrage Body",
-                    "description": "Anfrage Body"
+                    "description": "Der Anfrage-Body als ein Objekt von Schlüssel-Wert-Paaren."
                 }
             }
         }

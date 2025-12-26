@@ -181,11 +181,13 @@ send_api_command:
         text:
     body:
       required: true
-      example:
-            opticalSignalBehaviour: "FLASH_MIDDLE"
-            simpleRGBColorState: "PURPLE"
-            dimLevel: 0.42
-            channelIndex: 8
-            deviceId: "3014F711A00023E0C9A5E9356"
+      example: |
+            {
+              "opticalSignalBehaviour": "FLASH_MIDDLE",
+              "simpleRGBColorState": "PURPLE",
+              "dimLevel": 0.42,
+              "channelIndex": 8,
+              "deviceId": "3014F711A00023E0C9A5E9356"
+            }
       selector:
         object:

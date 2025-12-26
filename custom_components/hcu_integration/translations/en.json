@@ -197,7 +197,7 @@
         },
         "send_api_command": {
             "name": "Send API Command",
-            "description": "Send a simple API command to the HCU. See EQ3's API documentation.",
+            "description": "Send a raw API command to the HCU. Use with caution, as this provides direct access to the API and can cause unintended side effects if used incorrectly. See EQ3's API documentation for details.",
             "fields": {
                 "path": {
                     "name": "Request Path",

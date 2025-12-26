@@ -216,7 +216,7 @@ async def async_handle_switch_on_with_time(hass: HomeAssistant, call: ServiceCal
         except (HcuApiError, ConnectionError) as err:
             _LOGGER.error("Error calling switch_on_with_time for %s: %s", entity_id, err)
 
-async def async_handle_send_api_command(hass: HomeAssistant, call: ServiceCall) ->  None:
+async def async_handle_send_api_command(hass: HomeAssistant, call: ServiceCall) -> None:
     body = call.data.get(ATTR_BODY)
     path = call.data.get(ATTR_PATH)
 

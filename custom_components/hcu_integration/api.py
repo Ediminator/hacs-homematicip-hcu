@@ -548,7 +548,7 @@ class HcuApiClient:
     async def async_send_api_command(
         self, path: str, body: dict[str, Any] | None = None
     ) -> None:
-        """Generic method to send a command to a specific device channel."""
+        """Generic method to send a command to the HCU API."""
         await self._send_hmip_request(path, body)
     
     async def async_group_control(

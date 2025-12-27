@@ -660,6 +660,9 @@ class HcuApiClient:
     async def async_send_door_command(self, device_id: str, channel_index: int, command: str) -> None:
         await self.async_device_control(API_PATHS["SEND_DOOR_COMMAND"], device_id, channel_index, {"doorCommand": command})
 
+    async def async_send_door_impulse(self, device_id: str, channel_index: int) -> None:
+        await self.async_device_control(API_PATHS["SEND_DOOR_IMPULSE"], device_id, channel_index)
+
     async def async_toggle_garage_door_state(self, device_id: str, channel_index: int) -> None:
         await self.async_device_control(API_PATHS["TOGGLE_GARAGE_DOOR_STATE"], device_id, channel_index)
 

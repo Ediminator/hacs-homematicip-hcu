@@ -9,8 +9,10 @@ from homeassistant.components.climate import (
     ClimateEntity,
     ClimateEntityFeature,
     HVACMode,
+    HVACAction,
     PRESET_BOOST,
 )
+
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_TEMPERATURE, Platform, UnitOfTemperature
 from homeassistant.core import HomeAssistant, callback
@@ -231,6 +233,16 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
         # Return the maximum valve position to represent the heating demand of the group.
         return int(round(max(valve_positions) * 100))
 
+    @property
+    def hvac_action(self) -> HVACAction:
+        """Return the current HVAC action."""
+        if self.hvac_mode == HVACMode.OFF:
+            return HVACAction.OFF
+        valve_pos = self.current_valve_position
+        if valve_pos is None:
+            return HVACAction.IDLE
+        return HVACAction.HEATING if valve_pos > 0 else HVACAction.IDLE
+        
     async def async_set_temperature(self, **kwargs: Any) -> None:
         """Set new target temperature."""
         temperature = kwargs.get(ATTR_TEMPERATURE)

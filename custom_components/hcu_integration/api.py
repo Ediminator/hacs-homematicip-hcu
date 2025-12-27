@@ -323,7 +323,7 @@ class HcuApiClient:
         }
 
         last_exception = None
-
+        
         for attempt in range(API_MAX_RETRIES):
             future: asyncio.Future[Any] = asyncio.get_running_loop().create_future()
             self._pending_requests[message_id] = future
@@ -544,7 +544,13 @@ class HcuApiClient:
         """Generic method to send a control command to a specific device channel."""
         payload = {"deviceId": device_id, "channelIndex": channel_index, **(body or {})}
         await self._send_hmip_request(path, payload)
-
+    
+    async def async_send_api_command(
+        self, path: str, body: dict[str, Any] | None = None
+    ) -> None:
+        """Generic method to send a command to the HCU API."""
+        await self._send_hmip_request(path, body)
+    
     async def async_group_control(
         self, path: str, group_id: str, body: dict[str, Any] | None = None
     ) -> None:

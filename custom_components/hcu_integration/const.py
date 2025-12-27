@@ -125,6 +125,7 @@ API_PATHS = {
     "GET_SYSTEM_STATE": "/hmip/home/getSystemState",
     "RESET_ENERGY_COUNTER": "/hmip/device/control/resetEnergyCounter",
     "SEND_DOOR_COMMAND": "/hmip/device/control/sendDoorCommand",
+    "SEND_DOOR_IMPULSE": "/hmip/device/control/startImpulse",
     "SET_COLOR_TEMP": "/hmip/device/control/setColorTemperatureDimLevel",
     "SET_COLOR_TEMP_WITH_TIME": "/hmip/device/control/setColorTemperatureDimLevelWithTime",
     "SET_DIM_LEVEL": "/hmip/device/control/setDimLevel",
@@ -759,6 +760,7 @@ HMIP_CHANNEL_TYPE_TO_ENTITY = {
     "GARAGE_DOOR_CHANNEL": {"class": "HcuGarageDoorCover"},
     "DOOR_CHANNEL": {"class": "HcuGarageDoorCover"},
     "DOOR_SWITCH_CHANNEL": {"class": "HcuDoorOpenerButton"},
+    "IMPULSE_OUTPUT_CHANNEL": {"class": "HcuDoorImpulseButton"},
     "DOOR_LOCK_CHANNEL": {"class": "HcuLock"},
     # Event channel types - create HcuButtonEvent entities for button devices
     "KEY_CHANNEL": {"class": "HcuButtonEvent"},  # For HmIP-WRC2, HmIP-BRC2, HmIP-WRC6-A, HmIP-WKP

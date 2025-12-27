@@ -3,6 +3,22 @@
 All notable changes to the Homematic IP Local (HCU) integration will be documented in this file.
 
 ---
+## 1.19.2 - 2025-12-xx
+
+### 🐛 Bug Fixes
+
+**Fix Issue Climate Visualisation (Issue #164)**
+**Heating Profiles Control (Issue #170)**
+**Add translations for service turn on with time and light effects**
+
+### ✨ New Features
+
+- **serial number in device info**
+- **Add HMIP-MP3P**
+- **Add SimpleColor for HCU TOPLIGHT and HmIPW-WRC6**
+- **Add Attribut is_group in groups**
+- **Add impulse button for HmIP-WGC***
+- **Add service send_api_command***
 
 ## 1.19.1 - 2025-12-16
 

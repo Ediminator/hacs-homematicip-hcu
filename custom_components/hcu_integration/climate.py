@@ -110,6 +110,7 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
+        self._rebuild_profiles_and_presets()
         self._update_attributes_from_group_data()
         super()._handle_coordinator_update()
 

@@ -80,6 +80,7 @@ async def async_discover_entities(
         "HcuLock": lock,
         "HcuResetEnergyButton": button,
         "HcuDoorOpenerButton": button,
+        "HcuDoorImpulseButton": button,
         "HcuGenericSensor": sensor,
         "HcuTemperatureSensor": sensor,
         "HcuHomeSensor": sensor,

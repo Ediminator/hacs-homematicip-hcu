@@ -210,9 +210,11 @@ class HcuLight(HcuBaseEntity, LightEntity):
     def effect(self) -> str | None:
         """Return the current optical signal behavior effect."""
         if self._supports_optical_signal:
-            return effect.lower() if (effect := self._channel.get("opticalSignalBehaviour")) else None
+            effect = self._channel.get("opticalSignalBehaviour")
+            if effect is not None:
+                return effect.lower()
         return None
-
+    
     def _hs_to_simple_rgb(self, hs_color: tuple[float, float]) -> str:
         """Convert HA HS color to the closest Homematic IP simple RGB color name.
 

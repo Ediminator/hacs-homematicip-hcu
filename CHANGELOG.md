@@ -13,12 +13,12 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 
 ### ✨ New Features
 
-- **serial number in device info**
-- **Add HMIP-MP3P**
-- **Add SimpleColor for HCU TOPLIGHT and HmIPW-WRC6**
-- **Add Attribut is_group in groups**
-- **Add impulse button for HmIP-WGC**
-- **Add service send_api_command**
+- serial number in device info incl. HCU
+- Add HMIP-MP3P
+- Add SimpleColor for HCU TOPLIGHT and HmIPW-WRC6
+- Add Attribut is_group in groups
+- Add impulse button for HmIP-WGC
+- Add service send_api_command
 
 ## 1.19.1 - 2025-12-16
 

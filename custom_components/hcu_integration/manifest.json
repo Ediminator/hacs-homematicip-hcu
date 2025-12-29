@@ -1,18 +1,18 @@
 {
   "domain": "hcu_integration",
   "name": "Homematic IP Local (HCU)",
-  "config_flow": true,
-  "documentation": "https://github.com/Ediminator/hacs-homematicip-hcu",
-  "issue_tracker": "https://github.com/Ediminator/hacs-homematicip-hcu/issues",
-  "integration_type": "hub",
-  "iot_class": "local_push",
-  "quality_scale": "silver",
   "codeowners": [
     "@Ediminator"
   ],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/Ediminator/hacs-homematicip-hcu",
+  "integration_type": "hub",
+  "iot_class": "local_push",
+  "issue_tracker": "https://github.com/Ediminator/hacs-homematicip-hcu/issues",
+  "quality_scale": "silver",
   "requirements": [
     "aiohttp>=3.0.0"
   ],
-  "version": "1.19.2",
-  "dependencies": []
+  "version": "1.19.2"
 }

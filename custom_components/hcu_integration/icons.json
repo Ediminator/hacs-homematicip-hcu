@@ -1,0 +1,29 @@
+{
+    "entity": {
+        "light": {
+            "hcu_light": {
+                "state_attributes": {
+                    "effect": {
+                        "state": {
+                            "off": "mdi:lightbulb-off",
+                            "on": "mdi:lightbulb",
+                            "blinking_middle": "mdi:alarm-light",
+                            "flash_middle": "mdi:flash",
+                            "billow_middle": "mdi:waves"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "services": {
+        "play_sound": "mdi:music-note",
+        "set_rule_state": "mdi:playlist-edit",
+        "activate_party_mode": "mdi:party-popper",
+        "activate_vacation_mode": "mdi:airplane",
+        "activate_eco_mode": "mdi:leaf",
+        "deactivate_absence_mode": "mdi:home-account",
+        "switch_on_with_time": "mdi:timer-outline",
+        "send_api_command": "mdi:api"
+    }
+}

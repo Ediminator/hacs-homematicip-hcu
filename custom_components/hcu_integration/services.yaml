@@ -169,3 +169,25 @@ switch_on_with_time:
           max: 16383
           step: 0.1
           unit_of_measurement: "s"
+          
+send_api_command:
+  name: Send API Command
+  description: Send a simple API command to the HCU. See EQ3's API documentation.
+  fields:
+    path:
+      required: true
+      example: '/hmip/device/control/setOpticalSignal'
+      selector:
+        text:
+    body:
+      required: true
+      example: |
+            {
+              "opticalSignalBehaviour": "FLASH_MIDDLE",
+              "simpleRGBColorState": "PURPLE",
+              "dimLevel": 0.42,
+              "channelIndex": 8,
+              "deviceId": "3014F711A00023E0C9A5E9356"
+            }
+      selector:
+        object:

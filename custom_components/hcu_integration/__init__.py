@@ -181,6 +181,7 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
             identifiers={(DOMAIN, hcu_device_id)},
             manufacturer=hcu_device.get("oem", "eQ-3"),
             model=hcu_device.get("modelType", "HCU"),
+            serial_number=hcu_device.get("id"),
             name=hcu_device.get("label", "Homematic IP HCU"),
             sw_version=hcu_device.get("firmwareVersion", ""),
         )

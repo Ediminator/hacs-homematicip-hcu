@@ -104,3 +104,36 @@ class HcuDoorOpenerButton(HcuBaseEntity, ButtonEntity):
             _LOGGER.error(
                 "Error triggering door opener for %s: %s", self.entity_id, err
             )
+            
+class HcuDoorImpulseButton(HcuBaseEntity, ButtonEntity):
+    """Representation of a button to trigger a door impulse (e.g., HmIP-WGC)."""
+
+    PLATFORM = Platform.BUTTON
+    _attr_icon = "mdi:garage"
+
+    def __init__(
+        self,
+        coordinator: "HcuCoordinator",
+        client: HcuApiClient,
+        device_data: dict,
+        channel_index: str,
+    ):
+        """Initialize the door impulse button."""
+        super().__init__(coordinator, client, device_data, channel_index)
+
+        # Set entity name using the centralized naming helper
+        self._set_entity_name(channel_label=self._channel.get("label"))
+
+        self._attr_unique_id = f"{self._device_id}_{self._channel_index}_impulse"
+
+    async def async_press(self) -> None:
+        """Trigger the door impulse (sends x s pulse to open garage door)."""
+        _LOGGER.info("Triggering door impulse for %s", self.entity_id)
+        try:
+            await self._client.async_send_door_impulse(
+                self._device_id, self._channel_index
+            )
+        except (HcuApiError, ConnectionError) as err:
+            _LOGGER.error(
+                "Error triggering door impulse for %s: %s", self.entity_id, err
+            )

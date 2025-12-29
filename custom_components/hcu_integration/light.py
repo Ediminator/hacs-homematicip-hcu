@@ -316,11 +316,19 @@ class HcuLight(HcuBaseEntity, LightEntity):
                 "opticalSignalBehaviour": "OFF"
             }
 
+            if self._supports_optical_signal:
+                payload["opticalSignalBehaviour"] = "ON"
+                base_path_key = "SET_OPTICAL_SIGNAL_BEHAVIOUR"
+                time_path_key = "SET_OPTICAL_SIGNAL_BEHAVIOUR_WITH_TIME"
+            else:
+                base_path_key = "SET_SIMPLE_RGB_COLOR_STATE"
+                time_path_key = "SET_SIMPLE_RGB_COLOR_STATE_WITH_TIME"
+            
             if ramp_time is not None:
-                path = API_PATHS["SET_SIMPLE_RGB_COLOR_STATE_WITH_TIME"]
+                path = API_PATHS[time_path_key]
                 payload["rampTime"] = ramp_time
             else:
-                path = API_PATHS["SET_SIMPLE_RGB_COLOR_STATE"]
+                path = API_PATHS[base_path_key]
 
             # Set optimistic state for immediate feedback
             self._attr_assumed_state = True

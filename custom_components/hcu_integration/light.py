@@ -210,7 +210,9 @@ class HcuLight(HcuBaseEntity, LightEntity):
     def effect(self) -> str | None:
         """Return the current optical signal behavior effect."""
         if self._supports_optical_signal:
-            return self._channel.get("opticalSignalBehaviour")
+            effect = self._channel.get("opticalSignalBehaviour")
+            if isinstance(effect, str):
+                return effect.lower()
         return None
 
     def _hs_to_simple_rgb(self, hs_color: tuple[float, float]) -> str:
@@ -244,7 +246,7 @@ class HcuLight(HcuBaseEntity, LightEntity):
             optical_signal = None
             if ATTR_EFFECT in kwargs:
                 # If an effect is specified in the service call, use it directly.
-                optical_signal = kwargs[ATTR_EFFECT]
+                optical_signal = kwargs[ATTR_EFFECT].upper()
             else:
                 # If no effect is specified, turn the light on if it's off, or preserve its current non-OFF state.
                 current_signal = self._channel.get("opticalSignalBehaviour")
@@ -317,7 +319,6 @@ class HcuLight(HcuBaseEntity, LightEntity):
             }
 
             if self._supports_optical_signal:
-                payload["opticalSignalBehaviour"] = "ON"
                 base_path_key = "SET_OPTICAL_SIGNAL_BEHAVIOUR"
                 time_path_key = "SET_OPTICAL_SIGNAL_BEHAVIOUR_WITH_TIME"
             else:

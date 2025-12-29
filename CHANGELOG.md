@@ -19,6 +19,7 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 - Add Attribut is_group in groups
 - Add impulse button for HmIP-WGC
 - Add service send_api_command
+- prepare for default HACS integration
 
 ## 1.19.1 - 2025-12-16
 

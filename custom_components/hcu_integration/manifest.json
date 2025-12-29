@@ -14,19 +14,5 @@
     "aiohttp>=3.0.0"
   ],
   "version": "1.19.2",
-  "dependencies": [],
-  "reconfigure": true,
-  "platforms": [
-    "alarm_control_panel",
-    "binary_sensor",
-    "button",
-    "climate",
-    "cover",
-    "event",
-    "light",
-    "lock",
-    "sensor",
-    "siren",
-    "switch"
-  ]
+  "dependencies": []
 }

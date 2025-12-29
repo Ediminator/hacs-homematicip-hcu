@@ -27,6 +27,5 @@
     "sensor",
     "siren",
     "switch"
-  ],
-  "diagnostics": true
+  ]
 }

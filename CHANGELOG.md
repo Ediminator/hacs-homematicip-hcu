@@ -3,6 +3,16 @@
 All notable changes to the Homematic IP Local (HCU) integration will be documented in this file.
 
 ---
+## 1.19.3 - 2026xxx
+
+### 🐛 Bug Fixes
+
+**Add effects in lowercase to prepare for hacs default
+
+### ✨ New Features
+
+- add icons for services and effects
+  
 ## 1.19.2 - 2025-12-29
 
 ### 🐛 Bug Fixes

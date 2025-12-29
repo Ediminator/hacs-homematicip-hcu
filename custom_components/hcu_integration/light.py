@@ -211,7 +211,7 @@ class HcuLight(HcuBaseEntity, LightEntity):
         """Return the current optical signal behavior effect."""
         if self._supports_optical_signal:
             effect = self._channel.get("opticalSignalBehaviour")
-            if effect is not None:
+            if isinstance(effect, str):
                 return effect.lower()
         return None
     

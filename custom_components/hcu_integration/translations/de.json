@@ -216,11 +216,11 @@
                 "state_attributes": {
                     "effect": {
                         "state": {
-                            "OFF": "Aus",
-                            "ON": "Dauerhaft leuchten",
-                            "BLINKING_MIDDLE": "Blinken",
-                            "FLASH_MIDDLE": "Blitzen",
-                            "BILLOW_MIDDLE": "Pulsieren"
+                            "off": "Aus",
+                            "on": "Dauerhaft leuchten",
+                            "blinking_middle": "Blinken",
+                            "flash_middle": "Blitzen",
+                            "billow_middle": "Pulsieren"
                         }
                     }
                 }

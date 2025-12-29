@@ -216,11 +216,11 @@
                 "state_attributes": {
                     "effect": {
                         "state": {
-                            "OFF": "Off",
-                            "ON": "Steady on",
-                            "BLINKING_MIDDLE": "Blinking",
-                            "FLASH_MIDDLE": "Flashing",
-                            "BILLOW_MIDDLE": "Pulsing"
+                            "off": "Off",
+                            "on": "Steady on",
+                            "blinking_middle": "Blinking",
+                            "flash_middle": "Flashing",
+                            "billow_middle": "Pulsing"
                         }
                     }
                 }

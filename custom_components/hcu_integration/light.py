@@ -35,6 +35,7 @@ from .const import (
     HMIP_COLOR_PURPLE,
     HMIP_COLOR_TURQUOISE,
     HMIP_OPTICAL_SIGNAL_BEHAVIOURS,
+    HMIP_OPTICAL_SIGNAL_BEHAVIOURS_ICON_MAP,
 )
 
 if TYPE_CHECKING:
@@ -152,7 +153,12 @@ class HcuLight(HcuBaseEntity, LightEntity):
         if self._supports_optical_signal:
             self._attr_supported_features |= LightEntityFeature.EFFECT
             self._attr_effect_list = list(HMIP_OPTICAL_SIGNAL_BEHAVIOURS)
-
+    
+    @property
+    def icon(self) -> str | None:
+        effect = self._channel.get("opticalSignalBehaviour")
+        return HMIP_OPTICAL_SIGNAL_BEHAVIOURS_ICON_MAP.get(effect, "mdi:lightbulb")
+    
     @property
     def color_mode(self) -> ColorMode | str | None:
         """Return the current active color mode."""
@@ -210,7 +216,7 @@ class HcuLight(HcuBaseEntity, LightEntity):
     def effect(self) -> str | None:
         """Return the current optical signal behavior effect."""
         if self._supports_optical_signal:
-            return self._channel.get("opticalSignalBehaviour")
+            return self._channel.get("opticalSignalBehaviour").lower()
         return None
 
     def _hs_to_simple_rgb(self, hs_color: tuple[float, float]) -> str:
@@ -244,7 +250,7 @@ class HcuLight(HcuBaseEntity, LightEntity):
             optical_signal = None
             if ATTR_EFFECT in kwargs:
                 # If an effect is specified in the service call, use it directly.
-                optical_signal = kwargs[ATTR_EFFECT]
+                optical_signal = kwargs[ATTR_EFFECT].upper()
             else:
                 # If no effect is specified, turn the light on if it's off, or preserve its current non-OFF state.
                 current_signal = self._channel.get("opticalSignalBehaviour")
@@ -317,7 +323,6 @@ class HcuLight(HcuBaseEntity, LightEntity):
             }
 
             if self._supports_optical_signal:
-                payload["opticalSignalBehaviour"] = "ON"
                 base_path_key = "SET_OPTICAL_SIGNAL_BEHAVIOUR"
                 time_path_key = "SET_OPTICAL_SIGNAL_BEHAVIOUR_WITH_TIME"
             else:

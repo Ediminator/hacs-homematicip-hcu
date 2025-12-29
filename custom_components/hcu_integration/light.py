@@ -152,7 +152,7 @@ class HcuLight(HcuBaseEntity, LightEntity):
         if self._supports_optical_signal:
             self._attr_supported_features |= LightEntityFeature.EFFECT
             self._attr_effect_list = list(HMIP_OPTICAL_SIGNAL_BEHAVIOURS)
-    
+
     @property
     def color_mode(self) -> ColorMode | str | None:
         """Return the current active color mode."""
@@ -214,7 +214,7 @@ class HcuLight(HcuBaseEntity, LightEntity):
             if isinstance(effect, str):
                 return effect.lower()
         return None
-    
+
     def _hs_to_simple_rgb(self, hs_color: tuple[float, float]) -> str:
         """Convert HA HS color to the closest Homematic IP simple RGB color name.
 

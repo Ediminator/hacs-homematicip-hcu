@@ -834,14 +834,6 @@ HMIP_OPTICAL_SIGNAL_BEHAVIOURS = (
     "billow_middle",
 )
 
-HMIP_OPTICAL_SIGNAL_BEHAVIOURS_ICON_MAP = {
-    "off": "mdi:lightbulb-off",
-    "on": "mdi:lightbulb",
-    "blinking_middle": "mdi:lightbulb-flash",
-    "flash_middle": "mdi:flash",
-    "billow_middle": "mdi:blur",
-}
-
 # Siren tone options for HmIP-ASIR2 and compatible devices
 # These acoustic signals can be used with the siren.turn_on service
 # Based on official HomematicIP API documentation and HmIP-ASIR2 device specification

@@ -35,7 +35,6 @@ from .const import (
     HMIP_COLOR_PURPLE,
     HMIP_COLOR_TURQUOISE,
     HMIP_OPTICAL_SIGNAL_BEHAVIOURS,
-    HMIP_OPTICAL_SIGNAL_BEHAVIOURS_ICON_MAP,
 )
 
 if TYPE_CHECKING:
@@ -155,11 +154,6 @@ class HcuLight(HcuBaseEntity, LightEntity):
             self._attr_effect_list = list(HMIP_OPTICAL_SIGNAL_BEHAVIOURS)
     
     @property
-    def icon(self) -> str | None:
-        effect = self._channel.get("opticalSignalBehaviour")
-        return HMIP_OPTICAL_SIGNAL_BEHAVIOURS_ICON_MAP.get(effect, "mdi:lightbulb")
-    
-    @property
     def color_mode(self) -> ColorMode | str | None:
         """Return the current active color mode."""
         if ColorMode.HS in self.supported_color_modes:
@@ -216,7 +210,7 @@ class HcuLight(HcuBaseEntity, LightEntity):
     def effect(self) -> str | None:
         """Return the current optical signal behavior effect."""
         if self._supports_optical_signal:
-            return self._channel.get("opticalSignalBehaviour").lower()
+            return effect.lower() if (effect := self._channel.get("opticalSignalBehaviour")) else None
         return None
 
     def _hs_to_simple_rgb(self, hs_color: tuple[float, float]) -> str:

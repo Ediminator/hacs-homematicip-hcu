@@ -14,6 +14,20 @@
                     }
                 }
             }
+        },
+        "climate": {
+            "hcu_climate": {
+                "state_attributes": {
+                    "preset_mode": {
+                        "default": "mdi:thermostat",
+                        "state": {
+                            "preset_boost": "mdi:fire",
+                            "Eco": "mdi:leaf",
+                            "Party": "mdi:party-popper"
+                        }
+                    }
+                }
+            }
         }
     },
     "services": {

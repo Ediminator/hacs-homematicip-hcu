@@ -139,7 +139,7 @@ API_PATHS = {
     "SET_GROUP_CONTROL_MODE": "/hmip/group/heating/setControlMode",
     "SET_GROUP_SET_POINT_TEMP": "/hmip/group/heating/setSetPointTemperature",
     "SET_GROUP_SHUTTER_LEVEL": "/hmip/group/switching/setPrimaryShadingLevel",
-    "SET_GROUP_SLATS_LEVEL": "/hmip/group/switching/setSecondaryShadingLevel",
+    "SET_GROUP_SECONDARY_SHADING_LEVEL": "/hmip/group/switching/setSecondaryShadingLevel",
     "SET_HUE": "/hmip/device/control/setHueSaturationDimLevel",
     "SET_HUE_WITH_TIME": "/hmip/device/control/setHueSaturationDimLevelWithTime",
     "SET_LOCK_STATE": "/hmip/device/control/setLockState",

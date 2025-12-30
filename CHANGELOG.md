@@ -7,8 +7,8 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 
 ### 🐛 Bug Fixes
 
-- **Add effects in lowercase to prepare for hacs default
-- **rollback heating preset mode logic to prevent showing cooling profiles from issue #170 and open API Issue in #229
+- **Add effects in lowercase to prepare for hacs default**
+- **rollback heating preset mode logic to prevent showing cooling profiles from issue #170 and open API Issue in #229**
 
 ### ✨ New Features
 

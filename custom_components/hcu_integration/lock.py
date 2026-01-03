@@ -127,9 +127,9 @@ class HcuLock(HcuBaseEntity, LockEntity):
     @property
     def extra_state_attributes(self) -> dict:
         """Return additional state attributes."""
-        attrs = {
-            "pin_configured": bool(self._config_entry.data.get(CONF_PIN)),
-        }
+        attrs = dict(super().extra_state_attributes or {})
+
+        attrs["pin_configured"] = bool(self._config_entry.data.get(CONF_PIN))
 
         # Add PIN requirement status if determined
         if self._pin_required is not None:

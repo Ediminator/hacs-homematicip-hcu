@@ -111,7 +111,7 @@ class HcuWindowBinarySensor(HcuBinarySensor):
         so users can distinguish between open and tilted states in automations.
         """
         window_state = self._channel.get(self._feature)
-        return {
+        return (super().extra_state_attributes or {}) | {
             "window_state": window_state,
         }
 

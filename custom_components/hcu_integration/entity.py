@@ -202,7 +202,11 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, E
             device_info_kwargs["serial_number"] = self._device_id
 
         return DeviceInfo(**device_info_kwargs)
-
+    
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        return (super().extra_state_attributes or {}) | {"is_group": False}
+    
     @property
     def available(self) -> bool:
         """Return True if the entity is available.

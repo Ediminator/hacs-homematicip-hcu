@@ -212,7 +212,7 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
         """Return the optional state attributes."""
         attributes = super().extra_state_attributes or {}
         if (valve_pos := self.current_valve_position) is not None:
-            return attributes | {"valve_position": valve_pos}
+            attributes |= {"valve_position": valve_pos}
         return attributes
 
     @property

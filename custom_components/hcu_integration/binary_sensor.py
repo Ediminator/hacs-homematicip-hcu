@@ -111,7 +111,7 @@ class HcuWindowBinarySensor(HcuBinarySensor):
         so users can distinguish between open and tilted states in automations.
         """
         window_state = self._channel.get(self._feature)
-        return {
+        return (super().extra_state_attributes or {}) | {
             "window_state": window_state,
         }
 
@@ -181,7 +181,7 @@ class HcuVacationModeBinarySensor(HcuHomeBaseEntity, BinarySensorEntity):
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return the state attributes of the vacation mode sensor."""
-        return self._attr_extra_state_attributes
+        return (super().extra_state_attributes or {}) | (self._attr_extra_state_attributes or {})
 
     def _update_attributes(self) -> None:
         """Update the entity's attributes."""

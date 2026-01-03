@@ -210,9 +210,9 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return the optional state attributes."""
-        attributes = {}
+        attributes = super().extra_state_attributes or {}
         if (valve_pos := self.current_valve_position) is not None:
-            attributes["valve_position"] = valve_pos
+            attributes |= {"valve_position": valve_pos}
         return attributes
 
     @property

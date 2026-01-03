@@ -202,7 +202,16 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, E
             device_info_kwargs["serial_number"] = self._device_id
 
         return DeviceInfo(**device_info_kwargs)
-
+    
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        return (super().extra_state_attributes or {}) | {
+            "device_id": self._device_id,
+            "channel_index": self._channel_index,
+            "functional_channel_type": self._channel.get("functionalChannelType"),
+            "is_group": False
+        }
+    
     @property
     def available(self) -> bool:
         """Return True if the entity is available.
@@ -280,7 +289,10 @@ class HcuGroupBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMix
     
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        return (super().extra_state_attributes or {}) | {"is_group": True}
+        return (super().extra_state_attributes or {}) | {
+            "type": self._group.get("type"),
+            "is_group": True
+        }
     
     @property
     def available(self) -> bool:
@@ -403,7 +415,11 @@ class HcuHomeBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixi
         return DeviceInfo(
             identifiers={(DOMAIN, self._hcu_device_id)},
         )
-
+    
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        return (super().extra_state_attributes or {}) | {"is_group": False}
+    
     @property
     def available(self) -> bool:
         """Return True if the entity is available."""

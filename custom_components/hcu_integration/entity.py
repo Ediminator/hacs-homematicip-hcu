@@ -206,10 +206,10 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, E
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         return (super().extra_state_attributes or {}) | {
-        "device_id": self._device_id,
-        "channel_index": self._channel_index,
-        "functional_channel_type": self._channel.get("functionalChannelType"),
-        "is_group": False,
+            "device_id": self._device_id,
+            "channel_index": self._channel_index,
+            "functional_channel_type": self._channel.get("functionalChannelType"),
+            "is_group": False
         }
     
     @property
@@ -290,8 +290,8 @@ class HcuGroupBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMix
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         return (super().extra_state_attributes or {}) | {
-        "type": self._group.get("type"),
-        "is_group": True,
+            "type": self._group.get("type"),
+            "is_group": True
         }
     
     @property

@@ -761,7 +761,7 @@ HMIP_CHANNEL_TYPE_TO_ENTITY = {
     "BRAND_BLIND_CHANNEL": {"class": "HcuCover"},  # For HmIP-HDM1 HunterDouglas blinds
     "SHADING_CHANNEL": {"class": "HcuCover"},  # For HmIP-HDM1 HunterDouglas shading actuators
     "GARAGE_DOOR_CHANNEL": {"class": "HcuGarageDoorCover"},
-    "ROTARY_HANDLE_CHANNEL": {"class": "HcuTemperatureSensor"}
+    "ROTARY_HANDLE_CHANNEL": {"class": "HcuWindowStateSensor"},
     "DOOR_CHANNEL": {"class": "HcuGarageDoorCover"},
     "DOOR_SWITCH_CHANNEL": {"class": "HcuDoorOpenerButton"},
     "IMPULSE_OUTPUT_CHANNEL": {"class": "HcuDoorImpulseButton"},

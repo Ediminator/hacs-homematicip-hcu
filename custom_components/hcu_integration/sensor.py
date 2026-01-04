@@ -169,6 +169,18 @@ class HcuWindowStateSensor(HcuGenericSensor):
     This sensor shows the actual window state as its value: OPEN, TILTED, or CLOSED.
     This complements the binary sensor which can only show on/off.
     """
+    PLATFORM = Platform.SENSOR
+    
+    def __init__(
+        self,
+        coordinator: "HcuCoordinator",
+        client: HcuApiClient,
+        device_data: dict,
+        channel_index: str,
+        **kwargs,
+    ):
+    
+        super().__init__(coordinator, client, device_data, channel_index)
 
     @property
     def native_value(self) -> str | None:
@@ -177,3 +189,4 @@ class HcuWindowStateSensor(HcuGenericSensor):
         if state in ("OPEN", "TILTED", "CLOSED"):
             return state.lower().capitalize()  # Convert to Title Case for display
         return state
+        

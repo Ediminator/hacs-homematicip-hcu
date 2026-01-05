@@ -198,7 +198,7 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, E
             via_device=(DOMAIN, hcu_device_id),
         )
     
-        if model_type and model_type.startswith("HmIP"):
+        if model_type and model_type.startswith(("HmIP", "ELV")):
             device_info_kwargs["serial_number"] = self._device_id
 
         return DeviceInfo(**device_info_kwargs)

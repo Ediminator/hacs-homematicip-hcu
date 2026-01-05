@@ -269,6 +269,11 @@ HMIP_DEVICE_TYPE_TO_DEVICE_CLASS = {
     "SHUTTER_CONTACT_INVISIBLE": None,
 }
 
+UOM_HPA = "hPa"
+UOM_UG_M3 = "µg/m³"
+UOM_1_CM3 = "1/cm³"
+UOM_UM = "µm"
+
 HMIP_FEATURE_TO_ENTITY = {
     # Sensor Features
     "actualTemperature": {
@@ -278,10 +283,19 @@ HMIP_FEATURE_TO_ENTITY = {
         "device_class": SensorDeviceClass.TEMPERATURE,
         "state_class": SensorStateClass.MEASUREMENT,
     },
+    Klar — dann lagern wir **nur die Units** aus und lassen den Rest “flach”/gut lesbar.
+
+```python
+UOM_HPA = "hPa"
+UOM_UG_M3 = "µg/m³"
+UOM_1_CM3 = "1/cm³"
+UOM_UM = "µm"
+
+SENSORS = {
     "airPressure": {
         "class": "HcuGenericSensor",
         "name": "Air Pressure",
-        "unit": "hPa",
+        "unit": UOM_HPA,
         "device_class": SensorDeviceClass.ATMOSPHERIC_PRESSURE,
         "state_class": SensorStateClass.MEASUREMENT,
         "icon": "mdi:gauge",
@@ -289,7 +303,7 @@ HMIP_FEATURE_TO_ENTITY = {
     "particulateMassConcentrationOne": {
         "class": "HcuGenericSensor",
         "name": "PM1 Concentration",
-        "unit": "µg/m³",
+        "unit": UOM_UG_M3,
         "device_class": SensorDeviceClass.PM1,
         "state_class": SensorStateClass.MEASUREMENT,
         "icon": "mdi:blur",
@@ -297,7 +311,7 @@ HMIP_FEATURE_TO_ENTITY = {
     "particulateMassConcentrationOneAverage": {
         "class": "HcuGenericSensor",
         "name": "PM1 Concentration (Average)",
-        "unit": "µg/m³",
+        "unit": UOM_UG_M3,
         "device_class": SensorDeviceClass.PM1,
         "state_class": SensorStateClass.MEASUREMENT,
         "entity_registry_enabled_default": False,
@@ -306,7 +320,7 @@ HMIP_FEATURE_TO_ENTITY = {
     "particulateNumberConcentrationOne": {
         "class": "HcuGenericSensor",
         "name": "PM1 Number Concentration",
-        "unit": "1/cm³",
+        "unit": UOM_1_CM3,
         "state_class": SensorStateClass.MEASUREMENT,
         "entity_registry_enabled_default": False,
         "icon": "mdi:counter",
@@ -314,7 +328,7 @@ HMIP_FEATURE_TO_ENTITY = {
     "particulateMassConcentrationTwoPointFive": {
         "class": "HcuGenericSensor",
         "name": "PM2.5 Concentration",
-        "unit": "µg/m³",
+        "unit": UOM_UG_M3,
         "device_class": SensorDeviceClass.PM25,
         "state_class": SensorStateClass.MEASUREMENT,
         "icon": "mdi:blur",
@@ -322,7 +336,7 @@ HMIP_FEATURE_TO_ENTITY = {
     "particulateMassConcentrationTwoPointFiveAverage": {
         "class": "HcuGenericSensor",
         "name": "PM2.5 Concentration (Average)",
-        "unit": "µg/m³",
+        "unit": UOM_UG_M3,
         "device_class": SensorDeviceClass.PM25,
         "state_class": SensorStateClass.MEASUREMENT,
         "entity_registry_enabled_default": False,
@@ -331,7 +345,7 @@ HMIP_FEATURE_TO_ENTITY = {
     "particulateNumberConcentrationTwoPointFive": {
         "class": "HcuGenericSensor",
         "name": "PM2.5 Number Concentration",
-        "unit": "1/cm³",
+        "unit": UOM_1_CM3,
         "state_class": SensorStateClass.MEASUREMENT,
         "entity_registry_enabled_default": False,
         "icon": "mdi:counter",
@@ -339,7 +353,7 @@ HMIP_FEATURE_TO_ENTITY = {
     "particulateNumberConcentrationTwoPointFiveAverage": {
         "class": "HcuGenericSensor",
         "name": "PM2.5 Number Concentration (Average)",
-        "unit": "1/cm³",
+        "unit": UOM_1_CM3,
         "state_class": SensorStateClass.MEASUREMENT,
         "entity_registry_enabled_default": False,
         "icon": "mdi:counter",
@@ -355,7 +369,7 @@ HMIP_FEATURE_TO_ENTITY = {
     "particulateMassConcentrationTen": {
         "class": "HcuGenericSensor",
         "name": "PM10 Concentration",
-        "unit": "µg/m³",
+        "unit": UOM_UG_M3,
         "device_class": SensorDeviceClass.PM10,
         "state_class": SensorStateClass.MEASUREMENT,
         "icon": "mdi:blur",
@@ -363,7 +377,7 @@ HMIP_FEATURE_TO_ENTITY = {
     "particulateMassConcentrationTenAverage": {
         "class": "HcuGenericSensor",
         "name": "PM10 Concentration (Average)",
-        "unit": "µg/m³",
+        "unit": UOM_UG_M3,
         "device_class": SensorDeviceClass.PM10,
         "state_class": SensorStateClass.MEASUREMENT,
         "entity_registry_enabled_default": False,
@@ -372,7 +386,7 @@ HMIP_FEATURE_TO_ENTITY = {
     "particulateNumberConcentrationTen": {
         "class": "HcuGenericSensor",
         "name": "PM10 Number Concentration",
-        "unit": "1/cm³",
+        "unit": UOM_1_CM3,
         "state_class": SensorStateClass.MEASUREMENT,
         "entity_registry_enabled_default": False,
         "icon": "mdi:counter",
@@ -380,7 +394,7 @@ HMIP_FEATURE_TO_ENTITY = {
     "particulateNumberConcentrationTenAverage": {
         "class": "HcuGenericSensor",
         "name": "PM10 Number Concentration (Average)",
-        "unit": "1/cm³",
+        "unit": UOM_1_CM3,
         "state_class": SensorStateClass.MEASUREMENT,
         "entity_registry_enabled_default": False,
         "icon": "mdi:counter",
@@ -396,7 +410,7 @@ HMIP_FEATURE_TO_ENTITY = {
     "particulateTypicalSize": {
         "class": "HcuGenericSensor",
         "name": "Typical Particle Size",
-        "unit": "µm",
+        "unit": UOM_UM,
         "state_class": SensorStateClass.MEASUREMENT,
         "entity_registry_enabled_default": False,
         "icon": "mdi:ruler",

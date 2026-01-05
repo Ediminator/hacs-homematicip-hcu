@@ -269,6 +269,10 @@ HMIP_DEVICE_TYPE_TO_DEVICE_CLASS = {
     "SHUTTER_CONTACT_INVISIBLE": None,
 }
 
+UOM_HPA = "hPa"
+UOM_UG_M3 = "µg/m³"
+UOM_1_CM3 = "1/cm³"
+UOM_UM = "µm"
 
 HMIP_FEATURE_TO_ENTITY = {
     # Sensor Features
@@ -279,13 +283,6 @@ HMIP_FEATURE_TO_ENTITY = {
         "device_class": SensorDeviceClass.TEMPERATURE,
         "state_class": SensorStateClass.MEASUREMENT,
     },
-
-UOM_HPA = "hPa"
-UOM_UG_M3 = "µg/m³"
-UOM_1_CM3 = "1/cm³"
-UOM_UM = "µm"
-
-SENSORS = {
     "airPressure": {
         "class": "HcuGenericSensor",
         "name": "Air Pressure",
@@ -509,7 +506,7 @@ SENSORS = {
         "device_class": SensorDeviceClass.GAS,
         "state_class": SensorStateClass.TOTAL_INCREASING,
     },
-    "currentGasFlow": {
+    "currentGasFlow": {ust be moved outside of H
         "class": "HcuGenericSensor",
         "name": "Current Gas Flow",
         "unit": "m³/h",

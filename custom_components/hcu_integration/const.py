@@ -506,7 +506,7 @@ HMIP_FEATURE_TO_ENTITY = {
         "device_class": SensorDeviceClass.GAS,
         "state_class": SensorStateClass.TOTAL_INCREASING,
     },
-    "currentGasFlow":
+    "currentGasFlow": {
         "class": "HcuGenericSensor",
         "name": "Current Gas Flow",
         "unit": "m³/h",

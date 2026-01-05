@@ -269,6 +269,11 @@ HMIP_DEVICE_TYPE_TO_DEVICE_CLASS = {
     "SHUTTER_CONTACT_INVISIBLE": None,
 }
 
+UOM_HPA = "hPa"
+UOM_UG_M3 = "µg/m³"
+UOM_1_CM3 = "1/cm³"
+UOM_UM = "µm"
+
 HMIP_FEATURE_TO_ENTITY = {
     # Sensor Features
     "actualTemperature": {
@@ -277,6 +282,129 @@ HMIP_FEATURE_TO_ENTITY = {
         "unit": UnitOfTemperature.CELSIUS,
         "device_class": SensorDeviceClass.TEMPERATURE,
         "state_class": SensorStateClass.MEASUREMENT,
+    },
+    "airPressure": {
+        "class": "HcuGenericSensor",
+        "name": "Air Pressure",
+        "unit": UOM_HPA,
+        "device_class": SensorDeviceClass.ATMOSPHERIC_PRESSURE,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "icon": "mdi:gauge",
+    },
+    "particulateMassConcentrationOne": {
+        "class": "HcuGenericSensor",
+        "name": "PM1 Concentration",
+        "unit": UOM_UG_M3,
+        "device_class": SensorDeviceClass.PM1,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "icon": "mdi:blur",
+    },
+    "particulateMassConcentrationOneAverage": {
+        "class": "HcuGenericSensor",
+        "name": "PM1 Concentration (Average)",
+        "unit": UOM_UG_M3,
+        "device_class": SensorDeviceClass.PM1,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "entity_registry_enabled_default": False,
+        "icon": "mdi:blur",
+    },
+    "particulateNumberConcentrationOne": {
+        "class": "HcuGenericSensor",
+        "name": "PM1 Number Concentration",
+        "unit": UOM_1_CM3,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "entity_registry_enabled_default": False,
+        "icon": "mdi:counter",
+    },
+    "particulateMassConcentrationTwoPointFive": {
+        "class": "HcuGenericSensor",
+        "name": "PM2.5 Concentration",
+        "unit": UOM_UG_M3,
+        "device_class": SensorDeviceClass.PM25,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "icon": "mdi:blur",
+    },
+    "particulateMassConcentrationTwoPointFiveAverage": {
+        "class": "HcuGenericSensor",
+        "name": "PM2.5 Concentration (Average)",
+        "unit": UOM_UG_M3,
+        "device_class": SensorDeviceClass.PM25,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "entity_registry_enabled_default": False,
+        "icon": "mdi:blur",
+    },
+    "particulateNumberConcentrationTwoPointFive": {
+        "class": "HcuGenericSensor",
+        "name": "PM2.5 Number Concentration",
+        "unit": UOM_1_CM3,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "entity_registry_enabled_default": False,
+        "icon": "mdi:counter",
+    },
+    "particulateNumberConcentrationTwoPointFiveAverage": {
+        "class": "HcuGenericSensor",
+        "name": "PM2.5 Number Concentration (Average)",
+        "unit": UOM_1_CM3,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "entity_registry_enabled_default": False,
+        "icon": "mdi:counter",
+    },
+    "airQualityIndexTwoPointFive": {
+        "class": "HcuGenericSensor",
+        "name": "AQI (PM2.5)",
+        "device_class": SensorDeviceClass.AQI,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "entity_registry_enabled_default": False,
+        "icon": "mdi:air-filter",
+    },
+    "particulateMassConcentrationTen": {
+        "class": "HcuGenericSensor",
+        "name": "PM10 Concentration",
+        "unit": UOM_UG_M3,
+        "device_class": SensorDeviceClass.PM10,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "icon": "mdi:blur",
+    },
+    "particulateMassConcentrationTenAverage": {
+        "class": "HcuGenericSensor",
+        "name": "PM10 Concentration (Average)",
+        "unit": UOM_UG_M3,
+        "device_class": SensorDeviceClass.PM10,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "entity_registry_enabled_default": False,
+        "icon": "mdi:blur",
+    },
+    "particulateNumberConcentrationTen": {
+        "class": "HcuGenericSensor",
+        "name": "PM10 Number Concentration",
+        "unit": UOM_1_CM3,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "entity_registry_enabled_default": False,
+        "icon": "mdi:counter",
+    },
+    "particulateNumberConcentrationTenAverage": {
+        "class": "HcuGenericSensor",
+        "name": "PM10 Number Concentration (Average)",
+        "unit": UOM_1_CM3,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "entity_registry_enabled_default": False,
+        "icon": "mdi:counter",
+    },
+    "airQualityIndexTen": {
+        "class": "HcuGenericSensor",
+        "name": "AQI (PM10)",
+        "device_class": SensorDeviceClass.AQI,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "entity_registry_enabled_default": False,
+        "icon": "mdi:air-filter",
+    },
+    "particulateTypicalSize": {
+        "class": "HcuGenericSensor",
+        "name": "Typical Particle Size",
+        "unit": UOM_UM,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "entity_registry_enabled_default": False,
+        "icon": "mdi:ruler",
     },
     "valveActualTemperature": {
         "class": "HcuTemperatureSensor",

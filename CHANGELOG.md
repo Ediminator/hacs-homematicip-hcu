@@ -3,6 +3,17 @@
 All notable changes to the Homematic IP Local (HCU) integration will be documented in this file.
 
 ---
+## 1.19.4 - 2026-01-05
+
+### ✨ New Features
+
+- Add extra atrribute is_group:False to none group entites
+- Add extra atrribute device_id, channel_index, and functional_channel_type in all enties
+- Add extra attribute group type in all group entites
+- Add #254 air pressure for ELV-SH-CAP
+- Add #254 air quality for HmIP-SFD
+- add "ELV-" serialnumbers to deviceinfo
+
 ## 1.19.3 - 2026-01-03
 
 ### 🐛 Bug Fixes

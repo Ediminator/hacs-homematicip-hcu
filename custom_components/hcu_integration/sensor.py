@@ -74,7 +74,7 @@ class HcuHomeSensor(HcuHomeBaseEntity, HcuMigrationMixin, SensorEntity):
         return value
 
 
-class HcuGenericSensor(HcuBaseEntity, HcuMigrationMixin, SensorEntity):
+class HcuGenericSensor(HcuBaseEntity, SensorEntity):
     """Representation of a generic HCU sensor for a physical device."""
 
     PLATFORM = Platform.SENSOR

@@ -10,7 +10,7 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .entity import HcuBaseEntity, HcuMigrationMixin 
+from .entity import HcuBaseEntity, HcuMigrationMixin
 from .api import HcuApiClient
 
 if TYPE_CHECKING:

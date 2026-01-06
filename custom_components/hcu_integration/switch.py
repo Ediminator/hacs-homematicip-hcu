@@ -31,7 +31,7 @@ async def async_setup_entry(
         async_add_entities(entities)
 
 
-class HcuSwitch(SwitchStateMixin, HcuBaseEntity, HcuMigrationMixin, SwitchEntity):
+class HcuSwitch(SwitchStateMixin, HcuBaseEntity, SwitchEntity):
     """Representation of a standard Homematic IP HCU switch."""
 
     PLATFORM = Platform.SWITCH

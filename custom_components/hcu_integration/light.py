@@ -122,7 +122,7 @@ class HcuLight(HcuBaseEntity, LightEntity):
         # - migration logic implemented in migration.py is triggered here to update existing entity registry entries,
         #   preserving entity_id, name, and user customizations across upgrades
         legacy_unique_id = f"{self._device_id}_{self._channel_index}_light"
-        new_uid = f"{coordinator.entry_id}_{suffix}"
+        new_uid = f"{coordinator.entry_id}_{legacy_unique_id}"
         self._attr_unique_id = new_uid
         self._schedule_legacy_uid_migration(
             platform=self.Platform,

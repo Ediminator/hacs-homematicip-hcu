@@ -176,7 +176,7 @@ class HcuCover(HcuBaseEntity, CoverEntity):
         )
 
 
-class HcuGarageDoorCover(HcuBaseEntity, HcuMigrationMixin, CoverEntity):
+class HcuGarageDoorCover(HcuBaseEntity, CoverEntity):
     """Representation of an HCU Garage Door Cover."""
 
     PLATFORM = Platform.COVER

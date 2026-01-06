@@ -40,7 +40,7 @@ class HcuMigrationMixin:
     def _schedule_legacy_uid_migration(
         self,
         *,
-        platform: Platform,
+        platform=type(self).PLATFORM,
         legacy_unique_id: str,
         new_unique_id: str,
     ) -> None:

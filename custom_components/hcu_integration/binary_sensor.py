@@ -22,7 +22,7 @@ from .const import (
     ABSENCE_TYPE_PERMANENT,
     ABSENCE_TYPE_VACATION,
 )
-from .entity import HcuBaseEntity, HcuHomeBaseEntity
+from .entity import HcuBaseEntity, HcuHomeBaseEntity, HcuMigrationMixin
 
 if TYPE_CHECKING:
     from . import HcuCoordinator
@@ -43,7 +43,7 @@ async def async_setup_entry(
         async_add_entities(entities)
 
 
-class HcuBinarySensor(HcuBaseEntity, BinarySensorEntity):
+class HcuBinarySensor(HcuBaseEntity, HcuMigrationMixin, BinarySensorEntity):
     """
     Representation of a generic Homematic IP HCU binary sensor.
     This class is the foundation for all binary sensors in the integration.
@@ -76,13 +76,7 @@ class HcuBinarySensor(HcuBaseEntity, BinarySensorEntity):
         # - migration logic implemented in migration.py is triggered here to update existing entity registry entries,
         #   preserving entity_id, name, and user customizations across upgrades
         legacy_unique_id = f"{self._device_id}_{self._channel_index}_{self._feature}"
-        new_uid = f"{coordinator.entry_id}_{legacy_unique_id}"
-        self._attr_unique_id = new_uid
-        self._schedule_legacy_uid_migration(
-            platform=self.Platform,
-            legacy_unique_id=legacy_unique_id,
-            new_unique_id=new_uid,
-        )
+        self._configure_unique_id(legacy_unique_id)
         
         self._attr_device_class = mapping.get("device_class")
 
@@ -160,7 +154,7 @@ class HcuUnreachBinarySensor(HcuBinarySensor):
         return not self._channel.get(self._feature, False)
 
 
-class HcuVacationModeBinarySensor(HcuHomeBaseEntity, BinarySensorEntity):
+class HcuVacationModeBinarySensor(HcuHomeBaseEntity, HcuMigrationMixin, BinarySensorEntity):
     """Representation of the HCU's system-wide Vacation Mode."""
 
     PLATFORM = Platform.BINARY_SENSOR
@@ -178,13 +172,7 @@ class HcuVacationModeBinarySensor(HcuHomeBaseEntity, BinarySensorEntity):
         # - migration logic implemented in migration.py is triggered here to update existing entity registry entries,
         #   preserving entity_id, name, and user customizations across upgrades
         legacy_unique_id = f"{self._hcu_device_id}_vacation_mode"
-        new_uid = f"{coordinator.entry_id}_{legacy_unique_id}"
-        self._attr_unique_id = new_uid
-        self._schedule_legacy_uid_migration(
-            platform=self.Platform,
-            legacy_unique_id=legacy_unique_id,
-            new_unique_id=new_uid,
-        )
+        self._configure_unique_id(legacy_unique_id)
         
         self._update_attributes()
 

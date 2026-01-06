@@ -10,7 +10,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import CONF_PIN, DOCS_URL_LOCK_PIN_CONFIG
-from .entity import HcuBaseEntity
+from .entity import HcuBaseEntity, HcuMigrationMixin
 from .api import HcuApiClient, HcuApiError
 
 if TYPE_CHECKING:
@@ -32,7 +32,7 @@ async def async_setup_entry(
         async_add_entities(entities)
 
 
-class HcuLock(HcuBaseEntity, LockEntity):
+class HcuLock(HcuBaseEntity, HcuMigrationMixin, LockEntity):
     """Representation of a Homematic IP HCU door lock."""
 
     PLATFORM = Platform.LOCK
@@ -56,13 +56,7 @@ class HcuLock(HcuBaseEntity, LockEntity):
         # - migration logic implemented in migration.py is triggered here to update existing entity registry entries,
         #   preserving entity_id, name, and user customizations across upgrades
         legacy_unique_id = f"{self._device_id}_{self._channel_index}_lock"
-        new_uid = f"{coordinator.entry_id}_{legacy_unique_id}"
-        self._attr_unique_id = new_uid
-        self._schedule_legacy_uid_migration(
-            platform=self.Platform,
-            legacy_unique_id=legacy_unique_id,
-            new_unique_id=new_uid,
-        )
+        self._configure_unique_id(legacy_unique_id)
 
         # Track if this specific lock has determined it requires a PIN
         self._pin_required: bool | None = None

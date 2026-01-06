@@ -21,6 +21,16 @@ class HcuMigrationMixin:
     """Mixin for handling unique ID migration."""
     coordinator: "HcuCoordinator"
 
+    def _configure_unique_id(self, legacy_unique_id: str) -> None:
+        """Sets up the new unique_id and schedules migration from the legacy one."""
+        new_unique_id = f"{self.coordinator.entry_id}_{legacy_unique_id}"
+        self._attr_unique_id = new_unique_id
+        self._schedule_legacy_uid_migration(
+            platform=self.Platform,
+            legacy_unique_id=legacy_unique_id,
+            new_unique_id=new_unique_id,
+        )
+        
     def _schedule_legacy_uid_migration(
         self,
         *,
@@ -40,6 +50,8 @@ class HcuMigrationMixin:
                 new_unique_id=new_unique_id,
             )
         )
+        
+
         
 class HcuEntityPrefixMixin:
     """Mixin to provide entity prefix property for all HCU entities."""
@@ -296,13 +308,7 @@ class HcuGroupBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMix
         # - migration logic implemented in migration.py is triggered here to update existing entity registry entries,
         #   preserving entity_id, name, and user customizations across upgrades
         legacy_unique_id = self._group_id
-        new_uid = f"{coordinator.entry_id}_{legacy_unique_id}"
-        self._attr_unique_id = new_uid
-        self._schedule_legacy_uid_migration(
-            platform=self.Platform,
-            legacy_unique_id=legacy_unique_id,
-            new_unique_id=new_uid,
-        )
+        self._configure_unique_id(legacy_unique_id)
     
    
     @property

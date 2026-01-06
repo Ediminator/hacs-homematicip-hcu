@@ -12,7 +12,7 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .entity import HcuBaseEntity
+from .entity import HcuBaseEntity, HcuMigrationMixin
 from .api import HcuApiClient, HcuApiError
 
 if TYPE_CHECKING:
@@ -34,7 +34,7 @@ async def async_setup_entry(
         async_add_entities(entities)
 
 
-class HcuResetEnergyButton(HcuBaseEntity, ButtonEntity):
+class HcuResetEnergyButton(HcuBaseEntity, HcuMigrationMixin, ButtonEntity):
     """Representation of a button to reset the energy counter."""
 
     PLATFORM = Platform.BUTTON
@@ -62,13 +62,7 @@ class HcuResetEnergyButton(HcuBaseEntity, ButtonEntity):
         # - migration logic implemented in migration.py is triggered here to update existing entity registry entries,
         #   preserving entity_id, name, and user customizations across upgrades
         legacy_unique_id = f"{self._device_id}_{self._channel_index}_reset_energy_counter"
-        new_uid = f"{coordinator.entry_id}_{legacy_unique_id}"
-        self._attr_unique_id = new_uid
-        self._schedule_legacy_uid_migration(
-            platform=self.Platform,
-            legacy_unique_id=legacy_unique_id,
-            new_unique_id=new_uid,
-        )
+        self._configure_unique_id(legacy_unique_id)
 
     async def async_press(self) -> None:
         """Handle the button press action."""
@@ -82,7 +76,7 @@ class HcuResetEnergyButton(HcuBaseEntity, ButtonEntity):
                 "Error resetting energy counter for %s: %s", self.entity_id, err
             )
 
-class HcuDoorOpenerButton(HcuBaseEntity, ButtonEntity):
+class HcuDoorOpenerButton(HcuBaseEntity, HcuMigrationMixin, ButtonEntity):
     """Representation of a button to trigger a door opener (e.g., HmIP-FDC)."""
 
     PLATFORM = Platform.BUTTON
@@ -107,13 +101,7 @@ class HcuDoorOpenerButton(HcuBaseEntity, ButtonEntity):
         # - migration logic implemented in migration.py is triggered here to update existing entity registry entries,
         #   preserving entity_id, name, and user customizations across upgrades
         legacy_unique_id = f"{self._device_id}_{self._channel_index}_open"
-        new_uid = f"{coordinator.entry_id}_{legacy_unique_id}"
-        self._attr_unique_id = new_uid
-        self._schedule_legacy_uid_migration(
-            platform=self.Platform,
-            legacy_unique_id=legacy_unique_id,
-            new_unique_id=new_uid,
-        )
+        self._configure_unique_id(legacy_unique_id)
 
     async def async_press(self) -> None:
         """Trigger the door opener (sends 1s pulse to open door)."""
@@ -127,7 +115,7 @@ class HcuDoorOpenerButton(HcuBaseEntity, ButtonEntity):
                 "Error triggering door opener for %s: %s", self.entity_id, err
             )
             
-class HcuDoorImpulseButton(HcuBaseEntity, ButtonEntity):
+class HcuDoorImpulseButton(HcuBaseEntity, HcuMigrationMixin, ButtonEntity):
     """Representation of a button to trigger a door impulse (e.g., HmIP-WGC)."""
 
     PLATFORM = Platform.BUTTON
@@ -152,13 +140,7 @@ class HcuDoorImpulseButton(HcuBaseEntity, ButtonEntity):
         # - migration logic implemented in migration.py is triggered here to update existing entity registry entries,
         #   preserving entity_id, name, and user customizations across upgrades
         legacy_unique_id = f"{self._device_id}_{self._channel_index}_impulse"
-        new_uid = f"{coordinator.entry_id}_{legacy_unique_id}"
-        self._attr_unique_id = new_uid
-        self._schedule_legacy_uid_migration(
-            platform=self.Platform,
-            legacy_unique_id=legacy_unique_id,
-            new_unique_id=new_uid,
-        )
+        self._configure_unique_id(legacy_unique_id)
 
     async def async_press(self) -> None:
         """Trigger the door impulse (sends x s pulse to open garage door)."""

@@ -21,7 +21,7 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .entity import HcuBaseEntity, HcuSwitchingGroupBase
+from .entity import HcuBaseEntity, HcuMigrationMixin, HcuSwitchingGroupBase
 from .api import HcuApiClient
 from .const import (
     API_PATHS,
@@ -97,7 +97,7 @@ async def async_setup_entry(
         async_add_entities(entities)
 
 
-class HcuLight(HcuBaseEntity, LightEntity):
+class HcuLight(HcuBaseEntity, HcuMigrationMixin, LightEntity):
     """Representation of a Homematic IP light."""
 
     PLATFORM = Platform.LIGHT
@@ -122,13 +122,7 @@ class HcuLight(HcuBaseEntity, LightEntity):
         # - migration logic implemented in migration.py is triggered here to update existing entity registry entries,
         #   preserving entity_id, name, and user customizations across upgrades
         legacy_unique_id = f"{self._device_id}_{self._channel_index}_light"
-        new_uid = f"{coordinator.entry_id}_{legacy_unique_id}"
-        self._attr_unique_id = new_uid
-        self._schedule_legacy_uid_migration(
-            platform=self.Platform,
-            legacy_unique_id=legacy_unique_id,
-            new_unique_id=new_uid,
-        )
+        self._configure_unique_id(legacy_unique_id)
 
         # Determine supported color modes based on channel capabilities
         supported_modes = set()
@@ -358,7 +352,7 @@ class HcuLight(HcuBaseEntity, LightEntity):
             await self._client.async_set_dim_level(self._device_id, self._channel_index, 0.0, ramp_time)
 
 
-class HcuNotificationLight(HcuBaseEntity, LightEntity):
+class HcuNotificationLight(HcuBaseEntity, HcuMigrationMixin, LightEntity):
     """Representation of a Homematic IP notification light (e.g., HmIP-MP3P)."""
 
     PLATFORM = Platform.LIGHT
@@ -398,13 +392,7 @@ class HcuNotificationLight(HcuBaseEntity, LightEntity):
         # - migration logic implemented in migration.py is triggered here to update existing entity registry entries,
         #   preserving entity_id, name, and user customizations across upgrades
         legacy_unique_id = f"{self._device_id}_{self._channel_index}_light"
-        new_uid = f"{coordinator.entry_id}_{legacy_unique_id}"
-        self._attr_unique_id = new_uid
-        self._schedule_legacy_uid_migration(
-            platform=self.Platform,
-            legacy_unique_id=legacy_unique_id,
-            new_unique_id=new_uid,
-        )
+        self._configure_unique_id(legacy_unique_id)
 
     @property
     def is_on(self) -> bool:

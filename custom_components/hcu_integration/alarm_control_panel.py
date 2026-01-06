@@ -13,7 +13,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .api import HcuApiClient, HcuApiError
-from .entity import HcuHomeBaseEntity
+from .entity import HcuHomeBaseEntity, HcuMigrationMixin
 
 if TYPE_CHECKING:
     from . import HcuCoordinator
@@ -34,7 +34,7 @@ async def async_setup_entry(
         async_add_entities(entities)
 
 
-class HcuAlarmControlPanel(HcuHomeBaseEntity, AlarmControlPanelEntity):
+class HcuAlarmControlPanel(HcuHomeBaseEntity, HcuMigrationMixin, AlarmControlPanelEntity):
     """Representation of the HCU Security System."""
 
     PLATFORM = Platform.ALARM_CONTROL_PANEL
@@ -55,13 +55,7 @@ class HcuAlarmControlPanel(HcuHomeBaseEntity, AlarmControlPanelEntity):
         # - migration logic implemented in migration.py is triggered here to update existing entity registry entries,
         #   preserving entity_id, name, and user customizations across upgrades
         legacy_unique_id = f"{self._hcu_device_id}_security"
-        new_uid = f"{coordinator.entry_id}_{legacy_unique_id}"
-        self._attr_unique_id = new_uid
-        self._schedule_legacy_uid_migration(
-            platform=self.Platform,
-            legacy_unique_id=legacy_unique_id,
-            new_unique_id=new_uid,
-        )
+        self._configure_unique_id(legacy_unique_id)
         
         self._attr_alarm_state: AlarmControlPanelState | None = None
 

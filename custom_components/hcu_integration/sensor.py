@@ -10,7 +10,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .api import HcuApiClient
-from .entity import HcuBaseEntity, HcuHomeBaseEntity
+from .entity import HcuBaseEntity, HcuMigrationMixin, HcuHomeBaseEntity
 
 if TYPE_CHECKING:
     from . import HcuCoordinator
@@ -29,7 +29,7 @@ async def async_setup_entry(
         async_add_entities(entities)
 
 
-class HcuHomeSensor(HcuHomeBaseEntity, SensorEntity):
+class HcuHomeSensor(HcuHomeBaseEntity, HcuMigrationMixin, SensorEntity):
     """Representation of a sensor tied to the HCU 'home' object."""
 
     PLATFORM = Platform.SENSOR
@@ -54,13 +54,7 @@ class HcuHomeSensor(HcuHomeBaseEntity, SensorEntity):
         # - migration logic implemented in migration.py is triggered here to update existing entity registry entries,
         #   preserving entity_id, name, and user customizations across upgrades
         legacy_unique_id = f"{self._hcu_device_id}_{self._feature}"
-        new_uid = f"{coordinator.entry_id}_{legacy_unique_id}"
-        self._attr_unique_id = new_uid
-        self._schedule_legacy_uid_migration(
-            platform=self.Platform,
-            legacy_unique_id=legacy_unique_id,
-            new_unique_id=new_uid,
-        )
+        self._configure_unique_id(legacy_unique_id)
         
         self._attr_device_class = mapping.get("device_class")
         self._attr_native_unit_of_measurement = mapping.get("unit")
@@ -85,7 +79,7 @@ class HcuHomeSensor(HcuHomeBaseEntity, SensorEntity):
         return value
 
 
-class HcuGenericSensor(HcuBaseEntity, SensorEntity):
+class HcuGenericSensor(HcuBaseEntity, HcuMigrationMixin, SensorEntity):
     """Representation of a generic HCU sensor for a physical device."""
 
     PLATFORM = Platform.SENSOR
@@ -118,13 +112,7 @@ class HcuGenericSensor(HcuBaseEntity, SensorEntity):
         # - migration logic implemented in migration.py is triggered here to update existing entity registry entries,
         #   preserving entity_id, name, and user customizations across upgrades
         legacy_unique_id = f"{self._device_id}_{self._channel_index}_{self._feature}"
-        new_uid = f"{coordinator.entry_id}_{legacy_unique_id}"
-        self._attr_unique_id = new_uid
-        self._schedule_legacy_uid_migration(
-            platform=self.Platform,
-            legacy_unique_id=legacy_unique_id,
-            new_unique_id=new_uid,
-        )
+        self._configure_unique_id(legacy_unique_id)
         
         self._attr_device_class = mapping.get("device_class")
         self._attr_native_unit_of_measurement = mapping.get("unit")

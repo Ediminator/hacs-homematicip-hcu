@@ -11,7 +11,7 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .entity import HcuBaseEntity, SwitchStateMixin
+from .entity import HcuBaseEntity, SwitchStateMixin, HcuMigrationMixin
 from .api import HcuApiClient, HcuApiError
 from .const import (
     CHANNEL_TYPE_ALARM_SIREN,
@@ -36,7 +36,7 @@ async def async_setup_entry(
         async_add_entities(entities)
 
 
-class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
+class HcuSiren(SwitchStateMixin, HcuBaseEntity, HcuMigrationMixin, SirenEntity):
     """Representation of a Homematic IP HCU alarm siren.
 
     Note: The tone, duration, and optical signal are configured on the
@@ -70,13 +70,7 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
         # - migration logic implemented in migration.py is triggered here to update existing entity registry entries,
         #   preserving entity_id, name, and user customizations across upgrades
         legacy_unique_id = f"{self._device_id}_{self._channel_index}_siren"
-        new_uid = f"{coordinator.entry_id}_{legacy_unique_id}"
-        self._attr_unique_id = new_uid
-        self._schedule_legacy_uid_migration(
-            platform=self.Platform,
-            legacy_unique_id=legacy_unique_id,
-            new_unique_id=new_uid,
-        )
+        self._configure_unique_id(legacy_unique_id)
 
         # Find the ALARM_SWITCHING group for this siren
         self._alarm_group_id = self._find_alarm_switching_group()

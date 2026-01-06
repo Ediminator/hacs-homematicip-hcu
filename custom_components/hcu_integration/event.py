@@ -10,7 +10,7 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .entity import HcuBaseEntity
+from .entity import HcuBaseEntity, HcuMigrationMixin 
 from .api import HcuApiClient
 
 if TYPE_CHECKING:
@@ -45,7 +45,7 @@ async def async_setup_entry(
         async_add_entities(entities)
 
 
-class HcuDoorbellEvent(HcuBaseEntity, EventEntity):
+class HcuDoorbellEvent(HcuBaseEntity, HcuMigrationMixin, EventEntity):
     """Representation of a Homematic IP HCU doorbell event entity."""
 
     PLATFORM = Platform.EVENT
@@ -72,13 +72,7 @@ class HcuDoorbellEvent(HcuBaseEntity, EventEntity):
         # - migration logic implemented in migration.py is triggered here to update existing entity registry entries,
         #   preserving entity_id, name, and user customizations across upgrades
         legacy_unique_id = f"{self._device_id}_{self._channel_index_str}_doorbell_event"
-        new_uid = f"{coordinator.entry_id}_{legacy_unique_id}"
-        self._attr_unique_id = new_uid
-        self._schedule_legacy_uid_migration(
-            platform=self.Platform,
-            legacy_unique_id=legacy_unique_id,
-            new_unique_id=new_uid,
-        )
+        self._configure_unique_id(legacy_unique_id)
 
     @callback
     def handle_trigger(self) -> None:
@@ -86,7 +80,7 @@ class HcuDoorbellEvent(HcuBaseEntity, EventEntity):
         self._trigger_event("press")
 
 
-class HcuButtonEvent(HcuBaseEntity, EventEntity):
+class HcuButtonEvent(HcuBaseEntity, HcuMigrationMixin, EventEntity):
     """Representation of a Homematic IP HCU button event entity."""
 
     PLATFORM = Platform.EVENT
@@ -110,14 +104,8 @@ class HcuButtonEvent(HcuBaseEntity, EventEntity):
         # - migration logic implemented in migration.py is triggered here to update existing entity registry entries,
         #   preserving entity_id, name, and user customizations across upgrades
         legacy_unique_id = f"{self._device_id}_{self._channel_index_str}_button_event"
-        new_uid = f"{coordinator.entry_id}_{legacy_unique_id}"
-        self._attr_unique_id = new_uid
-        self._schedule_legacy_uid_migration(
-            platform=self.Platform,
-            legacy_unique_id=legacy_unique_id,
-            new_unique_id=new_uid,
-        )
-
+        self._configure_unique_id(legacy_unique_id)
+        
     @callback
     def handle_trigger(self, event_type: str | None = None) -> None:
         """Handle an event trigger from the coordinator."""

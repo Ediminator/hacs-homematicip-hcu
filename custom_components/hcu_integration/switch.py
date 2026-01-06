@@ -9,7 +9,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 import logging
 from .const import HMIP_DEVICE_TYPE_TO_DEVICE_CLASS
-from .entity import HcuBaseEntity, SwitchStateMixin, HcuSwitchingGroupBase
+from .entity import HcuBaseEntity, SwitchStateMixin, HcuSwitchingGroupBase, HcuMigrationMixin
 from .api import HcuApiClient, HcuApiError
 
 _LOGGER = logging.getLogger(__name__)
@@ -31,7 +31,7 @@ async def async_setup_entry(
         async_add_entities(entities)
 
 
-class HcuSwitch(SwitchStateMixin, HcuBaseEntity, SwitchEntity):
+class HcuSwitch(SwitchStateMixin, HcuBaseEntity, HcuMigrationMixin, SwitchEntity):
     """Representation of a standard Homematic IP HCU switch."""
 
     PLATFORM = Platform.SWITCH
@@ -53,13 +53,7 @@ class HcuSwitch(SwitchStateMixin, HcuBaseEntity, SwitchEntity):
         # - migration logic implemented in migration.py is triggered here to update existing entity registry entries,
         #   preserving entity_id, name, and user customizations across upgrades
         legacy_unique_id = f"{self._device_id}_{self._channel_index}_on"
-        new_uid = f"{coordinator.entry_id}_{legacy_unique_id}"
-        self._attr_unique_id = new_uid
-        self._schedule_legacy_uid_migration(
-            platform=self.Platform,
-            legacy_unique_id=legacy_unique_id,
-            new_unique_id=new_uid,
-        )
+        self._configure_unique_id(legacy_unique_id)
 
         device_type = self._device.get("type")
         self._attr_device_class = HMIP_DEVICE_TYPE_TO_DEVICE_CLASS.get(device_type)
@@ -120,7 +114,7 @@ class HcuSwitch(SwitchStateMixin, HcuBaseEntity, SwitchEntity):
             self.async_write_ha_state()
 
 
-class HcuWateringSwitch(SwitchStateMixin, HcuBaseEntity, SwitchEntity):
+class HcuWateringSwitch(SwitchStateMixin, HcuBaseEntity, HcuMigrationMixin, SwitchEntity):
     """Representation of a Homematic IP HCU watering controller."""
 
     PLATFORM = Platform.SWITCH
@@ -144,13 +138,7 @@ class HcuWateringSwitch(SwitchStateMixin, HcuBaseEntity, SwitchEntity):
         # - migration logic implemented in migration.py is triggered here to update existing entity registry entries,
         #   preserving entity_id, name, and user customizations across upgrades
         legacy_unique_id = f"{self._device_id}_{self._channel_index}_watering"
-        new_uid = f"{coordinator.entry_id}_{legacy_unique_id}"
-        self._attr_unique_id = new_uid
-        self._schedule_legacy_uid_migration(
-            platform=self.Platform,
-            legacy_unique_id=legacy_unique_id,
-            new_unique_id=new_uid,
-        )
+        self._configure_unique_id(legacy_unique_id)
         
         self._init_switch_state()
 

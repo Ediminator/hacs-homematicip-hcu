@@ -36,7 +36,7 @@ async def async_setup_entry(
         async_add_entities(entities)
 
 
-class HcuSiren(SwitchStateMixin, HcuBaseEntity, HcuMigrationMixin, SirenEntity):
+class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
     """Representation of a Homematic IP HCU alarm siren.
 
     Note: The tone, duration, and optical signal are configured on the

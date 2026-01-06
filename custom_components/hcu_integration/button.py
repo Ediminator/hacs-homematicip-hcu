@@ -34,7 +34,7 @@ async def async_setup_entry(
         async_add_entities(entities)
 
 
-class HcuResetEnergyButton(HcuBaseEntity, HcuMigrationMixin, ButtonEntity):
+class HcuResetEnergyButton(HcuBaseEntity, ButtonEntity):
     """Representation of a button to reset the energy counter."""
 
     PLATFORM = Platform.BUTTON

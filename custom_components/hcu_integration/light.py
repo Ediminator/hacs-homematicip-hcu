@@ -347,7 +347,7 @@ class HcuLight(HcuBaseEntity, LightEntity):
             await self._client.async_set_dim_level(self._device_id, self._channel_index, 0.0, ramp_time)
 
 
-class HcuNotificationLight(HcuBaseEntity, HcuMigrationMixin, LightEntity):
+class HcuNotificationLight(HcuBaseEntity, LightEntity):
     """Representation of a Homematic IP notification light (e.g., HmIP-MP3P)."""
 
     PLATFORM = Platform.LIGHT

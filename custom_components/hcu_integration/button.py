@@ -105,7 +105,7 @@ class HcuDoorOpenerButton(HcuBaseEntity, ButtonEntity):
                 "Error triggering door opener for %s: %s", self.entity_id, err
             )
             
-class HcuDoorImpulseButton(HcuBaseEntity, HcuMigrationMixin, ButtonEntity):
+class HcuDoorImpulseButton(HcuBaseEntity, ButtonEntity):
     """Representation of a button to trigger a door impulse (e.g., HmIP-WGC)."""
 
     PLATFORM = Platform.BUTTON

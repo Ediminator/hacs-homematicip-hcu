@@ -29,7 +29,7 @@ async def async_setup_entry(
         async_add_entities(entities)
 
 
-class HcuHomeSensor(HcuHomeBaseEntity, HcuMigrationMixin, SensorEntity):
+class HcuHomeSensor(HcuHomeBaseEntity, SensorEntity):
     """Representation of a sensor tied to the HCU 'home' object."""
 
     PLATFORM = Platform.SENSOR

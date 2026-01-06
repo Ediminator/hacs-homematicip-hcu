@@ -149,7 +149,7 @@ class HcuUnreachBinarySensor(HcuBinarySensor):
         return not self._channel.get(self._feature, False)
 
 
-class HcuVacationModeBinarySensor(HcuHomeBaseEntity, HcuMigrationMixin, BinarySensorEntity):
+class HcuVacationModeBinarySensor(HcuHomeBaseEntity, BinarySensorEntity):
     """Representation of the HCU's system-wide Vacation Mode."""
 
     PLATFORM = Platform.BINARY_SENSOR

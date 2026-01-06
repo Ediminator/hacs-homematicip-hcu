@@ -97,7 +97,7 @@ async def async_setup_entry(
         async_add_entities(entities)
 
 
-class HcuLight(HcuBaseEntity, HcuMigrationMixin, LightEntity):
+class HcuLight(HcuBaseEntity, LightEntity):
     """Representation of a Homematic IP light."""
 
     PLATFORM = Platform.LIGHT

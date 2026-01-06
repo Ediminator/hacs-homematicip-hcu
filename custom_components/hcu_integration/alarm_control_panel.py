@@ -48,7 +48,21 @@ class HcuAlarmControlPanel(HcuHomeBaseEntity, AlarmControlPanelEntity):
     def __init__(self, coordinator: "HcuCoordinator", client: HcuApiClient):
         super().__init__(coordinator, client)
         self._attr_name = self._apply_prefix("Homematic IP Alarm")
-        self._attr_unique_id = f"{self._hcu_device_id}_security"
+        
+        # Backward-compatible unique_id handling:
+        # - the legacy unique_id format (used by older versions) is derived from entity-specific attributes only
+        # - the new unique_id prefixes the legacy identifier with the config entry id to make entities instance-specific
+        # - migration logic implemented in migration.py is triggered here to update existing entity registry entries,
+        #   preserving entity_id, name, and user customizations across upgrades
+        legacy_unique_id = f"{self._hcu_device_id}_security"
+        new_uid = f"{coordinator.entry_id}_{suffix}"
+        self._attr_unique_id = new_uid
+        self._schedule_legacy_uid_migration(
+            platform=self.Platform,
+            legacy_unique_id=legacy_unique_id,
+            new_unique_id=new_uid,
+        )
+        
         self._attr_alarm_state: AlarmControlPanelState | None = None
 
     @property

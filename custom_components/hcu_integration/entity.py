@@ -10,6 +10,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .const import DOMAIN, CONF_ENTITY_PREFIX
 from .api import HcuApiClient, HcuApiError
 from .util import get_device_manufacturer
+from .migration import migrate_legacy_uid_if_exists
 
 if TYPE_CHECKING:
     from . import HcuCoordinator
@@ -95,6 +96,27 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, E
         self._channel_index_str = str(channel_index)
         self._channel_index = int(channel_index)
         self._attr_assumed_state = False
+    
+        
+    def _schedule_legacy_uid_migration(
+        self,
+        *,
+        platform: Platform,
+        legacy_unique_id: str,
+        new_unique_id: str,
+    ) -> None:
+        """Run a legacy->new unique_id migration in the background."""
+        hass = self.coordinator.hass
+        entry = self.coordinator.config_entry
+        hass.async_create_task(
+            migrate_legacy_uid_if_exists(
+                hass,
+                entry,
+                platform=platform.value,
+                legacy_unique_id=legacy_unique_id,
+                new_unique_id=new_unique_id,
+            )
+        )
 
     def _set_entity_name(
         self,
@@ -265,8 +287,41 @@ class HcuGroupBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMix
         # Centralized naming logic for all group entities
         label = group_data.get("label") or self._group_id
         self._attr_name = self._apply_prefix(label)
-        self._attr_unique_id = self._group_id
-
+        
+        # Backward-compatible unique_id handling:
+        # - the legacy unique_id format (used by older versions) is derived from entity-specific attributes only
+        # - the new unique_id prefixes the legacy identifier with the config entry id to make entities instance-specific
+        # - migration logic implemented in migration.py is triggered here to update existing entity registry entries,
+        #   preserving entity_id, name, and user customizations across upgrades
+        legacy_unique_id = self._group_id
+        new_uid = f"{coordinator.entry_id}_{suffix}"
+        self._attr_unique_id = new_uid
+        self._schedule_legacy_uid_migration(
+            platform=self.Platform,
+            legacy_unique_id=legacy_unique_id,
+            new_unique_id=new_uid,
+        )
+    
+    def _schedule_legacy_uid_migration(
+        self,
+        *,
+        platform: Platform,
+        legacy_unique_id: str,
+        new_unique_id: str,
+    ) -> None:
+        """Run a legacy->new unique_id migration in the background."""
+        hass = self.coordinator.hass
+        entry = self.coordinator.config_entry
+        hass.async_create_task(
+            migrate_legacy_uid_if_exists(
+                hass,
+                entry,
+                platform=platform.value,
+                legacy_unique_id=legacy_unique_id,
+                new_unique_id=new_unique_id,
+            )
+        )
+        
     @property
     def _group(self) -> dict[str, Any]:
         """Return the latest group data from the client's state cache."""
@@ -403,7 +458,27 @@ class HcuHomeBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixi
         self._hcu_device_id = self._client.hcu_device_id
         self._home_uuid = self._client.state.get("home", {}).get("id")
         self._attr_assumed_state = False
-
+    
+    def _schedule_legacy_uid_migration(
+        self,
+        *,
+        platform: Platform,
+        legacy_unique_id: str,
+        new_unique_id: str,
+    ) -> None:
+        """Run a legacy->new unique_id migration in the background."""
+        hass = self.coordinator.hass
+        entry = self.coordinator.config_entry
+        hass.async_create_task(
+            migrate_legacy_uid_if_exists(
+                hass,
+                entry,
+                platform=platform.value,
+                legacy_unique_id=legacy_unique_id,
+                new_unique_id=new_unique_id,
+            )
+        )
+    
     @property
     def _home(self) -> dict[str, Any]:
         """Return the latest home data from the client's state cache."""

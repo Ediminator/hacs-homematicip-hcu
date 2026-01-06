@@ -70,7 +70,20 @@ class HcuBinarySensor(HcuBaseEntity, BinarySensorEntity):
             channel_label=self._channel.get("label"), feature_name=mapping["name"]
         )
 
-        self._attr_unique_id = f"{self._device_id}_{self._channel_index}_{self._feature}"
+        # Backward-compatible unique_id handling:
+        # - the legacy unique_id format (used by older versions) is derived from entity-specific attributes only
+        # - the new unique_id prefixes the legacy identifier with the config entry id to make entities instance-specific
+        # - migration logic implemented in migration.py is triggered here to update existing entity registry entries,
+        #   preserving entity_id, name, and user customizations across upgrades
+        legacy_unique_id = f"{self._device_id}_{self._channel_index}_{self._feature}"
+        new_uid = f"{coordinator.entry_id}_{suffix}"
+        self._attr_unique_id = new_uid
+        self._schedule_legacy_uid_migration(
+            platform=self.Platform,
+            legacy_unique_id=legacy_unique_id,
+            new_unique_id=new_uid,
+        )
+        
         self._attr_device_class = mapping.get("device_class")
 
         if "entity_registry_enabled_default" in mapping:
@@ -158,7 +171,21 @@ class HcuVacationModeBinarySensor(HcuHomeBaseEntity, BinarySensorEntity):
         """Initialize the Vacation Mode sensor."""
         super().__init__(coordinator, client)
         self._attr_name = self._apply_prefix("Vacation Mode")
-        self._attr_unique_id = f"{self._hcu_device_id}_vacation_mode"
+        
+        # Backward-compatible unique_id handling:
+        # - the legacy unique_id format (used by older versions) is derived from entity-specific attributes only
+        # - the new unique_id prefixes the legacy identifier with the config entry id to make entities instance-specific
+        # - migration logic implemented in migration.py is triggered here to update existing entity registry entries,
+        #   preserving entity_id, name, and user customizations across upgrades
+        legacy_unique_id = f"{self._hcu_device_id}_vacation_mode"
+        new_uid = f"{coordinator.entry_id}_{suffix}"
+        self._attr_unique_id = new_uid
+        self._schedule_legacy_uid_migration(
+            platform=self.Platform,
+            legacy_unique_id=legacy_unique_id,
+            new_unique_id=new_uid,
+        )
+        
         self._update_attributes()
 
     @property

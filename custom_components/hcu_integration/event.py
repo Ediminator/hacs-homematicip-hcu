@@ -66,7 +66,19 @@ class HcuDoorbellEvent(HcuBaseEntity, EventEntity):
         # Use channel label directly without feature name to avoid redundancy
         self._set_entity_name(channel_label=self._channel.get("label"))
 
-        self._attr_unique_id = f"{self._device_id}_{self._channel_index_str}_doorbell_event"
+        # Backward-compatible unique_id handling:
+        # - the legacy unique_id format (used by older versions) is derived from entity-specific attributes only
+        # - the new unique_id prefixes the legacy identifier with the config entry id to make entities instance-specific
+        # - migration logic implemented in migration.py is triggered here to update existing entity registry entries,
+        #   preserving entity_id, name, and user customizations across upgrades
+        legacy_unique_id = f"{self._device_id}_{self._channel_index_str}_doorbell_event"
+        new_uid = f"{coordinator.entry_id}_{suffix}"
+        self._attr_unique_id = new_uid
+        self._schedule_legacy_uid_migration(
+            platform=self.Platform,
+            legacy_unique_id=legacy_unique_id,
+            new_unique_id=new_uid,
+        )
 
     @callback
     def handle_trigger(self) -> None:
@@ -91,7 +103,20 @@ class HcuButtonEvent(HcuBaseEntity, EventEntity):
     ):
         super().__init__(coordinator, client, device_data, channel_index)
         self._set_entity_name(channel_label=self._channel.get("label"))
-        self._attr_unique_id = f"{self._device_id}_{self._channel_index_str}_button_event"
+        
+        # Backward-compatible unique_id handling:
+        # - the legacy unique_id format (used by older versions) is derived from entity-specific attributes only
+        # - the new unique_id prefixes the legacy identifier with the config entry id to make entities instance-specific
+        # - migration logic implemented in migration.py is triggered here to update existing entity registry entries,
+        #   preserving entity_id, name, and user customizations across upgrades
+        legacy_unique_id = f"{self._device_id}_{self._channel_index_str}_button_event"
+        new_uid = f"{coordinator.entry_id}_{suffix}"
+        self._attr_unique_id = new_uid
+        self._schedule_legacy_uid_migration(
+            platform=self.Platform,
+            legacy_unique_id=legacy_unique_id,
+            new_unique_id=new_uid,
+        )
 
     @callback
     def handle_trigger(self, event_type: str | None = None) -> None:

@@ -115,7 +115,20 @@ class HcuLight(HcuBaseEntity, LightEntity):
         super().__init__(coordinator, client, device_data, channel_index)
 
         self._set_entity_name(channel_label=self._channel.get("label"))
-        self._attr_unique_id = f"{self._device_id}_{self._channel_index}_light"
+        
+        # Backward-compatible unique_id handling:
+        # - the legacy unique_id format (used by older versions) is derived from entity-specific attributes only
+        # - the new unique_id prefixes the legacy identifier with the config entry id to make entities instance-specific
+        # - migration logic implemented in migration.py is triggered here to update existing entity registry entries,
+        #   preserving entity_id, name, and user customizations across upgrades
+        legacy_unique_id = f"{self._device_id}_{self._channel_index}_light"
+        new_uid = f"{coordinator.entry_id}_{suffix}"
+        self._attr_unique_id = new_uid
+        self._schedule_legacy_uid_migration(
+            platform=self.Platform,
+            legacy_unique_id=legacy_unique_id,
+            new_unique_id=new_uid,
+        )
 
         # Determine supported color modes based on channel capabilities
         supported_modes = set()
@@ -378,7 +391,20 @@ class HcuNotificationLight(HcuBaseEntity, LightEntity):
         """Initialize the notification light entity."""
         super().__init__(coordinator, client, device_data, channel_index)
         self._set_entity_name(channel_label=self._channel.get("label"))
-        self._attr_unique_id = f"{self._device_id}_{self._channel_index}_light"
+        
+        # Backward-compatible unique_id handling:
+        # - the legacy unique_id format (used by older versions) is derived from entity-specific attributes only
+        # - the new unique_id prefixes the legacy identifier with the config entry id to make entities instance-specific
+        # - migration logic implemented in migration.py is triggered here to update existing entity registry entries,
+        #   preserving entity_id, name, and user customizations across upgrades
+        legacy_unique_id = f"{self._device_id}_{self._channel_index}_light"
+        new_uid = f"{coordinator.entry_id}_{suffix}"
+        self._attr_unique_id = new_uid
+        self._schedule_legacy_uid_migration(
+            platform=self.Platform,
+            legacy_unique_id=legacy_unique_id,
+            new_unique_id=new_uid,
+        )
 
     @property
     def is_on(self) -> bool:

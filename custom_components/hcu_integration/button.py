@@ -55,8 +55,19 @@ class HcuResetEnergyButton(HcuBaseEntity, ButtonEntity):
         self._set_entity_name(
             channel_label=self._channel.get("label"), feature_name="Reset Energy Counter"
         )
-        self._attr_unique_id = (
-            f"{self._device_id}_{self._channel_index}_reset_energy_counter"
+        
+        # Backward-compatible unique_id handling:
+        # - the legacy unique_id format (used by older versions) is derived from entity-specific attributes only
+        # - the new unique_id prefixes the legacy identifier with the config entry id to make entities instance-specific
+        # - migration logic implemented in migration.py is triggered here to update existing entity registry entries,
+        #   preserving entity_id, name, and user customizations across upgrades
+        legacy_unique_id = f"{self._device_id}_{self._channel_index}_reset_energy_counter"
+        new_uid = f"{coordinator.entry_id}_{suffix}"
+        self._attr_unique_id = new_uid
+        self._schedule_legacy_uid_migration(
+            platform=self.Platform,
+            legacy_unique_id=legacy_unique_id,
+            new_unique_id=new_uid,
         )
 
     async def async_press(self) -> None:
@@ -70,7 +81,6 @@ class HcuResetEnergyButton(HcuBaseEntity, ButtonEntity):
             _LOGGER.error(
                 "Error resetting energy counter for %s: %s", self.entity_id, err
             )
-
 
 class HcuDoorOpenerButton(HcuBaseEntity, ButtonEntity):
     """Representation of a button to trigger a door opener (e.g., HmIP-FDC)."""
@@ -91,7 +101,19 @@ class HcuDoorOpenerButton(HcuBaseEntity, ButtonEntity):
         # Set entity name using the centralized naming helper
         self._set_entity_name(channel_label=self._channel.get("label"))
 
-        self._attr_unique_id = f"{self._device_id}_{self._channel_index}_open"
+        # Backward-compatible unique_id handling:
+        # - the legacy unique_id format (used by older versions) is derived from entity-specific attributes only
+        # - the new unique_id prefixes the legacy identifier with the config entry id to make entities instance-specific
+        # - migration logic implemented in migration.py is triggered here to update existing entity registry entries,
+        #   preserving entity_id, name, and user customizations across upgrades
+        legacy_unique_id = f"{self._device_id}_{self._channel_index}_open"
+        new_uid = f"{coordinator.entry_id}_{suffix}"
+        self._attr_unique_id = new_uid
+        self._schedule_legacy_uid_migration(
+            platform=self.Platform,
+            legacy_unique_id=legacy_unique_id,
+            new_unique_id=new_uid,
+        )
 
     async def async_press(self) -> None:
         """Trigger the door opener (sends 1s pulse to open door)."""
@@ -124,7 +146,19 @@ class HcuDoorImpulseButton(HcuBaseEntity, ButtonEntity):
         # Set entity name using the centralized naming helper
         self._set_entity_name(channel_label=self._channel.get("label"))
 
-        self._attr_unique_id = f"{self._device_id}_{self._channel_index}_impulse"
+        # Backward-compatible unique_id handling:
+        # - the legacy unique_id format (used by older versions) is derived from entity-specific attributes only
+        # - the new unique_id prefixes the legacy identifier with the config entry id to make entities instance-specific
+        # - migration logic implemented in migration.py is triggered here to update existing entity registry entries,
+        #   preserving entity_id, name, and user customizations across upgrades
+        legacy_unique_id = f"{self._device_id}_{self._channel_index}_impulse"
+        new_uid = f"{coordinator.entry_id}_{suffix}"
+        self._attr_unique_id = new_uid
+        self._schedule_legacy_uid_migration(
+            platform=self.Platform,
+            legacy_unique_id=legacy_unique_id,
+            new_unique_id=new_uid,
+        )
 
     async def async_press(self) -> None:
         """Trigger the door impulse (sends x s pulse to open garage door)."""

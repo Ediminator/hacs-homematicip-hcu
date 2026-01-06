@@ -21,6 +21,12 @@ class HcuMigrationMixin:
     """Mixin for handling unique ID migration."""
     coordinator: "HcuCoordinator"
 
+    """ Backward-compatible unique_id handling: """
+    """ - the legacy unique_id format (used by older versions) is derived from entity-specific attributes only """
+    """ - the new unique_id prefixes the legacy identifier with the config entry id to make entities instance-specific """
+    """ - migration logic implemented in migration.py is triggered here to update existing entity registry entries, """
+    """   preserving entity_id, name, and user customizations across upgrades """
+    
     def _configure_unique_id(self, legacy_unique_id: str) -> None:
         """Sets up the new unique_id and schedules migration from the legacy one."""
         new_unique_id = f"{self.coordinator.entry_id}_{legacy_unique_id}"
@@ -302,11 +308,6 @@ class HcuGroupBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMix
         label = group_data.get("label") or self._group_id
         self._attr_name = self._apply_prefix(label)
         
-        # Backward-compatible unique_id handling:
-        # - the legacy unique_id format (used by older versions) is derived from entity-specific attributes only
-        # - the new unique_id prefixes the legacy identifier with the config entry id to make entities instance-specific
-        # - migration logic implemented in migration.py is triggered here to update existing entity registry entries,
-        #   preserving entity_id, name, and user customizations across upgrades
         legacy_unique_id = self._group_id
         self._configure_unique_id(legacy_unique_id)
     

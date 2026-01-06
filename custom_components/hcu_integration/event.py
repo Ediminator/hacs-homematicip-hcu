@@ -45,7 +45,7 @@ async def async_setup_entry(
         async_add_entities(entities)
 
 
-class HcuDoorbellEvent(HcuBaseEntity, HcuMigrationMixin, EventEntity):
+class HcuDoorbellEvent(HcuBaseEntity, EventEntity):
     """Representation of a Homematic IP HCU doorbell event entity."""
 
     PLATFORM = Platform.EVENT

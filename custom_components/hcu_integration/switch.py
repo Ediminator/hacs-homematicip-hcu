@@ -109,7 +109,7 @@ class HcuSwitch(SwitchStateMixin, HcuBaseEntity, HcuMigrationMixin, SwitchEntity
             self.async_write_ha_state()
 
 
-class HcuWateringSwitch(SwitchStateMixin, HcuBaseEntity, HcuMigrationMixin, SwitchEntity):
+class HcuWateringSwitch(SwitchStateMixin, HcuBaseEntity, SwitchEntity):
     """Representation of a Homematic IP HCU watering controller."""
 
     PLATFORM = Platform.SWITCH

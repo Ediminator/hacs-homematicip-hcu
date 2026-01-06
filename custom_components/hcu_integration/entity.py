@@ -18,12 +18,12 @@ if TYPE_CHECKING:
 _LOGGER = logging.getLogger(__name__)
 
 class HcuMigrationMixin:
-    """Mixin for handling unique ID migration.
-       Backward-compatible unique_id handling:
-       - the legacy unique_id format (used by older versions) is derived from entity-specific attributes only
-       - the new unique_id prefixes the legacy identifier with the config entry id to make entities instance-specific
-       - migration logic implemented in migration.py is triggered here to update existing entity registry entries,
-       preserving entity_id, name, and user customizations across upgrades """
+    """Mixin for handling unique ID migration."""
+      # Backward-compatible unique_id handling:
+      # - the legacy unique_id format (used by older versions) is derived from entity-specific attributes only
+      # - the new unique_id prefixes the legacy identifier with the config entry id to make entities instance-specific
+      # - migration logic implemented in migration.py is triggered here to update existing entity registry entries,
+      # preserving entity_id, name, and user customizations across upgrades
     
     coordinator: "HcuCoordinator"
 

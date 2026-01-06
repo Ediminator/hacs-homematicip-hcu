@@ -75,7 +75,7 @@ class HcuDoorbellEvent(HcuBaseEntity, EventEntity):
         self._trigger_event("press")
 
 
-class HcuButtonEvent(HcuBaseEntity, HcuMigrationMixin, EventEntity):
+class HcuButtonEvent(HcuBaseEntity, EventEntity):
     """Representation of a Homematic IP HCU button event entity."""
 
     PLATFORM = Platform.EVENT

@@ -51,7 +51,7 @@ async def async_setup_entry(
         async_add_entities(entities)
 
 
-class HcuCover(HcuBaseEntity, HcuMigrationMixin, CoverEntity):
+class HcuCover(HcuBaseEntity, CoverEntity):
     """Representation of an HCU Cover (shutter or blind) device channel."""
 
     PLATFORM = Platform.COVER

@@ -34,7 +34,7 @@ async def async_setup_entry(
         async_add_entities(entities)
 
 
-class HcuAlarmControlPanel(HcuHomeBaseEntity, HcuMigrationMixin, AlarmControlPanelEntity):
+class HcuAlarmControlPanel(HcuHomeBaseEntity, AlarmControlPanelEntity):
     """Representation of the HCU Security System."""
 
     PLATFORM = Platform.ALARM_CONTROL_PANEL

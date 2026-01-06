@@ -6,6 +6,7 @@ import logging
 from homeassistant.core import callback
 from homeassistant.helpers.entity import DeviceInfo, Entity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.const import Platform
 
 from .const import DOMAIN, CONF_ENTITY_PREFIX
 from .api import HcuApiClient, HcuApiError
@@ -32,7 +33,7 @@ class HcuMigrationMixin:
         new_unique_id = f"{self.coordinator.entry_id}_{legacy_unique_id}"
         self._attr_unique_id = new_unique_id
         self._schedule_legacy_uid_migration(
-            platform=self.Platform,
+            platform=type(self).PLATFORM,
             legacy_unique_id=legacy_unique_id,
             new_unique_id=new_unique_id,
         )
@@ -40,7 +41,7 @@ class HcuMigrationMixin:
     def _schedule_legacy_uid_migration(
         self,
         *,
-        platform=type(self).PLATFORM,
+        platform=platform.value,
         legacy_unique_id: str,
         new_unique_id: str,
     ) -> None:

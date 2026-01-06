@@ -5,10 +5,6 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 
 
-def make_new_unique_id(entry_id: str, suffix: str) -> str:
-    return f"{entry_id}_{suffix}"
-
-
 async def migrate_legacy_uid_if_exists(
     hass: HomeAssistant,
     entry: ConfigEntry,

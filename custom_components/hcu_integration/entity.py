@@ -17,7 +17,30 @@ if TYPE_CHECKING:
 
 _LOGGER = logging.getLogger(__name__)
 
+class HcuMigrationMixin:
+    """Mixin for handling unique ID migration."""
+    coordinator: "HcuCoordinator"
 
+    def _schedule_legacy_uid_migration(
+        self,
+        *,
+        platform: Platform,
+        legacy_unique_id: str,
+        new_unique_id: str,
+    ) -> None:
+        """Run a legacy->new unique_id migration in the background."""
+        hass = self.coordinator.hass
+        entry = self.coordinator.config_entry
+        hass.async_create_task(
+            migrate_legacy_uid_if_exists(
+                hass,
+                entry,
+                platform=platform.value,
+                legacy_unique_id=legacy_unique_id,
+                new_unique_id=new_unique_id,
+            )
+        )
+        
 class HcuEntityPrefixMixin:
     """Mixin to provide entity prefix property for all HCU entities."""
 
@@ -76,7 +99,7 @@ class SwitchStateMixin:
             self.async_write_ha_state()  # type: ignore[attr-defined]
 
 
-class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, Entity):
+class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, HcuMigrationMixin, Entity):
     """Base class for entities tied to a specific Homematic IP device channel."""
 
     _attr_should_poll = False
@@ -97,27 +120,6 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, E
         self._channel_index = int(channel_index)
         self._attr_assumed_state = False
     
-        
-    def _schedule_legacy_uid_migration(
-        self,
-        *,
-        platform: Platform,
-        legacy_unique_id: str,
-        new_unique_id: str,
-    ) -> None:
-        """Run a legacy->new unique_id migration in the background."""
-        hass = self.coordinator.hass
-        entry = self.coordinator.config_entry
-        hass.async_create_task(
-            migrate_legacy_uid_if_exists(
-                hass,
-                entry,
-                platform=platform.value,
-                legacy_unique_id=legacy_unique_id,
-                new_unique_id=new_unique_id,
-            )
-        )
-
     def _set_entity_name(
         self,
         channel_label: str | None = None,
@@ -266,7 +268,7 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, E
             self.async_write_ha_state()
 
 
-class HcuGroupBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, Entity):
+class HcuGroupBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, HcuMigrationMixin, Entity):
     """Base class for entities that represent a Homematic IP group."""
 
     _attr_should_poll = False
@@ -302,26 +304,7 @@ class HcuGroupBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMix
             new_unique_id=new_uid,
         )
     
-    def _schedule_legacy_uid_migration(
-        self,
-        *,
-        platform: Platform,
-        legacy_unique_id: str,
-        new_unique_id: str,
-    ) -> None:
-        """Run a legacy->new unique_id migration in the background."""
-        hass = self.coordinator.hass
-        entry = self.coordinator.config_entry
-        hass.async_create_task(
-            migrate_legacy_uid_if_exists(
-                hass,
-                entry,
-                platform=platform.value,
-                legacy_unique_id=legacy_unique_id,
-                new_unique_id=new_unique_id,
-            )
-        )
-        
+   
     @property
     def _group(self) -> dict[str, Any]:
         """Return the latest group data from the client's state cache."""
@@ -441,7 +424,7 @@ class HcuSwitchingGroupBase(SwitchingGroupMixin, HcuGroupBaseEntity):
         await self._async_set_switching_group_state(False)
 
 
-class HcuHomeBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, Entity):
+class HcuHomeBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, HcuMigrationMixin, Entity):
     """Base class for entities tied to the global 'home' object."""
 
     _attr_should_poll = False
@@ -458,26 +441,6 @@ class HcuHomeBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixi
         self._hcu_device_id = self._client.hcu_device_id
         self._home_uuid = self._client.state.get("home", {}).get("id")
         self._attr_assumed_state = False
-    
-    def _schedule_legacy_uid_migration(
-        self,
-        *,
-        platform: Platform,
-        legacy_unique_id: str,
-        new_unique_id: str,
-    ) -> None:
-        """Run a legacy->new unique_id migration in the background."""
-        hass = self.coordinator.hass
-        entry = self.coordinator.config_entry
-        hass.async_create_task(
-            migrate_legacy_uid_if_exists(
-                hass,
-                entry,
-                platform=platform.value,
-                legacy_unique_id=legacy_unique_id,
-                new_unique_id=new_unique_id,
-            )
-        )
     
     @property
     def _home(self) -> dict[str, Any]:

@@ -43,7 +43,7 @@ async def async_setup_entry(
         async_add_entities(entities)
 
 
-class HcuBinarySensor(HcuBaseEntity, HcuMigrationMixin, BinarySensorEntity):
+class HcuBinarySensor(HcuBaseEntity, BinarySensorEntity):
     """
     Representation of a generic Homematic IP HCU binary sensor.
     This class is the foundation for all binary sensors in the integration.

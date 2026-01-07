@@ -33,6 +33,7 @@ from .const import (
     DUTY_CYCLE_BINARY_SENSOR_MAPPING,
     HMIP_CHANNEL_TYPE_TO_ENTITY,
     HMIP_FEATURE_TO_ENTITY,
+    HMIP_OPTIONAL_FEATURE_TO_ENTITY,
     MULTI_FUNCTION_CHANNEL_DEVICES,
     PLATFORMS,
     EVENT_CHANNEL_TYPES,
@@ -81,6 +82,7 @@ async def async_discover_entities(
         "HcuResetEnergyButton": button,
         "HcuDoorOpenerButton": button,
         "HcuDoorImpulseButton": button,
+        "HcuDeviceIdentifyButton": button,
         "HcuGenericSensor": sensor,
         "HcuTemperatureSensor": sensor,
         "HcuHomeSensor": sensor,
@@ -271,6 +273,114 @@ async def async_discover_entities(
                             device_data.get("id"), channel_index, feature, class_name, e
                         )
 
+            # ---------------------------------------------------------------------
+            # Optional features via supportedOptionalFeatures (capabilities)
+            # ---------------------------------------------------------------------
+            supported_optional = (
+                channel_data.get("supportedOptionalFeatures")
+                or device_data.get("supportedOptionalFeatures")
+                or {}
+            )
+            
+            for feature, mapping in HMIP_OPTIONAL_FEATURE_TO_ENTITY.items():
+                if feature not in supported_optional:
+                    continue
+            
+                # 1) Log: optional feature gefunden/unterstützt
+                _LOGGER.debug(
+                    "Optional feature supported: device=%s channel=%s feature=%s",
+                    device_data.get("id"),
+                    channel_index,
+                    feature,
+                )
+            
+                requires_data_key = mapping.get("requires_data_key", True)
+                data_key = mapping.get("data_key", feature)
+            
+                # Wenn der Wert-Key bereits im normalen Feature-Mapping steckt, keine Doppel-Entity bauen
+                if requires_data_key and data_key in HMIP_FEATURE_TO_ENTITY:
+                    continue
+            
+                # Für Value-Features: nur bauen, wenn der Wert-Key vorhanden und nicht None ist
+                if requires_data_key:
+                    if data_key not in channel_data:
+                        _LOGGER.debug(
+                            "Optional feature supported but not created (missing data key): device=%s channel=%s feature=%s data_key=%s",
+                            device_data.get("id"),
+                            channel_index,
+                            feature,
+                            data_key,
+                        )
+                        continue
+            
+                    if channel_data[data_key] is None:
+                        _LOGGER.debug(
+                            "Optional feature supported but not created (value is null): device=%s channel=%s feature=%s data_key=%s",
+                            device_data.get("id"),
+                            channel_index,
+                            feature,
+                            data_key,
+                        )
+                        continue
+            
+                class_name = mapping["class"]
+                module = class_module_map.get(class_name)
+                if not module:
+                    _LOGGER.debug(
+                        "Optional feature supported but not created (no module mapping): device=%s channel=%s feature=%s class=%s",
+                        device_data.get("id"),
+                        channel_index,
+                        feature,
+                        class_name,
+                    )
+                    continue
+            
+                try:
+                    entity_class = getattr(module, class_name)
+                    platform = getattr(entity_class, "PLATFORM")
+            
+                    entity_mapping = mapping.copy()
+                    if is_deactivated_by_default:
+                        entity_mapping["entity_registry_enabled_default"] = not is_unused_channel
+            
+                    # Bei Actions (requires_data_key=False): capability-name weitergeben
+                    # Bei Value-Features: echten data_key weitergeben
+                    feature_arg = data_key if requires_data_key else feature
+            
+                    # Robust instanziieren: erst "Feature+Mapping", dann Fallbacks
+                    try:
+                        entity = entity_class(coordinator, client, device_data, channel_index, feature_arg, entity_mapping)
+                    except TypeError:
+                        try:
+                            entity = entity_class(coordinator, client, device_data, channel_index, feature_arg)
+                        except TypeError:
+                            entity = entity_class(coordinator, client, device_data, channel_index)
+            
+                    entities[platform].append(entity)
+            
+                    # 2) Log: anlegen erfolgreich
+                    _LOGGER.debug(
+                        "Optional feature entity created successfully: device=%s channel=%s feature=%s class=%s platform=%s arg=%s",
+                        device_data.get("id"),
+                        channel_index,
+                        feature,
+                        class_name,
+                        platform.value,
+                        feature_arg,
+                    )
+            
+                except (AttributeError, TypeError) as e:
+                    _LOGGER.error(
+                        "Failed to create optional feature entity: device=%s channel=%s feature=%s class=%s: %s",
+                        device_data.get("id"),
+                        channel_index,
+                        feature,
+                        class_name,
+                        e,
+                        exc_info=True,
+                    )
+
+            
             # Special handling for dutyCycle binary sensor (device-level warning flag)
             # Note: dutyCycle exists in both home object (percentage) and device channels (boolean)
             # This is handled separately to avoid key collision in HMIP_FEATURE_TO_ENTITY

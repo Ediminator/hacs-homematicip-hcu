@@ -129,6 +129,7 @@ API_PATHS = {
     "RESET_ENERGY_COUNTER": "/hmip/device/control/resetEnergyCounter",
     "SEND_DOOR_COMMAND": "/hmip/device/control/sendDoorCommand",
     "SEND_DOOR_IMPULSE": "/hmip/device/control/startImpulse",
+    "DEVICE_IDENTIFY": "/hmip/device/control/setIdentify",
     "SET_COLOR_TEMP": "/hmip/device/control/setColorTemperatureDimLevel",
     "SET_COLOR_TEMP_WITH_TIME": "/hmip/device/control/setColorTemperatureDimLevelWithTime",
     "SET_DIM_LEVEL": "/hmip/device/control/setDimLevel",
@@ -217,6 +218,16 @@ GENERIC_BUTTON_DEVICES = {
         "channels": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
     },
 }
+
+
+HMIP_OPTIONAL_FEATURE_TO_ENTITY = {
+    "IFeatureDeviceIdentify": {
+        "class": "HcuDeviceIdentifyButton",
+        "requires_data_key": False,
+        "simple_init": True,
+    }
+}
+
 
 HMIP_DEVICE_TYPE_TO_DEVICE_CLASS = {
     "BLIND_ACTUATOR": CoverDeviceClass.BLIND,

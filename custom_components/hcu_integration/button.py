@@ -89,7 +89,7 @@ class HcuDoorOpenerButton(HcuBaseEntity, ButtonEntity):
         super().__init__(coordinator, client, device_data, channel_index)
 
         # Set entity name using the centralized naming helper
-        self._set_entity_name(channel_label=self._channel.get("label"))
+        self._set_entity_name(channel_label=self._channel.get("label"), feature_name="Open")
 
         self._attr_unique_id = f"{self._device_id}_{self._channel_index}_open"
 
@@ -122,7 +122,7 @@ class HcuDoorImpulseButton(HcuBaseEntity, ButtonEntity):
         super().__init__(coordinator, client, device_data, channel_index)
 
         # Set entity name using the centralized naming helper
-        self._set_entity_name(channel_label=self._channel.get("label"))
+        self._set_entity_name(channel_label=self._channel.get("label"), feature_name="Impulse")
 
         self._attr_unique_id = f"{self._device_id}_{self._channel_index}_impulse"
 
@@ -137,3 +137,39 @@ class HcuDoorImpulseButton(HcuBaseEntity, ButtonEntity):
             _LOGGER.error(
                 "Error triggering door impulse for %s: %s", self.entity_id, err
             )
+
+class HcuDeviceIdentifyButton(HcuBaseEntity, ButtonEntity):
+    """Representation of a button to trigger device identify (blink/beep)."""
+
+    PLATFORM = Platform.BUTTON
+    _attr_icon = "mdi:crosshairs-gps"
+
+    def __init__(
+        self,
+        coordinator: "HcuCoordinator",
+        client: HcuApiClient,
+        device_data: dict,
+        channel_index: str,
+    ):
+        """Initialize the identify button."""
+        super().__init__(coordinator, client, device_data, channel_index)
+
+        self._attr_device_class = None
+        # Set entity name using the centralized naming helper
+        self._set_entity_name(
+            channel_label=self._channel.get("label"), feature_name="Identify"
+        )
+        self._attr_unique_id = f"{self._device_id}_{self._channel_index}_identify"
+
+    async def async_press(self) -> None:
+        """Trigger identify for the device/channel (e.g., blink/beep)."""
+        _LOGGER.info("Triggering identify for %s", self.entity_id)
+        try:
+            await self._client.async_send_identify(
+                self._device_id, self._channel_index
+            )
+        except (HcuApiError, ConnectionError) as err:
+            _LOGGER.error(
+                "Error triggering identify for %s: %s", self.entity_id, err
+            )
+

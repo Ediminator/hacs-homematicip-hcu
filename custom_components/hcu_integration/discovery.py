@@ -33,6 +33,7 @@ from .const import (
     DUTY_CYCLE_BINARY_SENSOR_MAPPING,
     HMIP_CHANNEL_TYPE_TO_ENTITY,
     HMIP_FEATURE_TO_ENTITY,
+    HMIP_OPTIONAL_FEATURE_TO_ENTITY,
     MULTI_FUNCTION_CHANNEL_DEVICES,
     PLATFORMS,
     EVENT_CHANNEL_TYPES,
@@ -81,6 +82,7 @@ async def async_discover_entities(
         "HcuResetEnergyButton": button,
         "HcuDoorOpenerButton": button,
         "HcuDoorImpulseButton": button,
+        "HcuDeviceIdentifyButton": button,
         "HcuGenericSensor": sensor,
         "HcuTemperatureSensor": sensor,
         "HcuHomeSensor": sensor,
@@ -270,6 +272,107 @@ async def async_discover_entities(
                             "Failed to create entity for device %s, channel %s, feature %s (%s): %s",
                             device_data.get("id"), channel_index, feature, class_name, e
                         )
+
+            # Optional features via supportedOptionalFeatures (channel-level dict: feature -> bool)
+            supported_map = channel_data.get("supportedOptionalFeatures") or {}
+            
+            for feature, mapping in HMIP_OPTIONAL_FEATURE_TO_ENTITY.items():
+                # Directly check whether the optional feature is supported (must be True)
+                if not supported_map.get(feature, False):
+                    continue
+            
+                _LOGGER.debug(
+                    "Optional feature supported: device=%s channel=%s feature=%s",
+                    device_data.get("id"),
+                    channel_index,
+                    feature,
+                )
+            
+                requires_data_key = mapping.get("requires_data_key", True)
+                data_key = mapping.get("data_key", feature)
+            
+                # Avoid creating duplicates if the value key is already handled by HMIP_FEATURE_TO_ENTITY
+                if requires_data_key and data_key in HMIP_FEATURE_TO_ENTITY:
+                    continue
+            
+                # For value-based optional features, only create an entity if the data key exists and is not None
+                if requires_data_key:
+                    if data_key not in channel_data:
+                        _LOGGER.debug(
+                            "Optional feature supported but not created (missing data key): device=%s channel=%s feature=%s data_key=%s",
+                            device_data.get("id"),
+                            channel_index,
+                            feature,
+                            data_key,
+                        )
+                        continue
+            
+                    if channel_data[data_key] is None:
+                        _LOGGER.debug(
+                            "Optional feature supported but not created (value is null): device=%s channel=%s feature=%s data_key=%s",
+                            device_data.get("id"),
+                            channel_index,
+                            feature,
+                            data_key,
+                        )
+                        continue
+            
+                class_name = mapping["class"]
+                module = class_module_map.get(class_name)
+                if not module:
+                    _LOGGER.debug(
+                        "Optional feature supported but not created (no module mapping): device=%s channel=%s feature=%s class=%s",
+                        device_data.get("id"),
+                        channel_index,
+                        feature,
+                        class_name,
+                    )
+                    continue
+            
+                try:
+                    entity_class = getattr(module, class_name)
+                    platform = getattr(entity_class, "PLATFORM")
+            
+                    entity_mapping = mapping.copy()
+                    if is_deactivated_by_default:
+                        entity_mapping["entity_registry_enabled_default"] = not is_unused_channel
+            
+                    feature_arg = data_key if requires_data_key else feature
+            
+                    # Select the constructor explicitly based on the mapping flag
+                    if mapping.get("simple_init", False):
+                        # Use a simpler __init__ signature for action-style entities (e.g., identify button)
+                        entity = entity_class(coordinator, client, device_data, channel_index)
+                    else:
+                        # Use the full __init__ signature for feature/value-based entities
+                        entity = entity_class(
+                            coordinator, client, device_data, channel_index, feature_arg, entity_mapping
+                        )
+            
+                    entities[platform].append(entity)
+            
+                    _LOGGER.debug(
+                        "Optional feature entity created successfully: device=%s channel=%s feature=%s class=%s platform=%s arg=%s",
+                        device_data.get("id"),
+                        channel_index,
+                        feature,
+                        class_name,
+                        platform.value,
+                        feature_arg,
+                    )
+            
+                except (AttributeError, TypeError) as e:
+                    _LOGGER.error(
+                        "Optional feature entity not created: device=%s channel=%s feature=%s class=%s error=%s",
+                        device_data.get("id"),
+                        channel_index,
+                        feature,
+                        class_name,
+                        e,
+                        exc_info=True,
+                    )
+                    continue
+
 
             # Special handling for dutyCycle binary sensor (device-level warning flag)
             # Note: dutyCycle exists in both home object (percentage) and device channels (boolean)

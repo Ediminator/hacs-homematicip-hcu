@@ -153,7 +153,7 @@ class HcuDeviceIdentifyButton(HcuBaseEntity, ButtonEntity):
     ):
         """Initialize the identify button."""
         super().__init__(coordinator, client, device_data, channel_index)
-        
+
         self._attr_device_class = None
         # Set entity name using the centralized naming helper
         self._set_entity_name(

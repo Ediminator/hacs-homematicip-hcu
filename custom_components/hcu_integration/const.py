@@ -224,6 +224,7 @@ HMIP_OPTIONAL_FEATURE_TO_ENTITY = {
     "IFeatureDeviceIdentify": {
         "class": "HcuDeviceIdentifyButton",
         "requires_data_key": False,
+        "simple_init": True,
     }
 }
 

@@ -273,29 +273,48 @@ async def async_discover_entities(
                             device_data.get("id"), channel_index, feature, class_name, e
                         )
 
-            # Optional features via supportedOptionalFeatures
-            supported_optional = (
-                channel_data.get("supportedOptionalFeatures")
-                or device_data.get("supportedOptionalFeatures")
-                or {}
-            )
+            # Optional features via supportedOptionalFeatures (channel-level dict: feature -> bool)
+            supported_map = channel_data.get("supportedOptionalFeatures") or {}
             
             for feature, mapping in HMIP_OPTIONAL_FEATURE_TO_ENTITY.items():
-                if feature not in supported_optional:
+                # Directly check whether the optional feature is supported (must be True)
+                if not supported_map.get(feature, False):
                     continue
+            
+                _LOGGER.debug(
+                    "Optional feature supported: device=%s channel=%s feature=%s",
+                    device_data.get("id"),
+                    channel_index,
+                    feature,
+                )
             
                 requires_data_key = mapping.get("requires_data_key", True)
                 data_key = mapping.get("data_key", feature)
             
-                # Avoid creating duplicates if the value key is already handled by the normal feature mapping
+                # Avoid creating duplicates if the value key is already handled by HMIP_FEATURE_TO_ENTITY
                 if requires_data_key and data_key in HMIP_FEATURE_TO_ENTITY:
                     continue
             
                 # For value-based optional features, only create an entity if the data key exists and is not None
                 if requires_data_key:
                     if data_key not in channel_data:
+                        _LOGGER.debug(
+                            "Optional feature supported but not created (missing data key): device=%s channel=%s feature=%s data_key=%s",
+                            device_data.get("id"),
+                            channel_index,
+                            feature,
+                            data_key,
+                        )
                         continue
+            
                     if channel_data[data_key] is None:
+                        _LOGGER.debug(
+                            "Optional feature supported but not created (value is null): device=%s channel=%s feature=%s data_key=%s",
+                            device_data.get("id"),
+                            channel_index,
+                            feature,
+                            data_key,
+                        )
                         continue
             
                 class_name = mapping["class"]
@@ -320,28 +339,15 @@ async def async_discover_entities(
             
                     feature_arg = data_key if requires_data_key else feature
             
-                    entity = None
-                    # Try the full constructor first (feature + mapping)
-                    try:
+                    # Select the constructor explicitly based on the mapping flag
+                    if mapping.get("simple_init", False):
+                        # Use a simpler __init__ signature for action-style entities (e.g., identify button)
+                        entity = entity_class(coordinator, client, device_data, channel_index)
+                    else:
+                        # Use the full __init__ signature for feature/value-based entities
                         entity = entity_class(
                             coordinator, client, device_data, channel_index, feature_arg, entity_mapping
                         )
-                    except TypeError:
-                        # Fallback: some entities (e.g., identify button) use a simpler __init__ signature
-                        try:
-                            entity = entity_class(coordinator, client, device_data, channel_index)
-                        except TypeError as e:
-                            _LOGGER.debug(
-                                "Optional feature entity not created (constructor mismatch): device=%s channel=%s feature=%s class=%s arg=%s error=%s",
-                                device_data.get("id"),
-                                channel_index,
-                                feature,
-                                class_name,
-                                feature_arg,
-                                e,
-                                exc_info=True,
-                            )
-                            continue
             
                     entities[platform].append(entity)
             
@@ -356,8 +362,8 @@ async def async_discover_entities(
                     )
             
                 except (AttributeError, TypeError) as e:
-                    _LOGGER.error(
-                        "Failed to create optional feature entity: device=%s channel=%s feature=%s class=%s: %s",
+                    _LOGGER.debug(
+                        "Optional feature entity not created: device=%s channel=%s feature=%s class=%s error=%s",
                         device_data.get("id"),
                         channel_index,
                         feature,
@@ -365,6 +371,8 @@ async def async_discover_entities(
                         e,
                         exc_info=True,
                     )
+                    continue
+
 
             # Special handling for dutyCycle binary sensor (device-level warning flag)
             # Note: dutyCycle exists in both home object (percentage) and device channels (boolean)

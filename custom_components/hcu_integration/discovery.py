@@ -287,9 +287,11 @@ async def async_discover_entities(
                 requires_data_key = mapping.get("requires_data_key", True)
                 data_key = mapping.get("data_key", feature)
             
+                # Avoid creating duplicates if the value key is already handled by the normal feature mapping
                 if requires_data_key and data_key in HMIP_FEATURE_TO_ENTITY:
                     continue
             
+                # For value-based optional features, only create an entity if the data key exists and is not None
                 if requires_data_key:
                     if data_key not in channel_data:
                         continue
@@ -318,18 +320,28 @@ async def async_discover_entities(
             
                     feature_arg = data_key if requires_data_key else feature
             
+                    entity = None
+                    # Try the full constructor first (feature + mapping)
                     try:
-                        entity = entity_class(coordinator, client, device_data, channel_index, feature_arg, entity_mapping)
-                    except TypeError:
-                        _LOGGER.debug(
-                        "Optional feature entity failed: device=%s channel=%s feature=%s class=%s platform=%s arg=%s",
-                        device_data.get("id"),
-                        channel_index,
-                        feature,
-                        class_name,
-                        platform.value,
-                        feature_arg,
+                        entity = entity_class(
+                            coordinator, client, device_data, channel_index, feature_arg, entity_mapping
                         )
+                    except TypeError:
+                        # Fallback: some entities (e.g., identify button) use a simpler __init__ signature
+                        try:
+                            entity = entity_class(coordinator, client, device_data, channel_index)
+                        except TypeError as e:
+                            _LOGGER.debug(
+                                "Optional feature entity not created (constructor mismatch): device=%s channel=%s feature=%s class=%s arg=%s error=%s",
+                                device_data.get("id"),
+                                channel_index,
+                                feature,
+                                class_name,
+                                feature_arg,
+                                e,
+                                exc_info=True,
+                            )
+                            continue
             
                     entities[platform].append(entity)
             
@@ -354,7 +366,6 @@ async def async_discover_entities(
                         exc_info=True,
                     )
 
-            
             # Special handling for dutyCycle binary sensor (device-level warning flag)
             # Note: dutyCycle exists in both home object (percentage) and device channels (boolean)
             # This is handled separately to avoid key collision in HMIP_FEATURE_TO_ENTITY

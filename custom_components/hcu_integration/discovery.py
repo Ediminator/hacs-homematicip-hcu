@@ -321,10 +321,15 @@ async def async_discover_entities(
                     try:
                         entity = entity_class(coordinator, client, device_data, channel_index, feature_arg, entity_mapping)
                     except TypeError:
-                        try:
-                            entity = entity_class(coordinator, client, device_data, channel_index, feature_arg)
-                        except TypeError:
-                            entity = entity_class(coordinator, client, device_data, channel_index)
+                        _LOGGER.debug(
+                        "Optional feature entity failed: device=%s channel=%s feature=%s class=%s platform=%s arg=%s",
+                        device_data.get("id"),
+                        channel_index,
+                        feature,
+                        class_name,
+                        platform.value,
+                        feature_arg,
+                        )
             
                     entities[platform].append(entity)
             

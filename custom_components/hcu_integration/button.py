@@ -165,7 +165,6 @@ class HcuDeviceIdentifyButton(HcuBaseEntity, ButtonEntity):
         """Trigger identify for the device/channel (e.g., blink/beep)."""
         _LOGGER.info("Triggering identify for %s", self.entity_id)
         try:
-            # Fallback if your client uses a different method name
             await self._client.async_send_identify(
                 self._device_id, self._channel_index
             )

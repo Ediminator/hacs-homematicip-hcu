@@ -129,6 +129,7 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
         self.entities: dict[Platform, list[Entity]] = {}
         self._event_entities: dict[tuple[str, str], event.TriggerableEvent] = {}
         self._connected_event = asyncio.Event()
+        self._initial_state_loaded = False
 
     async def async_setup(self) -> bool:
         """Initialize the coordinator and establish the initial connection."""
@@ -164,6 +165,7 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
             all_ids.add(home_id)
         self.async_set_updated_data(all_ids)
 
+        self._initial_state_loaded = True
         return True
 
     def _register_hcu_device(self) -> None:
@@ -189,6 +191,14 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
     def _handle_event_message(self, msg: dict[str, Any]) -> None:
         """Process incoming event messages from the HCU."""
         if msg.get("type") != "HMIP_SYSTEM_EVENT":
+            return
+
+        # Prevent race condition: Ignore events if initial state is not yet loaded
+        # This prevents false positive timestamp detection during startup/reload
+        # Prevent race condition: Ignore events if initial state is not yet loaded
+        # This prevents false positive timestamp detection during startup/reload
+        if not self._initial_state_loaded:
+            _LOGGER.debug("Ignoring event as initial system state is not yet loaded")
             return
 
         body = msg.get("body", {})
@@ -275,6 +285,10 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
 
 
                 if channel_type in EVENT_CHANNEL_TYPES:
+                    _LOGGER.debug(
+                        "Including channel for timestamp detection: device=%s, channel=%s, type=%s",
+                        device_id, ch_idx, channel_type
+                    )
                     event_channels.add((device_id, ch_idx))
 
         return event_channels

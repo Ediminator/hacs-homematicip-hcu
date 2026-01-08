@@ -362,7 +362,7 @@ async def async_discover_entities(
                     )
             
                 except (AttributeError, TypeError) as e:
-                    _LOGGER.debug(
+                    _LOGGER.error(
                         "Optional feature entity not created: device=%s channel=%s feature=%s class=%s error=%s",
                         device_data.get("id"),
                         channel_index,

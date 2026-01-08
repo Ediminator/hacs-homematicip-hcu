@@ -89,7 +89,7 @@ class HcuDoorOpenerButton(HcuBaseEntity, ButtonEntity):
         super().__init__(coordinator, client, device_data, channel_index)
 
         # Set entity name using the centralized naming helper
-        self._set_entity_name(channel_label=self._channel.get("label"))
+        self._set_entity_name(channel_label=self._channel.get("label"), feature_name="Open")
 
         self._attr_unique_id = f"{self._device_id}_{self._channel_index}_open"
 
@@ -122,7 +122,7 @@ class HcuDoorImpulseButton(HcuBaseEntity, ButtonEntity):
         super().__init__(coordinator, client, device_data, channel_index)
 
         # Set entity name using the centralized naming helper
-        self._set_entity_name(channel_label=self._channel.get("label"))
+        self._set_entity_name(channel_label=self._channel.get("label"), feature_name="Impulse")
 
         self._attr_unique_id = f"{self._device_id}_{self._channel_index}_impulse"
 
@@ -153,9 +153,12 @@ class HcuDeviceIdentifyButton(HcuBaseEntity, ButtonEntity):
     ):
         """Initialize the identify button."""
         super().__init__(coordinator, client, device_data, channel_index)
-
+        
+        self._attr_device_class = None
         # Set entity name using the centralized naming helper
-        self._set_entity_name("Identify")
+        self._set_entity_name(
+            channel_label=self._channel.get("label"), feature_name="Identify"
+        )
         self._attr_unique_id = f"{self._device_id}_{self._channel_index}_identify"
 
     async def async_press(self) -> None:

@@ -273,9 +273,7 @@ async def async_discover_entities(
                             device_data.get("id"), channel_index, feature, class_name, e
                         )
 
-            # ---------------------------------------------------------------------
-            # Optional features via supportedOptionalFeatures (capabilities)
-            # ---------------------------------------------------------------------
+            # Optional features via supportedOptionalFeatures
             supported_optional = (
                 channel_data.get("supportedOptionalFeatures")
                 or device_data.get("supportedOptionalFeatures")
@@ -286,41 +284,16 @@ async def async_discover_entities(
                 if feature not in supported_optional:
                     continue
             
-                # 1) Log: optional feature gefunden/unterstützt
-                _LOGGER.debug(
-                    "Optional feature supported: device=%s channel=%s feature=%s",
-                    device_data.get("id"),
-                    channel_index,
-                    feature,
-                )
-            
                 requires_data_key = mapping.get("requires_data_key", True)
                 data_key = mapping.get("data_key", feature)
             
-                # Wenn der Wert-Key bereits im normalen Feature-Mapping steckt, keine Doppel-Entity bauen
                 if requires_data_key and data_key in HMIP_FEATURE_TO_ENTITY:
                     continue
             
-                # Für Value-Features: nur bauen, wenn der Wert-Key vorhanden und nicht None ist
                 if requires_data_key:
                     if data_key not in channel_data:
-                        _LOGGER.debug(
-                            "Optional feature supported but not created (missing data key): device=%s channel=%s feature=%s data_key=%s",
-                            device_data.get("id"),
-                            channel_index,
-                            feature,
-                            data_key,
-                        )
                         continue
-            
                     if channel_data[data_key] is None:
-                        _LOGGER.debug(
-                            "Optional feature supported but not created (value is null): device=%s channel=%s feature=%s data_key=%s",
-                            device_data.get("id"),
-                            channel_index,
-                            feature,
-                            data_key,
-                        )
                         continue
             
                 class_name = mapping["class"]
@@ -343,11 +316,8 @@ async def async_discover_entities(
                     if is_deactivated_by_default:
                         entity_mapping["entity_registry_enabled_default"] = not is_unused_channel
             
-                    # Bei Actions (requires_data_key=False): capability-name weitergeben
-                    # Bei Value-Features: echten data_key weitergeben
                     feature_arg = data_key if requires_data_key else feature
             
-                    # Robust instanziieren: erst "Feature+Mapping", dann Fallbacks
                     try:
                         entity = entity_class(coordinator, client, device_data, channel_index, feature_arg, entity_mapping)
                     except TypeError:
@@ -358,7 +328,6 @@ async def async_discover_entities(
             
                     entities[platform].append(entity)
             
-                    # 2) Log: anlegen erfolgreich
                     _LOGGER.debug(
                         "Optional feature entity created successfully: device=%s channel=%s feature=%s class=%s platform=%s arg=%s",
                         device_data.get("id"),

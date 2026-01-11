@@ -60,10 +60,10 @@
                 "title": "Globale Einstellungen",
                 "description": "Konfigurieren Sie globale Einstellungen und Geräte-Importfilter.",
                 "data": {
+                    "advanced_debugging": "Erweitertes Debuggen für HMIP_SYSTEM_EVENT",
                     "comfort_temperature": "Standard-Komfort-Temperatur (für Party-Modus)",
-                    "import_sytronic": "Sytronic-Geräte importieren",
-                    "import_novotronic": "Novotronic-Geräte importieren",
-                    "selected_oems": "Zu importierende Hersteller"
+                    "selected_oems": "Zu importierende Hersteller",
+                    "disabled_groups": "Gruppen deaktivieren"
                 }
             },
             "lock_pin": {

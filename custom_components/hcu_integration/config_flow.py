@@ -14,6 +14,18 @@ from homeassistant.core import callback, HomeAssistant
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import aiohttp_client, device_registry as dr
 from homeassistant.helpers import selector
+from homeassistant.helpers.selector import (
+    BooleanSelector,
+    NumberSelector,
+    NumberSelectorConfig,
+    NumberSelectorMode,
+    SelectSelector,
+    SelectSelectorConfig,
+    SelectSelectorMode,
+    TextSelector,
+    TextSelectorConfig,
+    TextSelectorType,
+)
 from homeassistant.util import dt as dt_util
 
 from .api import HcuApiClient, HcuApiError
@@ -32,7 +44,13 @@ from .const import (
     CONF_AUTH_PORT,
     CONF_WEBSOCKET_PORT,
     CONF_ENTITY_PREFIX,
+    CONF_PLATFORM_OVERRIDES,    
     CONF_PLATFORM_OVERRIDES,
+    CONF_ALL_DISABLED_GROUPS,
+    CONF_ADVANCED_DEBUGGING,
+    DEFAULT_ADVANCED_DEBUGGING,
+    CONF_DISABLED_GROUPS,
+    CONF_SELECTED_OEMS,
     ATTR_END_TIME,
 )
 from .util import create_unverified_ssl_context, get_device_manufacturer
@@ -433,9 +451,11 @@ class HcuOptionsFlowHandler(OptionsFlow):
 
         if user_input is not None:
             # Calculate disabled OEMs from inverted selection
-            selected = set(user_input.get("selected_oems", []))
+            selected = set(user_input.get(CONF_SELECTED_OEMS, []))
             disabled_oems = list(third_party_oems - selected)
-            
+
+            disabled_groups = user_input.get(CONF_DISABLED_GROUPS, [])
+
             await self._handle_device_removal(disabled_oems)
             
             # Clean up old boolean keys if present to avoid clutter
@@ -446,14 +466,17 @@ class HcuOptionsFlowHandler(OptionsFlow):
                 new_options.pop(k)
 
             # Update new values
+            new_options[CONF_ADVANCED_DEBUGGING] = user_input[CONF_ADVANCED_DEBUGGING]
             new_options[CONF_COMFORT_TEMPERATURE] = user_input[CONF_COMFORT_TEMPERATURE]
-            new_options["disabled_oems"] = disabled_oems
+            new_options[CONF_SELECTED_OEMS] = disabled_oems
+            new_options[CONF_DISABLED_GROUPS] = disabled_groups
 
             return self.async_create_entry(title="", data=new_options)
 
         # Determine currently enabled OEMs (for pre-selection)
         # Check for new list format first
         disabled_oems = set(self.config_entry.options.get("disabled_oems", []))
+        selected_disabled_groups = set(self.config_entry.options.get("disabled_groups", []))
         
         # Backward compatibility: Check old boolean keys if new list not found (or empty? no, empty is valid)
         # If "disabled_oems" key is missing entirely, check legacy keys.
@@ -482,6 +505,10 @@ class HcuOptionsFlowHandler(OptionsFlow):
         default_selected = [oem for oem in third_party_oems_list if oem not in disabled_oems]
 
         schema = {
+            vol.Required(
+                CONF_ADVANCED_DEBUGGING,
+                default=self.config_entry.options.get(CONF_ADVANCED_DEBUGGING, DEFAULT_ADVANCED_DEBUGGING),
+            ): BooleanSelector(),
             vol.Optional(
                 CONF_COMFORT_TEMPERATURE,
                 default=self.config_entry.options.get(
@@ -489,13 +516,24 @@ class HcuOptionsFlowHandler(OptionsFlow):
                 ),
             ): vol.Coerce(float),
             vol.Required(
-                "selected_oems",
+                CONF_SELECTED_OEMS,
                 default=default_selected,
             ): selector.SelectSelector(
                 selector.SelectSelectorConfig(
                     options=third_party_oems_list,
                     multiple=True,
                     mode=selector.SelectSelectorMode.LIST,
+                )
+            ),
+            vol.Optional(
+                CONF_DISABLED_GROUPS,
+                default=selected_disabled_groups,
+            ): selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    mode=selector.SelectSelectorMode.DROPDOWN,
+                    multiple=True,
+                    sort=False,
+                    options=CONF_ALL_DISABLED_GROUPS,
                 )
             )
         }

@@ -90,15 +90,15 @@ def get_third_party_oems(client: "HcuApiClient | None") -> set[str]:
 
 def get_groups(client: "HcuApiClient | None") -> set[str]:
     """Discover groups from the HCU state."""
-    groups = set()
-    if client and client.state:
-        log_client(client)
-        for group in client.state.get("devices", {}).values():
-            manufacturer = get_group_type(group)
-            if manufacturer != MANUFACTURER_EQ3:
-                groups.add(manufacturer)
-    return groups
+    group_types: set[str] = set()
 
+    if client and client.state:
+        for group in client.state.get("groups", {}).values():
+            group_type = get_group_type(group)
+            group_types.add(group_type)
+
+    return group_types
+    
 def log_client(client):
     _LOGGER.debug("client type=%s", type(client))
     _LOGGER.debug("client repr=%r", client)

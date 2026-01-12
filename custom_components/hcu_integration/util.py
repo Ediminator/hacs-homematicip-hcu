@@ -72,29 +72,8 @@ def get_device_manufacturer(device_data: dict) -> str:
     return MANUFACTURER_EQ3
 
 def get_group_type(group_data: dict) -> str:
-    """Determine the manufacturer of a device."""
+    """Determine the type of a group."""
 
-    # 2. Trust explicit OEM if it's not the default "eQ-3"
-    # This is more accurate than loose model name matching
-    oem = device_data.get("oem")
-    if oem and oem != MANUFACTURER_EQ3:
-        return oem
-
-    # 3. Check loose model name match for Hue
-    model_type = group_data.get("modelType") or ""
-    if HUE_MODEL_TOKEN in model_type:
-        return MANUFACTURER_HUE
-
-    # 4. Check Device Type/Archetype for generic "External" status
-    # "PLUGIN_EXTERNAL" strongly implies a 3rd party integration
-    if device_data.get("type") == DEVICE_TYPE_PLUGIN_EXTERNAL:
-        return MANUFACTURER_3RD_PARTY
-
-    # 5. Check for standard Homematic IP prefix
-    if model_type.startswith(HOMEMATIC_MODEL_PREFIXES):
-        return MANUFACTURER_EQ3
-
-    # 6. Default
-    # If it has no 'oem' field and didn't match above, we assume it's a standard device
-    # (or legacy one) and return "eQ-3" to match previous behavior
-    return MANUFACTURER_EQ3
+    type = group_data.get("type")
+ 
+    return type

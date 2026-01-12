@@ -146,69 +146,14 @@ class HcuCover(HcuBaseEntity, CoverEntity):
         """Stop the cover."""
         self._attr_assumed_state = True
         await self._client.async_stop_cover(self._device_id, self._channel_index)
-        
+
     async def async_set_cover_position(self, **kwargs: Any) -> None:
         """Move the cover to a specific position."""
         position = kwargs.get(ATTR_POSITION, 100)
         self._attr_assumed_state = True
         shutter_level = round((100 - position) / 100.0, 2)
         await self._async_set_level(self._device_id, self._channel_index, shutter_level)
-    
-    async def async_open_tilt(self, **kwargs: Any) -> None:
-        """Move the cover tilt to a specific position."""
-        self._attr_assumed_state = True
-        
-        # Pass current shutter level if available, as per API docs
-        # We must fetch the level using the dynamic property to support both shutterLevel and primaryShadingLevel
-        current_level = self._channel.get(self._level_property)
-        if current_level is None:
-            _LOGGER.warning(
-                "Cannot set tilt position for %s: current level unknown",
-                self.name,
-            )
-            return
 
-        await self._client.async_set_slats_level(
-            self._device_id, self._channel_index, 0.0, shutter_level=current_level
-        )
-        
-    async def async_close_tilt(self, **kwargs: Any) -> None:
-        """Move the cover tilt to a specific position."""
-        
-        # Pass current shutter level if available, as per API docs
-        # We must fetch the level using the dynamic property to support both shutterLevel and primaryShadingLevel
-        current_level = self._channel.get(self._level_property)
-        if current_level is None:
-            _LOGGER.warning(
-                "Cannot set tilt position for %s: current level unknown",
-                self.name,
-            )
-            return
-
-        await self._client.async_set_slats_level(
-            self._device_id, self._channel_index, 1.0, shutter_level=current_level
-        )
-    
-    async def async_set_cover_tilt_position(self, **kwargs: Any) -> None:
-        """Move the cover tilt to a specific position."""
-        position = kwargs.get(ATTR_TILT_POSITION, 100)
-        self._attr_assumed_state = True
-        slats_level = round((100 - position) / 100.0, 2)
-        
-        # Pass current shutter level if available, as per API docs
-        # We must fetch the level using the dynamic property to support both shutterLevel and primaryShadingLevel
-        current_level = self._channel.get(self._level_property)
-        if current_level is None:
-            _LOGGER.warning(
-                "Cannot set tilt position for %s: current level unknown",
-                self.name,
-            )
-            return
-
-        await self._client.async_set_slats_level(
-            self._device_id, self._channel_index, slats_level, shutter_level=current_level
-        )
-    
     async def async_set_cover_tilt_position(self, **kwargs: Any) -> None:
         """Move the cover tilt to a specific position."""
         position = kwargs.get(ATTR_TILT_POSITION, 100)
@@ -406,27 +351,7 @@ class HcuCoverGroup(HcuGroupBaseEntity, CoverEntity):
             self._group_id,
             {"primaryShadingLevel": shutter_level},
         )
-    
-    async def async_open_tilt(self, **kwargs: Any) -> None:
-        """Set the open tilt position."""
-        shutter_level = self._group.get("shutterLevel")
-        self._attr_assumed_state = True
-        await self._client.async_group_control(
-            API_PATHS["SET_GROUP_SECONDARY_SHADING_LEVEL"],
-            self._group_id,
-            {"shutterLevel": shutter_level, "secondaryShadingLevel": 0.0},
-        )
 
-    async def async_close_tilt(self, **kwargs: Any) -> None:
-        """Set the close tilt position."""
-        shutter_level = self._group.get("shutterLevel")
-        self._attr_assumed_state = True
-        await self._client.async_group_control(
-            API_PATHS["SET_GROUP_SECONDARY_SHADING_LEVEL"],
-            self._group_id,
-            {"shutterLevel": shutter_level, "secondaryShadingLevel": 1.0},
-        )
-        
     async def async_set_cover_tilt_position(self, **kwargs: Any) -> None:
         """Set the cover group tilt position."""
         position = kwargs[ATTR_TILT_POSITION]

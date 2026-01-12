@@ -4,6 +4,8 @@ import logging
 import aiohttp
 import asyncio
 import voluptuous as vol
+from pprint import pformat
+import json
 from urllib.parse import quote, unquote
 from typing import Any, TYPE_CHECKING
 from datetime import datetime, timedelta
@@ -52,7 +54,7 @@ from .const import (
     CONF_SELECTED_OEMS,
     ATTR_END_TIME,
 )
-from .util import create_unverified_ssl_context, get_device_manufacturer
+from .util import create_unverified_ssl_context, get_device_manufacturer, get_group_type
 
 if TYPE_CHECKING:
     from . import HcuCoordinator
@@ -86,6 +88,40 @@ def get_third_party_oems(client: "HcuApiClient | None") -> set[str]:
                 third_party_oems.add(manufacturer)
     return third_party_oems
 
+def get_groups(client: "HcuApiClient | None") -> set[str]:
+    """Discover groups from the HCU state."""
+    groups = set()
+    if client and client.state:
+        log_client(client)
+        for group in client.state.get("devices", {}).values():
+            manufacturer = get_group_type(group)
+            if manufacturer != MANUFACTURER_EQ3:
+                groups.add(manufacturer)
+    return groups
+
+def log_client(client):
+    _LOGGER.debug("client type=%s", type(client))
+    _LOGGER.debug("client repr=%r", client)
+
+    # Falls der Client Attribute in __dict__ hat
+    d = getattr(client, "__dict__", None)
+    if d is not None:
+        _LOGGER.debug("client.__dict__=\n%s", pformat(d, width=120))
+    else:
+        _LOGGER.debug("client has no __dict__ (maybe slots / C-ext)")
+
+    # state schön formatiert
+    st = getattr(client, "state", None)
+    _LOGGER.debug("client.state(pformat)=\n%s", pformat(st, width=120))
+
+    # state als JSON (fallback default=str, falls nicht serialisierbar)
+    try:
+        _LOGGER.debug("client.state(json)=\n%s", json.dumps(st, indent=2, ensure_ascii=False, default=str))
+    except Exception as e:
+        _LOGGER.debug("client.state(json) failed: %s", e)
+
+    # Optional: Alle Attribute-Namen
+    _LOGGER.debug("client dir()=%s", [a for a in dir(client) if not a.startswith("_")])
 
 class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle a config flow for the Homematic IP HCU Integration."""
@@ -447,6 +483,8 @@ class HcuOptionsFlowHandler(OptionsFlow):
         
         third_party_oems = get_third_party_oems(client)
         third_party_oems_list = sorted(third_party_oems)
+        groups = get_groups(client)
+        groups_list = sorted(groups)
 
         if user_input is not None:
             # Calculate disabled OEMs from inverted selection
@@ -502,6 +540,7 @@ class HcuOptionsFlowHandler(OptionsFlow):
 
         # Pre-select everything that is NOT disabled
         default_selected = [oem for oem in third_party_oems_list if oem not in disabled_oems]
+        default_disabled_groups = [g for g in groups_list if g in selected_disabled_groups]
 
         schema = {
             vol.Required(
@@ -526,13 +565,13 @@ class HcuOptionsFlowHandler(OptionsFlow):
             ),
             vol.Optional(
                 CONF_DISABLED_GROUPS,
-                default=selected_disabled_groups,
+                default=default_disabled_groups,
             ): selector.SelectSelector(
                 selector.SelectSelectorConfig(
                     mode=selector.SelectSelectorMode.DROPDOWN,
                     multiple=True,
                     sort=False,
-                    options=CONF_ALL_DISABLED_GROUPS,
+                    options=groups_list,
                 )
             )
         }

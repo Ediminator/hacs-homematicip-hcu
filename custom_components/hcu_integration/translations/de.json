@@ -231,6 +231,15 @@
                     }
                 }
             }
+        },
+        "sensor": {
+            "hcu_tiltwindow": {
+                "state": {
+                    "Open": "Offen",
+                    "Closed": "Geschlossen",
+                    "Tilted": "Gekippt"
+                }
+            }
         }
     }
 }

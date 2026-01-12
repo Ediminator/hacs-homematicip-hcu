@@ -65,7 +65,7 @@
                     "selected_oems": "Manufacturers to import",
                     "disabled_groups": "Hide groups"
                 },
-                "description": {
+                "data_description": {
                     "advanced_debugging": "Enable this to log the complete raw event data for HMIP_SYSTEM_EVENT. Disable this function again when you no longer need it.",
                     "comfort_temperature": "Set the comfort temperature used for Party Mode.",
                     "selected_oems": "Choose which manufacturers should be imported into Home Assistant.",
@@ -229,6 +229,15 @@
                             "billow_middle": "Pulsing"
                         }
                     }
+                }
+            }
+        },
+        "sensor": {
+            "hcu_tiltwindow": {
+                "state": {
+                    "Open": "Open",
+                    "Closed": "Closed",
+                    "Tilted": "Tilted"
                 }
             }
         }

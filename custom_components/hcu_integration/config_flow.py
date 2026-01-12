@@ -47,7 +47,6 @@ from .const import (
     CONF_WEBSOCKET_PORT,
     CONF_ENTITY_PREFIX,
     CONF_PLATFORM_OVERRIDES,
-    CONF_ALL_DISABLED_GROUPS,
     CONF_ADVANCED_DEBUGGING,
     DEFAULT_ADVANCED_DEBUGGING,
     CONF_DISABLED_GROUPS,
@@ -95,8 +94,9 @@ def get_groups(client: "HcuApiClient | None") -> set[str]:
     if client and client.state:
         for group in client.state.get("groups", {}).values():
             group_type = get_group_type(group)
-            group_types.add(group_type)
-
+            if group_type:
+                group_types.add(group_type)
+                
     return group_types
     
 def log_client(client):

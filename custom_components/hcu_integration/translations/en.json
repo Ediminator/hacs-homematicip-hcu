@@ -57,13 +57,19 @@
                 }
             },
             "global_settings": {
-                "title": "Global Settings",
+                "title": "Global settings",
                 "description": "Configure global settings and device import filters.",
                 "data": {
-                    "advanced_debugging": "Advanced Debugging for HMIP_SYSTEM_EVENT",
-                    "comfort_temperature": "Default Comfort Temperature (for Party Mode)",
-                    "selected_oems": "Manufacturers to Import",
-                    "disabled_groups": "Disable Groups"
+                    "advanced_debugging": "Advanced debugging",
+                    "comfort_temperature": "Default comfort temperature",
+                    "selected_oems": "Manufacturers to import",
+                    "disabled_groups": "Hide groups"
+                },
+                "description": {
+                    "advanced_debugging": "Enable this to log the complete raw event data for HMIP_SYSTEM_EVENT. Disable this function again when you no longer need it.",
+                    "comfort_temperature": "Set the comfort temperature used for Party Mode.",
+                    "selected_oems": "Choose which manufacturers should be imported into Home Assistant.",
+                    "disabled_groups": "Choose which groups should be hidden."
                 }
             },
             "lock_pin": {

@@ -5,6 +5,11 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 ---
 ## 1.19.5 - 2026-01-
 
+### ⚠️ BREAKING CHANGES
+- **WINDOW State supported only for ROTARY_HANDLE_CHANNEL (HmIP-SRH) (#175)**
+  **For all others, these will be deleted. Non-available entities must be manually deleted via Settings -> Devices and Services -> entities. It is also possible to delete multiple devices at once.**
+  **You can filter by integration and the status 'not available,' which makes this easier. It is also possible to delete multiple entities at once.**
+
 ### 🐛 Bug Fixes
 
 - **Add shutterLevel to move the tilt cover-groups (#216)**
@@ -15,6 +20,7 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 - Add configuration disable groups
 - Add configuration Advanced Debugging to see the raw HMIP_EVENT_DATA
 - Add translation for window states
+- Add State Icons for Tilt Window
 - Add some translation for configuration
   
 ## 1.19.4 - 2026-01-05

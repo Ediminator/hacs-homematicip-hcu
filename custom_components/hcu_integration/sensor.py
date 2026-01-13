@@ -185,17 +185,16 @@ class HcuWindowStateSensor(HcuGenericSensor):
         
         if mapping is None:
             mapping = {
-                "name": "Window state",
+                "name": "State",
                 "device_class": SensorDeviceClass.ENUM
             }
             
         super().__init__(coordinator, client, device_data, channel_index, feature, mapping)
-    
         self._attr_options = ["open", "tilted", "closed"]
         
     @property
     def native_value(self) -> str | None:
-        """Return the window state: OPEN, TILTED, or CLOSED."""
+        """Return the window state: open, tilted, or closed."""
         state = self._channel.get(self._feature)
         if state in ("OPEN", "TILTED", "CLOSED"):
             return state.lower()

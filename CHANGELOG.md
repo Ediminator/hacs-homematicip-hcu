@@ -3,6 +3,20 @@
 All notable changes to the Homematic IP Local (HCU) integration will be documented in this file.
 
 ---
+## 1.19.5 - 2026-01-
+
+### 🐛 Bug Fixes
+
+- **Add shutterLevel to move the tilt cover-groups (#216)**
+
+### ✨ New Features
+
+- Add Identify Button for Din Rail Devices with new logic to evaluates the optional functions of the devices.
+- Add configuration disable groups
+- Add configuration Advanced Debugging to see the raw HMIP_EVENT_DATA
+- Add translation for window states
+- Add some translation for configuration
+  
 ## 1.19.4 - 2026-01-05
 
 ### ✨ New Features

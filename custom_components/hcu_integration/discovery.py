@@ -47,13 +47,6 @@ if TYPE_CHECKING:
 
 _LOGGER = logging.getLogger(__name__)
 
-# Mapping for window state text sensor (complements binary sensor)
-_WINDOW_STATE_SENSOR_MAPPING = {
-    "name": "Window State",
-    "icon": "mdi:window-open-variant",
-}
-
-
 async def async_discover_entities(
     hass: HomeAssistant,
     client: HcuApiClient,
@@ -261,13 +254,6 @@ async def async_discover_entities(
                                 button.HcuResetEnergyButton(coordinator, client, device_data, channel_index)
                             )
 
-                        # Add text sensor for window state (complements binary sensor)
-                        if feature == "windowState":
-                            entities[Platform.SENSOR].append(
-                                sensor.HcuWindowStateSensor(
-                                    coordinator, client, device_data, channel_index, feature, _WINDOW_STATE_SENSOR_MAPPING
-                                )
-                            )
                     except (AttributeError, TypeError) as e:
                         _LOGGER.error(
                             "Failed to create entity for device %s, channel %s, feature %s (%s): %s",

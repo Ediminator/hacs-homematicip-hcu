@@ -235,9 +235,9 @@
         "sensor": {
             "hcu_tiltwindow": {
                 "state": {
-                    "Open": "Open",
-                    "Closed": "Closed",
-                    "Tilted": "Tilted"
+                    "open": "Open",
+                    "closed": "Closed",
+                    "tilted": "Tilted"
                 }
             }
         }

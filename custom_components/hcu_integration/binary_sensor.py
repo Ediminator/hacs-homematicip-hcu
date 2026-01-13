@@ -94,27 +94,15 @@ class HcuWindowBinarySensor(HcuBinarySensor):
     Representation of a Homematic IP HCU window sensor.
     This class provides specialized logic for window sensors.
     """
-
+    
+    _attr_translation_key = "hcu_window"
+    
     @property
     def is_on(self) -> bool:
         """
         Return true if the window is open or tilted.
         """
         return self._channel.get(self._feature) in ("OPEN", "TILTED")
-
-    @property
-    def extra_state_attributes(self) -> dict[str, Any]:
-        """
-        Return additional state attributes.
-
-        Provides the actual window state (OPEN/TILTED/CLOSED) as an attribute
-        so users can distinguish between open and tilted states in automations.
-        """
-        window_state = self._channel.get(self._feature)
-        return (super().extra_state_attributes or {}) | {
-            "window_state": window_state,
-        }
-
 
 class HcuSmokeBinarySensor(HcuBinarySensor):
     """

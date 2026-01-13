@@ -28,6 +28,24 @@
                     }
                 }
             }
+        },
+        "binary_sensor":{
+            "hcu_window": {
+                "default": "mdi:window-closed-variant",
+                "state": {
+                    "on": "mdi:window-open-variant",
+                    "off": "mdi:window-closed-variant"
+                }
+            }
+        },
+        "sensor":{
+            "hcu_tiltwindow": {
+                "default": "mdi:window-closed-variant",
+                "state": {
+                    "open": "mdi:window-open-variant",
+                    "tilted": "mdi:angle-acute"
+                }
+            }
         }
     },
     "services": {

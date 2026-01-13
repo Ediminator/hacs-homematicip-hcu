@@ -7,7 +7,7 @@ from homeassistant.core import callback
 from homeassistant.helpers.entity import DeviceInfo, Entity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN, CONF_ENTITY_PREFIX
+from .const import DOMAIN, CONF_ENTITY_PREFIX, HOMEMATIC_MODEL_PREFIXES
 from .api import HcuApiClient, HcuApiError
 from .util import get_device_manufacturer
 
@@ -198,7 +198,7 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, E
             via_device=(DOMAIN, hcu_device_id),
         )
     
-        if model_type and model_type.startswith(("HmIP", "ELV")):
+        if model_type and model_type.startswith(HOMEMATIC_MODEL_PREFIXES):
             device_info_kwargs["serial_number"] = self._device_id
 
         return DeviceInfo(**device_info_kwargs)

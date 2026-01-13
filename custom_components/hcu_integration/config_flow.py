@@ -51,6 +51,7 @@ from .const import (
     DEFAULT_ADVANCED_DEBUGGING,
     CONF_DISABLED_GROUPS,
     CONF_SELECTED_OEMS,
+    CONF_DISABLED_OEMS,
     ATTR_END_TIME,
 )
 from .util import create_unverified_ssl_context, get_device_manufacturer, get_group_type
@@ -99,30 +100,6 @@ def get_groups(client: "HcuApiClient | None") -> set[str]:
                 
     return group_types
     
-def log_client(client):
-    _LOGGER.debug("client type=%s", type(client))
-    _LOGGER.debug("client repr=%r", client)
-
-    # Falls der Client Attribute in __dict__ hat
-    d = getattr(client, "__dict__", None)
-    if d is not None:
-        _LOGGER.debug("client.__dict__=\n%s", pformat(d, width=120))
-    else:
-        _LOGGER.debug("client has no __dict__ (maybe slots / C-ext)")
-
-    # state schön formatiert
-    st = getattr(client, "state", None)
-    _LOGGER.debug("client.state(pformat)=\n%s", pformat(st, width=120))
-
-    # state als JSON (fallback default=str, falls nicht serialisierbar)
-    try:
-        _LOGGER.debug("client.state(json)=\n%s", json.dumps(st, indent=2, ensure_ascii=False, default=str))
-    except Exception as e:
-        _LOGGER.debug("client.state(json) failed: %s", e)
-
-    # Optional: Alle Attribute-Namen
-    _LOGGER.debug("client dir()=%s", [a for a in dir(client) if not a.startswith("_")])
-
 class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle a config flow for the Homematic IP HCU Integration."""
 
@@ -505,19 +482,19 @@ class HcuOptionsFlowHandler(OptionsFlow):
             # Update new values
             new_options[CONF_ADVANCED_DEBUGGING] = user_input[CONF_ADVANCED_DEBUGGING]
             new_options[CONF_COMFORT_TEMPERATURE] = user_input[CONF_COMFORT_TEMPERATURE]
-            new_options[CONF_SELECTED_OEMS] = disabled_oems
+            new_options[CONF_DISABLED_OEMS] = disabled_oems
             new_options[CONF_DISABLED_GROUPS] = disabled_groups
 
             return self.async_create_entry(title="", data=new_options)
 
         # Determine currently enabled OEMs (for pre-selection)
         # Check for new list format first
-        disabled_oems = set(self.config_entry.options.get("disabled_oems", []))
-        selected_disabled_groups = set(self.config_entry.options.get("disabled_groups", []))
+        disabled_oems = set(self.config_entry.options.get(CONF_DISABLED_OEMS, []))
+        selected_disabled_groups = set(self.config_entry.options.get(CONF_DISABLED_GROUPS, []))
         
         # Backward compatibility: Check old boolean keys if new list not found (or empty? no, empty is valid)
         # If "disabled_oems" key is missing entirely, check legacy keys.
-        if "disabled_oems" not in self.config_entry.options:
+        if CONF_DISABLED_OEMS not in self.config_entry.options:
              for oem in third_party_oems:
                 option_key = f"import_{quote(oem)}"
                 # Migration logic: Check for old keys

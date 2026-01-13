@@ -52,6 +52,7 @@ DEFAULT_HCU_WEBSOCKET_PORT = 9001
 CONF_ADVANCED_DEBUGGING = "advanced_debugging"
 CONF_COMFORT_TEMPERATURE = "comfort_temperature"
 CONF_SELECTED_OEMS = "selected_oems"
+CONF_DISABLED_OEMS = "disabled_oems"
 CONF_DISABLED_GROUPS = "disabled_groups"
 DEFAULT_ADVANCED_DEBUGGING = False
 DEFAULT_COMFORT_TEMPERATURE = 21.0
@@ -67,7 +68,7 @@ MANUFACTURER_3RD_PARTY = "3rd Party"
 PLUGIN_ID_HUE = "de.eq3.plugin.hue"
 DEVICE_TYPE_PLUGIN_EXTERNAL = "PLUGIN_EXTERNAL"
 HUE_MODEL_TOKEN = "Hue"
-HOMEMATIC_MODEL_PREFIXES = ("HmIP-", "HM-", "ALPHA-")
+HOMEMATIC_MODEL_PREFIXES = ("HmIP-", "HM-", "ALPHA-", "ELV")
 
 # --- Documentation URLs ---
 DOCS_URL_LOCK_PIN_CONFIG = "https://github.com/Ediminator/hacs-homematicip-hcu#step-4-configure-door-lock-pin-optional"

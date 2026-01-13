@@ -4,6 +4,8 @@ import logging
 import aiohttp
 import asyncio
 import voluptuous as vol
+from pprint import pformat
+import json
 from urllib.parse import quote, unquote
 from typing import Any, TYPE_CHECKING
 from datetime import datetime, timedelta
@@ -14,6 +16,18 @@ from homeassistant.core import callback, HomeAssistant
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import aiohttp_client, device_registry as dr
 from homeassistant.helpers import selector
+from homeassistant.helpers.selector import (
+    BooleanSelector,
+    NumberSelector,
+    NumberSelectorConfig,
+    NumberSelectorMode,
+    SelectSelector,
+    SelectSelectorConfig,
+    SelectSelectorMode,
+    TextSelector,
+    TextSelectorConfig,
+    TextSelectorType,
+)
 from homeassistant.util import dt as dt_util
 
 from .api import HcuApiClient, HcuApiError
@@ -33,9 +47,14 @@ from .const import (
     CONF_WEBSOCKET_PORT,
     CONF_ENTITY_PREFIX,
     CONF_PLATFORM_OVERRIDES,
+    CONF_ADVANCED_DEBUGGING,
+    DEFAULT_ADVANCED_DEBUGGING,
+    CONF_DISABLED_GROUPS,
+    CONF_SELECTED_OEMS,
+    CONF_DISABLED_OEMS,
     ATTR_END_TIME,
 )
-from .util import create_unverified_ssl_context, get_device_manufacturer
+from .util import create_unverified_ssl_context, get_device_manufacturer, get_group_type
 
 if TYPE_CHECKING:
     from . import HcuCoordinator
@@ -69,7 +88,18 @@ def get_third_party_oems(client: "HcuApiClient | None") -> set[str]:
                 third_party_oems.add(manufacturer)
     return third_party_oems
 
+def get_groups(client: "HcuApiClient | None") -> set[str]:
+    """Discover groups from the HCU state."""
+    group_types: set[str] = set()
 
+    if client and client.state:
+        for group in client.state.get("groups", {}).values():
+            group_type = get_group_type(group)
+            if group_type:
+                group_types.add(group_type)
+                
+    return group_types
+    
 class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle a config flow for the Homematic IP HCU Integration."""
 
@@ -430,12 +460,16 @@ class HcuOptionsFlowHandler(OptionsFlow):
         
         third_party_oems = get_third_party_oems(client)
         third_party_oems_list = sorted(third_party_oems)
+        groups = get_groups(client)
+        groups_list = sorted(groups)
 
         if user_input is not None:
             # Calculate disabled OEMs from inverted selection
-            selected = set(user_input.get("selected_oems", []))
+            selected = set(user_input.get(CONF_SELECTED_OEMS, []))
             disabled_oems = list(third_party_oems - selected)
-            
+
+            disabled_groups = user_input.get(CONF_DISABLED_GROUPS, [])
+
             await self._handle_device_removal(disabled_oems)
             
             # Clean up old boolean keys if present to avoid clutter
@@ -446,18 +480,21 @@ class HcuOptionsFlowHandler(OptionsFlow):
                 new_options.pop(k)
 
             # Update new values
+            new_options[CONF_ADVANCED_DEBUGGING] = user_input[CONF_ADVANCED_DEBUGGING]
             new_options[CONF_COMFORT_TEMPERATURE] = user_input[CONF_COMFORT_TEMPERATURE]
-            new_options["disabled_oems"] = disabled_oems
+            new_options[CONF_DISABLED_OEMS] = disabled_oems
+            new_options[CONF_DISABLED_GROUPS] = disabled_groups
 
             return self.async_create_entry(title="", data=new_options)
 
         # Determine currently enabled OEMs (for pre-selection)
         # Check for new list format first
-        disabled_oems = set(self.config_entry.options.get("disabled_oems", []))
+        disabled_oems = set(self.config_entry.options.get(CONF_DISABLED_OEMS, []))
+        selected_disabled_groups = set(self.config_entry.options.get(CONF_DISABLED_GROUPS, []))
         
         # Backward compatibility: Check old boolean keys if new list not found (or empty? no, empty is valid)
         # If "disabled_oems" key is missing entirely, check legacy keys.
-        if "disabled_oems" not in self.config_entry.options:
+        if CONF_DISABLED_OEMS not in self.config_entry.options:
              for oem in third_party_oems:
                 option_key = f"import_{quote(oem)}"
                 # Migration logic: Check for old keys
@@ -480,8 +517,13 @@ class HcuOptionsFlowHandler(OptionsFlow):
 
         # Pre-select everything that is NOT disabled
         default_selected = [oem for oem in third_party_oems_list if oem not in disabled_oems]
+        default_disabled_groups = [g for g in groups_list if g in selected_disabled_groups]
 
         schema = {
+            vol.Required(
+                CONF_ADVANCED_DEBUGGING,
+                default=self.config_entry.options.get(CONF_ADVANCED_DEBUGGING, DEFAULT_ADVANCED_DEBUGGING),
+            ): BooleanSelector(),
             vol.Optional(
                 CONF_COMFORT_TEMPERATURE,
                 default=self.config_entry.options.get(
@@ -489,13 +531,24 @@ class HcuOptionsFlowHandler(OptionsFlow):
                 ),
             ): vol.Coerce(float),
             vol.Required(
-                "selected_oems",
+                CONF_SELECTED_OEMS,
                 default=default_selected,
             ): selector.SelectSelector(
                 selector.SelectSelectorConfig(
                     options=third_party_oems_list,
                     multiple=True,
                     mode=selector.SelectSelectorMode.LIST,
+                )
+            ),
+            vol.Optional(
+                CONF_DISABLED_GROUPS,
+                default=default_disabled_groups,
+            ): selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    mode=selector.SelectSelectorMode.DROPDOWN,
+                    multiple=True,
+                    sort=False,
+                    options=groups_list,
                 )
             )
         }

@@ -169,7 +169,9 @@ class HcuWindowStateSensor(HcuGenericSensor):
     This sensor shows the actual window state as its value: OPEN, TILTED, or CLOSED.
     This complements the binary sensor which can only show on/off.
     """
-
+    
+    _attr_translation_key = "hcu_tiltwindow"
+    
     @property
     def native_value(self) -> str | None:
         """Return the window state: OPEN, TILTED, or CLOSED."""

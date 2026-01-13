@@ -38,6 +38,7 @@ from .const import (
     PLATFORMS,
     EVENT_CHANNEL_TYPES,
     MANUFACTURER_EQ3,
+    CONF_DISABLED_GROUPS,
 )
 from .util import get_device_manufacturer
 
@@ -413,7 +414,8 @@ async def async_discover_entities(
 
     # Fetch device registry once before iterating groups
     dev_reg = dr.async_get(hass)
-
+    
+    disable_group_types = set(config_entry.options.get(CONF_DISABLED_GROUPS) or [])
     for group_data in state.get("groups", {}).values():
         group_type = group_data.get("type")
         group_id = group_data.get("id")
@@ -425,6 +427,16 @@ async def async_discover_entities(
                 "Skipping group without valid ID (type: %s, label: %s)",
                 group_type,
                 group_label or "unknown"
+            )
+            continue
+            
+        # Skip disabled group types
+        if group_type in disable_group_types:
+            _LOGGER.debug(
+                "Skipping group '%s' (id: %s) because group type '%s' is disabled",
+                group_label,
+                group_id,
+                group_type,
             )
             continue
 

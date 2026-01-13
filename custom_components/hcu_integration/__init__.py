@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import random
+import json
 from typing import Any, cast
 
 from homeassistant.config_entries import ConfigEntry
@@ -19,6 +20,7 @@ from .api import HcuApiClient, HcuApiError
 from .const import (
     CONF_AUTH_PORT,
     CONF_WEBSOCKET_PORT,
+    CONF_ADVANCED_DEBUGGING,
     CHANNEL_TYPE_MULTI_MODE_INPUT_TRANSMITTER,
     DEFAULT_HCU_AUTH_PORT,
     DEFAULT_HCU_WEBSOCKET_PORT,
@@ -33,6 +35,7 @@ from .const import (
     WEBSOCKET_RECONNECT_JITTER_MAX,
     WEBSOCKET_RECONNECT_MAX_DELAY,
 )
+
 from .discovery import async_discover_entities
 from .services import (
     INTEGRATION_SERVICES,
@@ -129,6 +132,10 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
         self.entities: dict[Platform, list[Entity]] = {}
         self._event_entities: dict[tuple[str, str], event.TriggerableEvent] = {}
         self._connected_event = asyncio.Event()
+        self.advanced_debugging = self.config_entry.options.get(
+            CONF_ADVANCED_DEBUGGING,
+            False,
+        )
 
     async def async_setup(self) -> bool:
         """Initialize the coordinator and establish the initial connection."""
@@ -195,6 +202,19 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
         events = body.get("eventTransaction", {}).get("events", {})
         if not events:
             return
+    
+        if self.advanced_debugging:
+            try:
+                pretty = json.dumps(
+                    events,
+                    ensure_ascii=False,
+                    indent=2,
+                    sort_keys=True,
+                    default=str
+                )
+                _LOGGER.debug("HMIP_SYSTEM_EVENT:\n%s", pretty)
+            except Exception:
+                _LOGGER.debug("HMIP_SYSTEM_EVENT: (repr): %r", events)
 
         device_channel_event_ids = self._handle_device_channel_events(events)
 

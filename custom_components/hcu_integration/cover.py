@@ -355,11 +355,11 @@ class HcuCoverGroup(HcuGroupBaseEntity, CoverEntity):
     async def async_set_cover_tilt_position(self, **kwargs: Any) -> None:
         """Set the cover group tilt position."""
         position = kwargs[ATTR_TILT_POSITION]
-        primary_level = self._group.get("primaryShadingLevel")
+        shutter_level = self._group.get("shutterLevel")
         self._attr_assumed_state = True
         secondary_level = round((100 - position) / 100.0, 2)
         await self._client.async_group_control(
             API_PATHS["SET_GROUP_SECONDARY_SHADING_LEVEL"],
             self._group_id,
-            {"primaryShadingLevel": primary_level, "secondaryShadingLevel": secondary_level},
+            {"shutterLevel": shutter_level, "secondaryShadingLevel": secondary_level},
         )

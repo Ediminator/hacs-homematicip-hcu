@@ -58,12 +58,18 @@
             },
             "global_settings": {
                 "title": "Globale Einstellungen",
-                "description": "Konfigurieren Sie globale Einstellungen und Geräte-Importfilter.",
+                "description": "Konfiguriere globale Einstellungen und Filter für den Geräteimport.",
                 "data": {
-                    "comfort_temperature": "Standard-Komfort-Temperatur (für Party-Modus)",
-                    "import_sytronic": "Sytronic-Geräte importieren",
-                    "import_novotronic": "Novotronic-Geräte importieren",
-                    "selected_oems": "Zu importierende Hersteller"
+                    "advanced_debugging": "Erweitertes Debugging",
+                    "comfort_temperature": "Standard-Komforttemperatur",
+                    "selected_oems": "Hersteller importieren",
+                    "disabled_groups": "Gruppen ausblenden"
+                },
+                "data_description": {
+                    "advanced_debugging": "Aktivieren, um die vollständigen Rohdaten der HMIP_SYSTEM_EVENT-Ereignisse zu protokollieren. Schalte diese Funktion wieder aus wenn du sie nicht mehr benötigst.",
+                    "comfort_temperature": "Lege hier die Komforttemperatur fest, die für den Party-Modus verwendet wird.",
+                    "selected_oems": "Wähle aus, welche Hersteller in Home Assistant importiert werden sollen.",
+                    "disabled_groups": "Wähle aus, welche Gruppen ausgeblendet werden sollen. Die Gruppennamen findest du in den zusätzlichen Attributen jeder Entität."
                 }
             },
             "lock_pin": {
@@ -223,6 +229,15 @@
                             "billow_middle": "Pulsieren"
                         }
                     }
+                }
+            }
+        },
+        "sensor": {
+            "hcu_tiltwindow": {
+                "state": {
+                    "Open": "Offen",
+                    "Closed": "Geschlossen",
+                    "Tilted": "Gekippt"
                 }
             }
         }

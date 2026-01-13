@@ -49,7 +49,12 @@ CONF_ENTITY_PREFIX = "entity_prefix"
 CONF_PLATFORM_OVERRIDES = "platform_overrides"  # Dict mapping entity unique_id to platform override
 DEFAULT_HCU_AUTH_PORT = 6969
 DEFAULT_HCU_WEBSOCKET_PORT = 9001
+CONF_ADVANCED_DEBUGGING = "advanced_debugging"
 CONF_COMFORT_TEMPERATURE = "comfort_temperature"
+CONF_SELECTED_OEMS = "selected_oems"
+CONF_DISABLED_OEMS = "disabled_oems"
+CONF_DISABLED_GROUPS = "disabled_groups"
+DEFAULT_ADVANCED_DEBUGGING = False
 DEFAULT_COMFORT_TEMPERATURE = 21.0
 DEFAULT_MIN_TEMP = 5.0
 DEFAULT_MAX_TEMP = 30.0
@@ -63,7 +68,7 @@ MANUFACTURER_3RD_PARTY = "3rd Party"
 PLUGIN_ID_HUE = "de.eq3.plugin.hue"
 DEVICE_TYPE_PLUGIN_EXTERNAL = "PLUGIN_EXTERNAL"
 HUE_MODEL_TOKEN = "Hue"
-HOMEMATIC_MODEL_PREFIXES = ("HmIP-", "HM-", "ALPHA-")
+HOMEMATIC_MODEL_PREFIXES = ("HmIP-", "HM-", "ALPHA-", "ELV")
 
 # --- Documentation URLs ---
 DOCS_URL_LOCK_PIN_CONFIG = "https://github.com/Ediminator/hacs-homematicip-hcu#step-4-configure-door-lock-pin-optional"

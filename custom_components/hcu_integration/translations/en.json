@@ -57,13 +57,19 @@
                 }
             },
             "global_settings": {
-                "title": "Global Settings",
+                "title": "Global settings",
                 "description": "Configure global settings and device import filters.",
                 "data": {
-                    "comfort_temperature": "Default Comfort Temperature (for Party Mode)",
-                    "import_sytronic": "Import Sytronic devices",
-                    "import_novotronic": "Import Novotronic devices",
-                    "selected_oems": "Manufacturers to Import"
+                    "advanced_debugging": "Advanced debugging",
+                    "comfort_temperature": "Default comfort temperature",
+                    "selected_oems": "Manufacturers to import",
+                    "disabled_groups": "Hide groups"
+                },
+                "data_description": {
+                    "advanced_debugging": "Enable this to log the complete raw event data for HMIP_SYSTEM_EVENT. Disable this function again when you no longer need it.",
+                    "comfort_temperature": "Set the comfort temperature used for Party Mode.",
+                    "selected_oems": "Choose which manufacturers should be imported into Home Assistant.",
+                    "disabled_groups": "Choose which group to hide. You can find the group names in each entity’s additional attributes."
                 }
             },
             "lock_pin": {
@@ -223,6 +229,15 @@
                             "billow_middle": "Pulsing"
                         }
                     }
+                }
+            }
+        },
+        "sensor": {
+            "hcu_tiltwindow": {
+                "state": {
+                    "Open": "Open",
+                    "Closed": "Closed",
+                    "Tilted": "Tilted"
                 }
             }
         }

@@ -3,25 +3,26 @@
 All notable changes to the Homematic IP Local (HCU) integration will be documented in this file.
 
 ---
-## 1.19.5 - 2026-01-
+## 1.19.5 - 2026-01-13
 
 ### ⚠️ BREAKING CHANGES
-- **WINDOW State supported only for ROTARY_HANDLE_CHANNEL (HmIP-SRH) (#175)**
-  **For all others, these will be deleted. Non-available entities must be manually deleted via Settings -> Devices and Services -> entities. It is also possible to delete multiple devices at once.**
-  **You can filter by integration and the status 'not available,' which makes this easier. It is also possible to delete multiple entities at once.**
+- **WINDOW state supported only for `ROTARY_HANDLE_CHANNEL` (HmIP-SRH) (#175)**  
+  For all other devices, these entities will be removed. Non-available entities must be deleted manually via **Settings -> Devices & Services -> Entities**.  
+  Tip: Filter by **integration** and the status **"not available"** to make cleanup easier. You can also delete multiple entities/devices at once.
 
 ### 🐛 Bug Fixes
-
-- **Add shutterLevel to move the tilt cover-groups (#216)**
+- **Add `shutterLevel` to move the tilt cover-groups (#216)**
 
 ### ✨ New Features
+- Add **Identify** button for DIN rail devices with new logic that evaluates the optional functions of the devices.
+- Add configuration option to **disable groups**.
+- Add configuration option **Advanced Debugging** to view the raw `HMIP_EVENT_DATA`.
+- Add translations for **window states**.
+- Add state icons for **tilt window**.
+- Add additional translations for configuration.
 
-- Add Identify Button for Din Rail Devices with new logic to evaluates the optional functions of the devices.
-- Add configuration disable groups
-- Add configuration Advanced Debugging to see the raw HMIP_EVENT_DATA
-- Add translation for window states
-- Add State Icons for Tilt Window
-- Add some translation for configuration
+### ✅ Update Note
+This release has been **thoroughly tested**. However, it is always recommended to **create a backup before updating**.
   
 ## 1.19.4 - 2026-01-05
 

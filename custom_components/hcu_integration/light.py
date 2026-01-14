@@ -21,7 +21,7 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .entity import HcuBaseEntity, HcuSwitchingGroupBase
+from .entity import HcuBaseEntity, HcuMigrationMixin, HcuSwitchingGroupBase
 from .api import HcuApiClient
 from .const import (
     API_PATHS,
@@ -115,7 +115,9 @@ class HcuLight(HcuBaseEntity, LightEntity):
         super().__init__(coordinator, client, device_data, channel_index)
 
         self._set_entity_name(channel_label=self._channel.get("label"))
-        self._attr_unique_id = f"{self._device_id}_{self._channel_index}_light"
+        
+        legacy_unique_id = f"{self._device_id}_{self._channel_index}_light"
+        self._configure_unique_id(legacy_unique_id)
 
         # Determine supported color modes based on channel capabilities
         supported_modes = set()
@@ -378,7 +380,9 @@ class HcuNotificationLight(HcuBaseEntity, LightEntity):
         """Initialize the notification light entity."""
         super().__init__(coordinator, client, device_data, channel_index)
         self._set_entity_name(channel_label=self._channel.get("label"))
-        self._attr_unique_id = f"{self._device_id}_{self._channel_index}_light"
+        
+        legacy_unique_id = f"{self._device_id}_{self._channel_index}_light"
+        self._configure_unique_id(legacy_unique_id)
 
     @property
     def is_on(self) -> bool:

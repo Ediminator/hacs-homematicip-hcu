@@ -14,7 +14,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import HMIP_DEVICE_TYPE_TO_DEVICE_CLASS, API_PATHS
-from .entity import HcuBaseEntity, HcuGroupBaseEntity
+from .entity import HcuBaseEntity, HcuGroupBaseEntity, HcuMigrationMixin
 from .api import HcuApiClient
 
 if TYPE_CHECKING:
@@ -69,8 +69,9 @@ class HcuCover(HcuBaseEntity, CoverEntity):
         # CRITICAL FIX: Explicitly call naming helper (restored from working version)
         self._set_entity_name(channel_label=self._channel.get("label"))
 
-        self._attr_unique_id = f"{self._device_id}_{self._channel_index}_cover"
-
+        legacy_unique_id = f"{self._device_id}_{self._channel_index}_cover"
+        self._configure_unique_id(legacy_unique_id)
+        
         device_type = self._device.get("type")
         self._attr_device_class = HMIP_DEVICE_TYPE_TO_DEVICE_CLASS.get(device_type)
 
@@ -193,7 +194,8 @@ class HcuGarageDoorCover(HcuBaseEntity, CoverEntity):
         # REFACTOR: Correctly call the centralized naming helper.
         self._set_entity_name(channel_label=self._channel.get("label"))
 
-        self._attr_unique_id = f"{self._device_id}_{self._channel_index}_cover"
+        legacy_unique_id = f"{self._device_id}_{self._channel_index}_cover"
+        self._configure_unique_id(legacy_unique_id)
 
         device_type = self._device.get("type")
         self._attr_device_class = HMIP_DEVICE_TYPE_TO_DEVICE_CLASS.get(device_type)

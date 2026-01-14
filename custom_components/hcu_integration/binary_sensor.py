@@ -22,7 +22,7 @@ from .const import (
     ABSENCE_TYPE_PERMANENT,
     ABSENCE_TYPE_VACATION,
 )
-from .entity import HcuBaseEntity, HcuHomeBaseEntity
+from .entity import HcuBaseEntity, HcuHomeBaseEntity, HcuMigrationMixin
 
 if TYPE_CHECKING:
     from . import HcuCoordinator
@@ -70,7 +70,9 @@ class HcuBinarySensor(HcuBaseEntity, BinarySensorEntity):
             channel_label=self._channel.get("label"), feature_name=mapping["name"]
         )
 
-        self._attr_unique_id = f"{self._device_id}_{self._channel_index}_{self._feature}"
+        legacy_unique_id = f"{self._device_id}_{self._channel_index}_{self._feature}"
+        self._configure_unique_id(legacy_unique_id)
+        
         self._attr_device_class = mapping.get("device_class")
 
         if "entity_registry_enabled_default" in mapping:
@@ -146,7 +148,10 @@ class HcuVacationModeBinarySensor(HcuHomeBaseEntity, BinarySensorEntity):
         """Initialize the Vacation Mode sensor."""
         super().__init__(coordinator, client)
         self._attr_name = self._apply_prefix("Vacation Mode")
-        self._attr_unique_id = f"{self._hcu_device_id}_vacation_mode"
+        
+        legacy_unique_id = f"{self._hcu_device_id}_vacation_mode"
+        self._configure_unique_id(legacy_unique_id)
+        
         self._update_attributes()
 
     @property

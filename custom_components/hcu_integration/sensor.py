@@ -10,7 +10,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .api import HcuApiClient
-from .entity import HcuBaseEntity, HcuHomeBaseEntity
+from .entity import HcuBaseEntity, HcuMigrationMixin, HcuHomeBaseEntity
 
 if TYPE_CHECKING:
     from . import HcuCoordinator
@@ -47,7 +47,10 @@ class HcuHomeSensor(HcuHomeBaseEntity, SensorEntity):
 
         base_name = f"Homematic IP HCU {mapping['name']}"
         self._attr_name = self._apply_prefix(base_name)
-        self._attr_unique_id = f"{self._hcu_device_id}_{self._feature}"
+        
+        legacy_unique_id = f"{self._hcu_device_id}_{self._feature}"
+        self._configure_unique_id(legacy_unique_id)
+        
         self._attr_device_class = mapping.get("device_class")
         self._attr_native_unit_of_measurement = mapping.get("unit")
         self._attr_state_class = mapping.get("state_class")
@@ -98,7 +101,9 @@ class HcuGenericSensor(HcuBaseEntity, SensorEntity):
             feature_name=feature_name
         )
 
-        self._attr_unique_id = f"{self._device_id}_{self._channel_index}_{self._feature}"
+        legacy_unique_id = f"{self._device_id}_{self._channel_index}_{self._feature}"
+        self._configure_unique_id(legacy_unique_id)
+        
         self._attr_device_class = mapping.get("device_class")
         self._attr_native_unit_of_measurement = mapping.get("unit")
         self._attr_state_class = mapping.get("state_class")

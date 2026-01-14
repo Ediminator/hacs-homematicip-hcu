@@ -13,7 +13,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .api import HcuApiClient, HcuApiError
-from .entity import HcuHomeBaseEntity
+from .entity import HcuHomeBaseEntity, HcuMigrationMixin
 
 if TYPE_CHECKING:
     from . import HcuCoordinator
@@ -48,7 +48,10 @@ class HcuAlarmControlPanel(HcuHomeBaseEntity, AlarmControlPanelEntity):
     def __init__(self, coordinator: "HcuCoordinator", client: HcuApiClient):
         super().__init__(coordinator, client)
         self._attr_name = self._apply_prefix("Homematic IP Alarm")
-        self._attr_unique_id = f"{self._hcu_device_id}_security"
+        
+        legacy_unique_id = f"{self._hcu_device_id}_security"
+        self._configure_unique_id(legacy_unique_id)
+        
         self._attr_alarm_state: AlarmControlPanelState | None = None
 
     @property

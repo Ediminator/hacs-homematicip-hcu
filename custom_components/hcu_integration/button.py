@@ -12,7 +12,7 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .entity import HcuBaseEntity
+from .entity import HcuBaseEntity, HcuMigrationMixin
 from .api import HcuApiClient, HcuApiError
 
 if TYPE_CHECKING:
@@ -55,9 +55,9 @@ class HcuResetEnergyButton(HcuBaseEntity, ButtonEntity):
         self._set_entity_name(
             channel_label=self._channel.get("label"), feature_name="Reset Energy Counter"
         )
-        self._attr_unique_id = (
-            f"{self._device_id}_{self._channel_index}_reset_energy_counter"
-        )
+        
+        legacy_unique_id = f"{self._device_id}_{self._channel_index}_reset_energy_counter"
+        self._configure_unique_id(legacy_unique_id)
 
     async def async_press(self) -> None:
         """Handle the button press action."""
@@ -70,7 +70,6 @@ class HcuResetEnergyButton(HcuBaseEntity, ButtonEntity):
             _LOGGER.error(
                 "Error resetting energy counter for %s: %s", self.entity_id, err
             )
-
 
 class HcuDoorOpenerButton(HcuBaseEntity, ButtonEntity):
     """Representation of a button to trigger a door opener (e.g., HmIP-FDC)."""
@@ -91,7 +90,8 @@ class HcuDoorOpenerButton(HcuBaseEntity, ButtonEntity):
         # Set entity name using the centralized naming helper
         self._set_entity_name(channel_label=self._channel.get("label"), feature_name="Open")
 
-        self._attr_unique_id = f"{self._device_id}_{self._channel_index}_open"
+        legacy_unique_id = f"{self._device_id}_{self._channel_index}_open"
+        self._configure_unique_id(legacy_unique_id)
 
     async def async_press(self) -> None:
         """Trigger the door opener (sends 1s pulse to open door)."""
@@ -124,7 +124,8 @@ class HcuDoorImpulseButton(HcuBaseEntity, ButtonEntity):
         # Set entity name using the centralized naming helper
         self._set_entity_name(channel_label=self._channel.get("label"), feature_name="Impulse")
 
-        self._attr_unique_id = f"{self._device_id}_{self._channel_index}_impulse"
+        legacy_unique_id = f"{self._device_id}_{self._channel_index}_impulse"
+        self._configure_unique_id(legacy_unique_id)
 
     async def async_press(self) -> None:
         """Trigger the door impulse (sends x s pulse to open garage door)."""

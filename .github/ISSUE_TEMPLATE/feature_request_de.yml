@@ -1,0 +1,84 @@
+name: Feature request
+description: Schlage eine Verbesserung oder ein neues Feature für hacs_homematicip_hcu vor
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Dieses Formular ist **ausschließlich für Feature-Requests**.
+
+        Bitte nutze dieses Formular nicht für Bug-Reports oder Fragen.
+        Stelle sicher, dass **alle erforderlichen Informationen** angegeben sind, damit der Request sinnvoll bewertet werden kann.
+
+        ⚠️ **WICHTIG**
+        Eine sinnvolle Bewertung ist nur möglich, wenn alle erforderlichen Informationen bereitgestellt werden.
+        Requests ohne ausreichende Details können ohne weitere Hinweise geschlossen werden.
+
+        ---
+        ### Bevor du ein neues Feature anfragst
+
+        Bitte prüfe, ob deine Idee bereits vorgeschlagen, diskutiert oder umgesetzt wurde.
+
+        Du kannst das so prüfen:
+        1. Gehe zum Tab **Issues** dieses Repositories
+        2. Suche nach Stichwörtern, die zu deinem Wunsch passen
+        3. Prüfe auch **offene und geschlossene Issues** sowie vorhandene Pull Requests
+
+        Wenn es bereits ein passendes Issue gibt, ergänze bitte dort deine Informationen, statt ein neues zu erstellen.
+
+        ---
+
+  - type: checkboxes
+    attributes:
+      label: Bestätigung
+      options:
+        - label: Ich habe bestehende offene und geschlossene Issues geprüft, um sicherzustellen, dass dieses Feature noch nicht vorgeschlagen oder bereits umgesetzt wurde.
+          required: true
+        - label: Ich habe die **README** gelesen und alle relevanten Anweisungen befolgt.
+          required: true
+
+  - type: textarea
+    validations:
+      required: true
+    attributes:
+      label: Feature-Beschreibung
+      description: |
+        Bitte beschreibe das gewünschte Feature so klar wie möglich und beantworte folgende Fragen:
+
+        1. Welches Problem möchtest du lösen?
+        2. Was ist deine vorgeschlagene Lösung / das gewünschte Verhalten?
+        3. Welche Alternativen hast du in Betracht gezogen?
+        4. Bezieht sich das Feature auf ein bestimmtes Gerät/Entity/Service? Wenn ja, welche(s)?
+        5. Zusätzlicher Kontext, Screenshots oder Beispiele?
+
+  - type: markdown
+    attributes:
+      value: |
+        ## Umgebung
+
+  - type: input
+    validations:
+      required: true
+    attributes:
+      label: Integrationsversion
+      placeholder: x.y.z
+      description: |
+        Gib die Version der Integration an, die du verwendest.
+
+  - type: markdown
+    attributes:
+      value: |
+        ## Details
+
+  - type: textarea
+    attributes:
+      label: Diagnose-Datei
+      placeholder: "Ziehe die Diagnose-.json-Datei hierher (Drag & Drop)."
+      description: |
+        Falls verfügbar, lade bitte eine Diagnose-Datei hoch. Das hilft bei der Bewertung und Umsetzung des Feature-Requests.
+
+        ⚠️ **WICHTIG**
+        Lade die Diagnose-Datei **nur als Datei** per Drag & Drop hoch.
+        Bitte füge hier keine Logs oder Textinhalte ein.
+
+        Dokumentation zum Herunterladen der Diagnose:
+        https://github.com/Ediminator/hacs-homematicip-hcu/blob/main/README.md#-diagnostics--troubleshooting

@@ -1,5 +1,5 @@
 name: Bug report
-description: Report a bug or unexpected behavior
+description: Report a bug for hacs_homematicip_hcu
 body:
   - type: markdown
     attributes:
@@ -14,13 +14,25 @@ body:
         especially **diagnostics data** and **log files**.
         Issues without this information may be closed without further notice.
 
-        Please read all sections carefully and fill out the form completely.
+        ---
+        ### Where to find “Good first issues”
+
+        Before opening a new issue, please check whether your problem is already known.
+
+        You can find **Good first issues** by:
+        1. Going to the **Issues** tab of this repository
+        2. Using the label filter **`good first issue`**
+        3. Or typing `label:"good first issue"` into the issue search field
+
+        Please also check **open and closed issues**, as the problem may already be reported or resolved.
+
+        ---
 
   - type: checkboxes
     attributes:
       label: Confirmation
       options:
-        - label: I have checked the **Good first issues** list to ensure this problem has not already been reported or resolved.
+        - label: I have checked the **Good first issues** list and existing issues to ensure this problem has not already been reported or resolved.
           required: true
         - label: I have read the **README** and followed all relevant instructions.
           required: true
@@ -76,6 +88,9 @@ body:
 
         Do NOT paste logs or text content here.
 
+        Documentation on how to download diagnostics:
+        https://github.com/Ediminator/hacs-homematicip-hcu/blob/main/README.md#-diagnostics--troubleshooting
+
         Skip this field only if the issue occurs during initial setup.
 
   - type: textarea
@@ -85,6 +100,9 @@ body:
       description: |
         Please upload the relevant log file.
         DEBUG-level logs are strongly recommended.
+
+        Documentation on how to enable debug logging:
+        https://github.com/Ediminator/hacs-homematicip-hcu/blob/main/README.md#debug-logging
 
         Make sure the log covers the time when the issue occurred
         and does not contain sensitive information.

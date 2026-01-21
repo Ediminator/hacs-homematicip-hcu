@@ -89,10 +89,3 @@ body:
 
         Stelle sicher, dass das Log den Zeitraum des Problems abdeckt
         und keine sensiblen Daten enthält.
-
-  - type: textarea
-    attributes:
-      label: Zusätzliche Informationen
-      description: |
-        Füge hier weitere Informationen hinzu, z. B. Hinweise zur Reproduktion,
-        Screenshots oder sonstige relevante Details.

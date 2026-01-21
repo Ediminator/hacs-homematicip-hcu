@@ -88,9 +88,3 @@ body:
 
         Make sure the log covers the time when the issue occurred
         and does not contain sensitive information.
-
-  - type: textarea
-    attributes:
-      label: Additional information
-      description: |
-        Add any additional context, screenshots, or details that may help reproduce or understand the issue.

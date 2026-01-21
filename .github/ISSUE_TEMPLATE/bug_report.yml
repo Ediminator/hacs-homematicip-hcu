@@ -1,4 +1,4 @@
-name: Bug report (en)
+name: 🐛 Bug report (en)
 description: Report a bug for hacs_homematicip_hcu
 body:
   - type: markdown

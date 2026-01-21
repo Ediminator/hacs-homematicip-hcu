@@ -1,0 +1,93 @@
+name: Feature request
+description: Suggest an improvement or new feature for hacs_homematicip_hcu
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This form is **only for feature requests**.
+
+        Please do not use this form for bug reports or questions.
+        Make sure **all required information** is provided so the request can be properly evaluated.
+
+        ⚠️ **IMPORTANT**
+        A meaningful review is only possible if all required information is provided.
+        Requests without enough details may be closed without further notice.
+
+        ---
+        ### Before you open a new request
+
+        Please check whether your idea has already been suggested, discussed, or implemented.
+
+        You can do this by:
+        1. Going to the **Issues** tab of this repository
+        2. Searching for keywords related to your request
+        3. Checking **open and closed issues** as well as existing pull requests
+
+        If there is an existing issue, please add your details there instead of opening a new one.
+
+        ---
+
+  - type: checkboxes
+    attributes:
+      label: Confirmation
+      options:
+        - label: I have checked existing open and closed issues to ensure this feature request has not already been proposed or implemented.
+          required: true
+        - label: I have read the **README** and followed all relevant instructions.
+          required: true
+
+  - type: textarea
+    validations:
+      required: true
+    attributes:
+      label: Feature description
+      description: |
+        Please describe the requested feature as clearly as possible and answer the following questions:
+
+        1. What problem are you trying to solve?
+        2. What is your proposed solution / desired behavior?
+        3. What alternatives have you considered?
+        4. Is this feature related to a specific device/entity/service? If yes, which one(s)?
+        5. Any additional context, screenshots, or examples?
+
+  - type: markdown
+    attributes:
+      value: |
+        ## Environment
+
+  - type: input
+    validations:
+      required: true
+    attributes:
+      label: Integration version
+      placeholder: x.y.z
+      description: |
+        Enter the version of the integration you are using.
+
+  - type: markdown
+    attributes:
+      value: |
+        ## Details
+
+  - type: textarea
+    attributes:
+      label: Diagnostics file
+      placeholder: "Drag and drop the diagnostics .json file here."
+      description: |
+        If available, please upload a diagnostics file. This helps evaluate and implement the feature request.
+
+        ⚠️ **IMPORTANT**
+        Upload the diagnostics file **only as a file** using drag and drop.
+        Do NOT paste logs or text content here.
+
+        Documentation on how to download diagnostics:
+        https://github.com/Ediminator/hacs-homematicip-hcu/blob/main/README.md#-diagnostics--troubleshooting
+
+  - type: textarea
+    attributes:
+      label: Additional information
+      description: |
+        Add any other relevant information here.
+
+        If you have logs or other files that help illustrate the request, please attach them as files (drag and drop),
+        and avoid posting sensitive information.

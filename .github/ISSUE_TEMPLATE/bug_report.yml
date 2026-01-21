@@ -80,7 +80,7 @@ body:
 
   - type: textarea
     attributes:
-      label: Diagnostics file (required)
+      label: Diagnostics file
       placeholder: "Drag and drop the diagnostics .json file here."
       description: |
         ⚠️ **IMPORTANT**
@@ -95,7 +95,7 @@ body:
 
   - type: textarea
     attributes:
-      label: Log file (required)
+      label: Log file
       placeholder: "Drag and drop the log file here."
       description: |
         Please upload the relevant log file.

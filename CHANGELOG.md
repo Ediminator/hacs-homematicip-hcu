@@ -3,6 +3,21 @@
 All notable changes to the Homematic IP Local (HCU) integration will be documented in this file.
 
 ---
+## 1.19.6 - 2026-01-
+
+### ⚠️ BREAKING CHANGES
+- **Eco mode can no longer be set via heating groups**  
+  (#268) Eco mode has been disabled for heating groups. To enable Eco mode globally, use the service hcu_integration.activate_eco_mode.
+
+### ✨ New Features
+- Add translations for events and buttons.
+
+### ✅ Update Note
+This release has been **thoroughly tested**. However, it is always recommended to **create a backup before updating**.
+
+### 🧹 Browser Cache Note
+Some of these changes are cached by your browser. After updating, please hard refresh / reload the page to ensure all changes are applied.
+
 ## 1.19.5 - 2026-01-13
 
 ### ⚠️ BREAKING CHANGES

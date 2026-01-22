@@ -11,6 +11,7 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 
 ### ✨ New Features
 - Add translations for events and buttons.
+- add extra attribute window_state to the HcuClimate entity.
 
 ### ✅ Update Note
 This release has been **thoroughly tested**. However, it is always recommended to **create a backup before updating**.

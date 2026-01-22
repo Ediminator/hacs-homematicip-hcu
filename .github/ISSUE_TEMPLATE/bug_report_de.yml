@@ -1,0 +1,108 @@
+name: 🐛 Bug report (de)
+description: Melde einen Fehler für hacs_homematicip_hcu
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Dieses Formular ist **ausschließlich für Bug-Reports**.
+
+        Bitte nutze dieses Formular nicht für Fragen oder Feature-Requests.
+        Stelle sicher, dass **alle erforderlichen Informationen** angegeben sind, damit das Problem korrekt analysiert werden kann.
+
+        ⚠️ **WICHTIG**
+        Sinnvolle Unterstützung ist nur möglich, wenn alle erforderlichen Informationen bereitgestellt werden,
+        insbesondere **Diagnosedaten** und **Logdateien**.
+        Issues ohne diese Informationen können ohne weitere Hinweise geschlossen werden.
+
+        ---
+        ### Wo du „Good first issues“ findest
+
+        Bevor du ein neues Issue erstellst, prüfe bitte, ob dein Problem bereits bekannt ist.
+
+        Du findest **Good first issues** so:
+        1. Gehe zum Tab **Issues** dieses Repositories
+        2. Nutze den Label-Filter **`good first issue`**
+        3. Oder gib `label:"good first issue"` in das Suchfeld der Issues ein
+
+        Bitte prüfe auch **offene und geschlossene Issues**, da das Problem ggf. bereits gemeldet oder gelöst wurde.
+
+        ---
+
+  - type: checkboxes
+    attributes:
+      label: Bestätigung
+      options:
+        - label: Ich habe die Liste **Good first issues** sowie bestehende Issues geprüft, um sicherzustellen, dass dieses Problem noch nicht gemeldet oder bereits gelöst wurde.
+          required: true
+        - label: Ich habe die **README** gelesen und alle relevanten Anweisungen befolgt.
+          required: true
+
+  - type: textarea
+    validations:
+      required: true
+    attributes:
+      label: Problembeschreibung
+      description: |
+        Bitte beschreibe das Problem so klar wie möglich und beantworte folgende Fragen:
+
+        1. Was passiert?
+        2. Wann und wie tritt es auf?
+        3. Was hast du erwartet, was passieren sollte?
+        4. Was hast du bereits versucht?
+
+        **Bitte füge hier keine Logs ein.** Screenshots sind willkommen.
+
+  - type: markdown
+    attributes:
+      value: |
+        ## Umgebung
+
+  - type: input
+    validations:
+      required: true
+    attributes:
+      label: Betroffene Integrationsversion
+      placeholder: x.y.z
+      description: |
+        Gib die Version der Integration an, bei der das Problem auftritt.
+
+  - type: input
+    attributes:
+      label: Letzte funktionierende Integrationsversion
+      placeholder: x.y.z
+      description: |
+        Falls bekannt, sonst leer lassen.
+
+  - type: markdown
+    attributes:
+      value: |
+        ## Details
+
+  - type: textarea
+    attributes:
+      label: Diagnose-Datei
+      placeholder: "Ziehe die Diagnose-.json-Datei hierher (Drag & Drop)."
+      description: |
+        ⚠️ **WICHTIG**
+        Lade die Diagnose-Datei **nur als Datei** per Drag & Drop hoch.
+
+        Bitte füge hier keine Logs oder Textinhalte ein.
+
+        Dokumentation zum Herunterladen der Diagnose:
+        https://github.com/Ediminator/hacs-homematicip-hcu/blob/main/README.md#-diagnostics--troubleshooting
+
+        Überspringe dieses Feld nur, wenn der Fehler während der Ersteinrichtung auftritt.
+
+  - type: textarea
+    attributes:
+      label: Logdatei
+      placeholder: "Ziehe die Logdatei hierher (Drag & Drop)."
+      description: |
+        Bitte lade die relevante Logdatei hoch.
+        Logs auf DEBUG-Level werden dringend empfohlen.
+
+        Dokumentation zum Aktivieren des Debug-Loggings:
+        https://github.com/Ediminator/hacs-homematicip-hcu/blob/main/README.md#debug-logging
+
+        Stelle sicher, dass das Log den Zeitraum abdeckt, in dem der Fehler aufgetreten ist,
+        und keine sensiblen Informationen enthält.

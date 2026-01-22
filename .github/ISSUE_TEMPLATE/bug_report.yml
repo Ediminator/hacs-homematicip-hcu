@@ -1,0 +1,108 @@
+name: 🐛 Bug report (en)
+description: Report a bug for hacs_homematicip_hcu
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This form is **only for bug reports**.
+
+        Please do not use this form for questions or feature requests.
+        Make sure **all required information** is provided so the issue can be properly analyzed.
+
+        ⚠️ **IMPORTANT**
+        Meaningful support is only possible if all required information is provided,
+        especially **diagnostics data** and **log files**.
+        Issues without this information may be closed without further notice.
+
+        ---
+        ### Where to find “Good first issues”
+
+        Before opening a new issue, please check whether your problem is already known.
+
+        You can find **Good first issues** by:
+        1. Going to the **Issues** tab of this repository
+        2. Using the label filter **`good first issue`**
+        3. Or typing `label:"good first issue"` into the issue search field
+
+        Please also check **open and closed issues**, as the problem may already be reported or resolved.
+
+        ---
+
+  - type: checkboxes
+    attributes:
+      label: Confirmation
+      options:
+        - label: I have checked the **Good first issues** list and existing issues to ensure this problem has not already been reported or resolved.
+          required: true
+        - label: I have read the **README** and followed all relevant instructions.
+          required: true
+
+  - type: textarea
+    validations:
+      required: true
+    attributes:
+      label: Problem description
+      description: |
+        Please describe the issue as clearly as possible and answer the following questions:
+
+        1. What is happening?
+        2. When and how does it occur?
+        3. What did you expect to happen?
+        4. What have you already tried?
+
+        **Do NOT include logs here.** Screenshots are welcome.
+
+  - type: markdown
+    attributes:
+      value: |
+        ## Environment
+
+  - type: input
+    validations:
+      required: true
+    attributes:
+      label: Affected integration version
+      placeholder: x.y.z
+      description: |
+        Enter the version of the integration where the issue occurs.
+
+  - type: input
+    attributes:
+      label: Last working integration version
+      placeholder: x.y.z
+      description: |
+        If known, otherwise leave blank.
+
+  - type: markdown
+    attributes:
+      value: |
+        ## Details
+
+  - type: textarea
+    attributes:
+      label: Diagnostics file
+      placeholder: "Drag and drop the diagnostics .json file here."
+      description: |
+        ⚠️ **IMPORTANT**
+        Upload the diagnostics file **only as a file** using drag and drop.
+
+        Do NOT paste logs or text content here.
+
+        Documentation on how to download diagnostics:
+        https://github.com/Ediminator/hacs-homematicip-hcu/blob/main/README.md#-diagnostics--troubleshooting
+
+        Skip this field only if the issue occurs during initial setup.
+
+  - type: textarea
+    attributes:
+      label: Log file
+      placeholder: "Drag and drop the log file here."
+      description: |
+        Please upload the relevant log file.
+        DEBUG-level logs are strongly recommended.
+
+        Documentation on how to enable debug logging:
+        https://github.com/Ediminator/hacs-homematicip-hcu/blob/main/README.md#debug-logging
+
+        Make sure the log covers the time when the issue occurred
+        and does not contain sensitive information.

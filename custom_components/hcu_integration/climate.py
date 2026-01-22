@@ -213,6 +213,8 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
         attributes = super().extra_state_attributes or {}
         if (valve_pos := self.current_valve_position) is not None:
             attributes |= {"valve_position": valve_pos}
+        if (window_state := self._group.get("windowState")) is not None:
+            attributes |= {"window_state": window_state}
         return attributes
 
     @property

@@ -142,6 +142,7 @@ class HcuDeviceIdentifyButton(HcuBaseEntity, ButtonEntity):
     """Representation of a button to trigger device identify (blink/beep)."""
 
     PLATFORM = Platform.BUTTON
+    _attr_translation_key = "hcu_device_identify"
     _attr_icon = "mdi:crosshairs-gps"
 
     def __init__(
@@ -155,10 +156,6 @@ class HcuDeviceIdentifyButton(HcuBaseEntity, ButtonEntity):
         super().__init__(coordinator, client, device_data, channel_index)
 
         self._attr_device_class = None
-        # Set entity name using the centralized naming helper
-        self._set_entity_name(
-            channel_label=self._channel.get("label"), feature_name="Identify"
-        )
         self._attr_unique_id = f"{self._device_id}_{self._channel_index}_identify"
 
     async def async_press(self) -> None:

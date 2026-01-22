@@ -322,8 +322,9 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
                 await self._client.async_set_group_boost(
                     group_id=self._group_id, boost=True
                 )
-            elif preset_mode == PRESET_ECO:
-                await self._client.async_activate_absence_permanent()
+            #elif preset_mode == PRESET_ECO:
+            #    Disable Set EcoMode from Heating Group
+            #    await self._client.async_activate_absence_permanent()
             elif preset_mode == PRESET_PARTY:
                 comfort_temp = self._config_entry.options.get(
                     CONF_COMFORT_TEMPERATURE, DEFAULT_COMFORT_TEMPERATURE

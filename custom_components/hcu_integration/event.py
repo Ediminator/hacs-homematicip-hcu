@@ -78,7 +78,8 @@ class HcuButtonEvent(HcuBaseEntity, EventEntity):
     """Representation of a Homematic IP HCU button event entity."""
 
     PLATFORM = Platform.EVENT
-
+    
+    _attr_translation_key = "hcu_button_event"
     _attr_device_class = EventDeviceClass.BUTTON
     _attr_event_types = ["press", "press_short", "press_long", "press_long_start", "press_long_stop"]
 

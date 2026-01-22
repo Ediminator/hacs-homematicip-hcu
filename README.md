@@ -199,7 +199,7 @@ This integration supports button events for:
 Before creating automations, verify your buttons are working:
 
 #### 1. Create a pseudo automation in the HCU with an empty action to enable button press events.
-   Important: You must create both key types if you want to use both short and long presses.
+- Important: You must create both key types if you want to use both short and long presses.
    
 #### 2. Open the Events Monitor
 

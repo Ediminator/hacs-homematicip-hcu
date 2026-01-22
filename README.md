@@ -198,18 +198,21 @@ This integration supports button events for:
 
 Before creating automations, verify your buttons are working:
 
-#### 1. Open the Events Monitor
+#### 1. Create a pseudo automation in the HCU with an empty action to enable button press events.
+   Important: You must create both key types if you want to use both short and long presses.
+   
+#### 2. Open the Events Monitor
 
 1. Go to **Developer Tools** → **Events** (in the sidebar)
 2. In the "Listen to events" section, type: `hcu_integration_event`
 3. Click **START LISTENING**
 
-#### 2. Press Your Buttons
+#### 3. Press Your Buttons
 
 - Press any button on your Homematic IP device
 - You should immediately see an event appear in the event monitor
 
-#### 3. Understand the Event Data
+#### 4. Understand the Event Data
 
 When a button is pressed, you'll see something like this:
 
@@ -234,6 +237,8 @@ event, followed by a single `KEY_PRESS_LONG_START` event. As long as the button
 is pressed, a sequence of periodic `KEY_PRESS_LONG` events is then generated
 approximately every 0.35 seconds. When the button is released, a single
 `KEY_PRESS_LONG_STOP` event is generated.
+
+
 
 #### 4. Note Down Your Device ID and Channels
 

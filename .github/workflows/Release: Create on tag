@@ -1,0 +1,121 @@
+name: Create Release on Tag
+
+on:
+  push:
+    tags:
+      - "*.*.*"
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    # Optionaler Sicherheits-Guard (anpassen oder entfernen)
+    if: github.repository_owner == 'Ediminator'
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Get version from tag
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Remove 'v' prefix if present
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+          # Extract base version (remove beta suffix like 'b1', 'b2', etc.)
+          # 2.0.5b2 -> 2.0.5, 2.0.5 -> 2.0.5
+          BASE_VERSION="${VERSION%%b*}"
+          echo "base_version=$BASE_VERSION" >> "$GITHUB_OUTPUT"
+
+          # Check if this is a stable release (no 'b' in version)
+          if [[ "$VERSION" != *"b"* ]]; then
+            echo "is_stable=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "is_stable=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Extract changelog section
+        id: changelog
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          VERSION="${{ steps.version.outputs.base_version }}"
+          FILE="CHANGELOG.md"
+
+          if [ ! -f "$FILE" ]; then
+            echo "CHANGELOG.md not found at repo root" >&2
+            exit 1
+          fi
+
+          # Erwartetes Format im Repo:
+          #   ## 1.19.6 - 2026-01-...
+          # plus ältere Varianten:
+          #   ## Version 1.15.18 - ...
+          #   # Version 1.15.18 - ...
+          #
+          # Wir extrahieren alles NACH dem passenden Header bis zum nächsten Versions-Header.
+          awk -v ver="$VERSION" '
+            function is_cur_header(line) {
+              return (line ~ ("^##[[:space:]]+v?" ver "([[:space:]]|$|-)")) ||
+                     (line ~ ("^##[[:space:]]+Version[[:space:]]+v?" ver "([[:space:]]|$|-)")) ||
+                     (line ~ ("^#[[:space:]]+Version[[:space:]]+v?" ver "([[:space:]]|$|-)"))
+            }
+            function is_any_header(line) {
+              return (line ~ /^##[[:space:]]+v?[0-9]+\.[0-9]+(\.[0-9]+)?([[:space:]]|$|-)/) ||
+                     (line ~ /^##[[:space:]]+Version[[:space:]]+v?[0-9]+\.[0-9]+(\.[0-9]+)?([[:space:]]|$|-)/) ||
+                     (line ~ /^#[[:space:]]+Version[[:space:]]+v?[0-9]+\.[0-9]+(\.[0-9]+)?([[:space:]]|$|-)/)
+            }
+            {
+              if (!found && is_cur_header($0)) { found=1; next }  # Header-Zeile selbst überspringen
+              if (found && is_any_header($0)) { exit }            # nächste Version -> Ende
+              if (found) print
+            }
+          ' "$FILE" > /tmp/changelog_section.md
+
+          if [ ! -s /tmp/changelog_section.md ]; then
+            echo "No matching changelog section found for version '$VERSION'." >&2
+            exit 1
+          fi
+
+      - name: Build release body (header + changelog + footer)
+        id: body
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          BODY_FILE="/tmp/release_body.md"
+          : > "$BODY_FILE"
+
+          # Header (falls vorhanden)
+          if [[ -f ".github/RELEASE_HEADER.md" ]]; then
+            cat ".github/RELEASE_HEADER.md" >> "$BODY_FILE"
+            printf "\n\n" >> "$BODY_FILE"
+          fi
+
+          # Changelog
+          cat /tmp/changelog_section.md >> "$BODY_FILE"
+
+          # Footer (falls vorhanden)
+          if [[ -f ".github/RELEASE_FOOTER.md" ]]; then
+            printf "\n\n" >> "$BODY_FILE"
+            cat ".github/RELEASE_FOOTER.md" >> "$BODY_FILE"
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ steps.version.outputs.version }}
+          body_path: /tmp/release_body.md
+          # stable => prerelease=false, beta => prerelease=true
+          prerelease: ${{ steps.version.outputs.is_stable != 'true' }}
+          generate_release_notes: false

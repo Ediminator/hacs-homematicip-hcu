@@ -3,7 +3,7 @@
 All notable changes to the Homematic IP Local (HCU) integration will be documented in this file.
 
 ---
-## 1.19.6 - 2026-01-
+## 1.19.6 - 2026-01-23
 
 ### ⚠️ BREAKING CHANGES
 - **Eco mode can no longer be set via heating groups**  

@@ -10,7 +10,7 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .entity import HcuBaseEntity
+from .entity import HcuBaseEntity, HcuMigrationMixin 
 from .api import HcuApiClient
 
 if TYPE_CHECKING:
@@ -66,7 +66,8 @@ class HcuDoorbellEvent(HcuBaseEntity, EventEntity):
         # Use channel label directly without feature name to avoid redundancy
         self._set_entity_name(channel_label=self._channel.get("label"))
 
-        self._attr_unique_id = f"{self._device_id}_{self._channel_index_str}_doorbell_event"
+        legacy_unique_id = f"{self._device_id}_{self._channel_index_str}_doorbell_event"
+        self._configure_unique_id(legacy_unique_id)
 
     @callback
     def handle_trigger(self) -> None:
@@ -92,8 +93,10 @@ class HcuButtonEvent(HcuBaseEntity, EventEntity):
     ):
         super().__init__(coordinator, client, device_data, channel_index)
         self._set_entity_name(channel_label=self._channel.get("label"))
-        self._attr_unique_id = f"{self._device_id}_{self._channel_index_str}_button_event"
-
+        
+        legacy_unique_id = f"{self._device_id}_{self._channel_index_str}_button_event"
+        self._configure_unique_id(legacy_unique_id)
+        
     @callback
     def handle_trigger(self, event_type: str | None = None) -> None:
         """Handle an event trigger from the coordinator."""

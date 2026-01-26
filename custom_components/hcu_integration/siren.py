@@ -11,7 +11,7 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .entity import HcuBaseEntity, SwitchStateMixin
+from .entity import HcuBaseEntity, SwitchStateMixin, HcuMigrationMixin
 from .api import HcuApiClient, HcuApiError
 from .const import (
     CHANNEL_TYPE_ALARM_SIREN,
@@ -64,7 +64,8 @@ class HcuSiren(SwitchStateMixin, HcuBaseEntity, SirenEntity):
         # Set entity name using the centralized naming helper
         self._set_entity_name(channel_label=self._channel.get("label"))
 
-        self._attr_unique_id = f"{self._device_id}_{self._channel_index}_siren"
+        legacy_unique_id = f"{self._device_id}_{self._channel_index}_siren"
+        self._configure_unique_id(legacy_unique_id)
 
         # Find the ALARM_SWITCHING group for this siren
         self._alarm_group_id = self._find_alarm_switching_group()

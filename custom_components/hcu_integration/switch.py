@@ -9,7 +9,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 import logging
 from .const import HMIP_DEVICE_TYPE_TO_DEVICE_CLASS
-from .entity import HcuBaseEntity, SwitchStateMixin, HcuSwitchingGroupBase
+from .entity import HcuBaseEntity, SwitchStateMixin, HcuSwitchingGroupBase, HcuMigrationMixin
 from .api import HcuApiClient, HcuApiError
 
 _LOGGER = logging.getLogger(__name__)
@@ -47,7 +47,8 @@ class HcuSwitch(SwitchStateMixin, HcuBaseEntity, SwitchEntity):
 
         self._set_entity_name(channel_label=self._channel.get("label"))
 
-        self._attr_unique_id = f"{self._device_id}_{self._channel_index}_on"
+        legacy_unique_id = f"{self._device_id}_{self._channel_index}_on"
+        self._configure_unique_id(legacy_unique_id)
 
         device_type = self._device.get("type")
         self._attr_device_class = HMIP_DEVICE_TYPE_TO_DEVICE_CLASS.get(device_type)
@@ -126,7 +127,9 @@ class HcuWateringSwitch(SwitchStateMixin, HcuBaseEntity, SwitchEntity):
 
         self._set_entity_name(channel_label=self._channel.get("label"))
 
-        self._attr_unique_id = f"{self._device_id}_{self._channel_index}_watering"
+        legacy_unique_id = f"{self._device_id}_{self._channel_index}_watering"
+        self._configure_unique_id(legacy_unique_id)
+        
         self._init_switch_state()
 
     @callback

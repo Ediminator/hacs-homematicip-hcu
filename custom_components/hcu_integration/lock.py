@@ -10,7 +10,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import CONF_PIN, DOCS_URL_LOCK_PIN_CONFIG
-from .entity import HcuBaseEntity
+from .entity import HcuBaseEntity, HcuMigrationMixin
 from .api import HcuApiClient, HcuApiError
 
 if TYPE_CHECKING:
@@ -49,7 +49,9 @@ class HcuLock(HcuBaseEntity, LockEntity):
         super().__init__(coordinator, client, device_data, channel_index)
         self._config_entry = config_entry
         self._set_entity_name(channel_label=self._channel.get("label"))
-        self._attr_unique_id = f"{self._device_id}_{self._channel_index}_lock"
+        
+        legacy_unique_id = f"{self._device_id}_{self._channel_index}_lock"
+        self._configure_unique_id(legacy_unique_id)
 
         # Track if this specific lock has determined it requires a PIN
         self._pin_required: bool | None = None

@@ -6,8 +6,8 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 ## 1.19.7 - 2026-01-
 
 ### ✨ New Features
-- Added meta group and switchVisualization as extra state attributes.
-- Going forward, newly discovered devices will be automatically assigned to the corresponding Home Assistant area — if the Homematic IP areas already exist in Home Assistant.
+- Added **meta group** and **switchVisualization** as extra state attributes.
+- Going forward, newly discovered devices will be automatically assigned to the corresponding Home Assistant area — **if the Homematic IP areas already exist in Home Assistant.**
 
 ### ✅ Update Note
 This release has been **thoroughly tested**. However, it is always recommended to **create a backup before updating**.

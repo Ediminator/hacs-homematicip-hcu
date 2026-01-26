@@ -176,13 +176,6 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, E
         """Return the latest channel data from the parent device's data structure."""
         return self._device.get("functionalChannels", {}).get(self._channel_index_str, {})
     
-    def _extract_groups_from_channel(self) -> list[dict]:
-        groups: list[dict] = []
-        for gid in self._channel.get("groups") or []:
-            if g := self._client.get_group_by_id(str(gid)):
-                groups.append(g)
-        return groups
-    
     def _get_meta_group_label_from_channel_data(self, channel_data: dict[str, Any]) -> str | None:
         """Finds the meta group label from a given channel's group list."""
         for gid in channel_data.get("groups") or []:
@@ -191,12 +184,13 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, E
                     return g.get("label")
         return None
 
-    @property
+    @cached_property
     def _meta_group_label(self) -> str | None:
         """Return the meta group label from the channel or channel 0."""
         # First check the current channel
         if label := self._get_meta_group_label_from_channel_data(self._channel):
             return label
+        
         #Fallback
         ch0 = (self._device.get("functionalChannels") or {}).get("0") or {}
         return self._get_meta_group_label_from_channel_data(ch0)
@@ -310,13 +304,11 @@ class HcuGroupBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMix
         """Return the latest group data from the client's state cache."""
         return self._client.get_group_by_id(self._group_id) or {}
     
-    @property
+    @cached_property
     def _meta_group_label(self) -> str | None:
-        metaGroupId = self._group.get("metaGroupId")
-        metaGroup = self._client.get_group_by_id(str(metaGroupId))
-        if metaGroup is not None:
-            return metaGroup.get("label")
-    
+        if metaGroupId := self._group.get("metaGroupId"):
+            if metaGroup := self._client.get_group_by_id(str(metaGroupId)):
+                return metaGroup.get("label")
         return None
     
     @property
@@ -325,7 +317,7 @@ class HcuGroupBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMix
         hcu_device_id = self._client.hcu_device_id
         group_type = self._group.get("type", "Group").replace("_", " ").title()
         model_name = f"{group_type} Group"
-        meta = self._meta_group_label_from_channel
+        meta = self._meta_group_label
     
         device_info_kwargs = dict(
             identifiers={(DOMAIN, self._group_id)},

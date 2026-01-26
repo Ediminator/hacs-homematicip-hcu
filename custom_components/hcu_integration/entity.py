@@ -184,7 +184,7 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, E
                     return g.get("label")
         return None
 
-    @cached_property
+    @property
     def _meta_group_label(self) -> str | None:
         """Return the meta group label from the channel or channel 0."""
         # First check the current channel
@@ -304,7 +304,7 @@ class HcuGroupBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMix
         """Return the latest group data from the client's state cache."""
         return self._client.get_group_by_id(self._group_id) or {}
     
-    @cached_property
+    @property
     def _meta_group_label(self) -> str | None:
         if metaGroupId := self._group.get("metaGroupId"):
             if metaGroup := self._client.get_group_by_id(str(metaGroupId)):

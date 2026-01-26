@@ -175,7 +175,26 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, E
     def _channel(self) -> dict[str, Any]:
         """Return the latest channel data from the parent device's data structure."""
         return self._device.get("functionalChannels", {}).get(self._channel_index_str, {})
+    
+    def _get_meta_group_label_from_channel_data(self, channel_data: dict[str, Any]) -> str | None:
+        """Finds the meta group label from a given channel's group list."""
+        for gid in channel_data.get("groups") or []:
+            if g := self._client.get_group_by_id(str(gid)):
+                if (g.get("type") or "").upper() == "META":
+                    return g.get("label")
+        return None
+
+    @cached_property
+    def _meta_group_label(self) -> str | None:
+        """Return the meta group label from the channel or channel 0."""
+        # First check the current channel
+        if label := self._get_meta_group_label_from_channel_data(self._channel):
+            return label
         
+        #Fallback
+        ch0 = (self._device.get("functionalChannels") or {}).get("0") or {}
+        return self._get_meta_group_label_from_channel_data(ch0)
+    
     @property
     def device_info(self) -> DeviceInfo:
         """Return device information for the Home Assistant device registry."""
@@ -188,7 +207,8 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, E
             )
         
         model_type = self._device.get("modelType")
-    
+        meta = self._meta_group_label
+        
         device_info_kwargs = dict(
             identifiers={(DOMAIN, self._device_id)},
             name=self._device.get("label", "Unknown Device"),
@@ -200,17 +220,29 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, E
     
         if model_type and model_type.startswith(HOMEMATIC_MODEL_PREFIXES):
             device_info_kwargs["serial_number"] = self._device_id
-
+            
+        if meta is not None:
+            device_info_kwargs["suggested_area"] = meta
+        
         return DeviceInfo(**device_info_kwargs)
     
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        return (super().extra_state_attributes or {}) | {
+        attrs = (super().extra_state_attributes or {}) | {
             "device_id": self._device_id,
             "channel_index": self._channel_index,
             "functional_channel_type": self._channel.get("functionalChannelType"),
-            "is_group": False
+            "is_group": False,
         }
+        meta = self._meta_group_label
+        if meta is not None:
+            attrs["meta"] = meta
+        
+        switchVisualization = self._channel.get("switchVisualization")
+        if switchVisualization is not None:
+            attrs["switchVisualization"] = switchVisualization
+        
+        return attrs
     
     @property
     def available(self) -> bool:
@@ -271,28 +303,46 @@ class HcuGroupBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMix
     def _group(self) -> dict[str, Any]:
         """Return the latest group data from the client's state cache."""
         return self._client.get_group_by_id(self._group_id) or {}
-
+    
+    @cached_property
+    def _meta_group_label(self) -> str | None:
+        if metaGroupId := self._group.get("metaGroupId"):
+            if metaGroup := self._client.get_group_by_id(str(metaGroupId)):
+                return metaGroup.get("label")
+        return None
+    
     @property
     def device_info(self) -> DeviceInfo:
         """Return device information for this virtual group entity."""
         hcu_device_id = self._client.hcu_device_id
         group_type = self._group.get("type", "Group").replace("_", " ").title()
         model_name = f"{group_type} Group"
-
-        return DeviceInfo(
+        meta = self._meta_group_label
+    
+        device_info_kwargs = dict(
             identifiers={(DOMAIN, self._group_id)},
             name=self._group.get("label", "Unknown Group"),
             manufacturer="Homematic IP",
             model=model_name,
-            via_device=(DOMAIN, hcu_device_id),
+            via_device=(DOMAIN, hcu_device_id)
         )
     
+        if meta is not None:
+            device_info_kwargs["suggested_area"] = meta
+         
+        return DeviceInfo(**device_info_kwargs)
+
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        return (super().extra_state_attributes or {}) | {
+        attrs = (super().extra_state_attributes or {}) | {
             "type": self._group.get("type"),
             "is_group": True
         }
+        meta = self._meta_group_label
+        if meta is not None:
+            attrs["meta"] = meta
+        
+        return attrs
     
     @property
     def available(self) -> bool:

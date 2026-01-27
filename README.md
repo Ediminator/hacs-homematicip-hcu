@@ -14,8 +14,8 @@ This integration connects directly to your HCU's local API, providing real-time 
 - [Requirements](#-requirements)
 - [Installation](#-installation)
 - [Configuration](#-configuration-options)
-- [Working with Buttons & Remote Controls](#-working-with-buttons--remote-controls) ⭐ **NEW: Simplified Guide**
-- [Available Services](#-available-services)
+- [Working with Buttons & Remote Controls](#-working-with-buttons--remote-controls)
+- [Available Actions](#-available-actions)
 - [Diagnostics & Troubleshooting](#-diagnostics--troubleshooting)
 - [FAQ](#-faq)
 - [Support](#-support)
@@ -144,7 +144,7 @@ After installation, you can adjust some settings:
 
 - **Comfort Temperature:** Default temperature (in °C) used when switching from OFF to HEAT mode
 - **Third-Party Device Filters:** Show/hide devices from manufacturers other than eQ-3
-
+- **Group Filters** Show/hide groups
 ---
 
 ## 🔘 Working with Buttons & Remote Controls
@@ -174,9 +174,9 @@ Stateless button devices (wall switches, remote controls, etc.) work differently
 This integration supports button events for:
 
 **Wall Switches:**
-- HmIP-WGS (Wall-mounted Glass Switch) ⭐ **Fixed in v1.8.1**
+- HmIP-WGS (Wall-mounted Glass Switch)
 - HmIP-WRC2 (2-button Wall Remote)
-- HmIP-WRC6 (6-button Wall Remote) ⭐ **Fixed in v1.8.1**
+- HmIP-WRC6 (6-button Wall Remote)
 - HmIP-WRCC2 (Wall Remote with Display)
 - HmIP-BRC2 (2-button Remote Control)
 - And more...
@@ -578,7 +578,7 @@ For persistent debug logging:
 
 ---
 
-## 🎮 Available Services
+## 🎮 Available Actions
 
 ### `hcu_integration.play_sound`
 
@@ -586,7 +586,7 @@ Play a sound on compatible notification devices (e.g., HmIP-MP3P).
 
 **Example:**
 ```yaml
-service: hcu_integration.play_sound
+action: hcu_integration.play_sound
 target:
   entity_id: switch.doorbell
 data:
@@ -601,7 +601,7 @@ Enable or disable automation rules within the HCU.
 
 **Example:**
 ```yaml
-service: hcu_integration.set_rule_state
+action: hcu_integration.set_rule_state
 data:
   rule_id: "00000000-0000-0000-0000-000000000000"
   enabled: true
@@ -613,7 +613,7 @@ Temporarily override heating schedule for a specific room.
 
 **Example:**
 ```yaml
-service: hcu_integration.activate_party_mode
+action: hcu_integration.activate_party_mode
 target:
   entity_id: climate.living_room
 data:
@@ -627,7 +627,7 @@ System-wide vacation mode for all heating groups.
 
 **Example:**
 ```yaml
-service: hcu_integration.activate_vacation_mode
+action: hcu_integration.activate_vacation_mode
 data:
   temperature: 15
   end_time: "2025-12-24 18:00"
@@ -639,7 +639,7 @@ Activate permanent absence (Eco) mode.
 
 **Example:**
 ```yaml
-service: hcu_integration.activate_eco_mode
+action: hcu_integration.activate_eco_mode
 ```
 
 ### `hcu_integration.deactivate_absence_mode`
@@ -648,7 +648,24 @@ Deactivate any active absence mode.
 
 **Example:**
 ```yaml
-service: hcu_integration.deactivate_absence_mode
+action: hcu_integration.deactivate_absence_mode
+```
+
+### `hcu_integration.send_api_command`
+
+Send raw api command to hcu.
+
+**Example:**
+```yaml
+action: hcu_integration.send_api_command
+data:
+  path: /hmip/device/control/setOpticalSignal
+  body:
+    opticalSignalBehaviour: FLASH_MIDDLE
+    simpleRGBColorState: PURPLE
+    dimLevel: 0.42
+    channelIndex: 8
+    deviceId: 3014F711A00478E0C9A5E3456
 ```
 
 ---

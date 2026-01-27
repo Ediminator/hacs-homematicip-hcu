@@ -21,6 +21,7 @@ from homeassistant.const import (
     UnitOfVolume,
     UnitOfElectricPotential,
     UnitOfFrequency,
+    EntityCategory,
 )
 
 # Domain of the integration
@@ -628,6 +629,7 @@ HMIP_FEATURE_TO_ENTITY = {
         "unit": PERCENTAGE,
         "icon": "mdi:radio-tower",
         "state_class": SensorStateClass.MEASUREMENT,
+        "entity_category": EntityCategory.DIAGNOSTIC,
         "entity_registry_enabled_default": False,
     },
     "dutyCycleLevel": {
@@ -636,6 +638,7 @@ HMIP_FEATURE_TO_ENTITY = {
         "unit": PERCENTAGE,
         "icon": "mdi:radio-tower",
         "state_class": SensorStateClass.MEASUREMENT,
+        "entity_category": EntityCategory.DIAGNOSTIC,
         "entity_registry_enabled_default": False,
     },
     "rssiDeviceValue": {
@@ -644,6 +647,7 @@ HMIP_FEATURE_TO_ENTITY = {
         "unit": "dBm",
         "device_class": SensorDeviceClass.SIGNAL_STRENGTH,
         "state_class": SensorStateClass.MEASUREMENT,
+        "entity_category": EntityCategory.DIAGNOSTIC,
         "entity_registry_enabled_default": False,
     },
     "rssiPeerValue": {
@@ -652,6 +656,7 @@ HMIP_FEATURE_TO_ENTITY = {
         "unit": "dBm",
         "device_class": SensorDeviceClass.SIGNAL_STRENGTH,
         "state_class": SensorStateClass.MEASUREMENT,
+        "entity_category": EntityCategory.DIAGNOSTIC,
         "entity_registry_enabled_default": False,
     },
     "accelerationSensorValueX": {
@@ -759,12 +764,13 @@ HMIP_FEATURE_TO_ENTITY = {
         "class": "HcuBinarySensor",
         "name": "Low Battery",
         "device_class": BinarySensorDeviceClass.BATTERY,
+        "entity_category": EntityCategory.DIAGNOSTIC,
     },
     "unreach": {
         "class": "HcuUnreachBinarySensor",
         "name": "Connectivity",
         "device_class": BinarySensorDeviceClass.CONNECTIVITY,
-        "entity_category": "diagnostic",
+        "entity_category": EntityCategory.DIAGNOSTIC,
     },
     "windowState": {
         "class": "HcuWindowBinarySensor",
@@ -842,7 +848,7 @@ DUTY_CYCLE_BINARY_SENSOR_MAPPING = {
     "class": "HcuBinarySensor",
     "name": "Duty Cycle Limit",
     "device_class": BinarySensorDeviceClass.PROBLEM,
-    "entity_category": "diagnostic",
+    "entity_category": EntityCategory.DIAGNOSTIC,
     "entity_registry_enabled_default": False,
 }
 

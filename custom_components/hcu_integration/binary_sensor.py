@@ -9,7 +9,7 @@ from homeassistant.components.binary_sensor import (
     BinarySensorEntity,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
+from homeassistant.const import Platform, EntityCategory
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.util import dt as dt_util
@@ -69,7 +69,8 @@ class HcuBinarySensor(HcuBaseEntity, BinarySensorEntity):
         self._set_entity_name(
             channel_label=self._channel.get("label"), feature_name=mapping["name"]
         )
-
+        
+        self._attr_entity_category = mapping.get("entity_category")
         self._attr_unique_id = f"{self._device_id}_{self._channel_index}_{self._feature}"
         self._attr_device_class = mapping.get("device_class")
 
@@ -123,7 +124,7 @@ class HcuUnreachBinarySensor(HcuBinarySensor):
     Representation of a Homematic IP HCU device's reachability.
     This class provides specialized logic for the 'unreach' status.
     """
-
+    
     @property
     def is_on(self) -> bool:
         """

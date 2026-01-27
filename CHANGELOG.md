@@ -9,6 +9,8 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 - Added **meta group** and **switchVisualization** as extra state attributes.
 - Going forward, newly discovered devices will be automatically assigned to the corresponding Home Assistant area — **if the Homematic IP areas already exist in Home Assistant.**
 - Move Connectivity, Low Battery, Duty Cycle, and RSSI sensors to the **Diagnostic category**.
+- Prepared groups **EXTENDED_LINKED_NOTIFICATION** and **EXTENDED_LINKED_WATERING**.
+- Added logic **to clean up unused / orphaned entities** from the entity registry.
 
 ### ✅ Update Note
 This release has been **thoroughly tested**. However, it is always recommended to **create a backup before updating**.

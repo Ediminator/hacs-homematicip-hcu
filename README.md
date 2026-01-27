@@ -68,8 +68,6 @@ Or, add it manually:
 
 ### Step 2: Enable the HCU Local API
 
-💡 **Tip:** If your **Home Assistant Area** names match your **Homematic IP Room** names (e.g., Living room = Living room), **newly discovered devices** will be created directly in the correct Home Assistant Area **automatically**.
-
 Before adding the integration, you must enable the local API on your HCU.
 
 1. Open your HCU's web interface (HCUweb) in a browser:
@@ -91,6 +89,8 @@ Before adding the integration, you must enable the local API on your HCU.
 ---
 
 ### Step 3: Add the Integration in Home Assistant
+
+💡 **Tip before Adding Integration:** If your **Home Assistant Area** names match your **Homematic IP Room** names (e.g., Living room = Living room), **newly discovered devices** will be created directly in the correct Home Assistant Area **automatically**.
 
 1. In Home Assistant, go to **Settings** → **Devices & Services**
 

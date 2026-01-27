@@ -8,7 +8,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 import logging
-from .const import HMIP_DEVICE_TYPE_TO_DEVICE_CLASS
+from .const import HMIP_DEVICE_TYPE_TO_DEVICE_CLASS, API_PATHS
 from .entity import HcuBaseEntity, SwitchStateMixin, HcuSwitchingGroupBase
 from .api import HcuApiClient, HcuApiError
 
@@ -156,6 +156,37 @@ class HcuSwitchGroup(HcuSwitchingGroupBase, SwitchEntity):
     PLATFORM = Platform.SWITCH
     
 class HcuWateringGroup(HcuSwitchingGroupBase, SwitchEntity):
-    """Representation of a Homematic IP HCU switching group."""
+    """Representation of a Homematic IP HCU watering switching group."""
 
     PLATFORM = Platform.SWITCH
+
+    def __init__(
+        self,
+        coordinator: "HcuCoordinator",
+        client: HcuApiClient,
+        group_data: dict[str, Any],
+    ) -> None:
+        """Initialize the HCU Cover group."""
+        super().__init__(coordinator, client, group_data)
+
+    @property
+    def is_on(self) -> bool | None:
+        """Return if the water group is activ."""
+        state = self._group.get("wateringActive")
+        return state
+    
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        """Turn the watering on."""
+        await self._client.async_group_control(
+            API_PATHS["SET_GROUP_WATERING_SWITCH_STATE"],
+            self._group_id,
+            {"wateringActive": True},
+        )
+
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        """Turn the watering off."""
+        await self._client.async_group_control(
+            API_PATHS["SET_GROUP_WATERING_SWITCH_STATE"],
+            self._group_id,
+            {"wateringActive": False},
+        )

@@ -385,7 +385,7 @@ async def async_discover_entities(
                     entity_mapping = DUTY_CYCLE_BINARY_SENSOR_MAPPING.copy()
                     if is_deactivated_by_default:
                         entity_mapping["entity_registry_enabled_default"] = not is_unused_channel
-                    entity = entity_class(coordinator, client, device_data, channel_index, "dutyCycle", entity_mapping)
+                    entity = binary_sensor.HcuBinarySensor(coordinator, client, device_data, channel_index, "dutyCycle", entity_mapping)
                     entities[Platform.BINARY_SENSOR].append(entity)
                     uid = getattr(entity, "unique_id", None)
                     if uid:

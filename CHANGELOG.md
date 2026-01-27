@@ -3,7 +3,7 @@
 All notable changes to the Homematic IP Local (HCU) integration will be documented in this file.
 
 ---
-## 1.19.7 - 2026-01-
+## 1.19.7 - 2026-01-27
 
 ### ✨ New Features
 - Added **meta group** and **switchVisualization** as extra state attributes.

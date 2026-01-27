@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.sensor import SensorEntity, SensorDeviceClass
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
+from homeassistant.const import Platform, EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
@@ -103,6 +103,7 @@ class HcuGenericSensor(HcuBaseEntity, SensorEntity):
         self._attr_native_unit_of_measurement = mapping.get("unit")
         self._attr_state_class = mapping.get("state_class")
         self._attr_icon = mapping.get("icon")
+        self._attr_entity_category = mapping.get("entity_category")
 
         if "entity_registry_enabled_default" in mapping:
             self._attr_entity_registry_enabled_default = mapping[

@@ -95,7 +95,7 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, E
         self._channel_index_str = str(channel_index)
         self._channel_index = int(channel_index)
         self._attr_assumed_state = False
-
+        
     def _set_entity_name(
         self,
         channel_label: str | None = None,

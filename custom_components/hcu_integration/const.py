@@ -21,6 +21,7 @@ from homeassistant.const import (
     UnitOfVolume,
     UnitOfElectricPotential,
     UnitOfFrequency,
+    EntityCategory,
 )
 
 # Domain of the integration
@@ -161,6 +162,8 @@ API_PATHS = {
     "SET_SWITCH_STATE_WITH_TIME": "/hmip/device/control/setSwitchStateWithTime",
     "SET_SWITCHING_GROUP_STATE": "/hmip/group/switching/setState",
     "SET_WATERING_SWITCH_STATE": "/hmip/device/control/setWateringSwitchState",
+    "SET_GROUP_WATERING_SWITCH_STATE": "/hmip/group/linked/control/setWateringSwitchState",
+    "SET_GROUP_WATERING_SWITCH_STATE_WITH_TIME": "/hmip/group/linked/control/setWateringSwitchStateWithTime",
     "SET_ZONES_ACTIVATION": "/hmip/home/security/setExtendedZonesActivation",
     "STOP_COVER": "/hmip/device/control/stop",
     "STOP_GROUP_COVER": "/hmip/group/switching/stop",
@@ -628,6 +631,7 @@ HMIP_FEATURE_TO_ENTITY = {
         "unit": PERCENTAGE,
         "icon": "mdi:radio-tower",
         "state_class": SensorStateClass.MEASUREMENT,
+        "entity_category": EntityCategory.DIAGNOSTIC,
         "entity_registry_enabled_default": False,
     },
     "dutyCycleLevel": {
@@ -636,6 +640,7 @@ HMIP_FEATURE_TO_ENTITY = {
         "unit": PERCENTAGE,
         "icon": "mdi:radio-tower",
         "state_class": SensorStateClass.MEASUREMENT,
+        "entity_category": EntityCategory.DIAGNOSTIC,
         "entity_registry_enabled_default": False,
     },
     "rssiDeviceValue": {
@@ -644,6 +649,7 @@ HMIP_FEATURE_TO_ENTITY = {
         "unit": "dBm",
         "device_class": SensorDeviceClass.SIGNAL_STRENGTH,
         "state_class": SensorStateClass.MEASUREMENT,
+        "entity_category": EntityCategory.DIAGNOSTIC,
         "entity_registry_enabled_default": False,
     },
     "rssiPeerValue": {
@@ -652,6 +658,7 @@ HMIP_FEATURE_TO_ENTITY = {
         "unit": "dBm",
         "device_class": SensorDeviceClass.SIGNAL_STRENGTH,
         "state_class": SensorStateClass.MEASUREMENT,
+        "entity_category": EntityCategory.DIAGNOSTIC,
         "entity_registry_enabled_default": False,
     },
     "accelerationSensorValueX": {
@@ -759,12 +766,13 @@ HMIP_FEATURE_TO_ENTITY = {
         "class": "HcuBinarySensor",
         "name": "Low Battery",
         "device_class": BinarySensorDeviceClass.BATTERY,
+        "entity_category": EntityCategory.DIAGNOSTIC,
     },
     "unreach": {
         "class": "HcuUnreachBinarySensor",
         "name": "Connectivity",
         "device_class": BinarySensorDeviceClass.CONNECTIVITY,
-        "entity_category": "diagnostic",
+        "entity_category": EntityCategory.DIAGNOSTIC,
     },
     "windowState": {
         "class": "HcuWindowBinarySensor",
@@ -842,7 +850,7 @@ DUTY_CYCLE_BINARY_SENSOR_MAPPING = {
     "class": "HcuBinarySensor",
     "name": "Duty Cycle Limit",
     "device_class": BinarySensorDeviceClass.PROBLEM,
-    "entity_category": "diagnostic",
+    "entity_category": EntityCategory.DIAGNOSTIC,
     "entity_registry_enabled_default": False,
 }
 

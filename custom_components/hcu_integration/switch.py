@@ -154,3 +154,8 @@ class HcuSwitchGroup(HcuSwitchingGroupBase, SwitchEntity):
     """Representation of a Homematic IP HCU switching group."""
 
     PLATFORM = Platform.SWITCH
+    
+class HcuWateringGroup(HcuSwitchingGroupBase, SwitchEntity):
+    """Representation of a Homematic IP HCU switching group."""
+
+    PLATFORM = Platform.SWITCH

@@ -386,6 +386,8 @@ async def async_discover_entities(
         "LIGHT": (Platform.LIGHT, light.HcuLightGroup, {}),
         "EXTENDED_LINKED_SWITCHING": (Platform.SWITCH, switch.HcuSwitchGroup, {}),
         "EXTENDED_LINKED_SHUTTER": (Platform.COVER, cover.HcuCoverGroup, {}),
+        "EXTENDED_LINKED_NOTIFICATION": (Platform.LIGHT, light.HcuLightGroup, {}),
+        "EXTENDED_LINKED_WATERING": (Platform.SWITCH, switch.HcuWateringGroup, {}),
     }
 
     # Track group discovery statistics for diagnostics

@@ -893,6 +893,7 @@ DEVICE_CHANNEL_EVENT_TYPES = frozenset({
 
 HMIP_CHANNEL_TYPE_TO_ENTITY = {
     "DIMMER_CHANNEL": {"class": "HcuLight"},
+    "MULTI_MODE_INPUT_DIMMER_CHANNEL": {"class": "HcuLight"}, 
     "RGBW_AUTOMATION_CHANNEL": {"class": "HcuLight"},
     "UNIVERSAL_LIGHT_CHANNEL": {"class": "HcuLight"},
     "NOTIFICATION_LIGHT_CHANNEL": {"class": "HcuLight"},

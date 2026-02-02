@@ -71,7 +71,6 @@ class HcuResetEnergyButton(HcuBaseEntity, ButtonEntity):
                 "Error resetting energy counter for %s: %s", self.entity_id, err
             )
 
-
 class HcuDoorOpenerButton(HcuBaseEntity, ButtonEntity):
     """Representation of a button to trigger a door opener (e.g., HmIP-FDC)."""
 
@@ -169,4 +168,3 @@ class HcuDeviceIdentifyButton(HcuBaseEntity, ButtonEntity):
             _LOGGER.error(
                 "Error triggering identify for %s: %s", self.entity_id, err
             )
-

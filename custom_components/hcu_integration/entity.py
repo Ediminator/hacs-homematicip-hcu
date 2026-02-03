@@ -5,6 +5,7 @@ import logging
 
 from homeassistant.core import callback
 from homeassistant.helpers.entity import DeviceInfo, Entity
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN, CONF_ENTITY_PREFIX, HOMEMATIC_MODEL_PREFIXES
@@ -321,6 +322,7 @@ class HcuGroupBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMix
     
         device_info_kwargs = dict(
             identifiers={(DOMAIN, self._group_id)},
+            entry_type=dr.DeviceEntryType.SERVICE,
             name=self._group.get("label", "Unknown Group"),
             manufacturer="Homematic IP",
             model=model_name,

@@ -25,6 +25,7 @@ from . import (
     sensor,
     siren,
     switch,
+    update,
 )
 from .api import HcuApiClient
 from .const import (
@@ -115,6 +116,13 @@ async def async_discover_entities(
                     manufacturer,
                 )
                 continue
+                
+        if device_data.get("updateState") is not None and device_data.get("availableFirmwareVersion") not in (None, "", "UNKNOWN"):
+            entity = update.HcuFirmwareUpdate(coordinator, client, device_data, "0")
+            entities[Platform.UPDATE].append(entity)
+            uid = getattr(entity, "unique_id", None)
+            if uid:
+                valid_entity_unique_ids.add(uid)
 
         for channel_index, channel_data in device_data.get("functionalChannels", {}).items():
             processed_features = set()

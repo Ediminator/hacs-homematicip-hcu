@@ -3,6 +3,18 @@
 All notable changes to the Homematic IP Local (HCU) integration will be documented in this file.
 
 ---
+## 1.19.9 - 2026-02-04
+
+### ✨ New Features
+- show groups as service
+- add firmware readonly entities for devices
+
+### ✅ Update Note
+This release has been **thoroughly tested**. However, it is always recommended to **create a backup before updating**.
+
+### 🧹 Browser Cache Note
+Some of these changes are cached by your browser. After updating, please hard refresh / reload the page to ensure all changes are applied.
+
 ## 1.19.8 - 2026-02-02
 
 ### ✨ New Features

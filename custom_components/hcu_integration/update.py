@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any
 
 import logging
 
-from homeassistant.components.update import UpdateDeviceClass, UpdateEntity,, UpdateEntityFeature
+from homeassistant.components.update import UpdateDeviceClass, UpdateEntity, UpdateEntityFeature
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, callback

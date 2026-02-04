@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any
 
 import logging
 
-from homeassistant.components.update import UpdateDeviceClass, UpdateEntity
+from homeassistant.components.update import UpdateDeviceClass, UpdateEntity, UpdateEntityFeature
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, callback
@@ -43,7 +43,6 @@ class HcuFirmwareUpdate(HcuBaseEntity, UpdateEntity):
     _attr_entity_category = EntityCategory.DIAGNOSTIC  # or EntityCategory.CONFIG
     _attr_translation_key = "hcu_firmware"
     # No install support -> no supported_features, no async_install implemented.
-    _attr_supported_features = 0
     _attr_supported_features: set[UpdateEntityFeature] = set()
 
     def __init__(
@@ -54,12 +53,8 @@ class HcuFirmwareUpdate(HcuBaseEntity, UpdateEntity):
         channel_index: str,
     ) -> None:
         super().__init__(coordinator, client, device_data, channel_index)
-        # Name similar to other entities
-        self._device_data = device_data
-        self._device_id = device_data.get("id")
         # Unique per device (not channel)
         self._attr_unique_id = f"{self._device_id}_firmware_update"
-        #self._default_entity_id = f"{self._device_id}_firmware_update"
         
     @callback
     def _handle_coordinator_update(self) -> None:
@@ -68,18 +63,13 @@ class HcuFirmwareUpdate(HcuBaseEntity, UpdateEntity):
         super()._handle_coordinator_update()
 
     @property
-    def available(self) -> bool:
-        """Return if data point is available."""
-        return True
-
-    @property
     def installed_version(self) -> str | None:
         """Currently installed firmware version."""
-        value = self._device_data.get("firmwareVersion")
+        value = self._device.get("firmwareVersion")
         return str(value) if value is not None else None
 
     @property
     def latest_version(self) -> str | None:
         """Latest available firmware version."""
-        value = self._device_data.get("availableFirmwareVersion")
+        value = self._device.get("availableFirmwareVersion")
         return str(value) if value is not None else None

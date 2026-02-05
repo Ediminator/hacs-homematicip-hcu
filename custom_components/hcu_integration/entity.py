@@ -109,13 +109,20 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, E
         Applies entity prefix if configured for multi-home setups.
         """
         base_name: str
+        
+        # Normalize channel label
+        channel_label = (channel_label or "").strip()
 
+        # Disable entity by default if channel label is empty
+        self._attr_entity_registry_enabled_default = bool(channel_label)
+    
+            
         if feature_name:
             # This is a "feature" entity (sensor, binary_sensor, button)
             if channel_label:
                 # Sensor on a labeled channel: "Channel Label Feature Name"
                 # (e.g., "Living Room Thermostat Temperature")
-                base_name = f"{channel_label} {feature_name}"
+                base_name = f"{channel_label} {feature_name} {self._channel_index}" 
                 self._attr_has_entity_name = False
             else:
                 # Sensor on an unlabeled channel: "Feature Name"
@@ -127,7 +134,7 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, E
             if channel_label:
                 # Main entity on a labeled channel: "Channel Label"
                 # (e.g., "Ceiling Light")
-                base_name = channel_label
+                base_name = f"{self._channel_index}: {channel_label}"
                 self._attr_has_entity_name = False
             else:
                 # Main entity on an unlabeled channel (e.g., FROLL, PSM-2)
@@ -136,6 +143,7 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, E
                 # The prefix will be applied by the logic below.
                 # (e.g., "HmIP-PSM-2" or "House1 HmIP-PSM-2" if prefixed)
                 base_name = self._device.get("label") or self._device.get("modelType") or self._device_id
+                base_name = f"{self._channel_index}: {base_name}"
                 self._attr_has_entity_name = True
 
         # Apply prefix to base name

@@ -61,12 +61,14 @@
                 "description": "Konfiguriere globale Einstellungen und Filter für den Geräteimport.",
                 "data": {
                     "advanced_debugging": "Erweitertes Debugging",
+                    "disable_unnamed_channels":"Kanäle ohne Label deaktivieren (Switch/Light/Cover/Event) (Experimental)",
                     "comfort_temperature": "Standard-Komforttemperatur",
                     "selected_oems": "Hersteller importieren",
                     "disabled_groups": "Gruppen ausblenden"
                 },
                 "data_description": {
                     "advanced_debugging": "Aktivieren, um die vollständigen Rohdaten der HMIP_SYSTEM_EVENT-Ereignisse zu protokollieren. Schalte diese Funktion wieder aus wenn du sie nicht mehr benötigst.",
+                    "disable_unnamed_channels":"Deaktiviert automatisch Entities von Kanälen, die kein Label haben. Die Entities werden im Entity Registry als „disabled by integration“ geführt und können jederzeit manuell wieder aktiviert werden. Sobald ein Label gesetzt ist, werden sie automatisch wieder aktiviert.",
                     "comfort_temperature": "Lege hier die Komforttemperatur fest, die für den Party-Modus verwendet wird.",
                     "selected_oems": "Wähle aus, welche Hersteller in Home Assistant importiert werden sollen.",
                     "disabled_groups": "Wähle aus, welche Gruppen ausgeblendet werden sollen. Die Gruppennamen findest du in den zusätzlichen Attributen jeder Entität."

@@ -48,6 +48,8 @@ from .const import (
     CONF_ENTITY_PREFIX,
     CONF_PLATFORM_OVERRIDES,
     CONF_ADVANCED_DEBUGGING,
+    CONF_DISABLE_UNNAMED_CHANNELS,
+    DEFAULT_DISABLE_UNNAMED_CHANNELS,
     DEFAULT_ADVANCED_DEBUGGING,
     CONF_DISABLED_GROUPS,
     CONF_SELECTED_OEMS,
@@ -481,6 +483,7 @@ class HcuOptionsFlowHandler(OptionsFlow):
 
             # Update new values
             new_options[CONF_ADVANCED_DEBUGGING] = user_input[CONF_ADVANCED_DEBUGGING]
+            new_options[CONF_DISABLE_UNNAMED_CHANNELS] = user_input[CONF_DISABLE_UNNAMED_CHANNELS]
             new_options[CONF_COMFORT_TEMPERATURE] = user_input[CONF_COMFORT_TEMPERATURE]
             new_options[CONF_DISABLED_OEMS] = disabled_oems
             new_options[CONF_DISABLED_GROUPS] = disabled_groups
@@ -523,6 +526,10 @@ class HcuOptionsFlowHandler(OptionsFlow):
             vol.Required(
                 CONF_ADVANCED_DEBUGGING,
                 default=self.config_entry.options.get(CONF_ADVANCED_DEBUGGING, DEFAULT_ADVANCED_DEBUGGING),
+            ): BooleanSelector(),
+            vol.Required(
+                CONF_DISABLE_UNNAMED_CHANNELS,
+                default=self.config_entry.options.get(CONF_DISABLE_UNNAMED_CHANNELS, DEFAULT_DISABLE_UNNAMED_CHANNELS),
             ): BooleanSelector(),
             vol.Optional(
                 CONF_COMFORT_TEMPERATURE,

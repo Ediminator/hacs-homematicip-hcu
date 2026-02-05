@@ -41,6 +41,7 @@ from .const import (
     EVENT_CHANNEL_TYPES,
     MANUFACTURER_EQ3,
     CONF_DISABLED_GROUPS,
+    CONF_DISABLE_UNNAMED_CHANNELS,
 )
 from .util import get_device_manufacturer
 
@@ -176,11 +177,93 @@ async def async_discover_entities(
                                 channel_type,
                             )
 
+                        ent_reg = er.async_get(coordinator.hass)
+
+                        channel_groups = channel_data.get("groups") or []
+
                         entity = entity_class(coordinator, client, device_data, channel_index, **init_kwargs)
-                        entities[platform].append(entity)
+                        
                         uid = getattr(entity, "unique_id", None)
+                        platform_domain = platform.value if hasattr(platform, "value") else str(platform)
+                        
+                        entity_id = ent_reg.async_get_entity_id(platform_domain, DOMAIN, uid) if uid else None
+                        disable_unnamed = config_entry.options.get(CONF_DISABLE_UNNAMED_CHANNELS, False)
+                        
+                        device_id = device_data.get("id")
+                        channel_type = channel_data.get("functionalChannelType")
+                        
+                        if not channel_groups and disable_unnamed:
+                            _LOGGER.debug(
+                                "Disabling entity by integration (no groups): device=%s channel=%s type=%s platform=%s class=%s unique_id=%s entity_id=%s",
+                                device_id,
+                                channel_index,
+                                channel_type,
+                                platform_domain,
+                                entity.__class__.__name__,
+                                uid,
+                                entity_id,
+                            )
+                        
+                            if entity_id:
+                                entry = ent_reg.async_get(entity_id)
+                                if entry and entry.disabled_by != er.RegistryEntryDisabler.USER:
+                                    if entry.disabled_by != er.RegistryEntryDisabler.INTEGRATION:
+                                        _LOGGER.info(
+                                            "Marking existing entity as disabled_by=integration (no groups): %s",
+                                            entity_id,
+                                        )
+                                    ent_reg.async_update_entity(
+                                        entity_id,
+                                        disabled_by=er.RegistryEntryDisabler.INTEGRATION,
+                                    )
+                                elif entry and entry.disabled_by == er.RegistryEntryDisabler.USER:
+                                    _LOGGER.debug(
+                                        "Skipping disable (entity is user-disabled): %s",
+                                        entity_id,
+                                    )
+                            else:
+                                _LOGGER.debug(
+                                    "Entity has no registry entry yet; will be created disabled_by=integration (no groups): device=%s channel=%s unique_id=%s",
+                                    device_id,
+                                    channel_index,
+                                    uid,
+                                )
+                        
+                        else:
+                            if not channel_groups and not disable_unnamed:
+                                _LOGGER.debug(
+                                    "Unnamed/ungrouped channel detected but setting is off; leaving enabled: device=%s channel=%s type=%s platform=%s unique_id=%s",
+                                    device_id,
+                                    channel_index,
+                                    channel_type,
+                                    platform_domain,
+                                    uid,
+                                )
+                        
+                            if entity_id:
+                                entry = ent_reg.async_get(entity_id)
+                                if entry and entry.disabled_by == er.RegistryEntryDisabler.INTEGRATION:
+                                    _LOGGER.info(
+                                        "Re-enabling entity (was disabled_by=integration): %s",
+                                        entity_id,
+                                    )
+                                    ent_reg.async_update_entity(entity_id, disabled_by=None)
+                        
+                        entities[platform].append(entity)
+                        
                         if uid:
                             valid_entity_unique_ids.add(uid)
+                        else:
+                            _LOGGER.debug(
+                                "Entity has no unique_id; cannot manage disabled_by in entity registry: device=%s channel=%s type=%s platform=%s class=%s",
+                                device_id,
+                                channel_index,
+                                channel_type,
+                                platform_domain,
+                                entity.__class__.__name__,
+                            )
+
+
                         
                     except (AttributeError, TypeError) as e:
                         _LOGGER.error(

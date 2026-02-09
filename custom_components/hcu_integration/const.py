@@ -52,11 +52,15 @@ CONF_PLATFORM_OVERRIDES = "platform_overrides"  # Dict mapping entity unique_id 
 DEFAULT_HCU_AUTH_PORT = 6969
 DEFAULT_HCU_WEBSOCKET_PORT = 9001
 CONF_ADVANCED_DEBUGGING = "advanced_debugging"
+CONF_ADVANCED_ATTRIBUTES = "advanced_attributes"
+CONF_DISABLE_UNCONFIGURED_CHANNELS = "disable_unconfigured_channels"
 CONF_COMFORT_TEMPERATURE = "comfort_temperature"
 CONF_SELECTED_OEMS = "selected_oems"
 CONF_DISABLED_OEMS = "disabled_oems"
 CONF_DISABLED_GROUPS = "disabled_groups"
 DEFAULT_ADVANCED_DEBUGGING = False
+DEFAULT_ADVANCED_ATTRIBUTES = False
+DEFAULT_DISABLE_UNCONFIGURED_CHANNELS = False
 DEFAULT_COMFORT_TEMPERATURE = 21.0
 DEFAULT_MIN_TEMP = 5.0
 DEFAULT_MAX_TEMP = 30.0
@@ -644,6 +648,48 @@ HMIP_FEATURE_TO_ENTITY = {
         "entity_category": EntityCategory.DIAGNOSTIC,
         "entity_registry_enabled_default": False,
     },
+    "dirtLevel": {
+        "class": "HcuGenericSensor",
+        "name": "Dirt Level",
+        "unit": PERCENTAGE,
+        "icon": "mdi:dust",
+        "state_class": SensorStateClass.MEASUREMENT,
+        "entity_category": EntityCategory.DIAGNOSTIC,
+    },
+    "operationDays": {
+        "class": "HcuGenericSensor",
+        "name": "Operation Days",
+        "unit": "d",
+        "device_class": SensorDeviceClass.DURATION,
+        "state_class": SensorStateClass.TOTAL_INCREASING,
+        "entity_category": EntityCategory.DIAGNOSTIC,
+    },
+    "lastSmokeTestTimestamp": {
+        "class": "HcuTimestampSensor",
+        "name": "Last Smoke Test",
+        "device_class": SensorDeviceClass.TIMESTAMP,
+        "entity_category": EntityCategory.DIAGNOSTIC,
+    },
+    "lastCommunicationTestTimestamp": {
+        "class": "HcuTimestampSensor",
+        "name": "Last Communication Test",
+        "device_class": SensorDeviceClass.TIMESTAMP,
+        "entity_category": EntityCategory.DIAGNOSTIC,
+    },
+    "smokeTestCounter": {
+        "class": "HcuGenericSensor",
+        "name": "Smoke Test Counter",
+        "icon": "mdi:counter",
+        "state_class": SensorStateClass.TOTAL_INCREASING,
+        "entity_category": EntityCategory.DIAGNOSTIC,
+    },
+    "smokeAlarmCounter": {
+        "class": "HcuGenericSensor",
+        "name": "Smoke Alarm Counter",
+        "icon": "mdi:counter",
+        "state_class": SensorStateClass.TOTAL_INCREASING,
+        "entity_category": EntityCategory.DIAGNOSTIC,
+    },
     "rssiDeviceValue": {
         "class": "HcuGenericSensor",
         "name": "RSSI Device",
@@ -794,6 +840,36 @@ HMIP_FEATURE_TO_ENTITY = {
         "class": "HcuBinarySensor",
         "name": "Illumination Detected",
         "device_class": BinarySensorDeviceClass.LIGHT,
+    },
+    "chamberDegraded": {
+        "class": "HcuBinarySensor",
+        "name": "Chamber Degraded",
+        "device_class": BinarySensorDeviceClass.PROBLEM,
+        "entity_category": EntityCategory.DIAGNOSTIC,
+    },
+    "deviceOverheated": {
+        "class": "HcuBinarySensor",
+        "name": "Device Overheated",
+        "device_class": BinarySensorDeviceClass.HEAT,
+        "entity_category": EntityCategory.DIAGNOSTIC,
+    },
+    "temperatureOutOfRange": {
+        "class": "HcuBinarySensor",
+        "name": "Temperature Out Of Range",
+        "device_class": BinarySensorDeviceClass.PROBLEM,
+        "entity_category": EntityCategory.DIAGNOSTIC,
+    },
+    "coProFaulty": {
+        "class": "HcuBinarySensor",
+        "name": "Co-Processor Faulty",
+        "device_class": BinarySensorDeviceClass.PROBLEM,
+        "entity_category": EntityCategory.DIAGNOSTIC,
+    },
+    "coProUpdateFailure": {
+        "class": "HcuBinarySensor",
+        "name": "Co-Processor Update Failure",
+        "device_class": BinarySensorDeviceClass.PROBLEM,
+        "entity_category": EntityCategory.DIAGNOSTIC,
     },
     "mainsFailureActive": {
         "class": "HcuBinarySensor",

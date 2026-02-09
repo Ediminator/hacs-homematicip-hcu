@@ -61,8 +61,8 @@
                 "description": "Konfiguriere globale Einstellungen und Filter für den Geräteimport.",
                 "data": {
                     "advanced_debugging": "Erweitertes Debugging",
-                    "advanced_attributes":"Erweiterte Attribute",
-                    "disable_unconfigured_channels":"Nicht konfigurierte Kanäle deaktivieren",
+                    "advanced_attributes": "Erweiterte Attribute",
+                    "disable_unconfigured_channels": "Nicht konfigurierte Kanäle deaktivieren",
                     "comfort_temperature": "Standard-Komforttemperatur",
                     "selected_oems": "Hersteller importieren",
                     "disabled_groups": "Gruppen ausblenden"

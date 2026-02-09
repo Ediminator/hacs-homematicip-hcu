@@ -229,7 +229,7 @@ class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
             finally:
                 if client.is_connected:
                     await client.disconnect()
-                    await listener_task
+                    listener_task.cancel()
         except (HcuApiError, ConnectionError, asyncio.TimeoutError, aiohttp.ClientError):
             _LOGGER.warning(
                 "Failed to connect to HCU during OEM selection. Proceeding without selection."

@@ -240,7 +240,7 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, E
             if meta is not None:
                 attrs["meta"] = meta
             
-            if hasattr(self, "_entity_name"):
+            if hasattr(self, "_attr_name"):
                 attrs["attr_name"] = self._attr_name
             
             if hasattr(self, "_attr_has_entity_name"):

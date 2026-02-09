@@ -224,19 +224,20 @@ class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
             # We need to connect to get the system state to find OEMs
             await client.connect()
             listener_task = self.hass.async_create_task(client.listen())
-            try:
-                await client.get_system_state()
-            finally:
-                if client.is_connected:
-                    listener_task.cancel()
-                    await client.disconnect()
-                    try:
-                        await listener_task
-                    except asyncio.CancelledError:
-                        pass  
+            await client.get_system_state()
         except (HcuApiError, ConnectionError, asyncio.TimeoutError, aiohttp.ClientError):
             _LOGGER.warning(
                 "Failed to connect to HCU during OEM selection. Proceeding without selection."
+            )
+        finally:
+            if listener_task:
+                listener_task.cancel()
+                try:
+                    await listener_task
+                except asyncio.CancelledError:
+                    pass
+            if client.is_connected:
+                await client.disconnect()
             )
             return self.async_create_entry(
                 title="Homematic IP Local (HCU)",

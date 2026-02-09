@@ -198,7 +198,7 @@ class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
             description_placeholders={"hcu_ip": host},
             errors=errors,
         )
-
+    
     async def async_step_select_oems(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
@@ -207,7 +207,8 @@ class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
         token = self._config_data[CONF_TOKEN]
         auth_port = self._config_data[CONF_AUTH_PORT]
         websocket_port = self._config_data[CONF_WEBSOCKET_PORT]
-
+        listener_task = None
+            
         # Use valid args for HcuApiClient
         session = aiohttp_client.async_get_clientsession(self.hass)
         client = HcuApiClient(
@@ -222,11 +223,13 @@ class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
         try:
             # We need to connect to get the system state to find OEMs
             await client.connect()
+            listener_task = self.hass.async_create_task(client.listen())
             try:
                 await client.get_system_state()
             finally:
                 if client.is_connected:
                     await client.disconnect()
+                    listener_task.cancel()
         except (HcuApiError, ConnectionError, asyncio.TimeoutError, aiohttp.ClientError):
             _LOGGER.warning(
                 "Failed to connect to HCU during OEM selection. Proceeding without selection."
@@ -249,7 +252,7 @@ class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
             # Convert to disabled_oems (those NOT selected).
             selected = set(user_input.get("selected_oems", []))
             disabled_oems = list(third_party_oems - selected)
-            
+
             return self.async_create_entry(
                 title="Homematic IP Local (HCU)",
                 data=self._config_data,
@@ -257,7 +260,7 @@ class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
             )
 
         third_party_oems_list = sorted(third_party_oems)
-        
+
         # Default: All selected (IMPORT everything by default)
         default_selected = third_party_oems_list
 
@@ -279,7 +282,7 @@ class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
             data_schema=vol.Schema(schema),
             description_placeholders={},
         )
-
+    
     async def async_step_reauth(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:

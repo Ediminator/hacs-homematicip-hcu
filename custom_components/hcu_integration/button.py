@@ -11,6 +11,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.entity import EntityCategory
 
 from .entity import HcuBaseEntity
 from .api import HcuApiClient, HcuApiError
@@ -38,6 +39,7 @@ class HcuResetEnergyButton(HcuBaseEntity, ButtonEntity):
     """Representation of a button to reset the energy counter."""
 
     PLATFORM = Platform.BUTTON
+    _attr_entity_category = EntityCategory.CONFIG
     _attr_has_entity_name = True
     _attr_icon = "mdi:reload"
 
@@ -53,7 +55,7 @@ class HcuResetEnergyButton(HcuBaseEntity, ButtonEntity):
 
         # REFACTOR: Correctly call the centralized naming helper for feature entities.
         self._set_entity_name(
-            channel_label=self._channel.get("label"), feature_name="Reset Energy Counter"
+            channel_label=self._channel.get("label"), platform="Button", feature_name="Reset Energy Counter"
         )
         self._attr_unique_id = (
             f"{self._device_id}_{self._channel_index}_reset_energy_counter"
@@ -88,7 +90,7 @@ class HcuDoorOpenerButton(HcuBaseEntity, ButtonEntity):
         super().__init__(coordinator, client, device_data, channel_index)
 
         # Set entity name using the centralized naming helper
-        self._set_entity_name(channel_label=self._channel.get("label"), feature_name="Open")
+        self._set_entity_name(channel_label=self._channel.get("label"),platform="Button",feature_name="Open")
 
         self._attr_unique_id = f"{self._device_id}_{self._channel_index}_open"
 
@@ -121,7 +123,7 @@ class HcuDoorImpulseButton(HcuBaseEntity, ButtonEntity):
         super().__init__(coordinator, client, device_data, channel_index)
 
         # Set entity name using the centralized naming helper
-        self._set_entity_name(channel_label=self._channel.get("label"), feature_name="Impulse")
+        self._set_entity_name(channel_label=self._channel.get("label"),platform="Button",feature_name="Impulse")
 
         self._attr_unique_id = f"{self._device_id}_{self._channel_index}_impulse"
 
@@ -141,6 +143,7 @@ class HcuDeviceIdentifyButton(HcuBaseEntity, ButtonEntity):
     """Representation of a button to trigger device identify (blink/beep)."""
 
     PLATFORM = Platform.BUTTON
+    _attr_entity_category = EntityCategory.CONFIG
     _attr_translation_key = "hcu_device_identify"
     _attr_icon = "mdi:crosshairs-gps"
 

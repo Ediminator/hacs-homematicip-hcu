@@ -67,7 +67,7 @@ class HcuBinarySensor(HcuBaseEntity, BinarySensorEntity):
 
         # REFACTOR: Correctly call the centralized naming helper for feature entities.
         self._set_entity_name(
-            channel_label=self._channel.get("label"), feature_name=mapping["name"]
+            channel_label=self._channel.get("label"), feature_name=mapping["name"], device_channels=len(device_data.get("functionalChannels", {}))
         )
         
         self._attr_entity_category = mapping.get("entity_category")

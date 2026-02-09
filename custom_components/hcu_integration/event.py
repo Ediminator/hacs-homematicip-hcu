@@ -64,7 +64,7 @@ class HcuDoorbellEvent(HcuBaseEntity, EventEntity):
 
         # Set entity name using the centralized naming helper
         # Use channel label directly without feature name to avoid redundancy
-        self._set_entity_name(channel_label=self._channel.get("label"))
+        self._set_entity_name(channel_label=self._channel.get("label"),platform="Event",device_channels=len(device_data.get("functionalChannels", {})))
 
         self._attr_unique_id = f"{self._device_id}_{self._channel_index_str}_doorbell_event"
 
@@ -91,7 +91,7 @@ class HcuButtonEvent(HcuBaseEntity, EventEntity):
         channel_index: str,
     ):
         super().__init__(coordinator, client, device_data, channel_index)
-        self._set_entity_name(channel_label=self._channel.get("label"))
+        self._set_entity_name(channel_label=self._channel.get("label"),platform="Event",device_channels=len(device_data.get("functionalChannels", {})))
         self._attr_unique_id = f"{self._device_id}_{self._channel_index_str}_button_event"
 
     @callback

@@ -114,7 +114,7 @@ class HcuLight(HcuBaseEntity, LightEntity):
         """Initialize the light entity."""
         super().__init__(coordinator, client, device_data, channel_index)
 
-        self._set_entity_name(channel_label=self._channel.get("label"))
+        self._set_entity_name(channel_label=self._channel.get("label"),platform="Light",device_channels=len(device_data.get("functionalChannels", {})))
         self._attr_unique_id = f"{self._device_id}_{self._channel_index}_light"
 
         # Determine supported color modes based on channel capabilities
@@ -377,7 +377,7 @@ class HcuNotificationLight(HcuBaseEntity, LightEntity):
     ):
         """Initialize the notification light entity."""
         super().__init__(coordinator, client, device_data, channel_index)
-        self._set_entity_name(channel_label=self._channel.get("label"))
+        self._set_entity_name(channel_label=self._channel.get("label"),platform="Light",device_channels=len(device_data.get("functionalChannels", {})))
         self._attr_unique_id = f"{self._device_id}_{self._channel_index}_light"
 
     @property

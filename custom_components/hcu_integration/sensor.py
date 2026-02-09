@@ -95,7 +95,9 @@ class HcuGenericSensor(HcuBaseEntity, SensorEntity):
         
         self._set_entity_name(
             channel_label=self._channel.get("label"),
-            feature_name=feature_name
+            feature_name=feature_name,
+            platform="Sensor",
+            device_channels=len(device_data.get("functionalChannels", {}))
         )
 
         self._attr_unique_id = f"{self._device_id}_{self._channel_index}_{self._feature}"

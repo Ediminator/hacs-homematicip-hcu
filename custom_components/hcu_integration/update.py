@@ -40,7 +40,7 @@ class HcuFirmwareUpdate(HcuBaseEntity, UpdateEntity):
     PLATFORM = Platform.UPDATE
 
     _attr_device_class = UpdateDeviceClass.FIRMWARE
-    _attr_entity_category = EntityCategory.DIAGNOSTIC  # or EntityCategory.CONFIG
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
     _attr_translation_key = "hcu_firmware"
     # No install support -> no supported_features, no async_install implemented.
     _attr_supported_features: set[UpdateEntityFeature] = set()

@@ -209,7 +209,8 @@ class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
         token = self._config_data[CONF_TOKEN]
         auth_port = self._config_data[CONF_AUTH_PORT]
         websocket_port = self._config_data[CONF_WEBSOCKET_PORT]
-
+        listener_task = None
+            
         # Use valid args for HcuApiClient
         session = aiohttp_client.async_get_clientsession(self.hass)
         client = HcuApiClient(
@@ -224,6 +225,7 @@ class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
         try:
             # We need to connect to get the system state to find OEMs
             await client.connect()
+            listener_task = self.hass.async_create_task(client.listen())
             try:
                 await client.get_system_state()
             finally:

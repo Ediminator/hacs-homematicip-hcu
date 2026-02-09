@@ -278,6 +278,11 @@ class HcuApiClient:
 
     async def listen(self) -> None:
         """Listen for incoming WebSocket messages in a continuous loop."""
+        
+        
+        _LOGGER.debug("Listen to HCU:")
+        
+        
         if not self.is_connected or self._websocket is None:
             raise ConnectionAbortedError("WebSocket is not connected.")
 
@@ -422,7 +427,7 @@ class HcuApiClient:
             HcuApiError: If the API request fails or returns invalid data
         """
         response_body = await self._send_hmip_request(
-            path=API_PATHS["GET_SYSTEM_STATE"], timeout=30
+            path=API_PATHS["GET_SYSTEM_STATE"], timeout=90
         )
 
         if not response_body:

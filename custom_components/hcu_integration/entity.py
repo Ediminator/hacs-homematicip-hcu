@@ -7,10 +7,14 @@ from homeassistant.core import callback
 from homeassistant.helpers.entity import DeviceInfo, Entity
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.util import slugify
+
 
 from .const import DOMAIN, CONF_ENTITY_PREFIX, HOMEMATIC_MODEL_PREFIXES
 from .api import HcuApiClient, HcuApiError
 from .util import get_device_manufacturer
+from .const import HMIP_FEATURE_TO_ENTITY
+
 
 if TYPE_CHECKING:
     from . import HcuCoordinator
@@ -88,19 +92,24 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, E
         client: HcuApiClient,
         device_data: dict[str, Any],
         channel_index: str,
+        feature: str | None = None,
     ) -> None:
         """Initialize the base entity."""
         super().__init__(coordinator)
         self._client = client
         self._device_id = device_data["id"]
+        self._device_data = device_data
         self._channel_index_str = str(channel_index)
         self._channel_index = int(channel_index)
+        self._feature = feature
         self._attr_assumed_state = False
         
     def _set_entity_name(
         self,
         channel_label: str | None = None,
         feature_name: str | None = None,
+        platform: str | None = "Channel",
+        device_channels: int = 0,
     ) -> None:
         """
         Set the entity name based on the channel label and feature.
@@ -110,31 +119,29 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, E
         """
         base_name: str
         
-        # Normalize channel label
-        channel_label = (channel_label or "").strip()
-
-        # Disable entity by default if channel label is empty
-        self._attr_entity_registry_enabled_default = bool(channel_label)
-    
-            
+        device_has_multiple_channels = device_channels > 2
+        channel_is_configured = bool(self._channel.get("groups") or [])
+        post_channel_index = "" if (self._channel_index == 0 or device_channels <= 2) else f" {self._channel_index}"
+        
         if feature_name:
             # This is a "feature" entity (sensor, binary_sensor, button)
             if channel_label:
                 # Sensor on a labeled channel: "Channel Label Feature Name"
-                # (e.g., "Living Room Thermostat Temperature")
-                base_name = f"{channel_label} {feature_name} {self._channel_index}" 
+                # (e.g., "Living Room Thermostat Temperature 1")
+                # If a device has multiple channels than add post_channel_index
+                base_name = f"{channel_label} {feature_name}{post_channel_index}"
                 self._attr_has_entity_name = False
             else:
                 # Sensor on an unlabeled channel: "Feature Name"
                 # (e.g., "Low Battery" on a device)
-                base_name = feature_name
+                base_name = f"{feature_name}{post_channel_index}"
                 self._attr_has_entity_name = True
         else:
-            # This is a "main" entity (switch, light, cover, lock)
+            # This is a "main" entity (switch, light, cover, lock, event)
             if channel_label:
                 # Main entity on a labeled channel: "Channel Label"
                 # (e.g., "Ceiling Light")
-                base_name = f"{self._channel_index}: {channel_label}"
+                base_name = f"{channel_label}"
                 self._attr_has_entity_name = False
             else:
                 # Main entity on an unlabeled channel (e.g., FROLL, PSM-2)
@@ -142,8 +149,10 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, E
                 # Setting has_entity_name to True makes it a standalone entity name.
                 # The prefix will be applied by the logic below.
                 # (e.g., "HmIP-PSM-2" or "House1 HmIP-PSM-2" if prefixed)
-                base_name = self._device.get("label") or self._device.get("modelType") or self._device_id
-                base_name = f"{self._channel_index}: {base_name}"
+                if device_has_multiple_channels:
+                    base_name = f"{platform}{post_channel_index}"
+                else:
+                    base_name = self._device.get("label") or self._device.get("modelType") or self._device_id
                 self._attr_has_entity_name = True
 
         # Apply prefix to base name
@@ -166,15 +175,15 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, E
                  # If it was going to be a child entity, base_name is just the feature name.
                  # We need to prepend the device name/label to make it a full name before prefixing.
                  device_label = self._device.get("label") or self._device.get("modelType") or self._device_id
-                 if base_name != device_label:
+                 if device_label and device_label not in base_name:
                      base_name = f"{device_label} {base_name}"
                  else:
                      base_name = device_label
 
-            self._attr_name = self._apply_prefix(base_name)
-        else:
-            self._attr_name = base_name
-
+           # self._attr_name = self._apply_prefix(base_name)
+        #else:
+          #  self._attr_name = base_name
+    
     @property
     def _device(self) -> dict[str, Any]:
         """Return the latest parent device data from the client's state cache."""
@@ -204,6 +213,167 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, E
         ch0 = (self._device.get("functionalChannels") or {}).get("0") or {}
         return self._get_meta_group_label_from_channel_data(ch0)
     
+    @property
+    def name(self) -> str | None:
+        base_name: str
+        channel_label = self._channel.get("label")
+        device_channels=len(self._device_data.get("functionalChannels", {}))
+        
+        device_has_multiple_channels = device_channels > 2
+        channel_is_configured = bool(self._channel.get("groups") or [])
+        post_channel_index = "" if (self._channel_index == 0 or device_channels <= 2) else f" {self._channel_index}"
+        feature_name = self._feature
+        if feature_name:
+            # This is a "feature" entity (sensor, binary_sensor, button)
+            if channel_label:
+                # Sensor on a labeled channel: "Channel Label Feature Name"
+                # (e.g., "Living Room Thermostat Temperature 1")
+                # If a device has multiple channels than add post_channel_index
+                base_name = f"{channel_label} {feature_name}{post_channel_index}"
+                self._attr_has_entity_name = False
+            else:
+                # Sensor on an unlabeled channel: "Feature Name"
+                # (e.g., "Low Battery" on a device)
+                base_name = f"{feature_name}{post_channel_index}"
+                self._attr_has_entity_name = True
+        else:
+            # This is a "main" entity (switch, light, cover, lock, event)
+            if channel_label:
+                # Main entity on a labeled channel: "Channel Label"
+                # (e.g., "Ceiling Light")
+                base_name = f"{channel_label}"
+                self._attr_has_entity_name = False
+            else:
+                # Main entity on an unlabeled channel (e.g., FROLL, PSM-2)
+                # Use the device's label, model type, or device ID as fallback.
+                # Setting has_entity_name to True makes it a standalone entity name.
+                # The prefix will be applied by the logic below.
+                # (e.g., "HmIP-PSM-2" or "House1 HmIP-PSM-2" if prefixed)
+                if device_has_multiple_channels:
+                    base_name = f"{platform}{post_channel_index}"
+                else:
+                    base_name = self._device.get("label") or self._device.get("modelType") or self._device_id
+                self._attr_has_entity_name = True
+
+        # Apply prefix to base name
+        if self._entity_prefix:
+            was_child_entity = self._attr_has_entity_name
+            # If a prefix is configured, we must disable has_entity_name and manually
+            # construct the full name. This forces Home Assistant to generate the
+            # Entity ID from the full prefixed name (e.g., domain.prefix_device_feature)
+            # instead of appending the prefix to the ID suffix (domain.device_prefix_feature).
+            self._attr_has_entity_name = False
+            
+            # If we are disabling has_entity_name, we need to ensure the base_name
+            # is fully qualified (includes device name if it was just a feature name).
+            # However, the logic above for base_name already handles this distinction
+            # based on whether it's a feature or main entity and whether it has a channel label.
+            # The only case where base_name might be "too simple" is if it was relying on
+            # the device name being prepended by HA (has_entity_name=True cases).
+            
+            if was_child_entity:
+                 # If it was going to be a child entity, base_name is just the feature name.
+                 # We need to prepend the device name/label to make it a full name before prefixing.
+                 device_label = self._device.get("label") or self._device.get("modelType") or self._device_id
+                 if device_label and device_label not in base_name:
+                     base_name = f"{device_label} {base_name}"
+                 else:
+                     base_name = device_label
+
+            return self._apply_prefix(base_name)
+        else:
+            return base_name
+            
+    import logging
+
+    @property
+    def suggested_object_id(self) -> str | None:
+        device_label = (self._device.get("label") or "").strip()
+    
+        parts: list[str] = [device_label, self._channel_index_str]
+        _LOGGER.debug(
+            "suggested_object_id: start build (device_id=%s, channel_index=%s, feature=%s, entity_prefix=%s, has_entity_name=%s)",
+            getattr(self, "_device_id", None),
+            getattr(self, "_channel_index", None),
+            getattr(self, "_feature", None),
+            getattr(self, "_entity_prefix", None),
+            getattr(self, "_attr_has_entity_name", None),
+        )
+    
+        if self._feature:
+            feature_key = self._feature
+            feature_info = HMIP_FEATURE_TO_ENTITY.get(feature_key)
+            _LOGGER.debug(
+                "suggested_object_id: feature lookup (feature_key=%s, feature_info=%s)",
+                feature_key,
+                feature_info,
+            )
+    
+            if feature_info:
+                feature_name = feature_info.get("name", feature_key)
+                parts.append(feature_name)
+                _LOGGER.debug(
+                    "suggested_object_id: using feature name from mapping (feature_name=%s)",
+                    feature_name,
+                )
+            else:
+                parts.append(str(feature_key))
+                _LOGGER.debug(
+                    "suggested_object_id: no mapping found, using feature_key as string (feature_name=%s)",
+                    str(feature_key),
+                )
+    
+        base_name = " ".join(p for p in parts if p)
+        _LOGGER.debug("suggested_object_id: base_name before prefix logic='%s'", base_name)
+    
+        if self._entity_prefix:
+            was_child_entity = getattr(self, "_attr_has_entity_name", None)
+            _LOGGER.debug(
+                "suggested_object_id: prefix configured='%s' (was_child_entity/has_entity_name=%s)",
+                self._entity_prefix,
+                was_child_entity,
+            )
+    
+            # NOTE: Side-effect (kept as in your original logic)
+            self._attr_has_entity_name = False
+            _LOGGER.debug(
+                "suggested_object_id: forced has_entity_name=False due to prefix configuration"
+            )
+    
+            if was_child_entity:
+                fallback_label = (
+                    self._device.get("label")
+                    or self._device.get("modelType")
+                    or getattr(self, "_device_id", None)
+                )
+                _LOGGER.debug(
+                    "suggested_object_id: child-entity handling (fallback_label='%s', base_name='%s')",
+                    fallback_label,
+                    base_name,
+                )
+    
+                if fallback_label and fallback_label not in base_name:
+                    base_name = f"{fallback_label} {base_name}"
+                    _LOGGER.debug(
+                        "suggested_object_id: prepended fallback label -> base_name='%s'",
+                        base_name,
+                    )
+                else:
+                    base_name = fallback_label
+                    _LOGGER.debug(
+                        "suggested_object_id: base_name replaced with fallback label -> base_name='%s'",
+                        base_name,
+                    )
+    
+            result = slugify(f"{self._entity_prefix} {base_name}")
+            _LOGGER.debug("suggested_object_id: final result with prefix='%s'", result)
+            return result
+    
+        result = slugify(base_name)
+        _LOGGER.debug("suggested_object_id: final result without prefix='%s'", result)
+        return result
+
+        
     @property
     def device_info(self) -> DeviceInfo:
         """Return device information for the Home Assistant device registry."""

@@ -45,8 +45,8 @@ class HcuSwitch(SwitchStateMixin, HcuBaseEntity, SwitchEntity):
     ):
         super().__init__(coordinator, client, device_data, channel_index)
 
-        self._set_entity_name(channel_label=self._channel.get("label"))
-
+        self._set_entity_name(channel_label=self._channel.get("label"),platform="Switch",device_channels=len(device_data.get("functionalChannels", {})))
+        
         self._attr_unique_id = f"{self._device_id}_{self._channel_index}_on"
 
         device_type = self._device.get("type")
@@ -124,7 +124,7 @@ class HcuWateringSwitch(SwitchStateMixin, HcuBaseEntity, SwitchEntity):
     ):
         super().__init__(coordinator, client, device_data, channel_index)
 
-        self._set_entity_name(channel_label=self._channel.get("label"))
+        self._set_entity_name(channel_label=self._channel.get("label"),platform="Switch",device_channels=len(device_data.get("functionalChannels", {})))
 
         self._attr_unique_id = f"{self._device_id}_{self._channel_index}_watering"
         self._init_switch_state()

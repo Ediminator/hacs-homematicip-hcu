@@ -58,18 +58,22 @@
             },
             "global_settings": {
                 "title": "Global settings",
-                "description": "Configure global settings and device import filters.",
+                "description": "Configure global settings and filters for device import.",
                 "data": {
                     "advanced_debugging": "Advanced debugging",
+                    "advanced_attributes": "Advanced attributes",
+                    "disable_unconfigured_channels": "Disable unconfigured channels",
                     "comfort_temperature": "Default comfort temperature",
-                    "selected_oems": "Manufacturers to import",
+                    "selected_oems": "Import manufacturers",
                     "disabled_groups": "Hide groups"
                 },
                 "data_description": {
-                    "advanced_debugging": "Enable this to log the complete raw event data for HMIP_SYSTEM_EVENT. Disable this function again when you no longer need it.",
-                    "comfort_temperature": "Set the comfort temperature used for Party Mode.",
+                    "advanced_debugging": "Enable to log the complete raw data of HMIP_SYSTEM_EVENT events. Disable this again when you no longer need it.",
+                    "advanced_attributes": "Enable to show additional developer attributes per entity.",
+                    "disable_unconfigured_channels": "Disables channels that are not configured in the Homematic IP app or are not assigned to a room. These channels will not be created in Home Assistant.",
+                    "comfort_temperature": "Set the comfort temperature used for Party Mode here.",
                     "selected_oems": "Choose which manufacturers should be imported into Home Assistant.",
-                    "disabled_groups": "Choose which group to hide. You can find the group names in each entity’s additional attributes."
+                    "disabled_groups": "Choose which groups should be hidden. You can find the group names in the additional attributes of each entity."
                 }
             },
             "lock_pin": {

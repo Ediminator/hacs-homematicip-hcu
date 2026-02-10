@@ -65,6 +65,59 @@ async def async_discover_entities(
     state = client.state
     valid_entity_unique_ids: set[str] = set()
     
+    def _add_entity(entity, platform: Platform | None = None) -> None:
+        """Append entity and track its unique_id."""
+        if platform is None:
+            platform = getattr(entity, "PLATFORM")
+        entities[platform].append(entity)
+        uid = getattr(entity, "unique_id", None)
+        if uid:
+            valid_entity_unique_ids.add(uid)
+    
+    def _safe_create(
+        module,
+        class_name: str,
+        *,
+        ctor_args: tuple[Any, ...] = (),
+        ctor_kwargs: dict[str, Any] | None = None,
+        platform: Platform | None = None,
+        log_ctx: str = "",
+    ):
+        """Create entity class by name, handle common errors, auto-register."""
+        ctor_kwargs = ctor_kwargs or {}
+        try:
+            entity_class = getattr(module, class_name)
+        except AttributeError as e:
+            _LOGGER.error("Entity class not found: %s (%s) %s", class_name, log_ctx, e)
+            return None
+    
+        try:
+            entity = entity_class(*ctor_args, **ctor_kwargs)
+        except TypeError as e:
+            _LOGGER.error("Failed to init %s (%s): %s", class_name, log_ctx, e)
+            return None
+    
+        _add_entity(entity, platform or getattr(entity_class, "PLATFORM", None))
+        return entity
+    
+    def _apply_default_enabled(mapping: dict[str, Any], deactivated: bool, unused: bool) -> dict[str, Any]:
+        """Copy mapping and apply entity_registry_enabled_default if needed."""
+        if not deactivated:
+            return mapping
+        m = mapping.copy()
+        m["entity_registry_enabled_default"] = not unused
+        return m
+    
+    def _resolve_channel_mapping(channel_type: str | None):
+        if not channel_type:
+            return None, None
+        if channel_type in HMIP_CHANNEL_TYPE_TO_ENTITY:
+            return channel_type, HMIP_CHANNEL_TYPE_TO_ENTITY[channel_type]
+        for base_type, mapping in HMIP_CHANNEL_TYPE_TO_ENTITY.items():
+            if channel_type.startswith(base_type):
+                return base_type, mapping
+        return None, None
+
     class_module_map = {
         "HcuLight": light,
         "HcuNotificationLight": light,

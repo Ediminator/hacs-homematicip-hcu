@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, call
 from homeassistant.core import HomeAssistant
 from custom_components.hcu_integration import HcuCoordinator
 from custom_components.hcu_integration.const import (
@@ -66,31 +66,46 @@ async def test_startup_safeguard(hass: HomeAssistant):
     # Mock state access for old_timestamps calculation
     coordinator.client.state = {"devices": {}}
 
-    # Case 1: Initial state NOT loaded
-    coordinator._initial_state_loaded = False
-    
-    msg = {
+    events_payload = {
+        "dummy_event": {"pushEventType": "DEVICE_CHANGED"}
+    }
+    msg_system_event = {
         "type": "HMIP_SYSTEM_EVENT",
         "body": {
             "eventTransaction": {
-                "events": {
-                    "dummy_event": {"pushEventType": "DEVICE_CHANGED"}
-                }
+                "events": events_payload
             }
         }
     }
-    
-    coordinator._handle_event_message(msg)
-    
-    # Assert methods were NOT called or returned early
-    coordinator._handle_device_channel_events.assert_not_called()
-    coordinator.client.process_events.assert_not_called()
 
-    # Case 2: Initial state LOADED
+    # Case 1: Wrong Event Type
+    msg_other = {"type": "OTHER_EVENT", "body": {}}
+    coordinator._handle_event_message(msg_other)
+    coordinator._handle_device_channel_events.assert_not_called()
+
+    # Case 2: Initial state NOT loaded
+    coordinator._initial_state_loaded = False
+    coordinator._handle_event_message(msg_system_event)
+    coordinator._handle_device_channel_events.assert_not_called()
+
+    # Case 3: Initial state LOADED
     coordinator._initial_state_loaded = True
+    coordinator._handle_event_message(msg_system_event)
     
-    coordinator._handle_event_message(msg)
-    
-    # Assert methods WERE called
-    coordinator._handle_device_channel_events.assert_called_once()
-    coordinator.client.process_events.assert_called_once()
+    # Assert methods WERE called with CORRECT arguments
+    coordinator._handle_device_channel_events.assert_called_once_with(events_payload)
+    coordinator.client.process_events.assert_called_once_with(events_payload)
+
+    # Case 4: No events in payload
+    coordinator._handle_device_channel_events.reset_mock()
+    msg_empty = {
+        "type": "HMIP_SYSTEM_EVENT",
+        "body": {
+            "eventTransaction": {
+                "events": {}
+            }
+        }
+    }
+    coordinator._handle_event_message(msg_empty)
+    # Should return early before processing
+    coordinator._handle_device_channel_events.assert_not_called()

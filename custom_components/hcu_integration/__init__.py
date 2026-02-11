@@ -301,10 +301,6 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
 
 
                 if channel_type in EVENT_CHANNEL_TYPES:
-                    _LOGGER.debug(
-                        "Including channel for timestamp detection: device=%s, channel=%s, type=%s",
-                        device_id, ch_idx, channel_type
-                    )
                     event_channels.add((device_id, ch_idx))
 
         return event_channels

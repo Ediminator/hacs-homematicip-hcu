@@ -6,7 +6,7 @@ Stateless buttons are handled via events in the coordinator.
 import logging
 from typing import TYPE_CHECKING
 
-from homeassistant.components.button import ButtonEntity
+from homeassistant.components.button import ButtonEntity, ButtonDeviceClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
@@ -141,9 +141,9 @@ class HcuDeviceIdentifyButton(HcuBaseEntity, ButtonEntity):
     """Representation of a button to trigger device identify (blink/beep)."""
 
     PLATFORM = Platform.BUTTON
-    _attr_translation_key = "hcu_device_identify"
     _attr_icon = "mdi:crosshairs-gps"
-
+    _attr_device_class = ButtonDeviceClass.IDENTIFY
+    
     def __init__(
         self,
         coordinator: "HcuCoordinator",
@@ -153,10 +153,10 @@ class HcuDeviceIdentifyButton(HcuBaseEntity, ButtonEntity):
     ):
         """Initialize the identify button."""
         super().__init__(coordinator, client, device_data, channel_index)
-
-        self._attr_device_class = None
+        
         self._attr_unique_id = f"{self._device_id}_{self._channel_index}_identify"
-
+        self._set_entity_name(channel_label=self._channel.get("label"), feature_name="Identify")
+        
     async def async_press(self) -> None:
         """Trigger identify for the device/channel (e.g., blink/beep)."""
         _LOGGER.info("Triggering identify for %s", self.entity_id)

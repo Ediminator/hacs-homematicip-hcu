@@ -40,9 +40,7 @@ class HcuFirmwareUpdate(HcuBaseEntity, UpdateEntity):
     PLATFORM = Platform.UPDATE
 
     _attr_device_class = UpdateDeviceClass.FIRMWARE
-    _attr_entity_category = EntityCategory.DIAGNOSTIC  # or EntityCategory.CONFIG
-    _attr_translation_key = "hcu_firmware"
-    # No install support -> no supported_features, no async_install implemented.
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
     _attr_supported_features: set[UpdateEntityFeature] = set()
 
     def __init__(
@@ -55,6 +53,8 @@ class HcuFirmwareUpdate(HcuBaseEntity, UpdateEntity):
         super().__init__(coordinator, client, device_data, channel_index)
         # Unique per device (not channel)
         self._attr_unique_id = f"{self._device_id}_firmware_update"
+        self._set_entity_name(channel_label=self._channel.get("label"), feature_name="Firmware")
+        
         
     @callback
     def _handle_coordinator_update(self) -> None:

@@ -93,18 +93,19 @@ class HcuGenericSensor(HcuBaseEntity, SensorEntity):
         # ENHANCED: Smart naming for energy counters based on type
         feature_name = self._get_smart_feature_name()
         
-        self._set_entity_name(
-            channel_label=self._channel.get("label"),
-            feature_name=feature_name
-        )
+        
 
         self._attr_unique_id = f"{self._device_id}_{self._channel_index}_{self._feature}"
         self._attr_device_class = mapping.get("device_class")
+        
         self._attr_native_unit_of_measurement = mapping.get("unit")
         self._attr_state_class = mapping.get("state_class")
         self._attr_icon = mapping.get("icon")
         self._attr_entity_category = mapping.get("entity_category")
-
+        self._set_entity_name(
+            channel_label=self._channel.get("label"),
+            feature_name=feature_name
+        )
         if "entity_registry_enabled_default" in mapping:
             self._attr_entity_registry_enabled_default = mapping[
                 "entity_registry_enabled_default"

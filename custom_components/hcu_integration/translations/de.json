@@ -221,8 +221,13 @@
         }
     },
     "entity": {
+        "binary_sensor": {
+            "hcu_low_battery": {
+                "name": "Batterie"
+            }
+        },
         "button": {
-            "hcu_device_identify":{
+            "hcu_identify":{
                 "name": "Identifizieren"
             }
         },
@@ -263,6 +268,12 @@
                     "closed": "Geschlossen",
                     "tilted": "Gekippt"
                 }
+            },
+            "hcu_humidity": {
+                "name": "Feuchtigkeit"
+            },
+            "hcu_temperature": {
+                "name": "Temperatur"
             }
         }
     }

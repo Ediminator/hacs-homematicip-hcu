@@ -64,16 +64,15 @@ class HcuBinarySensor(HcuBaseEntity, BinarySensorEntity):
         super().__init__(coordinator, client, device_data, channel_index)
         self._feature = feature
         self._on_state = mapping.get("on_state")
-
+        
+        self._attr_entity_category = mapping.get("entity_category")
+        self._attr_unique_id = f"{self._device_id}_{self._channel_index}_{self._feature}"
+        self._attr_device_class = mapping.get("device_class")
         # REFACTOR: Correctly call the centralized naming helper for feature entities.
         self._set_entity_name(
             channel_label=self._channel.get("label"), feature_name=mapping["name"]
         )
         
-        self._attr_entity_category = mapping.get("entity_category")
-        self._attr_unique_id = f"{self._device_id}_{self._channel_index}_{self._feature}"
-        self._attr_device_class = mapping.get("device_class")
-
         if "entity_registry_enabled_default" in mapping:
             self._attr_entity_registry_enabled_default = mapping[
                 "entity_registry_enabled_default"
@@ -146,8 +145,8 @@ class HcuVacationModeBinarySensor(HcuHomeBaseEntity, BinarySensorEntity):
     def __init__(self, coordinator: "HcuCoordinator", client: HcuApiClient):
         """Initialize the Vacation Mode sensor."""
         super().__init__(coordinator, client)
-        self._attr_name = self._apply_prefix("Vacation Mode")
         self._attr_unique_id = f"{self._hcu_device_id}_vacation_mode"
+        self._attr_name = self._apply_prefix("Vacation Mode")
         self._update_attributes()
 
     @property

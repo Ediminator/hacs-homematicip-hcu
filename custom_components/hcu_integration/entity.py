@@ -7,6 +7,7 @@ from homeassistant.core import callback
 from homeassistant.helpers.entity import DeviceInfo, Entity
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.util import slugify
 
 from .const import DOMAIN, CONF_ENTITY_PREFIX, HOMEMATIC_MODEL_PREFIXES, CONF_ADVANCED_ATTRIBUTES
 from .api import HcuApiClient, HcuApiError
@@ -109,7 +110,14 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, E
         Applies entity prefix if configured for multi-home setups.
         """
         base_name: str
-
+        dc = getattr(self, "device_class", None) \
+     or getattr(self, "_attr_device_class", None)
+     
+        _LOGGER.debug(
+                        "Entity naming: using translation_key. _attr_device_class=%s unique_id=%r",
+                        dc,
+                        getattr(self, "unique_id", None),
+                    )
         if feature_name:
             # This is a "feature" entity (sensor, binary_sensor, button)
             if channel_label:
@@ -120,8 +128,15 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, E
             else:
                 # Sensor on an unlabeled channel: "Feature Name"
                 # (e.g., "Low Battery" on a device)
-                base_name = feature_name
+                #self._attr_name = None
+                self._attr_name = None
                 self._attr_has_entity_name = True
+                if dc is None:
+                    self._attr_translation_key = slugify(f"hcu_{feature_name}")
+                    base_name = None
+                else:
+                    self._attr_translation_key = None
+                return
         else:
             # This is a "main" entity (switch, light, cover, lock)
             if channel_label:
@@ -243,6 +258,9 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, E
             if hasattr(self, "_attr_name"):
                 attrs["attr_name"] = self._attr_name
             
+            if getattr(self, "_attr_device_class", None) is not None:
+                attrs["attr_device_class"] = self._attr_device_class
+            
             if hasattr(self, "_attr_has_entity_name"):
                 attrs["attr_has_entity_name"] = self._attr_has_entity_name
             
@@ -251,6 +269,9 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, E
                 
             if hasattr(self, "suggested_object_id"):
                 attrs["suggested_object_id"] = self.suggested_object_id
+            
+            if hasattr(self, "_attr_translation_key"):
+                attrs["attr_translation_key"] = self._attr_translation_key
             
             switchVisualization = self._channel.get("switchVisualization")
             if switchVisualization is not None:

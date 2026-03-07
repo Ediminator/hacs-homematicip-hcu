@@ -3,6 +3,16 @@
 All notable changes to the Homematic IP Local (HCU) integration will be documented in this file.
 
 ---
+## 1.19.11 - 2026-03-07
+
+### ✨ New Features
+- Exposed 11 new diagnostic data points for HmIP-SWSD-2 smoke detectors (dirt levels, degradation, operations days, heat indicators, test timestamps).
+- Added `HcuTimestampSensor` mapping millisecond UNIX timestamps natively into Home Assistant datetime values.
+
+### 🐛 Bug Fixes
+- Restored `meta` and `switchVisualization` state attributes that were accidentally hidden behind the advanced debugging configuration flag in the previous update.
+- Improved robustness of the API timestamp parsing to prevent datetime overflow exceptions in case of faulty smoke detector data.
+
 ## 1.19.10 - 2026-02-09
 
 ### 🐛 Bug Fixes

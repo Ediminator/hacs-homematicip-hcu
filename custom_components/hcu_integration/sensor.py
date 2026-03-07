@@ -212,8 +212,19 @@ class HcuTimestampSensor(HcuGenericSensor):
     def native_value(self) -> str | None:
         """Return the timestamp as an isoformat string."""
         value = self._channel.get(self._feature)
-        if value:
-            # The API provides the timestamp in milliseconds
-            dt = dt_util.utc_from_timestamp(value / 1000.0)
+        
+        if value is None:
+            return None
+            
+        try:
+            # Ensure the value is numeric
+            timestamp_ms = float(value)
+            
+            # Prevent absurdly large numbers from crashing datetime parsing
+            if timestamp_ms <= 0 or timestamp_ms > 253402300799000: # Year 9999
+                return None
+                
+            dt = dt_util.utc_from_timestamp(timestamp_ms / 1000.0)
             return dt.isoformat()
-        return None
+        except (ValueError, TypeError, OverflowError):
+            return None

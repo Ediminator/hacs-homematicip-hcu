@@ -8,6 +8,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform, EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.util import dt as dt_util
 
 from .api import HcuApiClient
 from .entity import HcuBaseEntity, HcuHomeBaseEntity
@@ -200,3 +201,30 @@ class HcuWindowStateSensor(HcuGenericSensor):
         if state in ("OPEN", "TILTED", "CLOSED"):
             return state.lower()
         return state
+
+class HcuTimestampSensor(HcuGenericSensor):
+    """
+    Representation of an HCU timestamp sensor 
+    (used to map raw millisecond UNIX timestamps to proper Home Assistant datetime objects).
+    """
+    
+    @property
+    def native_value(self) -> str | None:
+        """Return the timestamp as an isoformat string."""
+        value = self._channel.get(self._feature)
+        
+        if value is None:
+            return None
+            
+        try:
+            # Ensure the value is numeric
+            timestamp_ms = float(value)
+            
+            # Prevent absurdly large numbers from crashing datetime parsing
+            if timestamp_ms <= 0 or timestamp_ms > 253402300799000: # Year 9999
+                return None
+                
+            dt = dt_util.utc_from_timestamp(timestamp_ms / 1000.0)
+            return dt.isoformat()
+        except (ValueError, TypeError, OverflowError):
+            return None

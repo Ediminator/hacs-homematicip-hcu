@@ -14,6 +14,7 @@ This integration connects directly to your HCU's local API, providing real-time 
 - [Requirements](#-requirements)
 - [Installation](#-installation)
 - [Configuration](#-configuration-options)
+- [Group Types](#-group-types)
 - [Working with Buttons & Remote Controls](#-working-with-buttons--remote-controls)
 - [Available Actions](#-available-actions)
 - [Diagnostics & Troubleshooting](#-diagnostics--troubleshooting)
@@ -32,6 +33,39 @@ This integration connects directly to your HCU's local API, providing real-time 
 - **🛡️ Security Integration**: Alarm control panel for your security system
 - **🔧 Extensive Services**: Play sounds, control rules, manage heating schedules
 - **📊 Diagnostics**: Built-in diagnostics for troubleshooting and device support
+- **🏗️ Group Support**: Automatic discovery of heating, switching, cover, and advanced system groups
+
+---
+
+## 🏗️ Group Types
+
+The integration automatically discovers and exposes Homematic IP "groups" — virtual devices that the HCU uses to orchestrate physical hardware.
+
+### Standard Groups (always visible)
+
+| Group Type | Platform | Description |
+|---|---|---|
+| `HEATING` | `climate` | Room thermostat control with profiles, eco/party mode |
+| `SWITCHING` | `switch` | User-created Direct Connection switch groups |
+| `LIGHT` | `light` | User-created Direct Connection light groups |
+| `SHUTTER` / `EXTENDED_LINKED_SHUTTER` | `cover` | Roller shutter and blind groups |
+| `EXTENDED_LINKED_SWITCHING` | `switch` | Extended linked switching groups |
+
+### Advanced Groups (conditionally visible)
+
+These groups only appear when the HCU has assigned physical devices to them. If they show up, it means they are active in your system.
+
+| Group Type | Platform | What it does |
+|---|---|---|
+| `HEATING_COOLING_DEMAND_BOILER` | `binary_sensor` | Aggregates all thermostat valve positions to indicate if the boiler needs to fire |
+| `HEATING_COOLING_DEMAND_PUMP` | `binary_sensor` | Indicates if the heating circulation pump should be running |
+| `HOT_WATER` | `switch` | Controls hot water profiles (requires a physical hot water actuator) |
+
+> **💡 Tip:** Even without a Homematic IP boiler actuator (HmIP-WHS2), you can use the Heat Demand binary sensor to control a third-party relay (Shelly, Zigbee plug) connected to your boiler via Home Assistant automations.
+
+### Room Groups (hidden)
+
+The HCU auto-creates hidden room groups containing all switches and lights in each physical room. These are filtered out to reduce UI clutter. User-created groups (Direct Connections) are always visible.
 
 ---
 

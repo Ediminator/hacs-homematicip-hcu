@@ -7,6 +7,7 @@ from datetime import datetime
 
 from homeassistant.components.binary_sensor import (
     BinarySensorEntity,
+    BinarySensorDeviceClass,
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform, EntityCategory
@@ -22,7 +23,7 @@ from .const import (
     ABSENCE_TYPE_PERMANENT,
     ABSENCE_TYPE_VACATION,
 )
-from .entity import HcuBaseEntity, HcuHomeBaseEntity
+from .entity import HcuBaseEntity, HcuHomeBaseEntity, HcuGroupBaseEntity
 
 if TYPE_CHECKING:
     from . import HcuCoordinator
@@ -225,3 +226,42 @@ class HcuVacationModeBinarySensor(HcuHomeBaseEntity, BinarySensorEntity):
         """Handle updated data from the coordinator."""
         self._update_attributes()
         super()._handle_coordinator_update()
+
+
+class HcuGroupBinarySensor(HcuGroupBaseEntity, BinarySensorEntity):
+    """Base class for Homematic IP HCU group binary sensors."""
+
+    PLATFORM = Platform.BINARY_SENSOR
+
+    def __init__(
+        self,
+        coordinator: "HcuCoordinator",
+        client: HcuApiClient,
+        group_data: dict,
+    ):
+        """Initialize the group binary sensor."""
+        super().__init__(coordinator, client, group_data)
+
+
+class HcuHeatDemandBinarySensorGroup(HcuGroupBinarySensor):
+    """
+    Representation of a Homematic IP HCU boiler/pump heat demand group.
+    """
+    
+    _attr_device_class = BinarySensorDeviceClass.HEAT
+    
+    def __init__(self, coordinator: "HcuCoordinator", client: HcuApiClient, group_data: dict):
+        super().__init__(coordinator, client, group_data)
+        if not group_data.get("label"):
+            group_type = group_data.get("type")
+            fallback_names = {
+                "HEATING_COOLING_DEMAND_BOILER": "Boiler Heat Demand",
+                "HEATING_COOLING_DEMAND_PUMP": "Pump Heat Demand",
+            }
+            fallback_name = fallback_names.get(group_type, "Heat Demand")
+            self._attr_name = self._apply_prefix(fallback_name)
+
+    @property
+    def is_on(self) -> bool:
+        """Return true if there is an active heat demand."""
+        return bool(self._group.get("heatDemand"))

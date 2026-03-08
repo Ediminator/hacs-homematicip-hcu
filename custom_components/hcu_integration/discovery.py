@@ -41,6 +41,8 @@ from .const import (
     EVENT_CHANNEL_TYPES,
     MANUFACTURER_EQ3,
     CONF_DISABLED_GROUPS,
+    ROOM_BASED_SWITCHING_GROUP_TYPES,
+    ALLOWED_EMPTY_GROUPS,
 )
 from .util import get_device_manufacturer
 
@@ -414,6 +416,9 @@ async def async_discover_entities(
         "EXTENDED_LINKED_NOTIFICATION": (Platform.LIGHT, light.HcuLightGroup, {}),
         "EXTENDED_LINKED_WATERING": (Platform.SWITCH, switch.HcuWateringGroup, {}),
         "EXTENDED_LINKED_GARAGE_DOOR": (Platform.SWITCH, switch.HcuSwitchGroup, {}),
+        "HEATING_COOLING_DEMAND_BOILER": (Platform.BINARY_SENSOR, binary_sensor.HcuHeatDemandBinarySensorGroup, {}),
+        "HEATING_COOLING_DEMAND_PUMP": (Platform.BINARY_SENSOR, binary_sensor.HcuHeatDemandBinarySensorGroup, {}),
+        "HOT_WATER": (Platform.SWITCH, switch.HcuSwitchGroup, {}),
     }
 
     # Track group discovery statistics for diagnostics
@@ -467,7 +472,7 @@ async def async_discover_entities(
             )
             continue
 
-        if not channels:
+        if not channels and group_type not in ALLOWED_EMPTY_GROUPS:
             _LOGGER.debug(
                 "Skipping group without channels: %s (id: %s)",
                 group_label,
@@ -476,19 +481,23 @@ async def async_discover_entities(
             continue
 
         if mapping := group_type_mapping.get(group_type):
-            valid_device_ids.add(group_id)
 
-            # Previously we skipped groups with metaGroupId assuming they were only auto-created room groups.
-            # However, user-created "Direct Connections" also have metaGroupId (issue #146).
-            # We now allow them to be discovered. If users find room groups redundant,
-            # we may need a more specific filter or an option in the future.
-            if group_type in ("SWITCHING", "LIGHT", "EXTENDED_LINKED_SWITCHING") and "metaGroupId" in group_data:
+            # Previously we explicitly allowed groups with metaGroupId (issue #146).
+            # However, room-based switching groups clutter the UI as many users do not
+            # use them, and prefer the Homematic App to just group physical switches.
+            # We skip them here. If users want them, we can add a config option later.
+            if group_type in ROOM_BASED_SWITCHING_GROUP_TYPES and "metaGroupId" in group_data:
                 _LOGGER.debug(
-                    "Discovering %s group '%s' (id: %s) despite having metaGroupId (likely Direct Connection or Room Group)",
+                    "Skipping %s group '%s' (id: %s) because it has a metaGroupId (Room Group)",
                     group_type,
                     group_label,
                     group_id
                 )
+                continue
+
+            # Only mark as valid AFTER passing all skip checks above,
+            # so the device registry cleanup can remove orphaned groups.
+            valid_device_ids.add(group_id)
 
             platform, entity_class, extra_kwargs = mapping
             entity = entity_class(coordinator, client, group_data, **extra_kwargs)

@@ -311,8 +311,15 @@ class HcuGroupBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMix
 
         # Centralized naming logic for all group entities
         label = group_data.get("label") or self._group_id
-        self._attr_name = self._apply_prefix(label)
+        self._attr_name = self._apply_prefix(self._format_label(label))
         self._attr_unique_id = self._group_id
+
+    @staticmethod
+    def _format_label(label: str) -> str:
+        """Format ALL_CAPS_UNDERSCORED labels to Title Case."""
+        if label and label.isupper() and "_" in label:
+            return label.replace("_", " ").strip().title()
+        return label
 
     @property
     def _group(self) -> dict[str, Any]:
@@ -334,10 +341,12 @@ class HcuGroupBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMix
         model_name = f"{group_type} Group"
         meta = self._meta_group_label
     
+        group_label = self._format_label(self._group.get("label", "Unknown Group"))
+
         device_info_kwargs = dict(
             identifiers={(DOMAIN, self._group_id)},
             entry_type=dr.DeviceEntryType.SERVICE,
-            name=self._group.get("label", "Unknown Group"),
+            name=group_label,
             manufacturer="Homematic IP",
             model=model_name,
             via_device=(DOMAIN, hcu_device_id)

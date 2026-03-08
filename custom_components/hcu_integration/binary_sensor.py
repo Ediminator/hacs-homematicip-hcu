@@ -254,7 +254,13 @@ class HcuHeatDemandBinarySensorGroup(HcuGroupBinarySensor):
         super().__init__(coordinator, client, group_data)
         # Use a more descriptive fallback name if the label is not provided by the API.
         if not group_data.get("label"):
-            self._attr_name = self._apply_prefix(self._format_label("Heat Demand"))
+            group_type = group_data.get("type", "")
+            fallback_name = "Heat Demand"
+            if "BOILER" in group_type:
+                fallback_name = "Boiler Heat Demand"
+            elif "PUMP" in group_type:
+                fallback_name = "Pump Heat Demand"
+            self._attr_name = self._apply_prefix(self._format_label(fallback_name))
 
     @property
     def is_on(self) -> bool:

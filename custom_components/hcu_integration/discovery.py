@@ -42,6 +42,7 @@ from .const import (
     MANUFACTURER_EQ3,
     CONF_DISABLED_GROUPS,
     ROOM_BASED_SWITCHING_GROUP_TYPES,
+    ALLOWED_EMPTY_GROUPS,
 )
 from .util import get_device_manufacturer
 
@@ -471,7 +472,7 @@ async def async_discover_entities(
             )
             continue
 
-        if not channels and group_type not in ("SECURITY_ZONE", "META"):
+        if not channels and group_type not in ALLOWED_EMPTY_GROUPS:
             _LOGGER.debug(
                 "Skipping group without channels: %s (id: %s)",
                 group_label,

@@ -41,6 +41,7 @@ from .const import (
     EVENT_CHANNEL_TYPES,
     MANUFACTURER_EQ3,
     CONF_DISABLED_GROUPS,
+    ROOM_BASED_SWITCHING_GROUP_TYPES,
 )
 from .util import get_device_manufacturer
 
@@ -484,7 +485,7 @@ async def async_discover_entities(
             # However, room-based switching groups clutter the UI as many users do not
             # use them, and prefer the Homematic App to just group physical switches.
             # We skip them here. If users want them, we can add a config option later.
-            if group_type in ("SWITCHING", "LIGHT", "EXTENDED_LINKED_SWITCHING") and "metaGroupId" in group_data:
+            if group_type in ROOM_BASED_SWITCHING_GROUP_TYPES and "metaGroupId" in group_data:
                 _LOGGER.debug(
                     "Skipping %s group '%s' (id: %s) because it has a metaGroupId (Room Group)",
                     group_type,

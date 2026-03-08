@@ -14,7 +14,7 @@ This integration connects directly to your HCU's local API, providing real-time 
 - [Requirements](#-requirements)
 - [Installation](#-installation)
 - [Configuration](#-configuration-options)
-- [Group Types](#️-group-types)
+- [Group Types](#-group-types)
 - [Working with Buttons & Remote Controls](#-working-with-buttons--remote-controls)
 - [Available Actions](#-available-actions)
 - [Diagnostics & Troubleshooting](#-diagnostics--troubleshooting)

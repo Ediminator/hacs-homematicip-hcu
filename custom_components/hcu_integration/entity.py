@@ -318,7 +318,7 @@ class HcuGroupBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMix
     def _format_label(label: str) -> str:
         """Format ALL_CAPS_UNDERSCORED labels to Title Case."""
         if label and label == label.upper() and "_" in label:
-            return label.replace("_", " ").title()
+            return label.replace("_", " ").strip().title()
         return label
 
     @property

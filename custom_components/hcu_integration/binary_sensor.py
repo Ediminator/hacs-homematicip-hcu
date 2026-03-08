@@ -244,26 +244,6 @@ class HcuGroupBinarySensor(HcuGroupBaseEntity, BinarySensorEntity):
         self._attr_unique_id = f"{self._group_id}"
 
 
-class HcuWindowBinarySensorGroup(HcuGroupBinarySensor):
-    """
-    Representation of a Homematic IP HCU room window group.
-    Translates the INDOOR_CLIMATE group windowState.
-    """
-    
-    _attr_device_class = BinarySensorDeviceClass.WINDOW
-    _attr_translation_key = "hcu_window"
-    
-    def __init__(self, coordinator: "HcuCoordinator", client: HcuApiClient, group_data: dict):
-        super().__init__(coordinator, client, group_data)
-        self._attr_name = self._apply_prefix(self._format_label(group_data.get("label", "Room Windows")))
-        self._attr_unique_id = f"{self._group_id}_window_state"
-
-    @property
-    def is_on(self) -> bool:
-        """Return true if any window in the room is open or tilted."""
-        return self._group.get("windowState") in ("OPEN", "TILTED")
-
-
 class HcuHeatDemandBinarySensorGroup(HcuGroupBinarySensor):
     """
     Representation of a Homematic IP HCU boiler/pump heat demand group.

@@ -27,7 +27,6 @@ Added support for three previously ignored Homematic IP group types. These group
 
 New entity classes added:
 - `HcuGroupBinarySensor` — Base class for group-level binary sensors
-- `HcuWindowBinarySensorGroup` — Aggregated room window state from `INDOOR_CLIMATE` groups
 - `HcuHeatDemandBinarySensorGroup` — Boiler/pump heat demand indicator
 
 **Human-Readable Group Labels**

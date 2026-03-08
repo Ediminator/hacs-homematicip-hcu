@@ -255,10 +255,7 @@ class HcuWindowBinarySensorGroup(HcuGroupBinarySensor):
     
     def __init__(self, coordinator: "HcuCoordinator", client: HcuApiClient, group_data: dict):
         super().__init__(coordinator, client, group_data)
-        label = group_data.get("label", "Room Windows")
-        if label and label == label.upper() and "_" in label:
-            label = label.replace("_", " ").title()
-        self._attr_name = self._apply_prefix(label)
+        self._attr_name = self._apply_prefix(self._format_label(group_data.get("label", "Room Windows")))
         self._attr_unique_id = f"{self._group_id}_window_state"
 
     @property
@@ -276,10 +273,7 @@ class HcuHeatDemandBinarySensorGroup(HcuGroupBinarySensor):
     
     def __init__(self, coordinator: "HcuCoordinator", client: HcuApiClient, group_data: dict):
         super().__init__(coordinator, client, group_data)
-        label = group_data.get("label", "Heat Demand")
-        if label and label == label.upper() and "_" in label:
-            label = label.replace("_", " ").title()
-        self._attr_name = self._apply_prefix(label)
+        self._attr_name = self._apply_prefix(self._format_label(group_data.get("label", "Heat Demand")))
         self._attr_unique_id = f"{self._group_id}_heat_demand"
 
     @property

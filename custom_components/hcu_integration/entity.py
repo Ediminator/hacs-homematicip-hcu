@@ -311,10 +311,15 @@ class HcuGroupBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMix
 
         # Centralized naming logic for all group entities
         label = group_data.get("label") or self._group_id
-        if label and label == label.upper() and "_" in label:
-            label = label.replace("_", " ").title()
-        self._attr_name = self._apply_prefix(label)
+        self._attr_name = self._apply_prefix(self._format_label(label))
         self._attr_unique_id = self._group_id
+
+    @staticmethod
+    def _format_label(label: str) -> str:
+        """Format ALL_CAPS_UNDERSCORED labels to Title Case."""
+        if label and label == label.upper() and "_" in label:
+            return label.replace("_", " ").title()
+        return label
 
     @property
     def _group(self) -> dict[str, Any]:
@@ -336,9 +341,7 @@ class HcuGroupBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMix
         model_name = f"{group_type} Group"
         meta = self._meta_group_label
     
-        group_label = self._group.get("label", "Unknown Group")
-        if group_label and group_label == group_label.upper() and "_" in group_label:
-            group_label = group_label.replace("_", " ").title()
+        group_label = self._format_label(self._group.get("label", "Unknown Group"))
 
         device_info_kwargs = dict(
             identifiers={(DOMAIN, self._group_id)},

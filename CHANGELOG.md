@@ -15,6 +15,16 @@ Added support for three previously ignored Homematic IP group types. These group
 - `HEATING_COOLING_DEMAND_PUMP` → `binary_sensor` (heat demand indicator)
 - `HOT_WATER` → `switch` (hot water profile control)
 
+> **💡 Why do I see "Heating Cooling Demand" entities?**
+> Your HCU automatically assigns thermostat radiator valves to these groups. The HCU aggregates all valve positions across your home to calculate a single answer: *"Does the boiler need to fire right now?"*
+> 
+> Even without a physical Homematic IP boiler actuator (like HmIP-WHS2), you can use this binary sensor in Home Assistant to:
+> - **Control a third-party relay** (e.g., a Shelly or Zigbee plug) connected to your boiler
+> - **Build energy dashboards** tracking when your boiler is demanded vs idle
+> - **Create automations** like *"If heatDemand has been off for 30 minutes, reduce boiler standby temperature"*
+> 
+> The `HOT_WATER` entity will only appear when you configure a hot water profile with a physical actuator in the Homematic IP app.
+
 New entity classes added:
 - `HcuGroupBinarySensor` — Base class for group-level binary sensors
 - `HcuWindowBinarySensorGroup` — Aggregated room window state from `INDOOR_CLIMATE` groups

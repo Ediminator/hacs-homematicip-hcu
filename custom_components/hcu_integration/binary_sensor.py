@@ -252,8 +252,9 @@ class HcuHeatDemandBinarySensorGroup(HcuGroupBinarySensor):
     
     def __init__(self, coordinator: "HcuCoordinator", client: HcuApiClient, group_data: dict):
         super().__init__(coordinator, client, group_data)
-        self._attr_name = self._apply_prefix(self._format_label(group_data.get("label", "Heat Demand")))
-        self._attr_unique_id = f"{self._group_id}_heat_demand"
+        # Use a more descriptive fallback name if the label is not provided by the API.
+        if not group_data.get("label"):
+            self._attr_name = self._apply_prefix(self._format_label("Heat Demand"))
 
     @property
     def is_on(self) -> bool:

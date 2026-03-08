@@ -241,7 +241,6 @@ class HcuGroupBinarySensor(HcuGroupBaseEntity, BinarySensorEntity):
     ):
         """Initialize the group binary sensor."""
         super().__init__(coordinator, client, group_data)
-        self._attr_unique_id = f"{self._group_id}"
 
 
 class HcuHeatDemandBinarySensorGroup(HcuGroupBinarySensor):

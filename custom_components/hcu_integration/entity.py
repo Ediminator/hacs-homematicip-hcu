@@ -311,6 +311,8 @@ class HcuGroupBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMix
 
         # Centralized naming logic for all group entities
         label = group_data.get("label") or self._group_id
+        if label and label == label.upper() and "_" in label:
+            label = label.replace("_", " ").title()
         self._attr_name = self._apply_prefix(label)
         self._attr_unique_id = self._group_id
 
@@ -334,10 +336,14 @@ class HcuGroupBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMix
         model_name = f"{group_type} Group"
         meta = self._meta_group_label
     
+        group_label = self._group.get("label", "Unknown Group")
+        if group_label and group_label == group_label.upper() and "_" in group_label:
+            group_label = group_label.replace("_", " ").title()
+
         device_info_kwargs = dict(
             identifiers={(DOMAIN, self._group_id)},
             entry_type=dr.DeviceEntryType.SERVICE,
-            name=self._group.get("label", "Unknown Group"),
+            name=group_label,
             manufacturer="Homematic IP",
             model=model_name,
             via_device=(DOMAIN, hcu_device_id)

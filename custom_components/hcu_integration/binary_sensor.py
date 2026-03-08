@@ -7,6 +7,7 @@ from datetime import datetime
 
 from homeassistant.components.binary_sensor import (
     BinarySensorEntity,
+    BinarySensorDeviceClass,
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform, EntityCategory
@@ -22,7 +23,7 @@ from .const import (
     ABSENCE_TYPE_PERMANENT,
     ABSENCE_TYPE_VACATION,
 )
-from .entity import HcuBaseEntity, HcuHomeBaseEntity
+from .entity import HcuBaseEntity, HcuHomeBaseEntity, HcuGroupBaseEntity
 
 if TYPE_CHECKING:
     from . import HcuCoordinator
@@ -225,3 +226,63 @@ class HcuVacationModeBinarySensor(HcuHomeBaseEntity, BinarySensorEntity):
         """Handle updated data from the coordinator."""
         self._update_attributes()
         super()._handle_coordinator_update()
+
+
+class HcuGroupBinarySensor(HcuGroupBaseEntity, BinarySensorEntity):
+    """Base class for Homematic IP HCU group binary sensors."""
+
+    PLATFORM = Platform.BINARY_SENSOR
+
+    def __init__(
+        self,
+        coordinator: "HcuCoordinator",
+        client: HcuApiClient,
+        group_data: dict,
+    ):
+        """Initialize the group binary sensor."""
+        super().__init__(coordinator, client, group_data)
+        self._attr_unique_id = f"{self._group_id}"
+
+
+class HcuWindowBinarySensorGroup(HcuGroupBinarySensor):
+    """
+    Representation of a Homematic IP HCU room window group.
+    Translates the INDOOR_CLIMATE group windowState.
+    """
+    
+    _attr_device_class = BinarySensorDeviceClass.WINDOW
+    _attr_translation_key = "hcu_window"
+    
+    def __init__(self, coordinator: "HcuCoordinator", client: HcuApiClient, group_data: dict):
+        super().__init__(coordinator, client, group_data)
+        label = group_data.get("label", "Room Windows")
+        if label and label == label.upper() and "_" in label:
+            label = label.replace("_", " ").title()
+        self._attr_name = self._apply_prefix(label)
+        self._attr_unique_id = f"{self._group_id}_window_state"
+
+    @property
+    def is_on(self) -> bool:
+        """Return true if any window in the room is open or tilted."""
+        return self._group.get("windowState") in ("OPEN", "TILTED")
+
+
+class HcuHeatDemandBinarySensorGroup(HcuGroupBinarySensor):
+    """
+    Representation of a Homematic IP HCU boiler/pump heat demand group.
+    """
+    
+    _attr_device_class = BinarySensorDeviceClass.HEAT
+    
+    def __init__(self, coordinator: "HcuCoordinator", client: HcuApiClient, group_data: dict):
+        super().__init__(coordinator, client, group_data)
+        label = group_data.get("label", "Heat Demand")
+        if label and label == label.upper() and "_" in label:
+            label = label.replace("_", " ").title()
+        self._attr_name = self._apply_prefix(label)
+        self._attr_unique_id = f"{self._group_id}_heat_demand"
+
+    @property
+    def is_on(self) -> bool:
+        """Return true if there is an active heat demand."""
+        return bool(self._group.get("heatDemand"))

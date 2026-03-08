@@ -3,6 +3,52 @@
 All notable changes to the Homematic IP Local (HCU) integration will be documented in this file.
 
 ---
+## 1.20.0 - 2026-03-08
+
+### ✨ New Features
+
+**Prepared Advanced Group Types (HEATING_COOLING_DEMAND, HOT_WATER)**
+
+Added support for three previously ignored Homematic IP group types. These groups are **conditionally exposed** — they only appear when physical devices are actually assigned to them, preventing empty entities from cluttering the UI.
+
+- `HEATING_COOLING_DEMAND_BOILER` → `binary_sensor` (heat demand indicator)
+- `HEATING_COOLING_DEMAND_PUMP` → `binary_sensor` (heat demand indicator)
+- `HOT_WATER` → `switch` (hot water profile control)
+
+New entity classes added:
+- `HcuGroupBinarySensor` — Base class for group-level binary sensors
+- `HcuWindowBinarySensorGroup` — Aggregated room window state from `INDOOR_CLIMATE` groups
+- `HcuHeatDemandBinarySensorGroup` — Boiler/pump heat demand indicator
+
+**Human-Readable Group Labels**
+
+Group labels that use ALL_CAPS_UNDERSCORED naming (e.g., `HOT_WATER`) are now automatically formatted to title case (`Hot Water`) in both entity names and device registry entries.
+
+### 🐛 Bug Fixes
+
+**Fix Zombie Group Devices Not Being Cleaned Up**
+
+Fixed a bug where orphaned group devices persisted in the Home Assistant device registry even after they were no longer discovered.
+
+- **Root Cause:** `valid_device_ids.add(group_id)` was called *before* the `metaGroupId` skip check, marking filtered groups as "valid" and preventing the cleanup logic from removing them.
+- **Fix:** Moved `valid_device_ids.add(group_id)` to after all skip checks, so the existing registry cleanup correctly identifies and removes orphaned group devices.
+
+### 🔧 Improvements
+
+**Room-Based Switching Groups Now Filtered**
+
+Auto-created room groups (`SWITCHING`, `LIGHT`, `EXTENDED_LINKED_SWITCHING` with `metaGroupId`) are now skipped during discovery to reduce UI clutter. User-created Direct Connection groups (which do not have a `metaGroupId`) continue to be discovered normally.
+
+> **Note:** This reverses the behavior introduced in v1.18.2/v1.18.3 (Issue #146), which allowed all `metaGroupId` groups. Users who need room-based switching groups can request a configuration option in a future release.
+
+### 📝 Files Changed
+
+- `custom_components/hcu_integration/discovery.py` — Advanced group mappings, conditional exposure, room-group filtering, zombie cleanup fix
+- `custom_components/hcu_integration/entity.py` — Label formatting for entity names and device registry
+- `custom_components/hcu_integration/binary_sensor.py` — New group binary sensor classes
+- `custom_components/hcu_integration/manifest.json` — Version bump to 1.20.0
+
+---
 ## 1.19.11 - 2026-03-07
 
 ### ✨ New Features

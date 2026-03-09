@@ -3,6 +3,28 @@
 All notable changes to the Homematic IP Local (HCU) integration will be documented in this file.
 
 ---
+## 1.21.1 - 2026-03-09
+
+### 🐛 Bug Fixes
+
+**Fix duplicate window entities on multimode inputs (Issue #175, PR #292)**
+
+Fixed an issue where input devices configured as push buttons or switches incorrectly created a `Window` binary sensor in Home Assistant in addition to their button/switch entities. Also improved device class mapping for actual contacts so they show up as Doors or Windows correctly based on their configuration in the Homematic IP app.
+
+**What Changed:**
+- Window sensors (`windowState` features) are now explicitly filtered out during discovery if the channel is not configured as `BINARY_BEHAVIOR` (i.e., configured as a push button or switch).
+- The `channelRole` attribute is now dynamically evaluated so that `DOOR_SENSOR` contacts utilize the Home Assistant `door` device class, and all other window sensors utilize the `window` device class.
+- The static translation key for window sensors was removed to rely fully on Home Assistant's native translations for Door and Window device classes.
+- Extracted magic strings (like `"BINARY_BEHAVIOR"` and `"DOOR_SENSOR"`) into centrally managed variables in `const.py`.
+
+**Files Changed:**
+- `custom_components/hcu_integration/discovery.py` — Added filtering logic for `windowState`.
+- `custom_components/hcu_integration/binary_sensor.py` — Dynamic device class assignment and translation fallback reset.
+- `custom_components/hcu_integration/const.py` — Added variables for multi mode input configurations.
+- `tests/test_issue_175.py` — Added a comprehensive unit test suite to verify correct logical filtering and device class creation for input modules.
+- `custom_components/hcu_integration/manifest.json` — Version bump to 1.21.1.
+
+---
 ## 1.21.0 - 2026-03-09
 
 ### 🐛 Bug Fixes

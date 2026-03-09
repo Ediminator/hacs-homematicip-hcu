@@ -43,6 +43,7 @@ from .const import (
     CONF_DISABLED_GROUPS,
     ALLOWED_EMPTY_GROUPS,
     MANDATORY_RF_FEATURES,
+    MULTI_MODE_INPUT_BINARY_BEHAVIOR,
 )
 from .util import get_device_manufacturer
 
@@ -266,7 +267,7 @@ async def async_discover_entities(
                 # Skip windowState binary sensors for input channels not configured as contacts
                 if feature == "windowState":
                     mode = channel_data.get("multiModeInputMode")
-                    if mode is not None and mode != "BINARY_BEHAVIOR":
+                    if mode is not None and mode != MULTI_MODE_INPUT_BINARY_BEHAVIOR:
                         _LOGGER.debug(
                             "Skipping windowState feature on device %s channel %s: configured as %s",
                             device_data.get("id"), channel_index, mode

@@ -22,6 +22,8 @@ from .const import (
     ABSENCE_TYPE_PERIOD,
     ABSENCE_TYPE_PERMANENT,
     ABSENCE_TYPE_VACATION,
+    CHANNEL_ROLE_DOOR_SENSOR,
+    CHANNEL_ROLE_WINDOW_SENSOR,
 )
 from .entity import HcuBaseEntity, HcuHomeBaseEntity, HcuGroupBaseEntity
 
@@ -124,7 +126,7 @@ class HcuWindowBinarySensor(HcuBinarySensor):
         
         # Determine the correct device_class based on the channelRole
         channel_role = self._channel.get("channelRole")
-        if channel_role == "DOOR_SENSOR":
+        if channel_role == CHANNEL_ROLE_DOOR_SENSOR:
             self._attr_device_class = BinarySensorDeviceClass.DOOR
         else:
             # WINDOW_SENSOR or default fallback

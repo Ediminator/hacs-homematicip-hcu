@@ -6,6 +6,13 @@ from homeassistant.components.binary_sensor import BinarySensorDeviceClass
 from custom_components.hcu_integration.discovery import async_discover_entities
 from custom_components.hcu_integration.binary_sensor import HcuWindowBinarySensor
 from custom_components.hcu_integration.coordinator import HcuCoordinator
+from custom_components.hcu_integration.const import (
+    MULTI_MODE_INPUT_KEY_BEHAVIOR,
+    MULTI_MODE_INPUT_SWITCH_BEHAVIOR,
+    MULTI_MODE_INPUT_BINARY_BEHAVIOR,
+    CHANNEL_ROLE_DOOR_SENSOR,
+    CHANNEL_ROLE_WINDOW_SENSOR,
+)
 
 async def test_duplicate_window_sensor_filtered(mock_hcu_client, mock_config_entry):
     """Test that windowState is ignored when multiModeInputMode is KEY_BEHAVIOR or SWITCH_BEHAVIOR."""
@@ -18,24 +25,24 @@ async def test_duplicate_window_sensor_filtered(mock_hcu_client, mock_config_ent
         "functionalChannels": {
             "1": { # Button configuration -> Should NOT create Window sensor
                 "functionalChannelType": "MULTI_MODE_INPUT_CHANNEL",
-                "multiModeInputMode": "KEY_BEHAVIOR",
+                "multiModeInputMode": MULTI_MODE_INPUT_KEY_BEHAVIOR,
                 "windowState": "CLOSED",
             },
             "2": { # Switch configuration -> Should NOT create Window sensor
                 "functionalChannelType": "MULTI_MODE_INPUT_CHANNEL",
-                "multiModeInputMode": "SWITCH_BEHAVIOR",
+                "multiModeInputMode": MULTI_MODE_INPUT_SWITCH_BEHAVIOR,
                 "windowState": "OPEN",
             },
             "3": { # Contact configuration (Window)
                 "functionalChannelType": "MULTI_MODE_INPUT_CHANNEL",
-                "multiModeInputMode": "BINARY_BEHAVIOR",
-                "channelRole": "WINDOW_SENSOR",
+                "multiModeInputMode": MULTI_MODE_INPUT_BINARY_BEHAVIOR,
+                "channelRole": CHANNEL_ROLE_WINDOW_SENSOR,
                 "windowState": "CLOSED",
             },
             "4": { # Contact configuration (Door)
                 "functionalChannelType": "MULTI_MODE_INPUT_CHANNEL",
-                "multiModeInputMode": "BINARY_BEHAVIOR",
-                "channelRole": "DOOR_SENSOR",
+                "multiModeInputMode": MULTI_MODE_INPUT_BINARY_BEHAVIOR,
+                "channelRole": CHANNEL_ROLE_DOOR_SENSOR,
                 "windowState": "OPEN",
             }
         }

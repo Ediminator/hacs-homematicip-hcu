@@ -7,9 +7,10 @@ from datetime import datetime
 
 from homeassistant.components.binary_sensor import (
     BinarySensorEntity,
+    BinarySensorDeviceClass,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
+from homeassistant.const import Platform, EntityCategory
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.util import dt as dt_util
@@ -22,7 +23,7 @@ from .const import (
     ABSENCE_TYPE_PERMANENT,
     ABSENCE_TYPE_VACATION,
 )
-from .entity import HcuBaseEntity, HcuHomeBaseEntity
+from .entity import HcuBaseEntity, HcuHomeBaseEntity, HcuGroupBaseEntity
 
 if TYPE_CHECKING:
     from . import HcuCoordinator
@@ -69,7 +70,8 @@ class HcuBinarySensor(HcuBaseEntity, BinarySensorEntity):
         self._set_entity_name(
             channel_label=self._channel.get("label"), feature_name=mapping["name"]
         )
-
+        
+        self._attr_entity_category = mapping.get("entity_category")
         self._attr_unique_id = f"{self._device_id}_{self._channel_index}_{self._feature}"
         self._attr_device_class = mapping.get("device_class")
 
@@ -94,27 +96,15 @@ class HcuWindowBinarySensor(HcuBinarySensor):
     Representation of a Homematic IP HCU window sensor.
     This class provides specialized logic for window sensors.
     """
-
+    
+    _attr_translation_key = "hcu_window"
+    
     @property
     def is_on(self) -> bool:
         """
         Return true if the window is open or tilted.
         """
         return self._channel.get(self._feature) in ("OPEN", "TILTED")
-
-    @property
-    def extra_state_attributes(self) -> dict[str, Any]:
-        """
-        Return additional state attributes.
-
-        Provides the actual window state (OPEN/TILTED/CLOSED) as an attribute
-        so users can distinguish between open and tilted states in automations.
-        """
-        window_state = self._channel.get(self._feature)
-        return {
-            "window_state": window_state,
-        }
-
 
 class HcuSmokeBinarySensor(HcuBinarySensor):
     """
@@ -135,7 +125,7 @@ class HcuUnreachBinarySensor(HcuBinarySensor):
     Representation of a Homematic IP HCU device's reachability.
     This class provides specialized logic for the 'unreach' status.
     """
-
+    
     @property
     def is_on(self) -> bool:
         """
@@ -181,7 +171,7 @@ class HcuVacationModeBinarySensor(HcuHomeBaseEntity, BinarySensorEntity):
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return the state attributes of the vacation mode sensor."""
-        return self._attr_extra_state_attributes
+        return (super().extra_state_attributes or {}) | (self._attr_extra_state_attributes or {})
 
     def _update_attributes(self) -> None:
         """Update the entity's attributes."""
@@ -236,3 +226,42 @@ class HcuVacationModeBinarySensor(HcuHomeBaseEntity, BinarySensorEntity):
         """Handle updated data from the coordinator."""
         self._update_attributes()
         super()._handle_coordinator_update()
+
+
+class HcuGroupBinarySensor(HcuGroupBaseEntity, BinarySensorEntity):
+    """Base class for Homematic IP HCU group binary sensors."""
+
+    PLATFORM = Platform.BINARY_SENSOR
+
+    def __init__(
+        self,
+        coordinator: "HcuCoordinator",
+        client: HcuApiClient,
+        group_data: dict,
+    ):
+        """Initialize the group binary sensor."""
+        super().__init__(coordinator, client, group_data)
+
+
+class HcuHeatDemandBinarySensorGroup(HcuGroupBinarySensor):
+    """
+    Representation of a Homematic IP HCU boiler/pump heat demand group.
+    """
+    
+    _attr_device_class = BinarySensorDeviceClass.HEAT
+    
+    def __init__(self, coordinator: "HcuCoordinator", client: HcuApiClient, group_data: dict):
+        super().__init__(coordinator, client, group_data)
+        if not group_data.get("label"):
+            group_type = group_data.get("type")
+            fallback_names = {
+                "HEATING_COOLING_DEMAND_BOILER": "Boiler Heat Demand",
+                "HEATING_COOLING_DEMAND_PUMP": "Pump Heat Demand",
+            }
+            fallback_name = fallback_names.get(group_type, "Heat Demand")
+            self._attr_name = self._apply_prefix(fallback_name)
+
+    @property
+    def is_on(self) -> bool:
+        """Return true if there is an active heat demand."""
+        return bool(self._group.get("heatDemand"))

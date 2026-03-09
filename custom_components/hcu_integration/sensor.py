@@ -3,11 +3,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from homeassistant.components.sensor import SensorEntity
+from homeassistant.components.sensor import SensorEntity, SensorDeviceClass
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
+from homeassistant.const import Platform, EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.util import dt as dt_util
 
 from .api import HcuApiClient
 from .entity import HcuBaseEntity, HcuHomeBaseEntity
@@ -103,6 +104,7 @@ class HcuGenericSensor(HcuBaseEntity, SensorEntity):
         self._attr_native_unit_of_measurement = mapping.get("unit")
         self._attr_state_class = mapping.get("state_class")
         self._attr_icon = mapping.get("icon")
+        self._attr_entity_category = mapping.get("entity_category")
 
         if "entity_registry_enabled_default" in mapping:
             self._attr_entity_registry_enabled_default = mapping[
@@ -169,11 +171,60 @@ class HcuWindowStateSensor(HcuGenericSensor):
     This sensor shows the actual window state as its value: OPEN, TILTED, or CLOSED.
     This complements the binary sensor which can only show on/off.
     """
+    
+    _attr_translation_key = "hcu_tiltwindow"
+    PLATFORM = Platform.SENSOR
 
+    def __init__(
+        self,
+        coordinator: "HcuCoordinator",
+        client: HcuApiClient,
+        device_data: dict,
+        channel_index: str,
+        feature: str = "windowState",
+        mapping: dict | None = None,
+    ):
+        
+        if mapping is None:
+            mapping = {
+                "name": "State",
+                "device_class": SensorDeviceClass.ENUM
+            }
+            
+        super().__init__(coordinator, client, device_data, channel_index, feature, mapping)
+        self._attr_options = ["open", "tilted", "closed"]
+        
     @property
     def native_value(self) -> str | None:
-        """Return the window state: OPEN, TILTED, or CLOSED."""
+        """Return the window state: open, tilted, or closed."""
         state = self._channel.get(self._feature)
         if state in ("OPEN", "TILTED", "CLOSED"):
-            return state.lower().capitalize()  # Convert to Title Case for display
+            return state.lower()
         return state
+
+class HcuTimestampSensor(HcuGenericSensor):
+    """
+    Representation of an HCU timestamp sensor 
+    (used to map raw millisecond UNIX timestamps to proper Home Assistant datetime objects).
+    """
+    
+    @property
+    def native_value(self) -> str | None:
+        """Return the timestamp as an isoformat string."""
+        value = self._channel.get(self._feature)
+        
+        if value is None:
+            return None
+            
+        try:
+            # Ensure the value is numeric
+            timestamp_ms = float(value)
+            
+            # Prevent absurdly large numbers from crashing datetime parsing
+            if timestamp_ms <= 0 or timestamp_ms > 253402300799000: # Year 9999
+                return None
+                
+            dt = dt_util.utc_from_timestamp(timestamp_ms / 1000.0)
+            return dt.isoformat()
+        except (ValueError, TypeError, OverflowError):
+            return None

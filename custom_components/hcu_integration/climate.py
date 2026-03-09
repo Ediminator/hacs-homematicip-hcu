@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from typing import TYPE_CHECKING, Any
 from datetime import timedelta
 
@@ -9,8 +10,10 @@ from homeassistant.components.climate import (
     ClimateEntity,
     ClimateEntityFeature,
     HVACMode,
+    HVACAction,
     PRESET_BOOST,
 )
+
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_TEMPERATURE, Platform, UnitOfTemperature
 from homeassistant.core import HomeAssistant, callback
@@ -53,6 +56,7 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
     """Representation of a Homematic IP HCU heating group."""
 
     PLATFORM = Platform.CLIMATE
+    _attr_translation_key = "hcu_climate"
     _attr_hvac_modes = [HVACMode.AUTO, HVACMode.HEAT, HVACMode.OFF]
     _attr_temperature_unit = UnitOfTemperature.CELSIUS
     _attr_supported_features = (
@@ -93,7 +97,7 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
         ]
 
         self._update_attributes_from_group_data()
-
+        
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
@@ -206,9 +210,11 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return the optional state attributes."""
-        attributes = {}
+        attributes = super().extra_state_attributes or {}
         if (valve_pos := self.current_valve_position) is not None:
-            attributes["valve_position"] = valve_pos
+            attributes |= {"valve_position": valve_pos}
+        if (window_state := self._group.get("windowState")) is not None:
+            attributes |= {"window_state": window_state}
         return attributes
 
     @property
@@ -231,6 +237,16 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
         # Return the maximum valve position to represent the heating demand of the group.
         return int(round(max(valve_positions) * 100))
 
+    @property
+    def hvac_action(self) -> HVACAction:
+        """Return the current HVAC action."""
+        if self.hvac_mode == HVACMode.OFF:
+            return HVACAction.OFF
+        valve_pos = self.current_valve_position
+        if valve_pos is None:
+            return HVACAction.IDLE
+        return HVACAction.HEATING if valve_pos > 0 else HVACAction.IDLE
+        
     async def async_set_temperature(self, **kwargs: Any) -> None:
         """Set new target temperature."""
         temperature = kwargs.get(ATTR_TEMPERATURE)
@@ -308,8 +324,9 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
                 await self._client.async_set_group_boost(
                     group_id=self._group_id, boost=True
                 )
-            elif preset_mode == PRESET_ECO:
-                await self._client.async_activate_absence_permanent()
+            #elif preset_mode == PRESET_ECO:
+            #    Disable Set EcoMode from Heating Group
+            #    await self._client.async_activate_absence_permanent()
             elif preset_mode == PRESET_PARTY:
                 comfort_temp = self._config_entry.options.get(
                     CONF_COMFORT_TEMPERATURE, DEFAULT_COMFORT_TEMPERATURE

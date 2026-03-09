@@ -58,12 +58,22 @@
             },
             "global_settings": {
                 "title": "Globale Einstellungen",
-                "description": "Konfigurieren Sie globale Einstellungen und Geräte-Importfilter.",
+                "description": "Konfiguriere globale Einstellungen und Filter für den Geräteimport.",
                 "data": {
-                    "comfort_temperature": "Standard-Komfort-Temperatur (für Party-Modus)",
-                    "import_sytronic": "Sytronic-Geräte importieren",
-                    "import_novotronic": "Novotronic-Geräte importieren",
-                    "selected_oems": "Zu importierende Hersteller"
+                    "advanced_debugging": "Erweitertes Debugging",
+                    "advanced_attributes": "Erweiterte Attribute",
+                    "disable_unconfigured_channels": "Nicht konfigurierte Kanäle deaktivieren",
+                    "comfort_temperature": "Standard-Komforttemperatur",
+                    "selected_oems": "Hersteller importieren",
+                    "disabled_groups": "Gruppen ausblenden"
+                },
+                "data_description": {
+                    "advanced_debugging": "Aktivieren, um die vollständigen Rohdaten der HMIP_SYSTEM_EVENT-Ereignisse zu protokollieren. Schalte diese Funktion wieder aus wenn du sie nicht mehr benötigst.",
+                    "advanced_attributes": "Aktivieren, um zusätzliche Entwickler-Attribute pro Entität anzuzeigen.",
+                    "disable_unconfigured_channels": "Deaktiviert Kanäle, die in der Homematic IP App nicht konfiguriert bzw. keinem Raum zugeordnet sind. Diese Kanäle werden in Home Assistant nicht erstellt.",
+                    "comfort_temperature": "Lege hier die Komforttemperatur fest, die für den Party-Modus verwendet wird.",
+                    "selected_oems": "Wähle aus, welche Hersteller in Home Assistant importiert werden sollen.",
+                    "disabled_groups": "Wähle aus, welche Gruppen ausgeblendet werden sollen. Die Gruppennamen findest du in den zusätzlichen Attributen jeder Entität."
                 }
             },
             "lock_pin": {
@@ -182,6 +192,76 @@
                 "duration": {
                     "name": "Dauer",
                     "description": "Die Dauer in Sekunden für den Party-Modus. Wird nur verwendet, wenn Endzeitpunkt nicht angegeben ist."
+                }
+            }
+        },
+        "switch_on_with_time": {
+            "name": "Einschalten mit Einschaltdauer",
+            "description": "Schaltet einen Schalter für eine bestimmte Dauer ein",
+            "fields": {
+                "on_time": {
+                    "name": "Einschaltdauer",
+                    "description": "Die Dauer in Sekunden, für die der Schalter eingeschaltet bleiben soll. Bereich: 0,1 - 16383 s"
+                }
+            }
+        },
+        "send_api_command": {
+            "name": "Sende API Befehl",
+            "description": "Sende einen rohen API-Befehl an die HCU. Mit Vorsicht verwenden, da dies direkten Zugriff auf die API ermöglicht und bei falscher Verwendung unbeabsichtigte Nebeneffekte verursachen kann. Siehe API-Dokumentation von EQ3 für Details",
+            "fields": {
+                "path": {
+                    "name": "Anfrage Pfad",
+                    "description": "Anfrage Pfad Beispiel: '/hmip/device/control/setOpticalSignal'"
+                },
+                "body": {
+                    "name": "Anfrage Body",
+                    "description": "Der Anfrage-Body als ein Objekt von Schlüssel-Wert-Paaren."
+                }
+            }
+        }
+    },
+    "entity": {
+        "button": {
+            "hcu_device_identify":{
+                "name": "Identifizieren"
+            }
+        },
+        "event": {
+            "hcu_button_event": {
+                "state_attributes": {
+                    "event_type": {
+                        "state": {
+                            "press": "Gedrückt", 
+                            "press_long": "Lange gedrückt", 
+                            "press_long_stop": "Nach langem Tastendruck los gelassen", 
+                            "press_long_start": "Langer Tastendruck gestartet", 
+                            "press_short": "Kurz gedrückt"
+                        }
+                    }
+                }
+            }
+        }, 
+        "light": {
+            "hcu_light": {
+                "state_attributes": {
+                    "effect": {
+                        "state": {
+                            "off": "Aus",
+                            "on": "Dauerhaft leuchten",
+                            "blinking_middle": "Blinken",
+                            "flash_middle": "Blitzen",
+                            "billow_middle": "Pulsieren"
+                        }
+                    }
+                }
+            }
+        },
+        "sensor": {
+            "hcu_tiltwindow": {
+                "state": {
+                    "open": "Geöffnet",
+                    "closed": "Geschlossen",
+                    "tilted": "Gekippt"
                 }
             }
         }

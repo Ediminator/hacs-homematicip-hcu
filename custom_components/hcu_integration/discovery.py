@@ -9,6 +9,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import entity_registry as er
 import asyncio
 from urllib.parse import quote
 
@@ -24,6 +25,7 @@ from . import (
     sensor,
     siren,
     switch,
+    update,
 )
 from .api import HcuApiClient
 from .const import (
@@ -33,10 +35,14 @@ from .const import (
     DUTY_CYCLE_BINARY_SENSOR_MAPPING,
     HMIP_CHANNEL_TYPE_TO_ENTITY,
     HMIP_FEATURE_TO_ENTITY,
+    HMIP_OPTIONAL_FEATURE_TO_ENTITY,
     MULTI_FUNCTION_CHANNEL_DEVICES,
     PLATFORMS,
     EVENT_CHANNEL_TYPES,
     MANUFACTURER_EQ3,
+    CONF_DISABLED_GROUPS,
+    ROOM_BASED_SWITCHING_GROUP_TYPES,
+    ALLOWED_EMPTY_GROUPS,
 )
 from .util import get_device_manufacturer
 
@@ -44,13 +50,6 @@ if TYPE_CHECKING:
     from . import HcuCoordinator
 
 _LOGGER = logging.getLogger(__name__)
-
-# Mapping for window state text sensor (complements binary sensor)
-_WINDOW_STATE_SENSOR_MAPPING = {
-    "name": "Window State",
-    "icon": "mdi:window-open-variant",
-}
-
 
 async def async_discover_entities(
     hass: HomeAssistant,
@@ -66,7 +65,8 @@ async def async_discover_entities(
     """
     entities: dict[Platform, list[Any]] = {platform: [] for platform in PLATFORMS}
     state = client.state
-
+    valid_entity_unique_ids: set[str] = set()
+    
     class_module_map = {
         "HcuLight": light,
         "HcuNotificationLight": light,
@@ -80,6 +80,8 @@ async def async_discover_entities(
         "HcuLock": lock,
         "HcuResetEnergyButton": button,
         "HcuDoorOpenerButton": button,
+        "HcuDoorImpulseButton": button,
+        "HcuDeviceIdentifyButton": button,
         "HcuGenericSensor": sensor,
         "HcuTemperatureSensor": sensor,
         "HcuHomeSensor": sensor,
@@ -116,6 +118,13 @@ async def async_discover_entities(
                     manufacturer,
                 )
                 continue
+
+        if device_data.get("updateState") is not None and device_data.get("availableFirmwareVersion") not in (None, "", "UNKNOWN"):
+            entity = update.HcuFirmwareUpdate(coordinator, client, device_data, "0")
+            entities[Platform.UPDATE].append(entity)
+            uid = getattr(entity, "unique_id", None)
+            if uid:
+                valid_entity_unique_ids.add(uid)
 
         for channel_index, channel_data in device_data.get("functionalChannels", {}).items():
             processed_features = set()
@@ -169,9 +178,12 @@ async def async_discover_entities(
                                 channel_type,
                             )
 
-                        entities[platform].append(
-                            entity_class(coordinator, client, device_data, channel_index, **init_kwargs)
-                        )
+                        entity = entity_class(coordinator, client, device_data, channel_index, **init_kwargs)
+                        entities[platform].append(entity)
+                        uid = getattr(entity, "unique_id", None)
+                        if uid:
+                            valid_entity_unique_ids.add(uid)
+                        
                     except (AttributeError, TypeError) as e:
                         _LOGGER.error(
                             "Failed to create entity for device %s, channel %s (type: %s, base: %s, class: %s): %s",
@@ -193,9 +205,11 @@ async def async_discover_entities(
                             channel_index,
                             channel_type,
                         )
-                        entities[Platform.EVENT].append(
-                            event.HcuButtonEvent(coordinator, client, device_data, channel_index)
-                        )
+                        entity = event.HcuButtonEvent(coordinator, client, device_data, channel_index)
+                        entities[Platform.EVENT].append(entity)
+                        uid = getattr(entity, "unique_id", None)
+                        if uid:
+                            valid_entity_unique_ids.add(uid)
                     except (AttributeError, TypeError) as e:
                         _LOGGER.error(
                             "Failed to create button event entity for device %s, channel %s (type: %s): %s",
@@ -208,11 +222,12 @@ async def async_discover_entities(
             if found_temp_feature:
                 try:
                     mapping = HMIP_FEATURE_TO_ENTITY[found_temp_feature]
-                    entities[Platform.SENSOR].append(
-                        sensor.HcuTemperatureSensor(
-                            coordinator, client, device_data, channel_index, found_temp_feature, mapping
-                        )
-                    )
+                    entity = sensor.HcuTemperatureSensor(coordinator, client, device_data, channel_index, found_temp_feature, mapping)
+                    entities[Platform.SENSOR].append(entity)
+                    uid = getattr(entity, "unique_id", None)
+                    if uid:
+                        valid_entity_unique_ids.add(uid)
+
                     processed_features.update(temp_features)
                 except (AttributeError, TypeError) as e:
                     _LOGGER.error("Failed to create temperature sensor for %s: %s", device_data.get("id"), e)
@@ -247,28 +262,130 @@ async def async_discover_entities(
                         entity_mapping = mapping.copy()
                         if is_deactivated_by_default:
                             entity_mapping["entity_registry_enabled_default"] = not is_unused_channel
-                        entities[platform].append(
-                            entity_class(coordinator, client, device_data, channel_index, feature, entity_mapping)
-                        )
+                        entity = entity_class(coordinator, client, device_data, channel_index, feature, entity_mapping)
+                        entities[platform].append(entity)
+                        uid = getattr(entity, "unique_id", None)
+                        if uid:
+                            valid_entity_unique_ids.add(uid)
+
 
                         # Add reset button for energy counters
                         if feature == "energyCounter":
-                            entities[Platform.BUTTON].append(
-                                button.HcuResetEnergyButton(coordinator, client, device_data, channel_index)
-                            )
+                            entity = button.HcuResetEnergyButton(coordinator, client, device_data, channel_index)
+                            entities[Platform.BUTTON].append(entity)
+                            uid = getattr(entity, "unique_id", None)
+                            if uid:
+                                valid_entity_unique_ids.add(uid)
 
-                        # Add text sensor for window state (complements binary sensor)
-                        if feature == "windowState":
-                            entities[Platform.SENSOR].append(
-                                sensor.HcuWindowStateSensor(
-                                    coordinator, client, device_data, channel_index, feature, _WINDOW_STATE_SENSOR_MAPPING
-                                )
-                            )
                     except (AttributeError, TypeError) as e:
                         _LOGGER.error(
                             "Failed to create entity for device %s, channel %s, feature %s (%s): %s",
                             device_data.get("id"), channel_index, feature, class_name, e
                         )
+
+            # Optional features via supportedOptionalFeatures (channel-level dict: feature -> bool)
+            supported_map = channel_data.get("supportedOptionalFeatures") or {}
+            
+            for feature, mapping in HMIP_OPTIONAL_FEATURE_TO_ENTITY.items():
+                # Directly check whether the optional feature is supported (must be True)
+                if not supported_map.get(feature, False):
+                    continue
+            
+                _LOGGER.debug(
+                    "Optional feature supported: device=%s channel=%s feature=%s",
+                    device_data.get("id"),
+                    channel_index,
+                    feature,
+                )
+            
+                requires_data_key = mapping.get("requires_data_key", True)
+                data_key = mapping.get("data_key", feature)
+            
+                # Avoid creating duplicates if the value key is already handled by HMIP_FEATURE_TO_ENTITY
+                if requires_data_key and data_key in HMIP_FEATURE_TO_ENTITY:
+                    continue
+            
+                # For value-based optional features, only create an entity if the data key exists and is not None
+                if requires_data_key:
+                    if data_key not in channel_data:
+                        _LOGGER.debug(
+                            "Optional feature supported but not created (missing data key): device=%s channel=%s feature=%s data_key=%s",
+                            device_data.get("id"),
+                            channel_index,
+                            feature,
+                            data_key,
+                        )
+                        continue
+            
+                    if channel_data[data_key] is None:
+                        _LOGGER.debug(
+                            "Optional feature supported but not created (value is null): device=%s channel=%s feature=%s data_key=%s",
+                            device_data.get("id"),
+                            channel_index,
+                            feature,
+                            data_key,
+                        )
+                        continue
+            
+                class_name = mapping["class"]
+                module = class_module_map.get(class_name)
+                if not module:
+                    _LOGGER.debug(
+                        "Optional feature supported but not created (no module mapping): device=%s channel=%s feature=%s class=%s",
+                        device_data.get("id"),
+                        channel_index,
+                        feature,
+                        class_name,
+                    )
+                    continue
+            
+                try:
+                    entity_class = getattr(module, class_name)
+                    platform = getattr(entity_class, "PLATFORM")
+            
+                    entity_mapping = mapping.copy()
+                    if is_deactivated_by_default:
+                        entity_mapping["entity_registry_enabled_default"] = not is_unused_channel
+            
+                    feature_arg = data_key if requires_data_key else feature
+            
+                    # Select the constructor explicitly based on the mapping flag
+                    if mapping.get("simple_init", False):
+                        # Use a simpler __init__ signature for action-style entities (e.g., identify button)
+                        entity = entity_class(coordinator, client, device_data, channel_index)
+                    else:
+                        # Use the full __init__ signature for feature/value-based entities
+                        entity = entity_class(
+                            coordinator, client, device_data, channel_index, feature_arg, entity_mapping
+                        )
+            
+                    entities[platform].append(entity)
+                    uid = getattr(entity, "unique_id", None)
+                    if uid:
+                        valid_entity_unique_ids.add(uid)
+
+                    _LOGGER.debug(
+                        "Optional feature entity created successfully: device=%s channel=%s feature=%s class=%s platform=%s arg=%s",
+                        device_data.get("id"),
+                        channel_index,
+                        feature,
+                        class_name,
+                        platform.value,
+                        feature_arg,
+                    )
+            
+                except (AttributeError, TypeError) as e:
+                    _LOGGER.error(
+                        "Optional feature entity not created: device=%s channel=%s feature=%s class=%s error=%s",
+                        device_data.get("id"),
+                        channel_index,
+                        feature,
+                        class_name,
+                        e,
+                        exc_info=True,
+                    )
+                    continue
+
 
             # Special handling for dutyCycle binary sensor (device-level warning flag)
             # Note: dutyCycle exists in both home object (percentage) and device channels (boolean)
@@ -278,11 +395,12 @@ async def async_discover_entities(
                     entity_mapping = DUTY_CYCLE_BINARY_SENSOR_MAPPING.copy()
                     if is_deactivated_by_default:
                         entity_mapping["entity_registry_enabled_default"] = not is_unused_channel
-                    entities[Platform.BINARY_SENSOR].append(
-                        binary_sensor.HcuBinarySensor(
-                            coordinator, client, device_data, channel_index, "dutyCycle", entity_mapping
-                        )
-                    )
+                    entity = binary_sensor.HcuBinarySensor(coordinator, client, device_data, channel_index, "dutyCycle", entity_mapping)
+                    entities[Platform.BINARY_SENSOR].append(entity)
+                    uid = getattr(entity, "unique_id", None)
+                    if uid:
+                        valid_entity_unique_ids.add(uid)
+
                 except (AttributeError, TypeError) as e:
                     _LOGGER.error("Failed to create dutyCycle binary sensor for device %s: %s", device_data.get("id"), e)
 
@@ -295,6 +413,12 @@ async def async_discover_entities(
         "LIGHT": (Platform.LIGHT, light.HcuLightGroup, {}),
         "EXTENDED_LINKED_SWITCHING": (Platform.SWITCH, switch.HcuSwitchGroup, {}),
         "EXTENDED_LINKED_SHUTTER": (Platform.COVER, cover.HcuCoverGroup, {}),
+        "EXTENDED_LINKED_NOTIFICATION": (Platform.LIGHT, light.HcuLightGroup, {}),
+        "EXTENDED_LINKED_WATERING": (Platform.SWITCH, switch.HcuWateringGroup, {}),
+        "EXTENDED_LINKED_GARAGE_DOOR": (Platform.SWITCH, switch.HcuSwitchGroup, {}),
+        "HEATING_COOLING_DEMAND_BOILER": (Platform.BINARY_SENSOR, binary_sensor.HcuHeatDemandBinarySensorGroup, {}),
+        "HEATING_COOLING_DEMAND_PUMP": (Platform.BINARY_SENSOR, binary_sensor.HcuHeatDemandBinarySensorGroup, {}),
+        "HOT_WATER": (Platform.SWITCH, switch.HcuSwitchGroup, {}),
     }
 
     # Track group discovery statistics for diagnostics
@@ -309,7 +433,8 @@ async def async_discover_entities(
 
     # Fetch device registry once before iterating groups
     dev_reg = dr.async_get(hass)
-
+    
+    disable_group_types = set(config_entry.options.get(CONF_DISABLED_GROUPS) or [])
     for group_data in state.get("groups", {}).values():
         group_type = group_data.get("type")
         group_id = group_data.get("id")
@@ -321,6 +446,16 @@ async def async_discover_entities(
                 "Skipping group without valid ID (type: %s, label: %s)",
                 group_type,
                 group_label or "unknown"
+            )
+            continue
+            
+        # Skip disabled group types
+        if group_type in disable_group_types:
+            _LOGGER.debug(
+                "Skipping group '%s' (id: %s) because group type '%s' is disabled",
+                group_label,
+                group_id,
+                group_type,
             )
             continue
 
@@ -337,7 +472,7 @@ async def async_discover_entities(
             )
             continue
 
-        if not channels:
+        if not channels and group_type not in ALLOWED_EMPTY_GROUPS:
             _LOGGER.debug(
                 "Skipping group without channels: %s (id: %s)",
                 group_label,
@@ -346,24 +481,31 @@ async def async_discover_entities(
             continue
 
         if mapping := group_type_mapping.get(group_type):
-            valid_device_ids.add(group_id)
 
-            # Previously we skipped groups with metaGroupId assuming they were only auto-created room groups.
-            # However, user-created "Direct Connections" also have metaGroupId (issue #146).
-            # We now allow them to be discovered. If users find room groups redundant,
-            # we may need a more specific filter or an option in the future.
-            if group_type in ("SWITCHING", "LIGHT", "EXTENDED_LINKED_SWITCHING") and "metaGroupId" in group_data:
+            # Previously we explicitly allowed groups with metaGroupId (issue #146).
+            # However, room-based switching groups clutter the UI as many users do not
+            # use them, and prefer the Homematic App to just group physical switches.
+            # We skip them here. If users want them, we can add a config option later.
+            if group_type in ROOM_BASED_SWITCHING_GROUP_TYPES and "metaGroupId" in group_data:
                 _LOGGER.debug(
-                    "Discovering %s group '%s' (id: %s) despite having metaGroupId (likely Direct Connection or Room Group)",
+                    "Skipping %s group '%s' (id: %s) because it has a metaGroupId (Room Group)",
                     group_type,
                     group_label,
                     group_id
                 )
+                continue
+
+            # Only mark as valid AFTER passing all skip checks above,
+            # so the device registry cleanup can remove orphaned groups.
+            valid_device_ids.add(group_id)
 
             platform, entity_class, extra_kwargs = mapping
-            entities[platform].append(
-                entity_class(coordinator, client, group_data, **extra_kwargs)
-            )
+            entity = entity_class(coordinator, client, group_data, **extra_kwargs)
+            entities[platform].append(entity)
+            uid = getattr(entity, "unique_id", None)
+            if uid:
+                valid_entity_unique_ids.add(uid)
+
             groups_discovered += 1
             _LOGGER.debug(
                 "Created %s group entity '%s' (id: %s, type: %s)",
@@ -386,17 +528,26 @@ async def async_discover_entities(
 
     # Create home-level entities (alarm panel, vacation mode sensor, home sensors)
     if "home" in state:
-        entities[Platform.ALARM_CONTROL_PANEL].append(
-            alarm_control_panel.HcuAlarmControlPanel(coordinator, client)
-        )
-        entities[Platform.BINARY_SENSOR].append(
-            binary_sensor.HcuVacationModeBinarySensor(coordinator, client)
-        )
+        entity = alarm_control_panel.HcuAlarmControlPanel(coordinator, client)
+        entities[Platform.ALARM_CONTROL_PANEL].append(entity)
+        uid = getattr(entity, "unique_id", None)
+        if uid:
+            valid_entity_unique_ids.add(uid)
+
+        entity = binary_sensor.HcuVacationModeBinarySensor(coordinator, client)
+        entities[Platform.BINARY_SENSOR].append(entity)
+        uid = getattr(entity, "unique_id", None)
+        if uid:
+            valid_entity_unique_ids.add(uid)
+
         for feature, mapping in HMIP_FEATURE_TO_ENTITY.items():
             if feature in state["home"] and mapping.get("class") == "HcuHomeSensor":
-                entities[Platform.SENSOR].append(
-                    sensor.HcuHomeSensor(coordinator, client, feature, mapping)
-                )
+                entity = sensor.HcuHomeSensor(coordinator, client, feature, mapping)
+                entities[Platform.SENSOR].append(entity)
+                uid = getattr(entity, "unique_id", None)
+                if uid:
+                    valid_entity_unique_ids.add(uid)
+
 
     _LOGGER.info("Discovered entities: %s", {p.value: len(e) for p, e in entities.items() if e})
 
@@ -449,6 +600,40 @@ async def async_discover_entities(
                     device.id,
                     hcu_identifier,
                     exc_info=True
+                )
+    
+    # -------------------------------------------------------------------------
+    # Entity Registry Cleanup
+    # -------------------------------------------------------------------------
+    # Remove entity registry entries that no longer exist in the current HCU state.
+    
+    ent_reg = er.async_get(hass)
+    entry_entities = er.async_entries_for_config_entry(ent_reg, config_entry.entry_id)
+    
+    for ent in entry_entities:
+        # Only touch entities belonging to this integration
+        if ent.platform != DOMAIN:
+            continue
+        
+        # Safety: very old entries could theoretically lack unique_id
+        if not ent.unique_id or ent.unique_id not in valid_entity_unique_ids:
+            _LOGGER.info(
+                "Removing orphaned entity from registry: %s (entity_id: %s, unique_id: %s)",
+                ent.name,
+                ent.entity_id,
+                ent.unique_id,
+            )
+            try:
+                ent_reg.async_remove(ent.entity_id)
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                _LOGGER.warning(
+                    "Failed to remove orphaned entity '%s' (entity_id: %s, unique_id: %s)",
+                    ent.name,
+                    ent.entity_id,
+                    ent.unique_id,
+                    exc_info=True,
                 )
 
     return entities

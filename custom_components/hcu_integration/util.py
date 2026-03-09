@@ -53,7 +53,7 @@ def get_device_manufacturer(device_data: dict) -> str:
         return oem
 
     # 3. Check loose model name match for Hue
-    model_type = device_data.get("modelType", "")
+    model_type = device_data.get("modelType") or ""
     if HUE_MODEL_TOKEN in model_type:
         return MANUFACTURER_HUE
 
@@ -70,3 +70,7 @@ def get_device_manufacturer(device_data: dict) -> str:
     # If it has no 'oem' field and didn't match above, we assume it's a standard device
     # (or legacy one) and return "eQ-3" to match previous behavior
     return MANUFACTURER_EQ3
+
+def get_group_type(group_data: dict) -> str:
+    """Determine the type of a group."""
+    return group_data.get("type")

@@ -21,6 +21,7 @@ from homeassistant.const import (
     UnitOfVolume,
     UnitOfElectricPotential,
     UnitOfFrequency,
+    EntityCategory,
 )
 
 # Domain of the integration
@@ -39,6 +40,7 @@ PLATFORMS: list[Platform] = [
     Platform.SENSOR,
     Platform.SIREN,
     Platform.SWITCH,
+    Platform.UPDATE,
 ]
 
 # --- Configuration Constants ---
@@ -49,7 +51,16 @@ CONF_ENTITY_PREFIX = "entity_prefix"
 CONF_PLATFORM_OVERRIDES = "platform_overrides"  # Dict mapping entity unique_id to platform override
 DEFAULT_HCU_AUTH_PORT = 6969
 DEFAULT_HCU_WEBSOCKET_PORT = 9001
+CONF_ADVANCED_DEBUGGING = "advanced_debugging"
+CONF_ADVANCED_ATTRIBUTES = "advanced_attributes"
+CONF_DISABLE_UNCONFIGURED_CHANNELS = "disable_unconfigured_channels"
 CONF_COMFORT_TEMPERATURE = "comfort_temperature"
+CONF_SELECTED_OEMS = "selected_oems"
+CONF_DISABLED_OEMS = "disabled_oems"
+CONF_DISABLED_GROUPS = "disabled_groups"
+DEFAULT_ADVANCED_DEBUGGING = False
+DEFAULT_ADVANCED_ATTRIBUTES = False
+DEFAULT_DISABLE_UNCONFIGURED_CHANNELS = False
 DEFAULT_COMFORT_TEMPERATURE = 21.0
 DEFAULT_MIN_TEMP = 5.0
 DEFAULT_MAX_TEMP = 30.0
@@ -63,7 +74,7 @@ MANUFACTURER_3RD_PARTY = "3rd Party"
 PLUGIN_ID_HUE = "de.eq3.plugin.hue"
 DEVICE_TYPE_PLUGIN_EXTERNAL = "PLUGIN_EXTERNAL"
 HUE_MODEL_TOKEN = "Hue"
-HOMEMATIC_MODEL_PREFIXES = ("HmIP-", "HM-", "ALPHA-")
+HOMEMATIC_MODEL_PREFIXES = ("HmIP-", "HM-", "ALPHA-", "ELV")
 
 # --- Documentation URLs ---
 DOCS_URL_LOCK_PIN_CONFIG = "https://github.com/Ediminator/hacs-homematicip-hcu#step-4-configure-door-lock-pin-optional"
@@ -100,6 +111,7 @@ SERVICE_ACTIVATE_VACATION_MODE = "activate_vacation_mode"
 SERVICE_ACTIVATE_ECO_MODE = "activate_eco_mode"
 SERVICE_DEACTIVATE_ABSENCE_MODE = "deactivate_absence_mode"
 SERVICE_SWITCH_ON_WITH_TIME = "switch_on_with_time"
+SERVICE_SEND_API_COMMAND = "send_api_command"
 
 # --- Preset Constants ---
 PRESET_ECO = "Eco"
@@ -113,6 +125,8 @@ ATTR_RULE_ID = "rule_id"
 ATTR_ENABLED = "enabled"
 ATTR_END_TIME = "end_time"
 ATTR_ON_TIME = "on_time"
+ATTR_PATH = "path"
+ATTR_BODY = "body"
 
 # --- API Path Constants ---
 API_PATHS = {
@@ -125,6 +139,8 @@ API_PATHS = {
     "GET_SYSTEM_STATE": "/hmip/home/getSystemState",
     "RESET_ENERGY_COUNTER": "/hmip/device/control/resetEnergyCounter",
     "SEND_DOOR_COMMAND": "/hmip/device/control/sendDoorCommand",
+    "SEND_DOOR_IMPULSE": "/hmip/device/control/startImpulse",
+    "DEVICE_IDENTIFY": "/hmip/device/control/setIdentify",
     "SET_COLOR_TEMP": "/hmip/device/control/setColorTemperatureDimLevel",
     "SET_COLOR_TEMP_WITH_TIME": "/hmip/device/control/setColorTemperatureDimLevelWithTime",
     "SET_DIM_LEVEL": "/hmip/device/control/setDimLevel",
@@ -135,10 +151,12 @@ API_PATHS = {
     "SET_GROUP_CONTROL_MODE": "/hmip/group/heating/setControlMode",
     "SET_GROUP_SET_POINT_TEMP": "/hmip/group/heating/setSetPointTemperature",
     "SET_GROUP_SHUTTER_LEVEL": "/hmip/group/switching/setPrimaryShadingLevel",
-    "SET_GROUP_SLATS_LEVEL": "/hmip/group/switching/setSecondaryShadingLevel",
+    "SET_GROUP_SECONDARY_SHADING_LEVEL": "/hmip/group/switching/setSecondaryShadingLevel",
     "SET_HUE": "/hmip/device/control/setHueSaturationDimLevel",
     "SET_HUE_WITH_TIME": "/hmip/device/control/setHueSaturationDimLevelWithTime",
     "SET_LOCK_STATE": "/hmip/device/control/setLockState",
+    "SET_OPTICAL_SIGNAL_BEHAVIOUR": "/hmip/device/control/setOpticalSignal",
+    "SET_OPTICAL_SIGNAL_BEHAVIOUR_WITH_TIME": "/hmip/device/control/setOpticalSignalWithTime",
     "SET_PRIMARY_SHADING_LEVEL": "/hmip/device/control/setPrimaryShadingLevel",  # For SHADING_CHANNEL devices (e.g., HmIP-HDM1)
     "SET_SHUTTER_LEVEL": "/hmip/device/control/setShutterLevel",
     "SET_SIMPLE_RGB_COLOR_STATE": "/hmip/device/control/setSimpleRGBColorDimLevel",
@@ -149,6 +167,8 @@ API_PATHS = {
     "SET_SWITCH_STATE_WITH_TIME": "/hmip/device/control/setSwitchStateWithTime",
     "SET_SWITCHING_GROUP_STATE": "/hmip/group/switching/setState",
     "SET_WATERING_SWITCH_STATE": "/hmip/device/control/setWateringSwitchState",
+    "SET_GROUP_WATERING_SWITCH_STATE": "/hmip/group/linked/control/setWateringSwitchState",
+    "SET_GROUP_WATERING_SWITCH_STATE_WITH_TIME": "/hmip/group/linked/control/setWateringSwitchStateWithTime",
     "SET_ZONES_ACTIVATION": "/hmip/home/security/setExtendedZonesActivation",
     "STOP_COVER": "/hmip/device/control/stop",
     "STOP_GROUP_COVER": "/hmip/group/switching/stop",
@@ -212,6 +232,16 @@ GENERIC_BUTTON_DEVICES = {
     },
 }
 
+
+HMIP_OPTIONAL_FEATURE_TO_ENTITY = {
+    "IFeatureDeviceIdentify": {
+        "class": "HcuDeviceIdentifyButton",
+        "requires_data_key": False,
+        "simple_init": True,
+    }
+}
+
+
 HMIP_DEVICE_TYPE_TO_DEVICE_CLASS = {
     "BLIND_ACTUATOR": CoverDeviceClass.BLIND,
     "BLIND_MODULE": CoverDeviceClass.BLIND,  # HmIP-HDM1 HunterDouglas
@@ -263,6 +293,11 @@ HMIP_DEVICE_TYPE_TO_DEVICE_CLASS = {
     "SHUTTER_CONTACT_INVISIBLE": None,
 }
 
+UOM_HPA = "hPa"
+UOM_UG_M3 = "µg/m³"
+UOM_1_CM3 = "1/cm³"
+UOM_UM = "µm"
+
 HMIP_FEATURE_TO_ENTITY = {
     # Sensor Features
     "actualTemperature": {
@@ -271,6 +306,129 @@ HMIP_FEATURE_TO_ENTITY = {
         "unit": UnitOfTemperature.CELSIUS,
         "device_class": SensorDeviceClass.TEMPERATURE,
         "state_class": SensorStateClass.MEASUREMENT,
+    },
+    "airPressure": {
+        "class": "HcuGenericSensor",
+        "name": "Air Pressure",
+        "unit": UOM_HPA,
+        "device_class": SensorDeviceClass.ATMOSPHERIC_PRESSURE,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "icon": "mdi:gauge",
+    },
+    "particulateMassConcentrationOne": {
+        "class": "HcuGenericSensor",
+        "name": "PM1 Concentration",
+        "unit": UOM_UG_M3,
+        "device_class": SensorDeviceClass.PM1,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "icon": "mdi:blur",
+    },
+    "particulateMassConcentrationOneAverage": {
+        "class": "HcuGenericSensor",
+        "name": "PM1 Concentration (Average)",
+        "unit": UOM_UG_M3,
+        "device_class": SensorDeviceClass.PM1,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "entity_registry_enabled_default": False,
+        "icon": "mdi:blur",
+    },
+    "particulateNumberConcentrationOne": {
+        "class": "HcuGenericSensor",
+        "name": "PM1 Number Concentration",
+        "unit": UOM_1_CM3,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "entity_registry_enabled_default": False,
+        "icon": "mdi:counter",
+    },
+    "particulateMassConcentrationTwoPointFive": {
+        "class": "HcuGenericSensor",
+        "name": "PM2.5 Concentration",
+        "unit": UOM_UG_M3,
+        "device_class": SensorDeviceClass.PM25,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "icon": "mdi:blur",
+    },
+    "particulateMassConcentrationTwoPointFiveAverage": {
+        "class": "HcuGenericSensor",
+        "name": "PM2.5 Concentration (Average)",
+        "unit": UOM_UG_M3,
+        "device_class": SensorDeviceClass.PM25,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "entity_registry_enabled_default": False,
+        "icon": "mdi:blur",
+    },
+    "particulateNumberConcentrationTwoPointFive": {
+        "class": "HcuGenericSensor",
+        "name": "PM2.5 Number Concentration",
+        "unit": UOM_1_CM3,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "entity_registry_enabled_default": False,
+        "icon": "mdi:counter",
+    },
+    "particulateNumberConcentrationTwoPointFiveAverage": {
+        "class": "HcuGenericSensor",
+        "name": "PM2.5 Number Concentration (Average)",
+        "unit": UOM_1_CM3,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "entity_registry_enabled_default": False,
+        "icon": "mdi:counter",
+    },
+    "airQualityIndexTwoPointFive": {
+        "class": "HcuGenericSensor",
+        "name": "AQI (PM2.5)",
+        "device_class": SensorDeviceClass.AQI,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "entity_registry_enabled_default": False,
+        "icon": "mdi:air-filter",
+    },
+    "particulateMassConcentrationTen": {
+        "class": "HcuGenericSensor",
+        "name": "PM10 Concentration",
+        "unit": UOM_UG_M3,
+        "device_class": SensorDeviceClass.PM10,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "icon": "mdi:blur",
+    },
+    "particulateMassConcentrationTenAverage": {
+        "class": "HcuGenericSensor",
+        "name": "PM10 Concentration (Average)",
+        "unit": UOM_UG_M3,
+        "device_class": SensorDeviceClass.PM10,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "entity_registry_enabled_default": False,
+        "icon": "mdi:blur",
+    },
+    "particulateNumberConcentrationTen": {
+        "class": "HcuGenericSensor",
+        "name": "PM10 Number Concentration",
+        "unit": UOM_1_CM3,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "entity_registry_enabled_default": False,
+        "icon": "mdi:counter",
+    },
+    "particulateNumberConcentrationTenAverage": {
+        "class": "HcuGenericSensor",
+        "name": "PM10 Number Concentration (Average)",
+        "unit": UOM_1_CM3,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "entity_registry_enabled_default": False,
+        "icon": "mdi:counter",
+    },
+    "airQualityIndexTen": {
+        "class": "HcuGenericSensor",
+        "name": "AQI (PM10)",
+        "device_class": SensorDeviceClass.AQI,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "entity_registry_enabled_default": False,
+        "icon": "mdi:air-filter",
+    },
+    "particulateTypicalSize": {
+        "class": "HcuGenericSensor",
+        "name": "Typical Particle Size",
+        "unit": UOM_UM,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "entity_registry_enabled_default": False,
+        "icon": "mdi:ruler",
     },
     "valveActualTemperature": {
         "class": "HcuTemperatureSensor",
@@ -478,6 +636,7 @@ HMIP_FEATURE_TO_ENTITY = {
         "unit": PERCENTAGE,
         "icon": "mdi:radio-tower",
         "state_class": SensorStateClass.MEASUREMENT,
+        "entity_category": EntityCategory.DIAGNOSTIC,
         "entity_registry_enabled_default": False,
     },
     "dutyCycleLevel": {
@@ -486,7 +645,50 @@ HMIP_FEATURE_TO_ENTITY = {
         "unit": PERCENTAGE,
         "icon": "mdi:radio-tower",
         "state_class": SensorStateClass.MEASUREMENT,
+        "entity_category": EntityCategory.DIAGNOSTIC,
         "entity_registry_enabled_default": False,
+    },
+    "dirtLevel": {
+        "class": "HcuGenericSensor",
+        "name": "Dirt Level",
+        "unit": PERCENTAGE,
+        "icon": "mdi:dust",
+        "state_class": SensorStateClass.MEASUREMENT,
+        "entity_category": EntityCategory.DIAGNOSTIC,
+    },
+    "operationDays": {
+        "class": "HcuGenericSensor",
+        "name": "Operation Days",
+        "unit": "d",
+        "device_class": SensorDeviceClass.DURATION,
+        "state_class": SensorStateClass.TOTAL_INCREASING,
+        "entity_category": EntityCategory.DIAGNOSTIC,
+    },
+    "lastSmokeTestTimestamp": {
+        "class": "HcuTimestampSensor",
+        "name": "Last Smoke Test",
+        "device_class": SensorDeviceClass.TIMESTAMP,
+        "entity_category": EntityCategory.DIAGNOSTIC,
+    },
+    "lastCommunicationTestTimestamp": {
+        "class": "HcuTimestampSensor",
+        "name": "Last Communication Test",
+        "device_class": SensorDeviceClass.TIMESTAMP,
+        "entity_category": EntityCategory.DIAGNOSTIC,
+    },
+    "smokeTestCounter": {
+        "class": "HcuGenericSensor",
+        "name": "Smoke Test Counter",
+        "icon": "mdi:counter",
+        "state_class": SensorStateClass.TOTAL_INCREASING,
+        "entity_category": EntityCategory.DIAGNOSTIC,
+    },
+    "smokeAlarmCounter": {
+        "class": "HcuGenericSensor",
+        "name": "Smoke Alarm Counter",
+        "icon": "mdi:counter",
+        "state_class": SensorStateClass.TOTAL_INCREASING,
+        "entity_category": EntityCategory.DIAGNOSTIC,
     },
     "rssiDeviceValue": {
         "class": "HcuGenericSensor",
@@ -494,6 +696,7 @@ HMIP_FEATURE_TO_ENTITY = {
         "unit": "dBm",
         "device_class": SensorDeviceClass.SIGNAL_STRENGTH,
         "state_class": SensorStateClass.MEASUREMENT,
+        "entity_category": EntityCategory.DIAGNOSTIC,
         "entity_registry_enabled_default": False,
     },
     "rssiPeerValue": {
@@ -502,6 +705,7 @@ HMIP_FEATURE_TO_ENTITY = {
         "unit": "dBm",
         "device_class": SensorDeviceClass.SIGNAL_STRENGTH,
         "state_class": SensorStateClass.MEASUREMENT,
+        "entity_category": EntityCategory.DIAGNOSTIC,
         "entity_registry_enabled_default": False,
     },
     "accelerationSensorValueX": {
@@ -609,12 +813,13 @@ HMIP_FEATURE_TO_ENTITY = {
         "class": "HcuBinarySensor",
         "name": "Low Battery",
         "device_class": BinarySensorDeviceClass.BATTERY,
+        "entity_category": EntityCategory.DIAGNOSTIC,
     },
     "unreach": {
         "class": "HcuUnreachBinarySensor",
         "name": "Connectivity",
         "device_class": BinarySensorDeviceClass.CONNECTIVITY,
-        "entity_category": "diagnostic",
+        "entity_category": EntityCategory.DIAGNOSTIC,
     },
     "windowState": {
         "class": "HcuWindowBinarySensor",
@@ -635,6 +840,36 @@ HMIP_FEATURE_TO_ENTITY = {
         "class": "HcuBinarySensor",
         "name": "Illumination Detected",
         "device_class": BinarySensorDeviceClass.LIGHT,
+    },
+    "chamberDegraded": {
+        "class": "HcuBinarySensor",
+        "name": "Chamber Degraded",
+        "device_class": BinarySensorDeviceClass.PROBLEM,
+        "entity_category": EntityCategory.DIAGNOSTIC,
+    },
+    "deviceOverheated": {
+        "class": "HcuBinarySensor",
+        "name": "Device Overheated",
+        "device_class": BinarySensorDeviceClass.HEAT,
+        "entity_category": EntityCategory.DIAGNOSTIC,
+    },
+    "temperatureOutOfRange": {
+        "class": "HcuBinarySensor",
+        "name": "Temperature Out Of Range",
+        "device_class": BinarySensorDeviceClass.PROBLEM,
+        "entity_category": EntityCategory.DIAGNOSTIC,
+    },
+    "coProFaulty": {
+        "class": "HcuBinarySensor",
+        "name": "Co-Processor Faulty",
+        "device_class": BinarySensorDeviceClass.PROBLEM,
+        "entity_category": EntityCategory.DIAGNOSTIC,
+    },
+    "coProUpdateFailure": {
+        "class": "HcuBinarySensor",
+        "name": "Co-Processor Update Failure",
+        "device_class": BinarySensorDeviceClass.PROBLEM,
+        "entity_category": EntityCategory.DIAGNOSTIC,
     },
     "mainsFailureActive": {
         "class": "HcuBinarySensor",
@@ -692,7 +927,7 @@ DUTY_CYCLE_BINARY_SENSOR_MAPPING = {
     "class": "HcuBinarySensor",
     "name": "Duty Cycle Limit",
     "device_class": BinarySensorDeviceClass.PROBLEM,
-    "entity_category": "diagnostic",
+    "entity_category": EntityCategory.DIAGNOSTIC,
     "entity_registry_enabled_default": False,
 }
 
@@ -735,9 +970,11 @@ DEVICE_CHANNEL_EVENT_TYPES = frozenset({
 
 HMIP_CHANNEL_TYPE_TO_ENTITY = {
     "DIMMER_CHANNEL": {"class": "HcuLight"},
+    "MULTI_MODE_INPUT_DIMMER_CHANNEL": {"class": "HcuLight"}, 
     "RGBW_AUTOMATION_CHANNEL": {"class": "HcuLight"},
     "UNIVERSAL_LIGHT_CHANNEL": {"class": "HcuLight"},
     "NOTIFICATION_LIGHT_CHANNEL": {"class": "HcuLight"},
+    "OPTICAL_SIGNAL_CHANNEL": {"class": "HcuLight"},
     "NOTIFICATION_MP3_SOUND_CHANNEL": {"class": "HcuNotificationLight"},
     "BACKLIGHT_CHANNEL": {"class": "HcuLight"},
     "ALARM_SIREN_CHANNEL": {"class": "HcuSiren"},
@@ -756,7 +993,9 @@ HMIP_CHANNEL_TYPE_TO_ENTITY = {
     "GARAGE_DOOR_CHANNEL": {"class": "HcuGarageDoorCover"},
     "DOOR_CHANNEL": {"class": "HcuGarageDoorCover"},
     "DOOR_SWITCH_CHANNEL": {"class": "HcuDoorOpenerButton"},
+    "IMPULSE_OUTPUT_CHANNEL": {"class": "HcuDoorImpulseButton"},
     "DOOR_LOCK_CHANNEL": {"class": "HcuLock"},
+    "ROTARY_HANDLE_CHANNEL": {"class": "HcuWindowStateSensor"},
     # Event channel types - create HcuButtonEvent entities for button devices
     "KEY_CHANNEL": {"class": "HcuButtonEvent"},  # For HmIP-WRC2, HmIP-BRC2, HmIP-WRC6-A, HmIP-WKP
     "WALL_MOUNTED_TRANSMITTER_CHANNEL": {"class": "HcuButtonEvent"},
@@ -819,11 +1058,11 @@ HMIP_RGB_COLOR_MAP = {
 # Optical signal behavior values for HmIP-BSL and similar notification lights
 # These control visual effects like blinking, flashing, etc.
 HMIP_OPTICAL_SIGNAL_BEHAVIOURS = (
-    "OFF",
-    "ON",
-    "BLINKING_MIDDLE",
-    "FLASH_MIDDLE",
-    "BILLOW_MIDDLE",
+    "off",
+    "on",
+    "blinking_middle",
+    "flash_middle",
+    "billow_middle",
 )
 
 # Siren tone options for HmIP-ASIR2 and compatible devices
@@ -867,3 +1106,13 @@ ABSENCE_TYPE_PERIOD = "PERIOD"
 ABSENCE_TYPE_PERMANENT = "PERMANENT"
 ABSENCE_TYPE_VACATION = "VACATION"
 
+# Window States (used in group windowState evaluation)
+WINDOW_STATE_OPEN = "OPEN"
+WINDOW_STATE_TILTED = "TILTED"
+WINDOW_STATE_CLOSED = "CLOSED"
+
+# Group types that are auto-created for rooms and should be filtered
+ROOM_BASED_SWITCHING_GROUP_TYPES = ("SWITCHING", "LIGHT", "EXTENDED_LINKED_SWITCHING")
+
+# Groups that are allowed to be discovered even without channels
+ALLOWED_EMPTY_GROUPS = ("SECURITY_ZONE", "META")

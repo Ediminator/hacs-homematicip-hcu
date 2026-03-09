@@ -14,8 +14,9 @@ This integration connects directly to your HCU's local API, providing real-time 
 - [Requirements](#-requirements)
 - [Installation](#-installation)
 - [Configuration](#-configuration-options)
-- [Working with Buttons & Remote Controls](#-working-with-buttons--remote-controls) ⭐ **NEW: Simplified Guide**
-- [Available Services](#-available-services)
+- [Group Types](#-group-types)
+- [Working with Buttons & Remote Controls](#-working-with-buttons--remote-controls)
+- [Available Actions](#-available-actions)
 - [Diagnostics & Troubleshooting](#-diagnostics--troubleshooting)
 - [FAQ](#-faq)
 - [Support](#-support)
@@ -32,6 +33,39 @@ This integration connects directly to your HCU's local API, providing real-time 
 - **🛡️ Security Integration**: Alarm control panel for your security system
 - **🔧 Extensive Services**: Play sounds, control rules, manage heating schedules
 - **📊 Diagnostics**: Built-in diagnostics for troubleshooting and device support
+- **🏗️ Group Support**: Automatic discovery of heating, switching, cover, and advanced system groups
+
+---
+
+## 🏗️ Group Types
+
+The integration automatically discovers and exposes Homematic IP "groups" — virtual devices that the HCU uses to orchestrate physical hardware.
+
+### Standard Groups (always visible)
+
+| Group Type | Platform | Description |
+|---|---|---|
+| `HEATING` | `climate` | Room thermostat control with profiles, eco/party mode |
+| `SWITCHING` | `switch` | User-created Direct Connection switch groups |
+| `LIGHT` | `light` | User-created Direct Connection light groups |
+| `SHUTTER` / `EXTENDED_LINKED_SHUTTER` | `cover` | Roller shutter and blind groups |
+| `EXTENDED_LINKED_SWITCHING` | `switch` | Extended linked switching groups |
+
+### Advanced Groups (conditionally visible)
+
+These groups only appear when the HCU has assigned physical devices to them. If they show up, it means they are active in your system.
+
+| Group Type | Platform | What it does |
+|---|---|---|
+| `HEATING_COOLING_DEMAND_BOILER` | `binary_sensor` | Aggregates all thermostat valve positions to indicate if the boiler needs to fire |
+| `HEATING_COOLING_DEMAND_PUMP` | `binary_sensor` | Indicates if the heating circulation pump should be running |
+| `HOT_WATER` | `switch` | Controls hot water profiles (requires a physical hot water actuator) |
+
+> **💡 Tip:** Even without a Homematic IP boiler actuator (HmIP-WHS2), you can use the Heat Demand binary sensor to control a third-party relay (Shelly, Zigbee plug) connected to your boiler via Home Assistant automations.
+
+### Room Groups (hidden)
+
+The HCU auto-creates hidden room groups containing all switches and lights in each physical room. These are filtered out to reduce UI clutter. User-created groups (Direct Connections) are always visible.
 
 ---
 
@@ -90,6 +124,8 @@ Before adding the integration, you must enable the local API on your HCU.
 
 ### Step 3: Add the Integration in Home Assistant
 
+💡 **Tip before Adding Integration:** If your **Home Assistant Area** names match your **Homematic IP Room** names (e.g., Living room = Living room), **newly discovered devices** will be created directly in the correct Home Assistant Area **automatically**.
+
 1. In Home Assistant, go to **Settings** → **Devices & Services**
 
 2. Click the **+ ADD INTEGRATION** button (bottom right)
@@ -144,7 +180,7 @@ After installation, you can adjust some settings:
 
 - **Comfort Temperature:** Default temperature (in °C) used when switching from OFF to HEAT mode
 - **Third-Party Device Filters:** Show/hide devices from manufacturers other than eQ-3
-
+- **Group Filters** Show/hide groups
 ---
 
 ## 🔘 Working with Buttons & Remote Controls
@@ -174,9 +210,9 @@ Stateless button devices (wall switches, remote controls, etc.) work differently
 This integration supports button events for:
 
 **Wall Switches:**
-- HmIP-WGS (Wall-mounted Glass Switch) ⭐ **Fixed in v1.8.1**
+- HmIP-WGS (Wall-mounted Glass Switch)
 - HmIP-WRC2 (2-button Wall Remote)
-- HmIP-WRC6 (6-button Wall Remote) ⭐ **Fixed in v1.8.1**
+- HmIP-WRC6 (6-button Wall Remote)
 - HmIP-WRCC2 (Wall Remote with Display)
 - HmIP-BRC2 (2-button Remote Control)
 - And more...
@@ -198,18 +234,21 @@ This integration supports button events for:
 
 Before creating automations, verify your buttons are working:
 
-#### 1. Open the Events Monitor
+#### 1. Create a pseudo automation in the HCU with an empty action to enable button press events.
+- Important: You must create both key types if you want to use both short and long presses.
+   
+#### 2. Open the Events Monitor
 
 1. Go to **Developer Tools** → **Events** (in the sidebar)
 2. In the "Listen to events" section, type: `hcu_integration_event`
 3. Click **START LISTENING**
 
-#### 2. Press Your Buttons
+#### 3. Press Your Buttons
 
 - Press any button on your Homematic IP device
 - You should immediately see an event appear in the event monitor
 
-#### 3. Understand the Event Data
+#### 4. Understand the Event Data
 
 When a button is pressed, you'll see something like this:
 
@@ -234,6 +273,8 @@ event, followed by a single `KEY_PRESS_LONG_START` event. As long as the button
 is pressed, a sequence of periodic `KEY_PRESS_LONG` events is then generated
 approximately every 0.35 seconds. When the button is released, a single
 `KEY_PRESS_LONG_STOP` event is generated.
+
+
 
 #### 4. Note Down Your Device ID and Channels
 
@@ -573,7 +614,7 @@ For persistent debug logging:
 
 ---
 
-## 🎮 Available Services
+## 🎮 Available Actions
 
 ### `hcu_integration.play_sound`
 
@@ -581,7 +622,7 @@ Play a sound on compatible notification devices (e.g., HmIP-MP3P).
 
 **Example:**
 ```yaml
-service: hcu_integration.play_sound
+action: hcu_integration.play_sound
 target:
   entity_id: switch.doorbell
 data:
@@ -596,7 +637,7 @@ Enable or disable automation rules within the HCU.
 
 **Example:**
 ```yaml
-service: hcu_integration.set_rule_state
+action: hcu_integration.set_rule_state
 data:
   rule_id: "00000000-0000-0000-0000-000000000000"
   enabled: true
@@ -608,7 +649,7 @@ Temporarily override heating schedule for a specific room.
 
 **Example:**
 ```yaml
-service: hcu_integration.activate_party_mode
+action: hcu_integration.activate_party_mode
 target:
   entity_id: climate.living_room
 data:
@@ -622,7 +663,7 @@ System-wide vacation mode for all heating groups.
 
 **Example:**
 ```yaml
-service: hcu_integration.activate_vacation_mode
+action: hcu_integration.activate_vacation_mode
 data:
   temperature: 15
   end_time: "2025-12-24 18:00"
@@ -634,7 +675,7 @@ Activate permanent absence (Eco) mode.
 
 **Example:**
 ```yaml
-service: hcu_integration.activate_eco_mode
+action: hcu_integration.activate_eco_mode
 ```
 
 ### `hcu_integration.deactivate_absence_mode`
@@ -643,7 +684,24 @@ Deactivate any active absence mode.
 
 **Example:**
 ```yaml
-service: hcu_integration.deactivate_absence_mode
+action: hcu_integration.deactivate_absence_mode
+```
+
+### `hcu_integration.send_api_command`
+
+Send raw api command to hcu.
+
+**Example:**
+```yaml
+action: hcu_integration.send_api_command
+data:
+  path: /hmip/device/control/setOpticalSignal
+  body:
+    opticalSignalBehaviour: FLASH_MIDDLE
+    simpleRGBColorState: PURPLE
+    dimLevel: 0.42
+    channelIndex: 8
+    deviceId: 3014F711A00478E0C9A5E3456
 ```
 
 ---

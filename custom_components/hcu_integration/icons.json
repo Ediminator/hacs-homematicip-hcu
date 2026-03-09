@@ -1,0 +1,61 @@
+{
+    "entity": {
+        "light": {
+            "hcu_light": {
+                "state_attributes": {
+                    "effect": {
+                        "state": {
+                            "off": "mdi:lightbulb-off",
+                            "on": "mdi:lightbulb",
+                            "blinking_middle": "mdi:alarm-light",
+                            "flash_middle": "mdi:flash",
+                            "billow_middle": "mdi:waves"
+                        }
+                    }
+                }
+            }
+        },
+        "climate": {
+            "hcu_climate": {
+                "state_attributes": {
+                    "preset_mode": {
+                        "default": "mdi:thermostat",
+                        "state": {
+                            "boost": "mdi:rocket-launch",
+                            "Eco": "mdi:leaf",
+                            "Party": "mdi:party-popper"
+                        }
+                    }
+                }
+            }
+        },
+        "binary_sensor":{
+            "hcu_window": {
+                "default": "mdi:window-closed-variant",
+                "state": {
+                    "on": "mdi:window-open-variant",
+                    "off": "mdi:window-closed-variant"
+                }
+            }
+        },
+        "sensor":{
+            "hcu_tiltwindow": {
+                "default": "mdi:window-closed-variant",
+                "state": {
+                    "open": "mdi:window-open-variant",
+                    "tilted": "mdi:angle-acute"
+                }
+            }
+        }
+    },
+    "services": {
+        "play_sound": "mdi:music-note",
+        "set_rule_state": "mdi:playlist-edit",
+        "activate_party_mode": "mdi:party-popper",
+        "activate_vacation_mode": "mdi:airplane",
+        "activate_eco_mode": "mdi:leaf",
+        "deactivate_absence_mode": "mdi:home-account",
+        "switch_on_with_time": "mdi:timer-outline",
+        "send_api_command": "mdi:api"
+    }
+}

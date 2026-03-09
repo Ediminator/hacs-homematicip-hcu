@@ -57,13 +57,23 @@
                 }
             },
             "global_settings": {
-                "title": "Global Settings",
-                "description": "Configure global settings and device import filters.",
+                "title": "Global settings",
+                "description": "Configure global settings and filters for device import.",
                 "data": {
-                    "comfort_temperature": "Default Comfort Temperature (for Party Mode)",
-                    "import_sytronic": "Import Sytronic devices",
-                    "import_novotronic": "Import Novotronic devices",
-                    "selected_oems": "Manufacturers to Import"
+                    "advanced_debugging": "Advanced debugging",
+                    "advanced_attributes": "Advanced attributes",
+                    "disable_unconfigured_channels": "Disable unconfigured channels",
+                    "comfort_temperature": "Default comfort temperature",
+                    "selected_oems": "Import manufacturers",
+                    "disabled_groups": "Hide groups"
+                },
+                "data_description": {
+                    "advanced_debugging": "Enable to log the complete raw data of HMIP_SYSTEM_EVENT events. Disable this again when you no longer need it.",
+                    "advanced_attributes": "Enable to show additional developer attributes per entity.",
+                    "disable_unconfigured_channels": "Disables channels that are not configured in the Homematic IP app or are not assigned to a room. These channels will not be created in Home Assistant.",
+                    "comfort_temperature": "Set the comfort temperature used for Party Mode here.",
+                    "selected_oems": "Choose which manufacturers should be imported into Home Assistant.",
+                    "disabled_groups": "Choose which groups should be hidden. You can find the group names in the additional attributes of each entity."
                 }
             },
             "lock_pin": {
@@ -182,6 +192,76 @@
                 "duration": {
                     "name": "Duration",
                     "description": "The duration in seconds for the party mode. Only used if end_time is not specified."
+                }
+            }
+        },
+        "switch_on_with_time": {
+            "name": "Turn on with time",
+            "description": "Turns a switch on for a specific duration",
+            "fields": {
+                "on_time": {
+                    "name": "On time",
+                    "description": "The duration in seconds for which the switch should stay on. Range: 0,1 – 16383 s"
+                }
+            }
+        },
+        "send_api_command": {
+            "name": "Send API Command",
+            "description": "Send a raw API command to the HCU. Use with caution, as this provides direct access to the API and can cause unintended side effects if used incorrectly. See EQ3's API documentation for details.",
+            "fields": {
+                "path": {
+                    "name": "Request Path",
+                    "description": "Request path example: '/hmip/device/control/setOpticalSignal'"
+                },
+                "body": {
+                    "name": "Request Body",
+                    "description": "The request body as an object of key-value pairs."
+                }
+            }
+        }
+    },
+    "entity": {
+        "button": {
+            "hcu_device_identify":{
+                "name": "Identify"
+            }
+        },
+        "event": {
+            "hcu_button_event": {
+                "state_attributes": {
+                    "event_type": {
+                        "state": {
+                            "press": "Pressed", 
+                            "press_long": "Long pressed", 
+                            "press_long_stop": "Long press released", 
+                            "press_long_start": "Long press started", 
+                            "press_short": "Short pressed"
+                        }
+                    }
+                }
+            }
+        }, 
+        "light": {
+            "hcu_light": {
+                "state_attributes": {
+                    "effect": {
+                        "state": {
+                            "off": "Off",
+                            "on": "Steady on",
+                            "blinking_middle": "Blinking",
+                            "flash_middle": "Flashing",
+                            "billow_middle": "Pulsing"
+                        }
+                    }
+                }
+            }
+        },
+        "sensor": {
+            "hcu_tiltwindow": {
+                "state": {
+                    "open": "Open",
+                    "closed": "Closed",
+                    "tilted": "Tilted"
                 }
             }
         }

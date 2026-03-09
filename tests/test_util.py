@@ -59,3 +59,13 @@ class TestGetDeviceManufacturer:
         """Test that unknown devices without markers default to eQ-3 (match existing behavior)."""
         device = {"modelType": "GenericSwitch"}
         assert get_device_manufacturer(device) == "eQ-3"
+
+    def test_model_type_is_none(self):
+        """Test that a device with modelType: None does not crash."""
+        device = {"modelType": None}
+        assert get_device_manufacturer(device) == "eQ-3"
+
+    def test_model_type_is_missing(self):
+        """Test that a device with a missing modelType does not crash."""
+        device = {}
+        assert get_device_manufacturer(device) == "eQ-3"

@@ -3,6 +3,220 @@
 All notable changes to the Homematic IP Local (HCU) integration will be documented in this file.
 
 ---
+## 1.21.0 - 2026-03-09
+
+### 🐛 Bug Fixes
+
+**Fix False Press Events During Startup and Reload (Issue #183, PR #288)**
+
+Fixed a race condition where button devices (especially HmIP-FCI6) triggered false `PRESS_SHORT` events during Home Assistant startup or integration reload.
+
+**Root Cause:**
+The WebSocket listener starts receiving events *before* the initial system state is fetched via `get_system_state()`. Events arriving during this window are processed against an empty device state, causing `_detect_timestamp_based_button_presses()` to treat every initial timestamp as a "change" and fire false button press events.
+
+**What Changed:**
+- Added `_initial_state_loaded` flag to `HcuCoordinator` — set to `False` during initialization, `True` after `get_system_state()` completes
+- `_handle_event_message()` now ignores all `HMIP_SYSTEM_EVENT` messages until the flag is set
+- On integration reload, a fresh `HcuCoordinator` is created, so the guard is automatically re-applied
+
+**Impact:**
+- ✅ No more false button press events during startup or reload
+- ✅ No impact on normal event processing after initialization
+- ✅ Existing `MULTI_MODE_INPUT_CHANNEL` exclusion (v1.18.7) continues to prevent false events during normal operation
+
+### 📝 Files Changed
+
+- `custom_components/hcu_integration/__init__.py` — Startup safeguard for event processing
+- `tests/test_issue_183.py` — Tests for the startup safeguard and channel exclusion
+- `custom_components/hcu_integration/manifest.json` — Version bump to 1.21.0
+
+---
+## 1.20.0 - 2026-03-08
+
+### ✨ New Features
+
+**Prepared Advanced Group Types (HEATING_COOLING_DEMAND, HOT_WATER)**
+
+Added support for three previously ignored Homematic IP group types. These groups are **conditionally exposed** — they only appear when physical devices are actually assigned to them, preventing empty entities from cluttering the UI.
+
+- `HEATING_COOLING_DEMAND_BOILER` → `binary_sensor` (heat demand indicator)
+- `HEATING_COOLING_DEMAND_PUMP` → `binary_sensor` (heat demand indicator)
+- `HOT_WATER` → `switch` (hot water profile control)
+
+> **💡 Why do I see "Heating Cooling Demand" entities?**
+> Your HCU automatically assigns thermostat radiator valves to these groups. The HCU aggregates all valve positions across your home to calculate a single answer: *"Does the boiler need to fire right now?"*
+> 
+> Even without a physical Homematic IP boiler actuator (like HmIP-WHS2), you can use this binary sensor in Home Assistant to:
+> - **Control a third-party relay** (e.g., a Shelly or Zigbee plug) connected to your boiler
+> - **Build energy dashboards** tracking when your boiler is demanded vs idle
+> - **Create automations** like *"If heatDemand has been off for 30 minutes, reduce boiler standby temperature"*
+> 
+> The `HOT_WATER` entity will only appear when you configure a hot water profile with a physical actuator in the Homematic IP app.
+
+New entity classes added:
+- `HcuGroupBinarySensor` — Base class for group-level binary sensors
+- `HcuHeatDemandBinarySensorGroup` — Boiler/pump heat demand indicator
+
+**Human-Readable Group Labels**
+
+Group labels that use ALL_CAPS_UNDERSCORED naming (e.g., `HOT_WATER`) are now automatically formatted to title case (`Hot Water`) in both entity names and device registry entries.
+
+### 🐛 Bug Fixes
+
+**Fix Zombie Group Devices Not Being Cleaned Up**
+
+Fixed a bug where orphaned group devices persisted in the Home Assistant device registry even after they were no longer discovered.
+
+- **Root Cause:** `valid_device_ids.add(group_id)` was called *before* the `metaGroupId` skip check, marking filtered groups as "valid" and preventing the cleanup logic from removing them.
+- **Fix:** Moved `valid_device_ids.add(group_id)` to after all skip checks, so the existing registry cleanup correctly identifies and removes orphaned group devices.
+
+### 🔧 Improvements
+
+**Room-Based Switching Groups Now Filtered**
+
+Auto-created room groups (`SWITCHING`, `LIGHT`, `EXTENDED_LINKED_SWITCHING` with `metaGroupId`) are now skipped during discovery to reduce UI clutter. User-created Direct Connection groups (which do not have a `metaGroupId`) continue to be discovered normally.
+
+> **Note:** This reverses the behavior introduced in v1.18.2/v1.18.3 (Issue #146), which allowed all `metaGroupId` groups. Users who need room-based switching groups can request a configuration option in a future release.
+
+### 📝 Files Changed
+
+- `custom_components/hcu_integration/discovery.py` — Advanced group mappings, conditional exposure, room-group filtering, zombie cleanup fix
+- `custom_components/hcu_integration/entity.py` — Label formatting for entity names and device registry
+- `custom_components/hcu_integration/binary_sensor.py` — New group binary sensor classes
+- `custom_components/hcu_integration/manifest.json` — Version bump to 1.20.0
+
+---
+## 1.19.11 - 2026-03-07
+
+### ✨ New Features
+- Exposed 11 new diagnostic data points for HmIP-SWSD-2 smoke detectors (dirt levels, degradation, operations days, heat indicators, test timestamps).
+- Added `HcuTimestampSensor` mapping millisecond UNIX timestamps natively into Home Assistant datetime values.
+
+### 🐛 Bug Fixes
+- Restored `meta` and `switchVisualization` state attributes that were accidentally hidden behind the advanced debugging configuration flag in the previous update.
+- Improved robustness of the API timestamp parsing to prevent datetime overflow exceptions in case of faulty smoke detector data.
+
+## 1.19.10 - 2026-02-09
+
+### 🐛 Bug Fixes
+- Fixed an error during setup #275
+
+## 1.19.9 - 2026-02-04
+
+### ✨ New Features
+- show groups as service
+- add firmware readonly entities for devices
+
+### ✅ Update Note
+This release has been **thoroughly tested**. However, it is always recommended to **create a backup before updating**.
+
+### 🧹 Browser Cache Note
+Some of these changes are cached by your browser. After updating, please hard refresh / reload the page to ensure all changes are applied.
+
+## 1.19.8 - 2026-02-02
+
+### ✨ New Features
+- Added HmIP-DRDI3
+- Prepared group **EXTENDED_LINKED_GARAGE_DOOR**.
+
+### ✅ Update Note
+This release has been **thoroughly tested**. However, it is always recommended to **create a backup before updating**.
+
+### 🧹 Browser Cache Note
+Some of these changes are cached by your browser. After updating, please hard refresh / reload the page to ensure all changes are applied.
+
+## 1.19.7 - 2026-01-27
+
+### ✨ New Features
+- Added **meta group** and **switchVisualization** as extra state attributes.
+- Going forward, newly discovered devices will be automatically assigned to the corresponding Home Assistant area — **if the Homematic IP areas already exist in Home Assistant.**
+- Move Connectivity, Low Battery, Duty Cycle, and RSSI sensors to the **Diagnostic category**.
+- Prepared groups **EXTENDED_LINKED_NOTIFICATION** and **EXTENDED_LINKED_WATERING**.
+- Added logic **to clean up unused / orphaned entities** from the entity registry.
+
+### ✅ Update Note
+This release has been **thoroughly tested**. However, it is always recommended to **create a backup before updating**.
+
+### 🧹 Browser Cache Note
+Some of these changes are cached by your browser. After updating, please hard refresh / reload the page to ensure all changes are applied.
+
+## 1.19.6 - 2026-01-23
+
+### ⚠️ BREAKING CHANGES
+- **Eco mode can no longer be set via heating groups**  
+  (#268) Eco mode has been disabled for heating groups. To enable Eco mode globally, use the service hcu_integration.activate_eco_mode.
+
+### ✨ New Features
+- Add translations for events and buttons.
+- add extra attribute window_state to the HcuClimate entity.
+
+### ✅ Update Note
+This release has been **thoroughly tested**. However, it is always recommended to **create a backup before updating**.
+
+### 🧹 Browser Cache Note
+Some of these changes are cached by your browser. After updating, please hard refresh / reload the page to ensure all changes are applied.
+
+## 1.19.5 - 2026-01-13
+
+### ⚠️ BREAKING CHANGES
+- **WINDOW state supported only for `ROTARY_HANDLE_CHANNEL` (HmIP-SRH) (#175)**  
+  For all other devices, these entities will be removed. Non-available entities must be deleted manually via **Settings -> Devices & Services -> Entities**.  
+  Tip: Filter by **integration** and the status **"not available"** to make cleanup easier. You can also delete multiple entities/devices at once.
+
+### 🐛 Bug Fixes
+- **Add `shutterLevel` to move the tilt cover-groups (#216)**
+
+### ✨ New Features
+- Add **Identify** button for DIN rail devices with new logic that evaluates the optional functions of the devices.
+- Add configuration option to **disable groups**.
+- Add configuration option **Advanced Debugging** to view the raw `HMIP_EVENT_DATA`.
+- Add translations for **window states**.
+- Add state icons for **tilt window**.
+- Add additional translations for configuration.
+
+### ✅ Update Note
+This release has been **thoroughly tested**. However, it is always recommended to **create a backup before updating**.
+  
+## 1.19.4 - 2026-01-05
+
+### ✨ New Features
+
+- Add extra attribute is_group:False to none group entities
+- Add extra attribute device_id, channel_index, and functional_channel_type in all entities
+- Add extra attribute group type in all group entities
+- Add #254 air pressure for ELV-SH-CAP
+- Add #254 air quality for HmIP-SFD
+- add "ELV-" serial numbers to device info
+
+## 1.19.3 - 2026-01-03
+
+### 🐛 Bug Fixes
+
+- **Add effects in lowercase to prepare for hacs default**
+- **rollback heating preset mode logic to prevent showing cooling profiles from issue #170 and open API Issue in #229**
+- **add secondaryshadinglevel on shading groups**
+
+### ✨ New Features
+
+- add icons for services, effects and climate profiles
+  
+## 1.19.2 - 2025-12-29
+
+### 🐛 Bug Fixes
+
+- **Fix Issue Climate Visualisation (Issue #164)**
+- **Heating Profiles Control (Issue #170)**
+- **Add translations for service turn on with time and light effects**
+
+### ✨ New Features
+
+- serial number in device info incl. HCU
+- Add HMIP-MP3P
+- Add SimpleColor for HCU TOPLIGHT and HmIPW-WRC6
+- Add Attribut is_group in groups
+- Add impulse button for HmIP-WGC
+- Add service send_api_command
+- prepare for default HACS integration
 
 ## 1.19.1 - 2025-12-16
 

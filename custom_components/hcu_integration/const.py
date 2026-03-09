@@ -74,7 +74,7 @@ MANUFACTURER_3RD_PARTY = "3rd Party"
 PLUGIN_ID_HUE = "de.eq3.plugin.hue"
 DEVICE_TYPE_PLUGIN_EXTERNAL = "PLUGIN_EXTERNAL"
 HUE_MODEL_TOKEN = "Hue"
-HOMEMATIC_MODEL_PREFIXES = ("HmIP-", "HM-", "ALPHA-", "ELV")
+HOMEMATIC_MODEL_PREFIXES = ("HmIP", "HM-", "ALPHA-", "ELV")
 
 # --- Documentation URLs ---
 DOCS_URL_LOCK_PIN_CONFIG = "https://github.com/Ediminator/hacs-homematicip-hcu#step-4-configure-door-lock-pin-optional"

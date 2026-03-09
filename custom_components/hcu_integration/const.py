@@ -74,7 +74,7 @@ MANUFACTURER_3RD_PARTY = "3rd Party"
 PLUGIN_ID_HUE = "de.eq3.plugin.hue"
 DEVICE_TYPE_PLUGIN_EXTERNAL = "PLUGIN_EXTERNAL"
 HUE_MODEL_TOKEN = "Hue"
-HOMEMATIC_MODEL_PREFIXES = ("HmIP-", "HM-", "ALPHA-", "ELV")
+HOMEMATIC_MODEL_PREFIXES = ("HmIP", "HM-", "ALPHA-", "ELV")
 
 # --- Documentation URLs ---
 DOCS_URL_LOCK_PIN_CONFIG = "https://github.com/Ediminator/hacs-homematicip-hcu#step-4-configure-door-lock-pin-optional"
@@ -1119,9 +1119,6 @@ ABSENCE_TYPE_VACATION = "VACATION"
 WINDOW_STATE_OPEN = "OPEN"
 WINDOW_STATE_TILTED = "TILTED"
 WINDOW_STATE_CLOSED = "CLOSED"
-
-# Group types that are auto-created for rooms and should be filtered
-ROOM_BASED_SWITCHING_GROUP_TYPES = ("SWITCHING", "LIGHT", "EXTENDED_LINKED_SWITCHING")
 
 # Groups that are allowed to be discovered even without channels
 ALLOWED_EMPTY_GROUPS = ("SECURITY_ZONE", "META")

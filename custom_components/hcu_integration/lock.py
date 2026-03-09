@@ -18,6 +18,8 @@ if TYPE_CHECKING:
 
 _LOGGER = logging.getLogger(__name__)
 
+_INVALID_PIN_ERROR_STRINGS = ("INVALID_AUTHORIZATION_PIN", "INVALID_PIN")
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -189,7 +191,7 @@ class HcuLock(HcuBaseEntity, LockEntity):
             error_str = str(err)
 
             # Parse the error to check if it's a PIN issue
-            if "INVALID_AUTHORIZATION_PIN" in error_str:
+            if any(s in error_str for s in _INVALID_PIN_ERROR_STRINGS):
                 _LOGGER.error(
                     "Invalid or missing PIN for lock '%s'. "
                     "To configure the PIN: Go to Settings → Devices & Services → "

@@ -3,7 +3,7 @@
 All notable changes to the Homematic IP Local (HCU) integration will be documented in this file.
 
 ---
-## 1.21.1 - 2026-03-09
+## 1.21.2 - 2026-03-10
 
 ### 🐛 Bug Fixes
 
@@ -22,6 +22,26 @@ Fixed an issue where input devices configured as push buttons or switches incorr
 - `custom_components/hcu_integration/binary_sensor.py` — Dynamic device class assignment and translation fallback reset.
 - `custom_components/hcu_integration/const.py` — Added variables for multi mode input configurations.
 - `tests/test_issue_175.py` — Added a comprehensive unit test suite to verify correct logical filtering and device class creation for input modules.
+- `custom_components/hcu_integration/manifest.json` — Version bump to 1.21.2.
+
+---
+## 1.21.1 - 2026-03-10
+
+### 🐛 Bug Fixes
+
+**Restore Legacy Group Discovery (Issue #294)**
+
+Resolved a regression introduced in version 1.20.0 that incorrectly filtered out user-created groups assigned to rooms (e.g., "Extended Linked Switching Groups"). This restoration ensures all groups are discovered correctly by removing hardcoded room-group filters. Users can continue to hide unwanted group types using the existing "Hide Groups" configuration option.
+
+**What Changed:**
+- Removed hardcoded filtering logic in `discovery.py` that skipped groups with `metaGroupId`.
+- Removed `ROOM_BASED_SWITCHING_GROUP_TYPES` constant from `const.py`.
+- Cleaned up obsolete log messages and counters related to room group filtering in `discovery.py`.
+- Verified that all group types are now correctly discovered and respect the "Hide Groups" configuration.
+
+**Files Changed:**
+- `custom_components/hcu_integration/discovery.py` — Removed room group filtering.
+- `custom_components/hcu_integration/const.py` — Removed unused constant.
 - `custom_components/hcu_integration/manifest.json` — Version bump to 1.21.1.
 
 ---

@@ -94,10 +94,28 @@ class HcuBinarySensor(HcuBaseEntity, BinarySensorEntity):
 class HcuWindowBinarySensor(HcuBinarySensor):
     """
     Representation of a Homematic IP HCU window sensor.
-    This class provides specialized logic for window sensors.
+    This class provides specialized logic for window sensors and maps
+    the `channelRole` to the appropriate Home Assistant device_class.
     """
-    
-    _attr_translation_key = "hcu_window"
+
+    def __init__(
+        self,
+        coordinator: "HcuCoordinator",
+        client: HcuApiClient,
+        device_data: dict,
+        channel_index: str,
+        feature: str,
+        mapping: dict,
+    ):
+        super().__init__(coordinator, client, device_data, channel_index, feature, mapping)
+        
+        # Determine the correct device_class based on the channelRole
+        channel_role = self._channel.get("channelRole")
+        if channel_role == "DOOR_SENSOR":
+            self._attr_device_class = BinarySensorDeviceClass.DOOR
+        else:
+            # WINDOW_SENSOR or default fallback
+            self._attr_device_class = BinarySensorDeviceClass.WINDOW
     
     @property
     def is_on(self) -> bool:

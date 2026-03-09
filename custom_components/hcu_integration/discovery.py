@@ -241,6 +241,16 @@ async def async_discover_entities(
                 if mapping.get("class") == "HcuHomeSensor":
                     continue
 
+                # Skip windowState binary sensors for input channels not configured as contacts
+                if feature == "windowState":
+                    mode = channel_data.get("multiModeInputMode")
+                    if mode is not None and mode != "BINARY_BEHAVIOR":
+                        _LOGGER.debug(
+                            "Skipping windowState feature on device %s channel %s: configured as %s",
+                            device_data.get("id"), channel_index, mode
+                        )
+                        continue
+
                 # Skip dutyCycleLevel sensor for the main HCU device to avoid redundancy
                 # with the home-level dutyCycle sensor (HcuHomeSensor)
                 if feature == "dutyCycleLevel" and device_data.get("id") == client.hcu_device_id:

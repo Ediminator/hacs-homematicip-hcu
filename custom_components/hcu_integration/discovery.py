@@ -41,7 +41,6 @@ from .const import (
     EVENT_CHANNEL_TYPES,
     MANUFACTURER_EQ3,
     CONF_DISABLED_GROUPS,
-    ROOM_BASED_SWITCHING_GROUP_TYPES,
     ALLOWED_EMPTY_GROUPS,
 )
 from .util import get_device_manufacturer
@@ -423,7 +422,6 @@ async def async_discover_entities(
 
     # Track group discovery statistics for diagnostics
     groups_discovered = 0
-    groups_skipped_meta = 0
     groups_unknown_type = 0
     
     # Initialize valid device IDs with physical devices (and HCU itself if present in devices)
@@ -482,19 +480,6 @@ async def async_discover_entities(
 
         if mapping := group_type_mapping.get(group_type):
 
-            # Previously we explicitly allowed groups with metaGroupId (issue #146).
-            # However, room-based switching groups clutter the UI as many users do not
-            # use them, and prefer the Homematic App to just group physical switches.
-            # We skip them here. If users want them, we can add a config option later.
-            if group_type in ROOM_BASED_SWITCHING_GROUP_TYPES and "metaGroupId" in group_data:
-                _LOGGER.debug(
-                    "Skipping %s group '%s' (id: %s) because it has a metaGroupId (Room Group)",
-                    group_type,
-                    group_label,
-                    group_id
-                )
-                continue
-
             # Only mark as valid AFTER passing all skip checks above,
             # so the device registry cleanup can remove orphaned groups.
             valid_device_ids.add(group_id)
@@ -552,11 +537,10 @@ async def async_discover_entities(
     _LOGGER.info("Discovered entities: %s", {p.value: len(e) for p, e in entities.items() if e})
 
     # Log group discovery summary for diagnostics
-    if groups_discovered > 0 or groups_skipped_meta > 0 or groups_unknown_type > 0:
+    if groups_discovered > 0 or groups_unknown_type > 0:
         _LOGGER.info(
-            "Group discovery summary: %d created, %d skipped (meta groups), %d unknown types",
+            "Group discovery summary: %d created, %d unknown types",
             groups_discovered,
-            groups_skipped_meta,
             groups_unknown_type
         )
 

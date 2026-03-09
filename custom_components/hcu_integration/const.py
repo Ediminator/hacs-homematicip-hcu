@@ -1111,8 +1111,5 @@ WINDOW_STATE_OPEN = "OPEN"
 WINDOW_STATE_TILTED = "TILTED"
 WINDOW_STATE_CLOSED = "CLOSED"
 
-# Group types that are auto-created for rooms and should be filtered
-ROOM_BASED_SWITCHING_GROUP_TYPES = ("SWITCHING", "LIGHT", "EXTENDED_LINKED_SWITCHING")
-
 # Groups that are allowed to be discovered even without channels
 ALLOWED_EMPTY_GROUPS = ("SECURITY_ZONE", "META")

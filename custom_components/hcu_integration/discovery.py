@@ -159,6 +159,19 @@ async def async_discover_entities(
                 if is_unused_channel:
                     continue
 
+                # Skip event entities if multi-mode input is configured as binary behavior
+                # This prevents redundant entities for "Security" assignments.
+                if class_name in ("HcuDoorbellEvent", "HcuButtonEvent") and (
+                    base_channel_type in (CHANNEL_TYPE_MULTI_MODE_INPUT, CHANNEL_TYPE_MULTI_MODE_INPUT_TRANSMITTER)
+                    and channel_data.get("multiModeInputMode") == MULTI_MODE_INPUT_BINARY_BEHAVIOR
+                ):
+                     _LOGGER.debug(
+                        "Skipping event entity for device %s, channel %s: binary behavior active",
+                        device_data.get("id"),
+                        channel_index,
+                    )
+                     continue
+
                 # Note: Some channels serve multiple functions (e.g., HmIP-BSL NOTIFICATION_LIGHT_CHANNEL)
                 # - These channels create light entities for backlight control
                 # - They ALSO respond to button presses via DEVICE_CHANNEL_EVENT
@@ -197,6 +210,19 @@ async def async_discover_entities(
             if device_type in MULTI_FUNCTION_CHANNEL_DEVICES:
                 multi_func_config = MULTI_FUNCTION_CHANNEL_DEVICES[device_type].get(base_channel_type or channel_type)
                 if multi_func_config and "button" in multi_func_config.get("functions", []):
+                    # Skip button event entity if multi-mode input is configured as binary behavior
+                    # This prevents redundant entities for "Security" assignments.
+                    if (
+                        channel_type == CHANNEL_TYPE_MULTI_MODE_INPUT_TRANSMITTER
+                        and channel_data.get("multiModeInputMode") == MULTI_MODE_INPUT_BINARY_BEHAVIOR
+                    ):
+                        _LOGGER.debug(
+                            "Skipping button event entity for multi-function channel: device=%s, channel=%s: binary behavior active",
+                            device_data.get("id"),
+                            channel_index,
+                        )
+                        continue
+
                     # Create additional button event entity for multi-function channel
                     try:
                         _LOGGER.debug(

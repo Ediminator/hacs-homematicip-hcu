@@ -42,6 +42,7 @@ from .const import (
     MANUFACTURER_EQ3,
     CONF_DISABLED_GROUPS,
     ALLOWED_EMPTY_GROUPS,
+    MULTI_MODE_INPUT_BINARY_BEHAVIOR,
 )
 from .util import get_device_manufacturer
 
@@ -157,6 +158,19 @@ async def async_discover_entities(
                 if is_unused_channel:
                     continue
 
+                # Skip event entities if multi-mode input is configured as binary behavior
+                # This prevents redundant entities for "Security" assignments.
+                if class_name in ("HcuDoorbellEvent", "HcuButtonEvent") and (
+                    base_channel_type in (CHANNEL_TYPE_MULTI_MODE_INPUT, CHANNEL_TYPE_MULTI_MODE_INPUT_TRANSMITTER)
+                    and channel_data.get("multiModeInputMode") == MULTI_MODE_INPUT_BINARY_BEHAVIOR
+                ):
+                     _LOGGER.debug(
+                        "Skipping event entity for device %s, channel %s: binary behavior active",
+                        device_data.get("id"),
+                        channel_index,
+                    )
+                     continue
+
                 # Note: Some channels serve multiple functions (e.g., HmIP-BSL NOTIFICATION_LIGHT_CHANNEL)
                 # - These channels create light entities for backlight control
                 # - They ALSO respond to button presses via DEVICE_CHANNEL_EVENT
@@ -195,6 +209,19 @@ async def async_discover_entities(
             if device_type in MULTI_FUNCTION_CHANNEL_DEVICES:
                 multi_func_config = MULTI_FUNCTION_CHANNEL_DEVICES[device_type].get(base_channel_type or channel_type)
                 if multi_func_config and "button" in multi_func_config.get("functions", []):
+                    # Skip button event entity if multi-mode input is configured as binary behavior
+                    # This prevents redundant entities for "Security" assignments.
+                    if (
+                        channel_type == CHANNEL_TYPE_MULTI_MODE_INPUT_TRANSMITTER
+                        and channel_data.get("multiModeInputMode") == MULTI_MODE_INPUT_BINARY_BEHAVIOR
+                    ):
+                        _LOGGER.debug(
+                            "Skipping button event entity for multi-function channel: device=%s, channel=%s: binary behavior active",
+                            device_data.get("id"),
+                            channel_index,
+                        )
+                        continue
+
                     # Create additional button event entity for multi-function channel
                     try:
                         _LOGGER.debug(
@@ -239,6 +266,16 @@ async def async_discover_entities(
                 # Skip HcuHomeSensor entities as they are home-level sensors handled separately
                 if mapping.get("class") == "HcuHomeSensor":
                     continue
+
+                # Skip windowState binary sensors for input channels not configured as contacts
+                if feature == "windowState":
+                    mode = channel_data.get("multiModeInputMode")
+                    if mode is not None and mode != MULTI_MODE_INPUT_BINARY_BEHAVIOR:
+                        _LOGGER.debug(
+                            "Skipping windowState feature on device %s channel %s: configured as %s",
+                            device_data.get("id"), channel_index, mode
+                        )
+                        continue
 
                 # Skip dutyCycleLevel sensor for the main HCU device to avoid redundancy
                 # with the home-level dutyCycle sensor (HcuHomeSensor)

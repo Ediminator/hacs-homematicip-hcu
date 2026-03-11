@@ -252,10 +252,13 @@ async def async_discover_entities(
                 if channel_data[feature] is None:
                     optional_features = channel_data.get("supportedOptionalFeatures", {})
                     # Check for exact match or various HCU feature name conventions
-                    is_hardware_supported = (
-                        optional_features.get(feature, False) or
-                        optional_features.get(f"IFeature{feature[0].upper()}{feature[1:]}", False) or
-                        optional_features.get(f"IOptionalFeature{feature[0].upper()}{feature[1:]}", False)
+                    feature_variants = (
+                        feature,
+                        f"IFeature{feature[0].upper()}{feature[1:]}",
+                        f"IOptionalFeature{feature[0].upper()}{feature[1:]}",
+                    )
+                    is_hardware_supported = any(
+                        optional_features.get(v, False) for v in feature_variants
                     )
                     
                     # Manual whitelist for primary features that aren't listed as optional

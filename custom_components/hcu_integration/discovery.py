@@ -245,13 +245,29 @@ async def async_discover_entities(
                 if feature == "dutyCycleLevel" and device_data.get("id") == client.hcu_device_id:
                     continue
 
-                # Skip features with null values to prevent broken sensors
+                # Hardware Support Guard:
+                # If a feature is null, we only create the entity if:
+                # 1. It is explicitly listed as supported in supportedOptionalFeatures
+                # 2. It belongs to our mandatory whitelist (features known to be transiently null on RF devices)
                 if channel_data[feature] is None:
-                    _LOGGER.debug(
-                        "Skipping feature '%s' on device %s channel %s: value is null",
-                        feature, device_data.get("id"), channel_index
+                    optional_features = channel_data.get("supportedOptionalFeatures", {})
+                    # Check for exact match or various HCU feature name conventions
+                    is_hardware_supported = (
+                        optional_features.get(feature, False) or
+                        optional_features.get(f"IFeature{feature[0].upper()}{feature[1:]}", False) or
+                        optional_features.get(f"IOptionalFeature{feature[0].upper()}{feature[1:]}", False)
                     )
-                    continue
+                    
+                    # Manual whitelist for primary features that aren't listed as optional
+                    # but are core to the device's function and may be null at startup.
+                    is_mandatory_rf = feature in ("windowState", "unreach")
+                    
+                    if not (is_hardware_supported or is_mandatory_rf):
+                        _LOGGER.debug(
+                            "Skipping unsupported feature '%s' on %s: value is null and hardware support not confirmed",
+                            feature, device_data.get("id")
+                        )
+                        continue
 
                 class_name = mapping["class"]
                 if module := class_module_map.get(class_name):
@@ -309,16 +325,6 @@ async def async_discover_entities(
                     if data_key not in channel_data:
                         _LOGGER.debug(
                             "Optional feature supported but not created (missing data key): device=%s channel=%s feature=%s data_key=%s",
-                            device_data.get("id"),
-                            channel_index,
-                            feature,
-                            data_key,
-                        )
-                        continue
-            
-                    if channel_data[data_key] is None:
-                        _LOGGER.debug(
-                            "Optional feature supported but not created (value is null): device=%s channel=%s feature=%s data_key=%s",
                             device_data.get("id"),
                             channel_index,
                             feature,

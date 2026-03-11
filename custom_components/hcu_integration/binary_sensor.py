@@ -81,11 +81,14 @@ class HcuBinarySensor(HcuBaseEntity, BinarySensorEntity):
             ]
 
     @property
-    def is_on(self) -> bool:
+    def is_on(self) -> bool | None:
         """
         Return true if the binary sensor is on.
         """
         value = self._channel.get(self._feature)
+        if value is None:
+            return None
+            
         if self._on_state:
             return value == self._on_state
         return bool(value)
@@ -100,11 +103,14 @@ class HcuWindowBinarySensor(HcuBinarySensor):
     _attr_translation_key = "hcu_window"
     
     @property
-    def is_on(self) -> bool:
+    def is_on(self) -> bool | None:
         """
         Return true if the window is open or tilted.
         """
-        return self._channel.get(self._feature) in ("OPEN", "TILTED")
+        value = self._channel.get(self._feature)
+        if value is None:
+            return None
+        return value in ("OPEN", "TILTED")
 
 class HcuSmokeBinarySensor(HcuBinarySensor):
     """
@@ -113,11 +119,14 @@ class HcuSmokeBinarySensor(HcuBinarySensor):
     """
 
     @property
-    def is_on(self) -> bool:
+    def is_on(self) -> bool | None:
         """
         Return true if the smoke detector alarm is active.
         """
-        return self._channel.get(self._feature) in ("PRIMARY_ALARM", "SECONDARY_ALARM")
+        value = self._channel.get(self._feature)
+        if value is None:
+            return None
+        return value in ("PRIMARY_ALARM", "SECONDARY_ALARM")
 
 
 class HcuUnreachBinarySensor(HcuBinarySensor):

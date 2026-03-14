@@ -545,7 +545,6 @@ HMIP_FEATURE_TO_ENTITY = {
         "unit": PERCENTAGE,
         "icon": "mdi:pipe-valve",
         "state_class": SensorStateClass.MEASUREMENT,
-        "entity_registry_enabled_default": False,
     },
     "windSpeed": {
         "class": "HcuGenericSensor",
@@ -657,6 +656,7 @@ HMIP_FEATURE_TO_ENTITY = {
         "icon": "mdi:dust",
         "state_class": SensorStateClass.MEASUREMENT,
         "entity_category": EntityCategory.DIAGNOSTIC,
+        "entity_registry_enabled_default": False,
     },
     "operationDays": {
         "class": "HcuGenericSensor",
@@ -665,18 +665,21 @@ HMIP_FEATURE_TO_ENTITY = {
         "device_class": SensorDeviceClass.DURATION,
         "state_class": SensorStateClass.TOTAL_INCREASING,
         "entity_category": EntityCategory.DIAGNOSTIC,
+        "entity_registry_enabled_default": False,
     },
     "lastSmokeTestTimestamp": {
         "class": "HcuTimestampSensor",
         "name": "Last Smoke Test",
         "device_class": SensorDeviceClass.TIMESTAMP,
         "entity_category": EntityCategory.DIAGNOSTIC,
+        "entity_registry_enabled_default": False,
     },
     "lastCommunicationTestTimestamp": {
         "class": "HcuTimestampSensor",
         "name": "Last Communication Test",
         "device_class": SensorDeviceClass.TIMESTAMP,
         "entity_category": EntityCategory.DIAGNOSTIC,
+        "entity_registry_enabled_default": False,
     },
     "smokeTestCounter": {
         "class": "HcuGenericSensor",
@@ -684,6 +687,7 @@ HMIP_FEATURE_TO_ENTITY = {
         "icon": "mdi:counter",
         "state_class": SensorStateClass.TOTAL_INCREASING,
         "entity_category": EntityCategory.DIAGNOSTIC,
+        "entity_registry_enabled_default": False,
     },
     "smokeAlarmCounter": {
         "class": "HcuGenericSensor",
@@ -691,6 +695,7 @@ HMIP_FEATURE_TO_ENTITY = {
         "icon": "mdi:counter",
         "state_class": SensorStateClass.TOTAL_INCREASING,
         "entity_category": EntityCategory.DIAGNOSTIC,
+        "entity_registry_enabled_default": False,
     },
     "rssiDeviceValue": {
         "class": "HcuGenericSensor",
@@ -848,30 +853,35 @@ HMIP_FEATURE_TO_ENTITY = {
         "name": "Chamber Degraded",
         "device_class": BinarySensorDeviceClass.PROBLEM,
         "entity_category": EntityCategory.DIAGNOSTIC,
+        "entity_registry_enabled_default": False,
     },
     "deviceOverheated": {
         "class": "HcuBinarySensor",
         "name": "Device Overheated",
         "device_class": BinarySensorDeviceClass.HEAT,
         "entity_category": EntityCategory.DIAGNOSTIC,
+        "entity_registry_enabled_default": False,
     },
     "temperatureOutOfRange": {
         "class": "HcuBinarySensor",
         "name": "Temperature Out Of Range",
         "device_class": BinarySensorDeviceClass.PROBLEM,
         "entity_category": EntityCategory.DIAGNOSTIC,
+        "entity_registry_enabled_default": False,
     },
     "coProFaulty": {
         "class": "HcuBinarySensor",
         "name": "Co-Processor Faulty",
         "device_class": BinarySensorDeviceClass.PROBLEM,
         "entity_category": EntityCategory.DIAGNOSTIC,
+        "entity_registry_enabled_default": False,
     },
     "coProUpdateFailure": {
         "class": "HcuBinarySensor",
         "name": "Co-Processor Update Failure",
         "device_class": BinarySensorDeviceClass.PROBLEM,
         "entity_category": EntityCategory.DIAGNOSTIC,
+        "entity_registry_enabled_default": False,
     },
     "mainsFailureActive": {
         "class": "HcuBinarySensor",

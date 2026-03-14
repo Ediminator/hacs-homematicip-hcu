@@ -603,10 +603,7 @@ async def async_discover_entities(
             continue
         
         # Safety: very old entries could theoretically lack unique_id
-        if not ent.unique_id:
-            continue
-            
-        if ent.unique_id not in valid_entity_unique_ids:
+        if not ent.unique_id or ent.unique_id not in valid_entity_unique_ids:
             _LOGGER.info(
                 "Removing orphaned entity from registry: %s (entity_id: %s, unique_id: %s)",
                 ent.name,

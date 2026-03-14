@@ -197,6 +197,8 @@ DEACTIVATED_BY_DEFAULT_DEVICES = {
     "DIGITAL_RADIO_INPUT_32",  # HmIP-DRI32 - Input-only device
 }
 
+MANDATORY_RF_FEATURES = ("windowState", "unreach")
+
 # Devices with multi-function channels that serve dual purposes
 # Maps device type to a dict of channel types that have multiple functions
 # For HmIP-BSL: NOTIFICATION_LIGHT_CHANNEL serves as BOTH button input AND backlight control

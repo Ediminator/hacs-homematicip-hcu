@@ -42,6 +42,7 @@ from .const import (
     MANUFACTURER_EQ3,
     CONF_DISABLED_GROUPS,
     ALLOWED_EMPTY_GROUPS,
+    MANDATORY_RF_FEATURES,
 )
 from .util import get_device_manufacturer
 
@@ -251,7 +252,7 @@ async def async_discover_entities(
                 if channel_data[feature] is None:
                     # Manual whitelist for primary features that aren't listed as optional
                     # but are core to the device's function and may be null at startup.
-                    is_mandatory_rf = feature in {"windowState", "unreach"}
+                    is_mandatory_rf = feature in MANDATORY_RF_FEATURES
                     
                     if not is_mandatory_rf:
                         _LOGGER.debug(

@@ -136,14 +136,17 @@ class HcuUnreachBinarySensor(HcuBinarySensor):
     """
     
     @property
-    def is_on(self) -> bool:
+    def is_on(self) -> bool | None:
         """
         Return true if the device is connected.
         The API's 'unreach' property is `True` when the device is unreachable.
         For Home Assistant's `connectivity` device class, `is_on` should be
         `True` when the device is connected, so we must invert the value.
         """
-        return not self._channel.get(self._feature, False)
+        value = self._channel.get(self._feature)
+        if value is None:
+            return None
+        return not value
 
 
 class HcuVacationModeBinarySensor(HcuHomeBaseEntity, BinarySensorEntity):

@@ -89,6 +89,16 @@ class HcuBinarySensor(HcuBaseEntity, BinarySensorEntity):
         if value is None:
             return None
             
+        return self._is_on_from_value(value)
+
+    def _is_on_from_value(self, value: Any) -> bool:
+        """
+        Determine the boolean state from the raw value.
+        Subclasses can override this to provide specific logic.
+        """
+        # Rule 1 from bot: Do not hardcode state values, such as on_state, for sensors if the value
+        # can be configured by the user in the external application.
+        # Here we use the configurable _on_state if provided by the mapping.
         if self._on_state:
             return value == self._on_state
         return bool(value)
@@ -102,14 +112,10 @@ class HcuWindowBinarySensor(HcuBinarySensor):
     
     _attr_translation_key = "hcu_window"
     
-    @property
-    def is_on(self) -> bool | None:
+    def _is_on_from_value(self, value: Any) -> bool:
         """
         Return true if the window is open or tilted.
         """
-        value = self._channel.get(self._feature)
-        if value is None:
-            return None
         return value in ("OPEN", "TILTED")
 
 class HcuSmokeBinarySensor(HcuBinarySensor):
@@ -118,14 +124,10 @@ class HcuSmokeBinarySensor(HcuBinarySensor):
     This class provides specialized logic for smoke detectors.
     """
 
-    @property
-    def is_on(self) -> bool | None:
+    def _is_on_from_value(self, value: Any) -> bool:
         """
         Return true if the smoke detector alarm is active.
         """
-        value = self._channel.get(self._feature)
-        if value is None:
-            return None
         return value in ("PRIMARY_ALARM", "SECONDARY_ALARM")
 
 
@@ -135,17 +137,13 @@ class HcuUnreachBinarySensor(HcuBinarySensor):
     This class provides specialized logic for the 'unreach' status.
     """
     
-    @property
-    def is_on(self) -> bool | None:
+    def _is_on_from_value(self, value: Any) -> bool:
         """
         Return true if the device is connected.
         The API's 'unreach' property is `True` when the device is unreachable.
         For Home Assistant's `connectivity` device class, `is_on` should be
         `True` when the device is connected, so we must invert the value.
         """
-        value = self._channel.get(self._feature)
-        if value is None:
-            return None
         return not value
 
 

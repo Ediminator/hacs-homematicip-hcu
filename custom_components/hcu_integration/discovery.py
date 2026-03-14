@@ -51,6 +51,15 @@ if TYPE_CHECKING:
 
 _LOGGER = logging.getLogger(__name__)
 
+# Features newly deactivated by default in Issue #296
+# Used for retroactive cleanup in the entity registry
+NEWLY_DEACTIVATED_FEATURES = frozenset({
+    "dirtLevel", "operationDays", "lastSmokeTestTimestamp",
+    "lastCommunicationTestTimestamp", "smokeTestCounter", "smokeAlarmCounter",
+    "chamberDegraded", "deviceOverheated", "temperatureOutOfRange",
+    "coProFaulty", "coProUpdateFailure"
+})
+
 async def async_discover_entities(
     hass: HomeAssistant,
     client: HcuApiClient,
@@ -623,15 +632,7 @@ async def async_discover_entities(
             if len(parts) == 2:
                 feature = parts[1]
                 
-                # Features newly deactivated by default in Issue #296
-                newly_deactivated = (
-                    "dirtLevel", "operationDays", "lastSmokeTestTimestamp",
-                    "lastCommunicationTestTimestamp", "smokeTestCounter", "smokeAlarmCounter",
-                    "chamberDegraded", "deviceOverheated", "temperatureOutOfRange",
-                    "coProFaulty", "coProUpdateFailure"
-                )
-                
-                if feature in newly_deactivated:
+                if feature in NEWLY_DEACTIVATED_FEATURES:
                     mapping = HMIP_FEATURE_TO_ENTITY.get(feature) or HMIP_OPTIONAL_FEATURE_TO_ENTITY.get(feature)
                     
                     if mapping and mapping.get("entity_registry_enabled_default") is False:

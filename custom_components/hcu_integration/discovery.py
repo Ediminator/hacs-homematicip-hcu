@@ -246,6 +246,10 @@ async def async_discover_entities(
                 if feature == "dutyCycleLevel" and device_data.get("id") == client.hcu_device_id:
                     continue
 
+                # Hardware Support Guard:
+                # If a feature is null, we only create the entity if:
+                # It belongs to our mandatory whitelist (features known to be transiently null on RF devices)
+                if channel_data[feature] is None:
                     # Manual whitelist for primary features that aren't listed as optional
                     # but are core to the device's function and may be null at startup.
                     is_mandatory_rf = feature in MANDATORY_RF_FEATURES

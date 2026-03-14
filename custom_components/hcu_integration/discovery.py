@@ -625,12 +625,13 @@ async def async_discover_entities(
         else:
             # Retroactively disable entities that are ONLY newly disabled by default
             # Extract feature name from unique_id
-            # We find all matching features and take the longest one to ensure
-            # we pick the most specific match (e.g. 'coProFault' over 'fault').
-            matching_features = [
-                f for f in NEWLY_DEACTIVATED_FEATURES if ent.unique_id.endswith(f"_{f}")
-            ]
-            feature = max(matching_features, key=len) if matching_features else None
+            # We use a generator expression with max() and a default value
+            # for better performance and more idiomatic code.
+            feature = max(
+                (f for f in NEWLY_DEACTIVATED_FEATURES if ent.unique_id.endswith(f"_{f}")),
+                key=len,
+                default=None,
+            )
 
             if not feature:
                 continue

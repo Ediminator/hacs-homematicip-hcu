@@ -3,6 +3,27 @@
 All notable changes to the Homematic IP Local (HCU) integration will be documented in this file.
 
 ---
+## 1.21.2 - 2026-03-14
+
+### 🐛 Bug Fixes
+
+**Fix Missing Entities for RF Devices on Startup (Issue/PR #298)**
+
+Fixed an issue where battery (`lowBat`), window state (`windowState`), and connectivity (`unreach`) entities were completely missing for HmIP-SWDM and other RF devices if their value reported as `null` during integration startup.
+
+**What Changed:**
+- **Mandatory RF Features:** Introduced a whitelist for core features (`windowState`, `unreach`) that should always be created even when initially `null`.
+- **Optional Features Guard:** Restored the `supportedOptionalFeatures` check so features like `lowBat` are correctly discovered when initially `null`.
+- **Accurate Sensor States:** Refactored `HcuBinarySensor` classes so that `null` values map to an `unknown` state in Home Assistant, instead of defaulting to `False` (e.g., showing a device as "Connected" when its unreach state is actually unknown).
+- **Code Maintainability:** Extracted complex logic into a `_should_skip_null_feature` helper function.
+
+**Files Changed:**
+- `custom_components/hcu_integration/discovery.py` — Hardware support guard logic extraction and fix.
+- `custom_components/hcu_integration/const.py` — Added `MANDATORY_RF_FEATURES` whitelist.
+- `custom_components/hcu_integration/binary_sensor.py` — Refactored null value handling for boolean sensors.
+- `custom_components/hcu_integration/manifest.json` — Version bump to 1.21.2.
+
+---
 ## 1.21.1 - 2026-03-10
 
 ### 🐛 Bug Fixes

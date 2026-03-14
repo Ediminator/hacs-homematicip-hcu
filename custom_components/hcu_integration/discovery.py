@@ -247,27 +247,15 @@ async def async_discover_entities(
 
                 # Hardware Support Guard:
                 # If a feature is null, we only create the entity if:
-                # 1. It is explicitly listed as supported in supportedOptionalFeatures
-                # 2. It belongs to our mandatory whitelist (features known to be transiently null on RF devices)
+                # It belongs to our mandatory whitelist (features known to be transiently null on RF devices)
                 if channel_data[feature] is None:
-                    optional_features = channel_data.get("supportedOptionalFeatures", {})
-                    # Check for exact match or various HCU feature name conventions
-                    feature_variants = (
-                        feature,
-                        f"IFeature{feature[0].upper()}{feature[1:]}",
-                        f"IOptionalFeature{feature[0].upper()}{feature[1:]}",
-                    )
-                    is_hardware_supported = any(
-                        optional_features.get(v, False) for v in feature_variants
-                    )
-                    
                     # Manual whitelist for primary features that aren't listed as optional
                     # but are core to the device's function and may be null at startup.
                     is_mandatory_rf = feature in ("windowState", "unreach")
                     
-                    if not (is_hardware_supported or is_mandatory_rf):
+                    if not is_mandatory_rf:
                         _LOGGER.debug(
-                            "Skipping unsupported feature '%s' on %s: value is null and hardware support not confirmed",
+                            "Skipping unsupported feature '%s' on %s: value is null and not in mandatory whitelist",
                             feature, device_data.get("id")
                         )
                         continue

@@ -251,7 +251,7 @@ async def async_discover_entities(
                 if channel_data[feature] is None:
                     # Manual whitelist for primary features that aren't listed as optional
                     # but are core to the device's function and may be null at startup.
-                    is_mandatory_rf = feature in ("windowState", "unreach")
+                    is_mandatory_rf = feature in {"windowState", "unreach"}
                     
                     if not is_mandatory_rf:
                         _LOGGER.debug(

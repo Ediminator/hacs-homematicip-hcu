@@ -3,6 +3,26 @@
 All notable changes to the Homematic IP Local (HCU) integration will be documented in this file.
 
 ---
+## 1.21.3 - 2026-03-14
+
+### ✨ New Features
+
+**Diagnostic Entity Clutter Cleanup & Native Valve Position (Issue #296)**
+
+This release significantly cleans up the entity list by disabling obscure diagnostic sensors by default and re-enabling critical thermodynamic data. 
+
+**What Changed:**
+- **Diagnostic Silence:** 11 obscure diagnostic entities (e.g., `dirtLevel`, `chamberDegraded`, `operationDays`) are now **disabled by default** for new installations.
+- **Retroactive Cleanup:** For existing users, the integration will now automatically disable these 11 entities in the Home Assistant registry IF they were previously enabled by default and HAVEN'T been manually modified by the user. This ensures a cleaner UI without overriding your manual configurations.
+- **Valve Position Enabled:** The `valvePosition` sensor is now enabled by default for all climate devices, providing immediate visibility into heating demand without manual activation.
+- **Robust Feature Parsing:** Refactored the internal entity registry cleanup logic to be more resilient and performant, ensuring accurate identification of entities even as Homematic IP expands its feature set.
+
+**Files Changed:**
+- `custom_components/hcu_integration/const.py` — Updated default enabled status for diagnostic and valve sensors.
+- `custom_components/hcu_integration/discovery.py` — Implemented proactive registry cleanup and robust feature extraction.
+- `custom_components/hcu_integration/manifest.json` — Version bump to 1.21.3.
+
+---
 ## 1.21.2 - 2026-03-14
 
 ### 🐛 Bug Fixes

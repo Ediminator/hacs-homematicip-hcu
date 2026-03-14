@@ -250,24 +250,7 @@ async def async_discover_entities(
                 # If a feature is null, we only create the entity if:
                 # It belongs to our mandatory whitelist (features known to be transiently null on RF devices)
                 if channel_data[feature] is None:
-                    # Manual whitelist for primary features that aren't listed as optional
-                    # but are core to the device's function and may be null at startup.
-                    is_mandatory_rf = feature in MANDATORY_RF_FEATURES
-                    
-                    # Also check if the feature is explicitly supported, even if its value is null.
-                    supported_map = channel_data.get("supportedOptionalFeatures", {})
-                    # For features in HMIP_FEATURE_TO_ENTITY, we check if they are supported by name
-                    # or by their IFeature/IOptionalFeature variant.
-                    feature_variants = (
-                        feature,
-                        f"IFeature{feature[0].upper()}{feature[1:]}",
-                        f"IOptionalFeature{feature[0].upper()}{feature[1:]}",
-                    )
-                    is_optional_supported = any(
-                        supported_map.get(v, False) for v in feature_variants
-                    )
-                    
-                    if not (is_mandatory_rf or is_optional_supported):
+                    if _should_skip_null_feature(feature, channel_data):
                         _LOGGER.debug(
                             "Skipping unsupported feature '%s' on %s: value is null and not in mandatory whitelist or supported optional features",
                             feature, device_data.get("id")
@@ -632,3 +615,26 @@ async def async_discover_entities(
                 )
 
     return entities
+
+def _should_skip_null_feature(feature: str, channel_data: dict) -> bool:
+    """
+    Determine whether to skip creating an entity for a feature that has a null value.
+    """
+    # Manual whitelist for primary features that aren't listed as optional
+    # but are core to the device's function and may be null at startup.
+    is_mandatory_rf = feature in MANDATORY_RF_FEATURES
+    
+    # Also check if the feature is explicitly supported, even if its value is null.
+    supported_map = channel_data.get("supportedOptionalFeatures", {})
+    # For features in HMIP_FEATURE_TO_ENTITY, we check if they are supported by name
+    # or by their IFeature/IOptionalFeature variant.
+    feature_variants = (
+        feature,
+        f"IFeature{feature[0].upper()}{feature[1:]}",
+        f"IOptionalFeature{feature[0].upper()}{feature[1:]}",
+    )
+    is_optional_supported = any(
+        supported_map.get(v, False) for v in feature_variants
+    )
+    
+    return not (is_mandatory_rf or is_optional_supported)

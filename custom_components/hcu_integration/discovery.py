@@ -627,37 +627,43 @@ async def async_discover_entities(
                 )
         else:
             # Retroactively disable entities that are ONLY newly disabled by default
-            # Extract feature name from unique_id (typically {device_id}_{channel}_{feature})
+            # Extract feature name from unique_id
             parts = ent.unique_id.rsplit("_", 1)
-            if len(parts) == 2:
-                feature = parts[1]
-                
-                if feature in NEWLY_DEACTIVATED_FEATURES:
-                    mapping = HMIP_FEATURE_TO_ENTITY.get(feature) or HMIP_OPTIONAL_FEATURE_TO_ENTITY.get(feature)
-                    
-                    if mapping and mapping.get("entity_registry_enabled_default") is False:
-                        # Only disable if currently active (None) to respect user overrides
-                        if ent.disabled_by is None:
-                            _LOGGER.info(
-                                "Retroactively disabling entity to reduce clutter: %s (entity_id: %s, feature: %s)",
-                                ent.name or ent.entity_id,
-                                ent.entity_id,
-                                feature,
-                            )
-                            try:
-                                ent_reg.async_update_entity(
-                                    ent.entity_id,
-                                    disabled_by=er.RegistryEntryDisabler.INTEGRATION
-                                )
-                            except asyncio.CancelledError:
-                                raise
-                            except Exception:
-                                _LOGGER.warning(
-                                    "Failed to retroactively disable entity '%s' (entity_id: %s)",
-                                    ent.name or ent.entity_id,
-                                    ent.entity_id,
-                                    exc_info=True,
-                                )
+            if len(parts) != 2:
+                continue
+
+            feature = parts[1]
+            if feature not in NEWLY_DEACTIVATED_FEATURES:
+                continue
+
+            mapping = HMIP_FEATURE_TO_ENTITY.get(feature) or HMIP_OPTIONAL_FEATURE_TO_ENTITY.get(feature)
+            if not (mapping and mapping.get("entity_registry_enabled_default") is False):
+                continue
+
+            # Only disable if currently active (None) to respect user overrides
+            if ent.disabled_by is not None:
+                continue
+
+            _LOGGER.info(
+                "Retroactively disabling entity to reduce clutter: %s (entity_id: %s, feature: %s)",
+                ent.name or ent.entity_id,
+                ent.entity_id,
+                feature,
+            )
+            try:
+                ent_reg.async_update_entity(
+                    ent.entity_id,
+                    disabled_by=er.RegistryEntryDisabler.INTEGRATION
+                )
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                _LOGGER.warning(
+                    "Failed to retroactively disable entity '%s' (entity_id: %s)",
+                    ent.name or ent.entity_id,
+                    ent.entity_id,
+                    exc_info=True,
+                )
 
     return entities
 

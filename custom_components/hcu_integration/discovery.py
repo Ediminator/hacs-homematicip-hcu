@@ -661,9 +661,10 @@ async def async_discover_entities(
                 raise
             except Exception:
                 _LOGGER.warning(
-                    "Failed to retroactively disable entity '%s' (entity_id: %s)",
+                    "Failed to retroactively disable entity '%s' (entity_id: %s, feature: %s)",
                     ent.name or ent.entity_id,
                     ent.entity_id,
+                    feature,
                     exc_info=True,
                 )
 

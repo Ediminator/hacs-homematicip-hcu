@@ -635,7 +635,7 @@ async def async_discover_entities(
             if not feature:
                 continue
 
-            mapping = HMIP_FEATURE_TO_ENTITY.get(feature) or HMIP_OPTIONAL_FEATURE_TO_ENTITY.get(feature)
+            mapping = HMIP_FEATURE_TO_ENTITY.get(feature)
             if not (mapping and mapping.get("entity_registry_enabled_default") is False):
                 continue
 

@@ -628,12 +628,16 @@ async def async_discover_entities(
         else:
             # Retroactively disable entities that are ONLY newly disabled by default
             # Extract feature name from unique_id
-            parts = ent.unique_id.rsplit("_", 1)
-            if len(parts) != 2:
-                continue
+            parts = ent.unique_id.split('_')
+            feature = None
+            # Heuristic for device_id_channel_index_feature format
+            if len(parts) >= 3 and parts[1].isdigit():
+                feature = '_'.join(parts[2:])
+            # Heuristic for device_id_feature format
+            elif len(parts) >= 2:
+                feature = '_'.join(parts[1:])
 
-            feature = parts[1]
-            if feature not in NEWLY_DEACTIVATED_FEATURES:
+            if not feature or feature not in NEWLY_DEACTIVATED_FEATURES:
                 continue
 
             mapping = HMIP_FEATURE_TO_ENTITY.get(feature) or HMIP_OPTIONAL_FEATURE_TO_ENTITY.get(feature)

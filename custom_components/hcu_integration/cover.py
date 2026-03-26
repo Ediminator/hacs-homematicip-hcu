@@ -125,6 +125,14 @@ class HcuCover(HcuBaseEntity, CoverEntity):
         return _level_to_position(self._channel.get("slatsLevel"))
 
     @property
+    def is_opening(self) -> bool:
+        return (self._channel.get("lastShadingDirection") == "LIGHTER" and self._channel.get("processing") == True)
+
+    @property
+    def is_closing(self) -> bool:
+        return (self._channel.get("lastShadingDirection") == "DARKER" and self._channel.get("processing") == True)
+
+    @property
     def is_closed(self) -> bool | None:
         """Return if the cover is closed or not."""
         pos = self.current_cover_position

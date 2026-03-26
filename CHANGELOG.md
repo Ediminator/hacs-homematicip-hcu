@@ -7,7 +7,7 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 
 ### ✨ New Features
 
-- State Closing and Opening for shutter actors
+- Closing and Opening State for shutter actuators
 
 ---
 ## 1.21.3 - 2026-03-14

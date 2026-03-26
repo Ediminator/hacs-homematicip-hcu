@@ -3,6 +3,13 @@
 All notable changes to the Homematic IP Local (HCU) integration will be documented in this file.
 
 ---
+## 1.21.4 - 
+
+### ✨ New Features
+
+**State Closing and Opening for shutter actors**
+
+---
 ## 1.21.3 - 2026-03-14
 
 ### ✨ New Features

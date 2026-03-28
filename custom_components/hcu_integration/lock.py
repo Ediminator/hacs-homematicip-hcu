@@ -11,16 +11,13 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import (
     CONF_PIN,
-    DOCS_URL_LOCK_PIN_CONFIG,
     LOCK_STATE_LOCKED,
     LOCK_STATE_UNLOCKED,
     LOCK_STATE_OPEN,
-    LOCK_AUTH_ERROR_MSG,
-    INVALID_PIN_ERROR_STRINGS,
-    ACCESS_DENIED_ERROR_STRINGS,
 )
 from .entity import HcuBaseEntity
 from .api import HcuApiClient, HcuApiError
+from .util import handle_lock_api_error
 
 if TYPE_CHECKING:
     from . import HcuCoordinator
@@ -195,46 +192,11 @@ class HcuLock(HcuBaseEntity, LockEntity):
                 self._pin_required = False
 
         except HcuApiError as err:
-            error_str_lower = str(err).lower()
-
-            if any(s in error_str_lower for s in INVALID_PIN_ERROR_STRINGS):
-                _LOGGER.error(
-                    "Invalid or missing PIN for lock '%s'. "
-                    "To configure the PIN: Go to Settings → Devices & Services → "
-                    "Homematic IP Local (HCU) → CONFIGURE → Enter your door lock's Authorization PIN. "
-                    "See %s for details.",
-                    self.name,
-                    DOCS_URL_LOCK_PIN_CONFIG,
-                )
+            err_type = handle_lock_api_error(err, self.hass, self._config_entry, self.name, pin)
+            
+            if err_type == "invalid_pin":
                 self._pin_required = True
-
-                # Only trigger reauth if we already have a PIN configured (meaning it's wrong)
-                # If no PIN is configured, user will see the attribute and can add it
-                if pin:
-                    self._config_entry.async_start_reauth(self.hass)
-                else:
-                    _LOGGER.warning(
-                        "Lock '%s' requires a PIN to function. "
-                        "Please configure it: Settings → Devices & Services → "
-                        "Homematic IP Local (HCU) → CONFIGURE → Enter Authorization PIN. "
-                        "See %s for details.",
-                        self.name,
-                        DOCS_URL_LOCK_PIN_CONFIG,
-                    )
-
-            # Check for access denied / permission errors
-            elif any(err in error_str_lower for err in ACCESS_DENIED_ERROR_STRINGS) or "no permission" in error_str_lower:
-                _LOGGER.error(LOCK_AUTH_ERROR_MSG, f"lock '{self.name}'")
-
-            # Check for motor jam errors
-            elif "jammed" in error_str_lower or "jam" in error_str_lower:
-                _LOGGER.error(
-                    "Lock '%s' is jammed and cannot complete the operation. "
-                    "Check the lock mechanism for obstructions.",
-                    self.name,
-                )
-
-            else:
+            elif not err_type:
                 _LOGGER.error("Failed to set lock state for %s: %s", self.name, err)
 
         except ConnectionError as err:

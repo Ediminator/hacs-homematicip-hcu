@@ -217,19 +217,20 @@ class HcuLock(HcuBaseEntity, LockEntity):
                     )
 
             # Check for access denied / permission errors
-            elif "ACCESS_DENIED" in error_str or "INVALID_REQUEST" in error_str or "no permission" in error_str.lower():
+            elif "ACCESS_DENIED" in error_str or "INVALID_REQUEST" in error_str or "CLIENT_INVALID_AUTHORIZATION" in error_str or "no permission" in error_str.lower():
                 _LOGGER.error(
                     "Access denied for lock '%s'. The Home Assistant Integration plugin user "
                     "does not have permission to control this lock. "
                     "\n\nTo fix this issue:\n"
-                    "1. Open the HomematicIP app on your phone\n"
-                    "2. Go to Settings → Access Control → Access Profiles\n"
-                    "3. Select or create an access profile for this lock\n"
-                    "4. Try to add 'Home Assistant Integration' user to the profile\n"
-                    "\nKNOWN LIMITATION: The plugin user may appear grayed out or expired in the app. "
-                    "This is a known issue with the HCU firmware. The integration has properly registered with the HCU, "
-                    "but the HomematicIP app may not allow assigning it to access profiles. "
-                    "\nPlease check the 'has_access_authorization' attribute to verify authorization status.",
+                    "0. CRITICAL: Ensure your HCU Firmware is updated to version 1.6.16 or higher.\n"
+                    "1. Delete any old 'Home Assistant' profiles if they appear grayed out.\n"
+                    "2. Open the HomematicIP app on your phone\n"
+                    "3. Go to Settings → Access Control → Access Profiles\n"
+                    "4. Create a new access profile for this lock and add the 'Home Assistant Integration' user.\n"
+                    "\nKNOWN LIMITATION: Even on 1.6.16, the plugin user may still appear grayed out or expired in the app. "
+                    "This is a known UI bug with the HCU firmware. The integration has properly registered with the HCU, "
+                    "but the HomematicIP app UI often lags.\n"
+                    "Please check the 'has_access_authorization' attribute to verify authorization status.",
                     self.name,
                 )
 

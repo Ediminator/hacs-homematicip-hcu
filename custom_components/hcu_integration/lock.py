@@ -223,7 +223,9 @@ class HcuLock(HcuBaseEntity, LockEntity):
                     )
 
             # Check for access denied / permission errors
-            elif "ACCESS_DENIED" in error_str or "INVALID_REQUEST" in error_str or "CLIENT_INVALID_AUTHORIZATION" in error_str or "no permission" in error_str.lower():
+            elif any(
+                err in error_str for err in ("ACCESS_DENIED", "INVALID_REQUEST", "CLIENT_INVALID_AUTHORIZATION")
+            ) or "no permission" in error_str.lower():
                 _LOGGER.error(
                     "Access denied for lock '%s'. The Home Assistant Integration plugin user "
                     "does not have permission to control this lock. "

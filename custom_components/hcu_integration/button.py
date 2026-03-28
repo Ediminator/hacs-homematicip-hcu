@@ -200,6 +200,26 @@ class HcuDoorUnlatchButton(HcuBaseEntity, ButtonEntity):
                 self._device_id, self._channel_index, state=LOCK_STATE_OPEN, pin=pin
             )
         except (HcuApiError, ConnectionError) as err:
-            _LOGGER.error(
-                "Error triggering unlatch for %s: %s", self.entity_id, err
-            )
+            error_str = str(err)
+            if any(
+                e in error_str for e in ("ACCESS_DENIED", "INVALID_REQUEST", "CLIENT_INVALID_AUTHORIZATION")
+            ) or "no permission" in error_str.lower():
+                _LOGGER.error(
+                    "Access denied for lock unlatch button '%s'. The Home Assistant Integration plugin user "
+                    "does not have permission to control this lock. "
+                    "\n\nTo fix this issue:\n"
+                    "0. CRITICAL: Ensure your HCU Firmware is updated to version 1.6.16 or higher.\n"
+                    "1. Delete any old 'Home Assistant' profiles if they appear grayed out.\n"
+                    "2. Open the HomematicIP app on your phone\n"
+                    "3. Go to Settings → Access Control → Access Profiles\n"
+                    "4. Create a new access profile for this lock and add the 'Home Assistant Integration' user.\n"
+                    "\nKNOWN LIMITATION: Even on 1.6.16, the plugin user may still appear grayed out or expired in the app. "
+                    "This is a known UI bug with the HCU firmware. The integration has properly registered with the HCU, "
+                    "but the HomematicIP app UI often lags.\n"
+                    "Please check the 'has_access_authorization' attribute on the lock entity to verify authorization status.",
+                    self.entity_id,
+                )
+            else:
+                _LOGGER.error(
+                    "Error triggering unlatch for %s: %s", self.entity_id, err
+                )

@@ -35,6 +35,8 @@ body:
           required: true
         - label: I have read the **README** and followed all relevant instructions.
           required: true
+        - label: I have reload the integration to solve my problem.
+          required: true
 
   - type: textarea
     validations:

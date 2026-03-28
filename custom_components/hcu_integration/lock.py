@@ -9,7 +9,13 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import CONF_PIN, DOCS_URL_LOCK_PIN_CONFIG
+from .const import (
+    CONF_PIN,
+    DOCS_URL_LOCK_PIN_CONFIG,
+    LOCK_STATE_LOCKED,
+    LOCK_STATE_UNLOCKED,
+    LOCK_STATE_OPEN,
+)
 from .entity import HcuBaseEntity
 from .api import HcuApiClient, HcuApiError
 
@@ -66,7 +72,7 @@ class HcuLock(HcuBaseEntity, LockEntity):
     @property
     def is_locked(self) -> bool:
         """Return true if the lock is locked."""
-        return self._channel.get("lockState") == "LOCKED"
+        return self._channel.get("lockState") == LOCK_STATE_LOCKED
 
     @property
     def is_locking(self) -> bool | None:
@@ -258,12 +264,12 @@ class HcuLock(HcuBaseEntity, LockEntity):
 
     async def async_lock(self, **kwargs) -> None:
         """Lock the door."""
-        await self._set_lock_state("LOCKED")
+        await self._set_lock_state(LOCK_STATE_LOCKED)
 
     async def async_unlock(self, **kwargs) -> None:
         """Unlock the door."""
-        await self._set_lock_state("UNLOCKED")
+        await self._set_lock_state(LOCK_STATE_UNLOCKED)
 
     async def async_open(self, **kwargs) -> None:
         """Open the door latch."""
-        await self._set_lock_state("OPEN")
+        await self._set_lock_state(LOCK_STATE_OPEN)

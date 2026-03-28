@@ -14,6 +14,11 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .entity import HcuBaseEntity
 from .api import HcuApiClient, HcuApiError
+from .util import handle_lock_api_error
+from .const import (
+    CONF_PIN,
+    LOCK_STATE_OPEN,
+)
 
 if TYPE_CHECKING:
     from . import HcuCoordinator
@@ -167,4 +172,43 @@ class HcuDeviceIdentifyButton(HcuBaseEntity, ButtonEntity):
         except (HcuApiError, ConnectionError) as err:
             _LOGGER.error(
                 "Error triggering identify for %s: %s", self.entity_id, err
+            )
+
+class HcuDoorUnlatchButton(HcuBaseEntity, ButtonEntity):
+    """Representation of a button to unlatch a door lock (e.g., HmIP-DLD)."""
+
+    PLATFORM = Platform.BUTTON
+    _attr_icon = "mdi:door-open"
+
+    def __init__(
+        self,
+        coordinator: "HcuCoordinator",
+        client: HcuApiClient,
+        device_data: dict,
+        channel_index: str,
+        config_entry: ConfigEntry,
+    ):
+        """Initialize the door unlatch button."""
+        super().__init__(coordinator, client, device_data, channel_index)
+        self._config_entry = config_entry
+        self._set_entity_name(channel_label=self._channel.get("label"), feature_name="Unlatch")
+        self._attr_unique_id = f"{self._device_id}_{self._channel_index}_unlatch"
+
+    async def async_press(self) -> None:
+        """Pull the door latch to open the door."""
+        pin = self._config_entry.data.get(CONF_PIN)
+        _LOGGER.info("Triggering unlatch for %s", self.name)
+        
+        try:
+            await self._client.async_set_lock_state(
+                self._device_id, self._channel_index, state=LOCK_STATE_OPEN, pin=pin
+            )
+        except HcuApiError as err:
+            if not handle_lock_api_error(err, self.hass, self._config_entry, self.name, pin):
+                _LOGGER.error(
+                    "Error triggering unlatch for %s: %s", self.name, err
+                )
+        except ConnectionError as err:
+            _LOGGER.error(
+                "Connection failed while triggering unlatch for %s: %s", self.name, err
             )

@@ -1,6 +1,7 @@
 # custom_components/hcu_integration/util.py
 import ssl
 from homeassistant.core import HomeAssistant
+from homeassistant.config_entries import ConfigEntry
 from .const import (
     MANUFACTURER_EQ3,
     MANUFACTURER_HUE,
@@ -9,7 +10,14 @@ from .const import (
     DEVICE_TYPE_PLUGIN_EXTERNAL,
     HUE_MODEL_TOKEN,
     HOMEMATIC_MODEL_PREFIXES,
+    INVALID_PIN_ERROR_STRINGS,
+    ACCESS_DENIED_ERROR_STRINGS,
+    LOCK_AUTH_ERROR_MSG,
+    DOCS_URL_LOCK_PIN_CONFIG,
 )
+import logging
+
+_LOGGER = logging.getLogger(__name__)
 
 # Cache key for storing SSL context in hass.data
 _SSL_CONTEXT_CACHE_KEY = "hcu_integration_ssl_context"
@@ -74,3 +82,47 @@ def get_device_manufacturer(device_data: dict) -> str:
 def get_group_type(group_data: dict) -> str:
     """Determine the type of a group."""
     return group_data.get("type")
+
+def handle_lock_api_error(
+    err: Exception,
+    hass: HomeAssistant,
+    config_entry: ConfigEntry,
+    entity_name: str,
+    pin: str | None,
+) -> str | None:
+    """
+    Handle standard lock API authentication and state errors across lock platforms.
+    Returns the type of error matched, or None if unhandled.
+    """
+    error_str_lower = str(err).lower()
+
+    # Check for invalid PIN errors
+    if any(s in error_str_lower for s in INVALID_PIN_ERROR_STRINGS):
+        if pin:
+            config_entry.async_start_reauth(hass)
+        else:
+            _LOGGER.warning(
+                "Lock '%s' requires a PIN to function. "
+                "Please configure it: Settings → Devices & Services → "
+                "Homematic IP Local (HCU) → CONFIGURE → Enter Authorization PIN. "
+                "See %s for details.",
+                entity_name,
+                DOCS_URL_LOCK_PIN_CONFIG,
+            )
+        return "invalid_pin"
+
+    # Check for access denied / permission errors
+    if any(e in error_str_lower for e in ACCESS_DENIED_ERROR_STRINGS) or "no permission" in error_str_lower:
+        _LOGGER.error(LOCK_AUTH_ERROR_MSG, f"lock '{entity_name}'")
+        return "access_denied"
+
+    # Check for motor jam errors
+    if "jammed" in error_str_lower or "jam" in error_str_lower:
+        _LOGGER.error(
+            "Lock '%s' is jammed and cannot complete the operation. "
+            "Check the lock mechanism for obstructions.",
+            entity_name,
+        )
+        return "jammed"
+
+    return None

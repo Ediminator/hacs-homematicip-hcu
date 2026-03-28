@@ -90,6 +90,7 @@ async def async_discover_entities(
         "HcuResetEnergyButton": button,
         "HcuDoorOpenerButton": button,
         "HcuDoorImpulseButton": button,
+        "HcuDoorUnlatchButton": button,
         "HcuDeviceIdentifyButton": button,
         "HcuGenericSensor": sensor,
         "HcuTemperatureSensor": sensor,
@@ -192,6 +193,21 @@ async def async_discover_entities(
                         uid = getattr(entity, "unique_id", None)
                         if uid:
                             valid_entity_unique_ids.add(uid)
+
+                        # Add Unlatch button for door locks (creates extra entity for HomeKit support)
+                        if base_channel_type == "DOOR_LOCK_CHANNEL":
+                            try:
+                                unlatch_btn = button.HcuDoorUnlatchButton(
+                                    coordinator, client, device_data, channel_index, config_entry
+                                )
+                                entities[Platform.BUTTON].append(unlatch_btn)
+                                unlatch_uid = getattr(unlatch_btn, "unique_id", None)
+                                if unlatch_uid:
+                                    valid_entity_unique_ids.add(unlatch_uid)
+                            except (AttributeError, TypeError) as e:
+                                _LOGGER.error(
+                                    "Failed to create Unlatch button for %s: %s", device_data.get("id"), e
+                                )
                         
                     except (AttributeError, TypeError) as e:
                         _LOGGER.error(

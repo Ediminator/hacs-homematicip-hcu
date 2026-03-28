@@ -9,16 +9,20 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import CONF_PIN, DOCS_URL_LOCK_PIN_CONFIG
+from .const import (
+    CONF_PIN,
+    LOCK_STATE_LOCKED,
+    LOCK_STATE_UNLOCKED,
+    LOCK_STATE_OPEN,
+)
 from .entity import HcuBaseEntity
 from .api import HcuApiClient, HcuApiError
+from .util import handle_lock_api_error
 
 if TYPE_CHECKING:
     from . import HcuCoordinator
 
 _LOGGER = logging.getLogger(__name__)
-
-_INVALID_PIN_ERROR_STRINGS = ("INVALID_AUTHORIZATION_PIN", "INVALID_PIN")
 
 
 async def async_setup_entry(
@@ -66,7 +70,7 @@ class HcuLock(HcuBaseEntity, LockEntity):
     @property
     def is_locked(self) -> bool:
         """Return true if the lock is locked."""
-        return self._channel.get("lockState") == "LOCKED"
+        return self._channel.get("lockState") == LOCK_STATE_LOCKED
 
     @property
     def is_locking(self) -> bool | None:
@@ -188,60 +192,11 @@ class HcuLock(HcuBaseEntity, LockEntity):
                 self._pin_required = False
 
         except HcuApiError as err:
-            error_str = str(err)
-
-            # Parse the error to check if it's a PIN issue
-            if any(s in error_str for s in _INVALID_PIN_ERROR_STRINGS):
-                _LOGGER.error(
-                    "Invalid or missing PIN for lock '%s'. "
-                    "To configure the PIN: Go to Settings → Devices & Services → "
-                    "Homematic IP Local (HCU) → CONFIGURE → Enter your door lock's Authorization PIN. "
-                    "See %s for details.",
-                    self.name,
-                    DOCS_URL_LOCK_PIN_CONFIG,
-                )
+            err_type = handle_lock_api_error(err, self.hass, self._config_entry, self.name, pin)
+            
+            if err_type == "invalid_pin":
                 self._pin_required = True
-
-                # Only trigger reauth if we already have a PIN configured (meaning it's wrong)
-                # If no PIN is configured, user will see the attribute and can add it
-                if pin:
-                    self._config_entry.async_start_reauth(self.hass)
-                else:
-                    _LOGGER.warning(
-                        "Lock '%s' requires a PIN to function. "
-                        "Please configure it: Settings → Devices & Services → "
-                        "Homematic IP Local (HCU) → CONFIGURE → Enter Authorization PIN. "
-                        "See %s for details.",
-                        self.name,
-                        DOCS_URL_LOCK_PIN_CONFIG,
-                    )
-
-            # Check for access denied / permission errors
-            elif "ACCESS_DENIED" in error_str or "INVALID_REQUEST" in error_str or "no permission" in error_str.lower():
-                _LOGGER.error(
-                    "Access denied for lock '%s'. The Home Assistant Integration plugin user "
-                    "does not have permission to control this lock. "
-                    "\n\nTo fix this issue:\n"
-                    "1. Open the HomematicIP app on your phone\n"
-                    "2. Go to Settings → Access Control → Access Profiles\n"
-                    "3. Select or create an access profile for this lock\n"
-                    "4. Try to add 'Home Assistant Integration' user to the profile\n"
-                    "\nKNOWN LIMITATION: The plugin user may appear grayed out or expired in the app. "
-                    "This is a known issue with the HCU firmware. The integration has properly registered with the HCU, "
-                    "but the HomematicIP app may not allow assigning it to access profiles. "
-                    "\nPlease check the 'has_access_authorization' attribute to verify authorization status.",
-                    self.name,
-                )
-
-            # Check for motor jam errors
-            elif "JAMMED" in error_str or "JAM" in error_str:
-                _LOGGER.error(
-                    "Lock '%s' is jammed and cannot complete the operation. "
-                    "Check the lock mechanism for obstructions.",
-                    self.name,
-                )
-
-            else:
+            elif not err_type:
                 _LOGGER.error("Failed to set lock state for %s: %s", self.name, err)
 
         except ConnectionError as err:
@@ -257,12 +212,12 @@ class HcuLock(HcuBaseEntity, LockEntity):
 
     async def async_lock(self, **kwargs) -> None:
         """Lock the door."""
-        await self._set_lock_state("LOCKED")
+        await self._set_lock_state(LOCK_STATE_LOCKED)
 
     async def async_unlock(self, **kwargs) -> None:
         """Unlock the door."""
-        await self._set_lock_state("UNLOCKED")
+        await self._set_lock_state(LOCK_STATE_UNLOCKED)
 
     async def async_open(self, **kwargs) -> None:
         """Open the door latch."""
-        await self._set_lock_state("OPEN")
+        await self._set_lock_state(LOCK_STATE_OPEN)

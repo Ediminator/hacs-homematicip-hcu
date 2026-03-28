@@ -15,6 +15,7 @@ from .const import (
     LOCK_STATE_LOCKED,
     LOCK_STATE_UNLOCKED,
     LOCK_STATE_OPEN,
+    LOCK_AUTH_ERROR_MSG,
 )
 from .entity import HcuBaseEntity
 from .api import HcuApiClient, HcuApiError
@@ -226,21 +227,7 @@ class HcuLock(HcuBaseEntity, LockEntity):
             elif any(
                 err in error_str for err in ("ACCESS_DENIED", "INVALID_REQUEST", "CLIENT_INVALID_AUTHORIZATION")
             ) or "no permission" in error_str.lower():
-                _LOGGER.error(
-                    "Access denied for lock '%s'. The Home Assistant Integration plugin user "
-                    "does not have permission to control this lock. "
-                    "\n\nTo fix this issue:\n"
-                    "0. CRITICAL: Ensure your HCU Firmware is updated to version 1.6.16 or higher.\n"
-                    "1. Delete any old 'Home Assistant' profiles if they appear grayed out.\n"
-                    "2. Open the HomematicIP app on your phone\n"
-                    "3. Go to Settings → Access Control → Access Profiles\n"
-                    "4. Create a new access profile for this lock and add the 'Home Assistant Integration' user.\n"
-                    "\nKNOWN LIMITATION: Even on 1.6.16, the plugin user may still appear grayed out or expired in the app. "
-                    "This is a known UI bug with the HCU firmware. The integration has properly registered with the HCU, "
-                    "but the HomematicIP app UI often lags.\n"
-                    "Please check the 'has_access_authorization' attribute to verify authorization status.",
-                    self.name,
-                )
+                _LOGGER.error(LOCK_AUTH_ERROR_MSG, f"lock '{self.name}'")
 
             # Check for motor jam errors
             elif "JAMMED" in error_str or "JAM" in error_str:

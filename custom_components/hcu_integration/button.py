@@ -14,7 +14,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .entity import HcuBaseEntity
 from .api import HcuApiClient, HcuApiError
-from .const import CONF_PIN, LOCK_STATE_OPEN
+from .const import CONF_PIN, LOCK_STATE_OPEN, LOCK_AUTH_ERROR_MSG
 
 if TYPE_CHECKING:
     from . import HcuCoordinator
@@ -204,21 +204,7 @@ class HcuDoorUnlatchButton(HcuBaseEntity, ButtonEntity):
             if any(
                 e in error_str for e in ("ACCESS_DENIED", "INVALID_REQUEST", "CLIENT_INVALID_AUTHORIZATION")
             ) or "no permission" in error_str.lower():
-                _LOGGER.error(
-                    "Access denied for lock unlatch button '%s'. The Home Assistant Integration plugin user "
-                    "does not have permission to control this lock. "
-                    "\n\nTo fix this issue:\n"
-                    "0. CRITICAL: Ensure your HCU Firmware is updated to version 1.6.16 or higher.\n"
-                    "1. Delete any old 'Home Assistant' profiles if they appear grayed out.\n"
-                    "2. Open the HomematicIP app on your phone\n"
-                    "3. Go to Settings → Access Control → Access Profiles\n"
-                    "4. Create a new access profile for this lock and add the 'Home Assistant Integration' user.\n"
-                    "\nKNOWN LIMITATION: Even on 1.6.16, the plugin user may still appear grayed out or expired in the app. "
-                    "This is a known UI bug with the HCU firmware. The integration has properly registered with the HCU, "
-                    "but the HomematicIP app UI often lags.\n"
-                    "Please check the 'has_access_authorization' attribute on the lock entity to verify authorization status.",
-                    self.entity_id,
-                )
+                _LOGGER.error(LOCK_AUTH_ERROR_MSG, f"lock unlatch button '{self.entity_id}'")
             else:
                 _LOGGER.error(
                     "Error triggering unlatch for %s: %s", self.entity_id, err

@@ -36,6 +36,8 @@ body:
           required: true
         - label: Ich habe die **README** gelesen und alle relevanten Anweisungen befolgt.
           required: true
+        - label: Ich habe die Integration neu geladen, um mein Problem zu lösen.
+          required: true
 
   - type: textarea
     validations:

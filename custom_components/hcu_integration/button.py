@@ -14,7 +14,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .entity import HcuBaseEntity
 from .api import HcuApiClient, HcuApiError
-from .const import CONF_PIN
+from .const import CONF_PIN, LOCK_STATE_OPEN
 
 if TYPE_CHECKING:
     from . import HcuCoordinator
@@ -197,7 +197,7 @@ class HcuDoorUnlatchButton(HcuBaseEntity, ButtonEntity):
         
         try:
             await self._client.async_set_lock_state(
-                self._device_id, self._channel_index, state="OPEN", pin=pin
+                self._device_id, self._channel_index, state=LOCK_STATE_OPEN, pin=pin
             )
         except (HcuApiError, ConnectionError) as err:
             _LOGGER.error(

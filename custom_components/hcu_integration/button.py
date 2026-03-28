@@ -14,13 +14,10 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .entity import HcuBaseEntity
 from .api import HcuApiClient, HcuApiError
+from .util import handle_lock_api_error
 from .const import (
     CONF_PIN,
     LOCK_STATE_OPEN,
-    LOCK_AUTH_ERROR_MSG,
-    INVALID_PIN_ERROR_STRINGS,
-    ACCESS_DENIED_ERROR_STRINGS,
-    DOCS_URL_LOCK_PIN_CONFIG,
 )
 
 if TYPE_CHECKING:
@@ -206,25 +203,12 @@ class HcuDoorUnlatchButton(HcuBaseEntity, ButtonEntity):
             await self._client.async_set_lock_state(
                 self._device_id, self._channel_index, state=LOCK_STATE_OPEN, pin=pin
             )
-        except (HcuApiError, ConnectionError) as err:
-            error_str_lower = str(err).lower()
-            # Check for invalid PIN errors
-            if any(s in error_str_lower for s in INVALID_PIN_ERROR_STRINGS):
-                if pin:
-                    self._config_entry.async_start_reauth(self.hass)
-                else:
-                    _LOGGER.warning(
-                        "Lock unlatch button '%s' requires a PIN to function. "
-                        "Please configure it: Settings → Devices & Services → "
-                        "Homematic IP Local (HCU) → CONFIGURE → Enter Authorization PIN. "
-                        "See %s for details.",
-                        self.entity_id,
-                        DOCS_URL_LOCK_PIN_CONFIG,
-                    )
-            # Check for access denied / permission errors
-            elif any(e in error_str_lower for e in ACCESS_DENIED_ERROR_STRINGS) or "no permission" in error_str_lower:
-                _LOGGER.error(LOCK_AUTH_ERROR_MSG, f"lock unlatch button '{self.entity_id}'")
-            else:
+        except HcuApiError as err:
+            if not handle_lock_api_error(err, self.hass, self._config_entry, self.entity_id, pin):
                 _LOGGER.error(
                     "Error triggering unlatch for %s: %s", self.entity_id, err
                 )
+        except ConnectionError as err:
+            _LOGGER.error(
+                "Connection failed while triggering unlatch for %s: %s", self.entity_id, err
+            )

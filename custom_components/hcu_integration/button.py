@@ -197,18 +197,18 @@ class HcuDoorUnlatchButton(HcuBaseEntity, ButtonEntity):
     async def async_press(self) -> None:
         """Pull the door latch to open the door."""
         pin = self._config_entry.data.get(CONF_PIN)
-        _LOGGER.info("Triggering unlatch for %s", self.entity_id)
+        _LOGGER.info("Triggering unlatch for %s", self.name)
         
         try:
             await self._client.async_set_lock_state(
                 self._device_id, self._channel_index, state=LOCK_STATE_OPEN, pin=pin
             )
         except HcuApiError as err:
-            if not handle_lock_api_error(err, self.hass, self._config_entry, self.entity_id, pin):
+            if not handle_lock_api_error(err, self.hass, self._config_entry, self.name, pin):
                 _LOGGER.error(
-                    "Error triggering unlatch for %s: %s", self.entity_id, err
+                    "Error triggering unlatch for %s: %s", self.name, err
                 )
         except ConnectionError as err:
             _LOGGER.error(
-                "Connection failed while triggering unlatch for %s: %s", self.entity_id, err
+                "Connection failed while triggering unlatch for %s: %s", self.name, err
             )

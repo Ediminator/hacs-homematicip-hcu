@@ -14,7 +14,14 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .entity import HcuBaseEntity
 from .api import HcuApiClient, HcuApiError
-from .const import CONF_PIN, LOCK_STATE_OPEN, LOCK_AUTH_ERROR_MSG
+from .const import (
+    CONF_PIN,
+    LOCK_STATE_OPEN,
+    LOCK_AUTH_ERROR_MSG,
+    INVALID_PIN_ERROR_STRINGS,
+    ACCESS_DENIED_ERROR_STRINGS,
+    DOCS_URL_LOCK_PIN_CONFIG,
+)
 
 if TYPE_CHECKING:
     from . import HcuCoordinator
@@ -201,9 +208,21 @@ class HcuDoorUnlatchButton(HcuBaseEntity, ButtonEntity):
             )
         except (HcuApiError, ConnectionError) as err:
             error_str = str(err)
-            if any(
-                e in error_str for e in ("ACCESS_DENIED", "INVALID_REQUEST", "CLIENT_INVALID_AUTHORIZATION")
-            ) or "no permission" in error_str.lower():
+            # Check for invalid PIN errors
+            if any(s in error_str for s in INVALID_PIN_ERROR_STRINGS):
+                if pin:
+                    self._config_entry.async_start_reauth(self.hass)
+                else:
+                    _LOGGER.warning(
+                        "Lock unlatch button '%s' requires a PIN to function. "
+                        "Please configure it: Settings → Devices & Services → "
+                        "Homematic IP Local (HCU) → CONFIGURE → Enter Authorization PIN. "
+                        "See %s for details.",
+                        self.entity_id,
+                        DOCS_URL_LOCK_PIN_CONFIG,
+                    )
+            # Check for access denied / permission errors
+            elif any(e in error_str for e in ACCESS_DENIED_ERROR_STRINGS) or "no permission" in error_str.lower():
                 _LOGGER.error(LOCK_AUTH_ERROR_MSG, f"lock unlatch button '{self.entity_id}'")
             else:
                 _LOGGER.error(

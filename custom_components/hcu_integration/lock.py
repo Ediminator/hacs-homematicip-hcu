@@ -16,6 +16,8 @@ from .const import (
     LOCK_STATE_UNLOCKED,
     LOCK_STATE_OPEN,
     LOCK_AUTH_ERROR_MSG,
+    INVALID_PIN_ERROR_STRINGS,
+    ACCESS_DENIED_ERROR_STRINGS,
 )
 from .entity import HcuBaseEntity
 from .api import HcuApiClient, HcuApiError
@@ -24,8 +26,6 @@ if TYPE_CHECKING:
     from . import HcuCoordinator
 
 _LOGGER = logging.getLogger(__name__)
-
-_INVALID_PIN_ERROR_STRINGS = ("INVALID_AUTHORIZATION_PIN", "INVALID_PIN")
 
 
 async def async_setup_entry(
@@ -197,8 +197,7 @@ class HcuLock(HcuBaseEntity, LockEntity):
         except HcuApiError as err:
             error_str = str(err)
 
-            # Parse the error to check if it's a PIN issue
-            if any(s in error_str for s in _INVALID_PIN_ERROR_STRINGS):
+            if any(s in error_str for s in INVALID_PIN_ERROR_STRINGS):
                 _LOGGER.error(
                     "Invalid or missing PIN for lock '%s'. "
                     "To configure the PIN: Go to Settings → Devices & Services → "
@@ -224,9 +223,7 @@ class HcuLock(HcuBaseEntity, LockEntity):
                     )
 
             # Check for access denied / permission errors
-            elif any(
-                err in error_str for err in ("ACCESS_DENIED", "INVALID_REQUEST", "CLIENT_INVALID_AUTHORIZATION")
-            ) or "no permission" in error_str.lower():
+            elif any(err in error_str for err in ACCESS_DENIED_ERROR_STRINGS) or "no permission" in error_str.lower():
                 _LOGGER.error(LOCK_AUTH_ERROR_MSG, f"lock '{self.name}'")
 
             # Check for motor jam errors

@@ -15,7 +15,7 @@ Added a dedicated `HcuDoorUnlatchButton` for HmIP-DLD door locks. Because Apple 
 
 **Enhanced Authentication Diagnostics for Plugin Users**
 
-Fixed confusing error logs when Home Assistant cannot authenticate with the HCU for specific locks. The integration now catches `CLIENT_INVALID_AUTHORIZATION` errors and prints a crystal clear 4-step troubleshooting flow to the logs, forcing users to delete stale profiles and verify they are on HCU Firmware 1.6.16+.
+Fixed confusing error logs when Home Assistant cannot authenticate with the HCU for specific locks. The integration now catches `CLIENT_INVALID_AUTHORIZATION` errors and prints a crystal clear 5-step troubleshooting flow to the logs, forcing users to delete stale profiles and verify they are on HCU Firmware 1.6.16+.
 
 **Centralized Lock Error Handling**
 

@@ -195,9 +195,9 @@ class HcuLock(HcuBaseEntity, LockEntity):
                 self._pin_required = False
 
         except HcuApiError as err:
-            error_str = str(err)
+            error_str_lower = str(err).lower()
 
-            if any(s in error_str for s in INVALID_PIN_ERROR_STRINGS):
+            if any(s in error_str_lower for s in INVALID_PIN_ERROR_STRINGS):
                 _LOGGER.error(
                     "Invalid or missing PIN for lock '%s'. "
                     "To configure the PIN: Go to Settings → Devices & Services → "
@@ -223,11 +223,11 @@ class HcuLock(HcuBaseEntity, LockEntity):
                     )
 
             # Check for access denied / permission errors
-            elif any(err in error_str for err in ACCESS_DENIED_ERROR_STRINGS) or "no permission" in error_str.lower():
+            elif any(err in error_str_lower for err in ACCESS_DENIED_ERROR_STRINGS) or "no permission" in error_str_lower:
                 _LOGGER.error(LOCK_AUTH_ERROR_MSG, f"lock '{self.name}'")
 
             # Check for motor jam errors
-            elif "JAMMED" in error_str or "JAM" in error_str:
+            elif "jammed" in error_str_lower or "jam" in error_str_lower:
                 _LOGGER.error(
                     "Lock '%s' is jammed and cannot complete the operation. "
                     "Check the lock mechanism for obstructions.",

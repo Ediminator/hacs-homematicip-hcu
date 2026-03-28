@@ -207,9 +207,9 @@ class HcuDoorUnlatchButton(HcuBaseEntity, ButtonEntity):
                 self._device_id, self._channel_index, state=LOCK_STATE_OPEN, pin=pin
             )
         except (HcuApiError, ConnectionError) as err:
-            error_str = str(err)
+            error_str_lower = str(err).lower()
             # Check for invalid PIN errors
-            if any(s in error_str for s in INVALID_PIN_ERROR_STRINGS):
+            if any(s in error_str_lower for s in INVALID_PIN_ERROR_STRINGS):
                 if pin:
                     self._config_entry.async_start_reauth(self.hass)
                 else:
@@ -222,7 +222,7 @@ class HcuDoorUnlatchButton(HcuBaseEntity, ButtonEntity):
                         DOCS_URL_LOCK_PIN_CONFIG,
                     )
             # Check for access denied / permission errors
-            elif any(e in error_str for e in ACCESS_DENIED_ERROR_STRINGS) or "no permission" in error_str.lower():
+            elif any(e in error_str_lower for e in ACCESS_DENIED_ERROR_STRINGS) or "no permission" in error_str_lower:
                 _LOGGER.error(LOCK_AUTH_ERROR_MSG, f"lock unlatch button '{self.entity_id}'")
             else:
                 _LOGGER.error(

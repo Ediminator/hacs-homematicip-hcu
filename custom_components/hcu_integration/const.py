@@ -1134,9 +1134,9 @@ LOCK_STATE_OPEN = "OPEN"
 LOCK_STATE_LOCKED = "LOCKED"
 LOCK_STATE_UNLOCKED = "UNLOCKED"
 
-# Error Types
-INVALID_PIN_ERROR_STRINGS = ("INVALID_AUTHORIZATION_PIN", "INVALID_PIN")
-ACCESS_DENIED_ERROR_STRINGS = ("ACCESS_DENIED", "INVALID_REQUEST", "CLIENT_INVALID_AUTHORIZATION")
+# Error Types (lowercase for case-insensitive matching)
+INVALID_PIN_ERROR_STRINGS = ("invalid_authorization_pin", "invalid_pin")
+ACCESS_DENIED_ERROR_STRINGS = ("access_denied", "invalid_request", "client_invalid_authorization")
 
 # Error Messages
 LOCK_AUTH_ERROR_MSG = (

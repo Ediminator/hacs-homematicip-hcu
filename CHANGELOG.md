@@ -3,6 +3,32 @@
 All notable changes to the Homematic IP Local (HCU) integration will be documented in this file.
 
 ---
+## 1.21.7 - 2026-04-03
+
+### ✨ New Features
+
+**Apple HomeKit Door Unlatch Bypass (Issue #30)**
+
+Added a dedicated `HcuDoorUnlatchButton` for HmIP-DLD door locks. Because Apple HomeKit natively refuses to support an "Open Latch" button for Lock accessories, this update creates a separate Home Assistant button entity alongside your lock. You can now easily export this dummy button into HomeKit to pull your door latch!
+
+### 🐛 Bug Fixes
+
+**Enhanced Authentication Diagnostics for Plugin Users**
+
+Fixed confusing error logs when Home Assistant cannot authenticate with the HCU for specific locks. The integration now catches `CLIENT_INVALID_AUTHORIZATION` errors and prints a crystal clear 4-step troubleshooting flow to the logs, forcing users to delete stale profiles and verify they are on HCU Firmware 1.6.16+.
+
+**Centralized Lock Error Handling**
+
+Refactored lock error handling into a shared `handle_lock_api_error()` utility in `util.py`. Extracted lock state strings (`LOCKED`, `UNLOCKED`, `OPEN`) and error patterns to named constants. Error detection is now case-insensitive.
+
+**Files Changed:**
+- `custom_components/hcu_integration/button.py` — Added `HcuDoorUnlatchButton` class.
+- `custom_components/hcu_integration/lock.py` — Refactored to use shared error handler and constants.
+- `custom_components/hcu_integration/util.py` — Added `handle_lock_api_error()` utility.
+- `custom_components/hcu_integration/const.py` — Added lock state and error constants.
+- `custom_components/hcu_integration/manifest.json` — Version bump to 1.21.7.
+
+---
 ## 1.21.6 - 2026-04-03
 
 ### ✨ New Features

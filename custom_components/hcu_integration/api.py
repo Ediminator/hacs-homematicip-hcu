@@ -402,7 +402,7 @@ class HcuApiClient:
         """Handle control request and Notify the HCU that the control request was successful."""
         msg_id = msg.get("id")
         body = msg.get("body", {})
-        device_id = body.get("deviceId",{})
+        device_id = body.get("deviceId")
         
         response = {
             "id": msg_id,
@@ -416,7 +416,7 @@ class HcuApiClient:
                     }]
             },
         }
-        await self._send_message(message)
+        await self._send_message(response)
     
     async def _send_config_template_response(self, message_id: str) -> None:
         """Notify the HCU that the plugin is ready to receive events."""
@@ -590,13 +590,13 @@ class HcuApiClient:
         }
         await self._send_message(message)
     
-    async def async_delete_user_message_request(self, userMessageId: str) -> None:
+    async def async_delete_user_message_request(self, user_message_id: str) -> None:
         """Delete User Message Request.""" 
         message = {
             "id": str(uuid4()),
             "pluginId": self.plugin_id,
             "type": "DELETE_USER_MESSAGE_REQUEST",
-            "body": {"userMessageId": userMessageId},
+            "body": {"userMessageId": user_message_id},
         }
         await self._send_message(message)
         

@@ -129,7 +129,7 @@ ATTR_END_TIME = "end_time"
 ATTR_ON_TIME = "on_time"
 ATTR_PATH = "path"
 ATTR_BODY = "body"
-ATTR_USERMESSAGEID = "userMessageId"
+ATTR_USER_MESSAGE_ID = "userMessageId"
 
 # --- API Path Constants ---
 API_PATHS = {

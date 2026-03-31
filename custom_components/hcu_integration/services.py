@@ -21,7 +21,7 @@ from .const import (
     ATTR_VOLUME,
     ATTR_PATH,
     ATTR_BODY,
-    ATTR_USERMESSAGEID,
+    ATTR_USER_MESSAGE_ID,
     DOMAIN,
     SERVICE_ACTIVATE_ECO_MODE,
     SERVICE_ACTIVATE_PARTY_MODE,
@@ -269,23 +269,23 @@ async def async_create_user_message_request(hass: HomeAssistant, call: ServiceCa
         _LOGGER.error("Error calling create_user_message_request for path %s: %s", path, err)
 
 async def async_delete_user_message_request(hass: HomeAssistant, call: ServiceCall) -> None:
-    userMessageId = call.data.get(ATTR_USERMESSAGEID)
+    user_message_id = call.data.get(ATTR_USER_MESSAGE_ID)
 
-    if not isinstance(userMessageId, str):
-        if path is None:
-            _LOGGER.error("Required attribute '%s' missing for delete_user_message_request", ATTR_USERMESSAGEID)
+    if not isinstance(user_message_id, str):
+        if user_message_id is None:
+            _LOGGER.error("Required attribute '%s' missing for delete_user_message_request", user_message_id)
         else:
-            _LOGGER.error("Attribute '%s' must be a string for delete_user_message_request", ATTR_USERMESSAGEID)
+            _LOGGER.error("Attribute '%s' must be a string for delete_user_message_request", user_message_id)
         return
     
     try:
         client = _get_client_for_service(hass)
         await client.async_delete_user_message_request(
-            userMessageId=userMessageId,
+            user_message_id=user_message_id,
         )
         
     except (HcuApiError, ConnectionError) as err:
-        _LOGGER.error("Error calling delete_user_message_request for path %s: %s", path, err)
+        _LOGGER.error("Error calling delete_user_message_request for ID %s: %s", user_message_id, err)
         
 def async_register_services(hass: HomeAssistant) -> None:
     """Register all HCU integration services."""

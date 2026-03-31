@@ -17,7 +17,7 @@ This integration connects directly to your HCU's local API, providing real-time 
 - [Group Types](#-group-types)
 - [Working with Buttons & Remote Controls](#-working-with-buttons--remote-controls)
 - [Available Actions](#-available-actions)
-- [User Message to HCU](#-user-messages)
+- [User Message to HCU](#-user-messages-to-hcu)
 - [Diagnostics & Troubleshooting](#-diagnostics--troubleshooting)
 - [FAQ](#-faq)
 - [Support](#-support)

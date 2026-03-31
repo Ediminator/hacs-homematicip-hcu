@@ -273,9 +273,9 @@ async def async_delete_user_message_request(hass: HomeAssistant, call: ServiceCa
 
     if not isinstance(user_message_id, str):
         if user_message_id is None:
-            _LOGGER.error("Required attribute '%s' missing for delete_user_message_request", user_message_id)
+            _LOGGER.error("Required attribute '%s' missing for delete_user_message_request", ATTR_USER_MESSAGE_ID)
         else:
-            _LOGGER.error("Attribute '%s' must be a string for delete_user_message_request", user_message_id)
+            _LOGGER.error("Attribute '%s' must be a string for delete_user_message_request", ATTR_USER_MESSAGE_ID)
         return
     
     try:

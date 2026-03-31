@@ -258,20 +258,26 @@ class HcuApiClient:
         elif msg_type in (
             "PLUGIN_STATE_REQUEST",
             "DISCOVER_REQUEST",
+            "CONTROL_REQUEST",
             "CONFIG_TEMPLATE_REQUEST",
             "CONFIG_UPDATE_REQUEST",
+            
         ):
             if not msg_id:
                 _LOGGER.warning("Received %s without message ID, cannot respond", msg_type)
                 return
-
+            
             _LOGGER.debug("Received %s: %s", msg_type, msg)
-            handler_map = {
-                "PLUGIN_STATE_REQUEST": self._send_plugin_ready,
-                "DISCOVER_REQUEST": self._send_discover_response,
-                "CONFIG_TEMPLATE_REQUEST": self._send_config_template_response,
-                "CONFIG_UPDATE_REQUEST": self._send_config_update_response,
-            }
+
+            if msg_type == "CONTROL_REQUEST":
+                asyncio.create_task(self._handle_control_request(msg))
+            else:
+                handler_map = {
+                    "PLUGIN_STATE_REQUEST": self._send_plugin_ready,
+                    "DISCOVER_REQUEST": self._send_discover_response,
+                    "CONFIG_TEMPLATE_REQUEST": self._send_config_template_response,
+                    "CONFIG_UPDATE_REQUEST": self._send_config_update_response,
+                }
             asyncio.create_task(handler_map[msg_type](msg_id))
         elif self._event_callback:
             self._event_callback(msg)
@@ -284,11 +290,7 @@ class HcuApiClient:
         try:
             async for msg in self._websocket:
                 if msg.type == aiohttp.WSMsgType.TEXT:
-                    try:
-                        data = msg.json()
-                        self._handle_incoming_message(data)
-                    except ValueError as err:
-                        _LOGGER.warning("Failed to parse JSON from WebSocket: %s", err)
+                    self._handle_incoming_message(msg.json())
                 elif msg.type in (aiohttp.WSMsgType.CLOSED, aiohttp.WSMsgType.ERROR):
                     raise ConnectionAbortedError(
                         f"WebSocket connection issue: {msg.data}"
@@ -384,15 +386,35 @@ class HcuApiClient:
         await self._send_message(message)
 
     async def _send_discover_response(self, message_id: str) -> None:
-        """Notify the HCU that the plugin is ready to receive events."""
+        """Notify the HCU if there are devices that need to be registered with it."""
         message = {
             "id": message_id,
             "pluginId": self.plugin_id,
             "type": "DISCOVER_RESPONSE",
-            "body": {"success": "true", "devices": []},
+            "body": {},
         }
         await self._send_message(message)
 
+    async def _handle_control_request(self, msg: dict[str, Any]) -> None:
+        """Handle control request and Notify the HCU that the control request was successful."""
+        msg_id = msg.get("id")
+        body = msg.get("body", {})
+        device_id = body.get("deviceId",{})
+        
+        response = {
+            "id": msg_id,
+            "pluginId": self.plugin_id,
+            "type": "CONTROL_RESPONSE",
+            "body": {
+                "success": "true",
+                "devices": [
+                    {
+                        "deviceId": device_id,
+                    }]
+            },
+        }
+        await self._send_message(message)
+    
     async def _send_config_template_response(self, message_id: str) -> None:
         """Notify the HCU that the plugin is ready to receive events."""
         message = {
@@ -555,6 +577,26 @@ class HcuApiClient:
         """Generic method to send a command to the HCU API."""
         await self._send_hmip_request(path, body)
     
+    async def async_create_user_message_request(self, body: dict[str, Any]) -> None:
+        """Notify the HCU that the plugin is ready to receive events."""
+        message = {
+            "id": str(uuid4()),
+            "pluginId": self.plugin_id,
+            "type": "CREATE_USER_MESSAGE_REQUEST",
+            "body": body,
+        }
+        await self._send_message(message)
+    
+    async def async_delete_user_message_request(self, userMessageId: str) -> None:
+        """Notify the HCU that the plugin is ready to receive events."""
+        message = {
+            "id": str(uuid4()),
+            "pluginId": self.plugin_id,
+            "type": "DELETE_USER_MESSAGE_REQUEST",
+            "body": {"userMessageId": userMessageId},
+        }
+        await self._send_message(message)
+        
     async def async_group_control(
         self, path: str, group_id: str, body: dict[str, Any] | None = None
     ) -> None:

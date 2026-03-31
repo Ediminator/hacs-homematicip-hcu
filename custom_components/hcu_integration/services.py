@@ -21,6 +21,8 @@ from .const import (
     ATTR_VOLUME,
     ATTR_PATH,
     ATTR_BODY,
+    ATTR_BODY,
+    ATTR_USERMESSAGEID,
     DOMAIN,
     SERVICE_ACTIVATE_ECO_MODE,
     SERVICE_ACTIVATE_PARTY_MODE,
@@ -30,6 +32,8 @@ from .const import (
     SERVICE_SET_RULE_STATE,
     SERVICE_SWITCH_ON_WITH_TIME,
     SERVICE_SEND_API_COMMAND,
+    SERVICE_USER_MESSAGE,
+    SERVICE_USER_MESSAGE_DELETE,
 )
 
 if TYPE_CHECKING:
@@ -55,6 +59,8 @@ INTEGRATION_SERVICES = [
     SERVICE_DEACTIVATE_ABSENCE_MODE,
     SERVICE_SWITCH_ON_WITH_TIME,
     SERVICE_SEND_API_COMMAND,
+    SERVICE_USER_MESSAGE,
+    SERVICE_USER_MESSAGE_DELETE,
 ]
 
 
@@ -243,7 +249,45 @@ async def async_handle_send_api_command(hass: HomeAssistant, call: ServiceCall) 
         
     except (HcuApiError, ConnectionError) as err:
         _LOGGER.error("Error calling send_api_command for path %s: %s", path, err)
+
+async def async_create_user_message_request(hass: HomeAssistant, call: ServiceCall) -> None:
+    body = call.data.get(ATTR_BODY)
+
+    if not isinstance(body, dict):
+        if body is None:
+            _LOGGER.error("Required attribute '%s' missing for create_user_message_request", ATTR_BODY)
+        else:
+            _LOGGER.error("Attribute '%s' must be an object/dictionary for create_user_message_request", ATTR_BODY)
+        return
+
+    try:
+        client = _get_client_for_service(hass)
+        await client.async_create_user_message_request(
+            body=body,
+        )
+        
+    except (HcuApiError, ConnectionError) as err:
+        _LOGGER.error("Error calling create_user_message_request for path %s: %s", path, err)
+
+async def async_delete_user_message_request(hass: HomeAssistant, call: ServiceCall) -> None:
+    userMessageId = call.data.get(ATTR_USERMESSAGEID)
+
+    if not isinstance(userMessageId, str):
+        if path is None:
+            _LOGGER.error("Required attribute '%s' missing for delete_user_message_request", ATTR_USERMESSAGEID)
+        else:
+            _LOGGER.error("Attribute '%s' must be a string for delete_user_message_request", ATTR_USERMESSAGEID)
+        return
     
+    try:
+        client = _get_client_for_service(hass)
+        await client.async_delete_user_message_request(
+            userMessageId=userMessageId,
+        )
+        
+    except (HcuApiError, ConnectionError) as err:
+        _LOGGER.error("Error calling delete_user_message_request for path %s: %s", path, err)
+
 def async_register_services(hass: HomeAssistant) -> None:
     """Register all HCU integration services."""
     service_handlers = {
@@ -255,6 +299,8 @@ def async_register_services(hass: HomeAssistant) -> None:
         SERVICE_DEACTIVATE_ABSENCE_MODE: async_handle_deactivate_absence_mode,
         SERVICE_SWITCH_ON_WITH_TIME: async_handle_switch_on_with_time,
         SERVICE_SEND_API_COMMAND: async_handle_send_api_command,
+        SERVICE_USER_MESSAGE: async_create_user_message_request,
+        SERVICE_USER_MESSAGE_DELETE: async_delete_user_message_request,
     }
 
     assert set(service_handlers.keys()) == set(INTEGRATION_SERVICES), \

@@ -2,7 +2,6 @@
 """The Homematic IP Local (HCU) integration."""
 from __future__ import annotations
 
-import aiohttp
 import asyncio
 import logging
 import random
@@ -15,7 +14,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .api import HcuApiClient, HcuApiError
 from .const import (
@@ -176,18 +175,6 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
 
         self._initial_state_loaded = True
         return True
-
-    async def _async_update_data(self) -> set[str]:
-        """Fetch the latest data from the HCU."""
-        try:
-            await self.client.get_system_state()
-            state = self.client.state
-            all_ids = set(state.get("devices", {}).keys()) | set(state.get("groups", {}).keys())
-            if home_id := state.get("home", {}).get("id"):
-                all_ids.add(home_id)
-            return all_ids
-        except Exception as err:
-            raise UpdateFailed(f"Error communicating with API: {err}") from err
 
     def _register_hcu_device(self) -> None:
         """Register the HCU as a device in Home Assistant."""
@@ -421,7 +408,7 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
                 _LOGGER.info("WebSocket connected to HCU")
                 await self.client.listen()
 
-            except (ConnectionError, asyncio.TimeoutError, aiohttp.ClientError) as e:
+            except (ConnectionError, asyncio.TimeoutError) as e:
                 _LOGGER.warning("WebSocket disconnected: %s. Reconnecting in %ds", e, reconnect_delay)
             except asyncio.CancelledError:
                 _LOGGER.info("WebSocket listener cancelled")

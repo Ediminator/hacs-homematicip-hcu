@@ -56,6 +56,8 @@
         "activate_eco_mode": "mdi:leaf",
         "deactivate_absence_mode": "mdi:home-account",
         "switch_on_with_time": "mdi:timer-outline",
-        "send_api_command": "mdi:api"
+        "send_api_command": "mdi:api",
+        "create_user_message_request": "mdi:message-badge",
+        "delete_user_message_request": "mdi:message-off"
     }
 }

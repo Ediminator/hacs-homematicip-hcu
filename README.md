@@ -711,7 +711,37 @@ data:
     channelIndex: 8
     deviceId: 3014F711A00478E0C9A5E3456
 ```
+### `hcu_integration.create_user_message_request`
 
+Create a User Message that is displayed in the Homematic IP app. See the EQ3 API documentation for details.
+
+**Example:**
+```yaml
+action: hcu_integration.create_user_message_request
+data:
+  body:
+     messageCategory: INFO
+     userMessageId: USER_MESSAGE
+     title:
+       en: "Message from Home Assistant"
+       de: "Nachricht von Home Assistant"
+     message:
+       en: "Test Message with Entity States {{ states('sensor.State') }}."
+       de: "Test Nachricht mit Entität Status {{ states('sensor.Status') }}."
+     behaviorType: NOT_DISMISSIBLE
+     timestamp: "{{ as_timestamp(utcnow()) | int }}"
+```
+
+### `hcu_integration.delete_user_message_request`
+
+Delete a previously created User Message from the Homematic IP app.
+
+**Example:**
+```yaml
+action: hcu_integration.delete_user_message_request
+data:
+  userMessageId: "USER_MESSAGE"
+```
 ---
 
 ## 🔄 Updating the Integration

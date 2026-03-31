@@ -112,6 +112,8 @@ SERVICE_ACTIVATE_ECO_MODE = "activate_eco_mode"
 SERVICE_DEACTIVATE_ABSENCE_MODE = "deactivate_absence_mode"
 SERVICE_SWITCH_ON_WITH_TIME = "switch_on_with_time"
 SERVICE_SEND_API_COMMAND = "send_api_command"
+SERVICE_USER_MESSAGE = "create_user_message_request"
+SERVICE_USER_MESSAGE_DELETE = "delete_user_message_request"
 
 # --- Preset Constants ---
 PRESET_ECO = "Eco"
@@ -127,6 +129,7 @@ ATTR_END_TIME = "end_time"
 ATTR_ON_TIME = "on_time"
 ATTR_PATH = "path"
 ATTR_BODY = "body"
+ATTR_USERMESSAGEID = "userMessageId"
 
 # --- API Path Constants ---
 API_PATHS = {

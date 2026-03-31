@@ -191,3 +191,35 @@ send_api_command:
             }
       selector:
         object:
+        
+create_user_message_request:
+  name: Create User Message
+  description: Create a User Message that is displayed in the Homematic IP app. See the EQ3 API documentation for details.
+  fields:
+    body:
+      required: true
+      example: |
+        messageCategory: INFO
+        userMessageId: USER_MESSAGE
+        title:
+          en: "Message from Home Assistant"
+          de: "Nachricht von Home Assistant"
+        message:
+          en: "{{ state_attr('sensor.waste_badge', 'friendly_name') }} wird {{ states('sensor.waste_badge') }} abgeholt."
+          de: "{{ state_attr('sensor.waste_badge', 'friendly_name') }} wird {{ states('sensor.waste_badge') }} abgeholt."
+        behaviorType: NOT_DISMISSIBLE
+        timestamp: "{{ as_timestamp(utcnow()) | int }}"
+      selector:
+        object:
+
+delete_user_message_request:
+  name: Delete a User Message
+  description: Delete a previously created User Message from the Homematic IP app. See the EQ3 API documentation for details.
+  fields:
+    userMessageId:
+      name: User Message Id
+      description: "Use the User Message ID of the previously created User Message here."
+      example: 'USER_MESSAGE'
+      required: true
+      selector:
+        text:

@@ -258,6 +258,7 @@ class HcuApiClient:
         elif msg_type in (
             "PLUGIN_STATE_REQUEST",
             "DISCOVER_REQUEST",
+            "CONTROL_REQUEST",
             "CONFIG_TEMPLATE_REQUEST",
             "CONFIG_UPDATE_REQUEST",
         ):
@@ -266,12 +267,16 @@ class HcuApiClient:
                 return
 
             _LOGGER.debug("Received %s: %s", msg_type, msg)
-            handler_map = {
-                "PLUGIN_STATE_REQUEST": self._send_plugin_ready,
-                "DISCOVER_REQUEST": self._send_discover_response,
-                "CONFIG_TEMPLATE_REQUEST": self._send_config_template_response,
-                "CONFIG_UPDATE_REQUEST": self._send_config_update_response,
-            }
+            
+            if msg_type == "CONTROL_REQUEST":
+                asyncio.create_task(self._handle_control_request(msg))
+            else:
+                handler_map = {
+                    "PLUGIN_STATE_REQUEST": self._send_plugin_ready,
+                    "DISCOVER_REQUEST": self._send_discover_response,
+                    "CONFIG_TEMPLATE_REQUEST": self._send_config_template_response,
+                    "CONFIG_UPDATE_REQUEST": self._send_config_update_response,
+                }
             asyncio.create_task(handler_map[msg_type](msg_id))
         elif self._event_callback:
             self._event_callback(msg)
@@ -384,7 +389,7 @@ class HcuApiClient:
         await self._send_message(message)
 
     async def _send_discover_response(self, message_id: str) -> None:
-        """Notify the HCU that the plugin is ready to receive events."""
+        """Notify the HCU if there are devices that need to be registered with it."""
         message = {
             "id": message_id,
             "pluginId": self.plugin_id,
@@ -392,7 +397,27 @@ class HcuApiClient:
             "body": {"success": "true", "devices": []},
         }
         await self._send_message(message)
-
+    
+    async def _handle_control_request(self, msg: dict[str, Any]) -> None:
+        """Handle control request and Notify the HCU that the control request was successful."""
+        msg_id = msg.get("id")
+        body = msg.get("body", {})
+        device_id = body.get("deviceId",{})
+        
+        response = {
+            "id": msg_id,
+            "pluginId": self.plugin_id,
+            "type": "CONTROL_RESPONSE",
+            "body": {
+                "success": "true",
+                "devices": [
+                    {
+                        "deviceId": device_id,
+                    }]
+            },
+        }
+        await self._send_message(message)
+    
     async def _send_config_template_response(self, message_id: str) -> None:
         """Notify the HCU that the plugin is ready to receive events."""
         message = {
@@ -555,6 +580,26 @@ class HcuApiClient:
         """Generic method to send a command to the HCU API."""
         await self._send_hmip_request(path, body)
     
+    async def async_create_user_message_request(self, body: dict[str, Any]) -> None:
+        """Create User Message Request.""" 
+        message = {
+            "id": str(uuid4()),
+            "pluginId": self.plugin_id,
+            "type": "CREATE_USER_MESSAGE_REQUEST",
+            "body": body,
+        }
+        await self._send_message(message)
+    
+    async def async_delete_user_message_request(self, userMessageId: str) -> None:
+        """Delete User Message Request.""" 
+        message = {
+            "id": str(uuid4()),
+            "pluginId": self.plugin_id,
+            "type": "DELETE_USER_MESSAGE_REQUEST",
+            "body": {"userMessageId": userMessageId},
+        }
+        await self._send_message(message)
+        
     async def async_group_control(
         self, path: str, group_id: str, body: dict[str, Any] | None = None
     ) -> None:

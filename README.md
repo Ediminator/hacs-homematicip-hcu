@@ -17,6 +17,7 @@ This integration connects directly to your HCU's local API, providing real-time 
 - [Group Types](#-group-types)
 - [Working with Buttons & Remote Controls](#-working-with-buttons--remote-controls)
 - [Available Actions](#-available-actions)
+- [User Message to HCU](#-user-messages)
 - [Diagnostics & Troubleshooting](#-diagnostics--troubleshooting)
 - [FAQ](#-faq)
 - [Support](#-support)
@@ -546,7 +547,12 @@ This is expected if you're upgrading from a very old version (pre-1.5.0). The ol
 Simply delete the old button entities and use event-based automations instead.
 
 ---
+## User Message to HCU
+<img src="https://raw.githubusercontent.com/Ediminator/hacs-homematicip-hcu/refs/heads/main/images/usermessage.jpeg" height="300"> 
+With the actions **hcu_integration.create_user_message_request** and **hcu_integration.delete_user_message_request**, you can delete user messages in the Homematic IP app.
+More Information under **[Available Actions](#-available-actions)**
 
+---
 ## 📊 Diagnostics & Troubleshooting
 
 ### Downloading Diagnostics

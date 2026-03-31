@@ -723,8 +723,8 @@ data:
      messageCategory: INFO
      userMessageId: USER_MESSAGE
      title:
-       en: "Message from Home Assistant"
-       de: "Nachricht von Home Assistant"
+       en: Message from Home Assistant
+       de: Nachricht von Home Assistant
      message:
        en: "Test Message with Entity States {{ states('sensor.State') }}."
        de: "Test Nachricht mit Entität Status {{ states('sensor.Status') }}."
@@ -740,7 +740,7 @@ Delete a previously created User Message from the Homematic IP app.
 ```yaml
 action: hcu_integration.delete_user_message_request
 data:
-  userMessageId: "USER_MESSAGE"
+  userMessageId: USER_MESSAGE
 ```
 ---
 

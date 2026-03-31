@@ -551,7 +551,7 @@ Simply delete the old button entities and use event-based automations instead.
 
 <img src="https://raw.githubusercontent.com/Ediminator/hacs-homematicip-hcu/refs/heads/main/images/usermessage.jpeg" height="300"> 
 
-With the actions **hcu_integration.create_user_message_request** and **hcu_integration.delete_user_message_request**, you can delete user messages in the Homematic IP app.
+With the actions **hcu_integration.create_user_message_request** and **hcu_integration.delete_user_message_request**, you can create and delete user messages in the Homematic IP app.
 More Information under **[Available Actions](#-available-actions)**
 
 ---

@@ -218,6 +218,26 @@
                     "description": "The request body as an object of key-value pairs."
                 }
             }
+        },
+        "create_user_message_request": {
+            "name": "Create a User Message",
+            "description": "Create a User Message that is displayed in the Homematic IP app. See the EQ3 API documentation for details.",
+            "fields": {
+                "body": {
+                    "name": "Request Body",
+                    "description": "Describe the message in the body. Use parameters like messageCategory, userMessageId, title, message, behaviorType, and timestamp. See the EQ3 API documentation for details."
+                }
+            }
+        },
+        "delete_user_message_request": {
+            "name": "Delete a User Message",
+            "description": "Delete a previously created User Message from the Homematic IP app. See the EQ3 API documentation for details.",
+            "fields": {
+                "userMessageId": {
+                    "name": "User Message Id",
+                    "description": "Use the User Message ID of the previously created User Message here."
+                }
+            }
         }
     },
     "entity": {

@@ -235,15 +235,7 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, E
             "functional_channel_type": self._channel.get("functionalChannelType"),
             "is_group": False,
         }
-        
-        meta = self._meta_group_label
-        if meta is not None:
-            attrs["meta"] = meta
-            
-        switchVisualization = self._channel.get("switchVisualization")
-        if switchVisualization is not None:
-            attrs["switchVisualization"] = switchVisualization
-            
+
         if self.coordinator.config_entry.options.get(CONF_ADVANCED_ATTRIBUTES, False):
             meta = self._meta_group_label
             if meta is not None:

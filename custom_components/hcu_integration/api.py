@@ -458,15 +458,6 @@ class HcuApiClient:
                 "groupId": "info",
                 "order": 3,
             },
-            "ha_dashboard": {
-                "friendlyName": "Home Assistant",
-                "description": "Open the Home Assistant dashboard",
-                "dataType": "WEBLINK",
-                "currentValue": PLUGIN_DOCUMENTATION_URL,
-                "defaultValue": "Open Dashboard",
-                "groupId": "links",
-                "order": 1,
-            },
             "documentation": {
                 "friendlyName": "Documentation",
                 "description": "View the integration documentation on GitHub",
@@ -474,7 +465,7 @@ class HcuApiClient:
                 "currentValue": PLUGIN_DOCUMENTATION_URL,
                 "defaultValue": "Open Documentation",
                 "groupId": "links",
-                "order": 2,
+                "order": 1,
             },
             "issue_tracker": {
                 "friendlyName": "Issue Tracker",
@@ -483,7 +474,7 @@ class HcuApiClient:
                 "currentValue": PLUGIN_ISSUE_TRACKER_URL,
                 "defaultValue": "Open Issue Tracker",
                 "groupId": "links",
-                "order": 3,
+                "order": 2,
             },
         }
 

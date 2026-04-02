@@ -15,7 +15,6 @@ from .const import (
     PLUGIN_DOCUMENTATION_URL,
     PLUGIN_ISSUE_TRACKER_URL,
     HCU_DEVICE_TYPES,
-    HCU_MODEL_TYPES,
     API_REQUEST_TIMEOUT,
     API_PATHS,
     API_MAX_RETRIES,
@@ -435,11 +434,12 @@ class HcuApiClient:
         devices = self._state.get("devices", {})
         # Filter out the HCU itself and any auxiliary access points (HAP/DRAP)
         # to show an accurate count of managed end devices.
+        # We use prefix matching for robustness against newer hardware models.
         filtered_devices = [
             d
             for d in devices.values()
             if d.get("type") not in HCU_DEVICE_TYPES
-            and d.get("modelType") not in HCU_MODEL_TYPES
+            and not d.get("modelType", "").startswith(("HmIP-HCU", *HAP_DRAP_PREFIXES))
         ]
         device_count = len(filtered_devices)
 

@@ -439,7 +439,7 @@ class HcuApiClient:
             d
             for d in devices.values()
             if d.get("type") not in HCU_DEVICE_TYPES
-            and not d.get("modelType", "").startswith(("HmIP-HCU", *HAP_DRAP_PREFIXES))
+            and not (d.get("modelType") or "").startswith(("HmIP-HCU", *HAP_DRAP_PREFIXES))
         ]
         device_count = len(filtered_devices)
 

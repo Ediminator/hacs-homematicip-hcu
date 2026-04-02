@@ -90,6 +90,9 @@ PLUGIN_FRIENDLY_NAME = {
     "de": "Home Assistant Integration",
     "en": "Home Assistant Integration",
 }
+PLUGIN_VERSION = "1.21.5"
+PLUGIN_DOCUMENTATION_URL = "https://github.com/Ediminator/hacs-homematicip-hcu"
+PLUGIN_ISSUE_TRACKER_URL = "https://github.com/Ediminator/hacs-homematicip-hcu/issues"
 
 # --- Timing Constants ---
 WEBSOCKET_CONNECT_TIMEOUT = 10

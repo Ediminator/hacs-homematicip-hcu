@@ -10,6 +10,10 @@ from homeassistant.core import HomeAssistant
 
 from .const import (
     PLUGIN_ID,
+    PLUGIN_FRIENDLY_NAME,
+    PLUGIN_VERSION,
+    PLUGIN_DOCUMENTATION_URL,
+    PLUGIN_ISSUE_TRACKER_URL,
     HCU_DEVICE_TYPES,
     API_REQUEST_TIMEOUT,
     API_PATHS,
@@ -379,12 +383,15 @@ class HcuApiClient:
         ) from last_exception
 
     async def _send_plugin_ready(self, message_id: str) -> None:
-        """Notify the HCU that the plugin is ready to receive events."""
+        """Send plugin readiness status and display name to the HCU."""
         message = {
             "id": message_id,
             "pluginId": self.plugin_id,
             "type": "PLUGIN_STATE_RESPONSE",
-            "body": {"pluginReadinessStatus": "READY"},
+            "body": {
+                "pluginReadinessStatus": "READY",
+                "friendlyName": PLUGIN_FRIENDLY_NAME,
+            },
         }
         await self._send_message(message)
 
@@ -419,17 +426,90 @@ class HcuApiClient:
         await self._send_message(response)
     
     async def _send_config_template_response(self, message_id: str) -> None:
-        """Notify the HCU that the plugin is ready to receive events."""
+        """Respond with plugin configuration template for display on HCUweb.
+
+        Provides read-only status information and useful links so the plugin
+        configuration page on HCUweb shows meaningful content instead of a blank page.
+        """
+        device_count = len(self._state.get("devices", {}))
+
+        properties = {
+            "status": {
+                "friendlyName": "Status",
+                "description": "Current plugin readiness status",
+                "dataType": "READONLY",
+                "currentValue": "READY" if self.is_connected else "ERROR",
+                "groupId": "info",
+                "order": 1,
+            },
+            "version": {
+                "friendlyName": "Version",
+                "description": "Installed integration version",
+                "dataType": "READONLY",
+                "currentValue": PLUGIN_VERSION,
+                "groupId": "info",
+                "order": 2,
+            },
+            "device_count": {
+                "friendlyName": "Devices",
+                "description": "Number of Homematic IP devices managed by this integration",
+                "dataType": "READONLY",
+                "currentValue": str(device_count),
+                "groupId": "info",
+                "order": 3,
+            },
+            "ha_dashboard": {
+                "friendlyName": "Home Assistant",
+                "description": "Open the Home Assistant dashboard",
+                "dataType": "WEBLINK",
+                "currentValue": PLUGIN_DOCUMENTATION_URL,
+                "defaultValue": "Open Dashboard",
+                "groupId": "links",
+                "order": 1,
+            },
+            "documentation": {
+                "friendlyName": "Documentation",
+                "description": "View the integration documentation on GitHub",
+                "dataType": "WEBLINK",
+                "currentValue": PLUGIN_DOCUMENTATION_URL,
+                "defaultValue": "Open Documentation",
+                "groupId": "links",
+                "order": 2,
+            },
+            "issue_tracker": {
+                "friendlyName": "Issue Tracker",
+                "description": "Report bugs or request features",
+                "dataType": "WEBLINK",
+                "currentValue": PLUGIN_ISSUE_TRACKER_URL,
+                "defaultValue": "Open Issue Tracker",
+                "groupId": "links",
+                "order": 3,
+            },
+        }
+
+        groups = {
+            "info": {
+                "friendlyName": "Status",
+                "description": "Current integration status",
+                "order": 1,
+            },
+            "links": {
+                "friendlyName": "Links",
+                "description": "Useful resources",
+                "order": 2,
+            },
+        }
+
         message = {
             "id": message_id,
             "pluginId": self.plugin_id,
             "type": "CONFIG_TEMPLATE_RESPONSE",
-            "body": {"properties": {}},
+            "body": {"properties": properties, "groups": groups},
         }
         await self._send_message(message)
 
     async def _send_config_update_response(self, message_id: str) -> None:
-        """Notify the HCU that the plugin is ready to receive events."""
+        """Acknowledge a configuration update from HCUweb (read-only config, always APPLIED)."""
         message = {
             "id": message_id,
             "pluginId": self.plugin_id,

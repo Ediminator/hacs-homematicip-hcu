@@ -431,14 +431,23 @@ class HcuApiClient:
         Provides read-only status information and useful links so the plugin
         configuration page on HCUweb shows meaningful content instead of a blank page.
         """
-        device_count = len(self._state.get("devices", {}))
+        devices = self._state.get("devices", {})
+        # Filter out the HCU itself and any auxiliary access points (HAP/DRAP)
+        # to show an accurate count of managed end devices.
+        filtered_devices = [
+            d
+            for d in devices.values()
+            if d.get("type") not in HCU_DEVICE_TYPES
+            and d.get("modelType") not in HCU_MODEL_TYPES
+        ]
+        device_count = len(filtered_devices)
 
         properties = {
             "status": {
                 "friendlyName": "Status",
                 "description": "Current plugin readiness status",
                 "dataType": "READONLY",
-                "currentValue": "READY" if self.is_connected else "ERROR",
+                "currentValue": "READY",
                 "groupId": "info",
                 "order": 1,
             },

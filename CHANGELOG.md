@@ -7,7 +7,7 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 
 ### ✨ New Features
 
-**HCU Plugin Configuration Dashboard (Option A)**
+**HCU Plugin Configuration Dashboard**
 
 This release fixes the ""blank plugin user"" issue where clicking the gear icon for the Home Assistant integration on the HCU webview would open an empty page. The configuration page now displays a useful informational dashboard:
 

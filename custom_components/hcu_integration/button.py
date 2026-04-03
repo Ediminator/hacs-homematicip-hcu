@@ -104,7 +104,7 @@ class HcuDoorOpenerButton(HcuBaseEntity, ButtonEntity):
             await self._client.async_send_door_command(
                 self._device_id, self._channel_index, LOCK_STATE_OPEN
             )
-        except (HcuApiError, ConnectionError) as err:
+        except HcuApiError as err:
             _LOGGER.error(
                 "Error triggering door opener for %s: %s", self.entity_id, err
             )
@@ -137,7 +137,7 @@ class HcuDoorImpulseButton(HcuBaseEntity, ButtonEntity):
             await self._client.async_send_door_impulse(
                 self._device_id, self._channel_index
             )
-        except (HcuApiError, ConnectionError) as err:
+        except HcuApiError as err:
             _LOGGER.error(
                 "Error triggering door impulse for %s: %s", self.entity_id, err
             )
@@ -169,7 +169,7 @@ class HcuDeviceIdentifyButton(HcuBaseEntity, ButtonEntity):
             await self._client.async_send_identify(
                 self._device_id, self._channel_index
             )
-        except (HcuApiError, ConnectionError) as err:
+        except HcuApiError as err:
             _LOGGER.error(
                 "Error triggering identify for %s: %s", self.entity_id, err
             )
@@ -204,11 +204,11 @@ class HcuDoorUnlatchButton(HcuBaseEntity, ButtonEntity):
                 self._device_id, self._channel_index, state=LOCK_STATE_OPEN, pin=pin
             )
         except HcuApiError as err:
-            if not handle_lock_api_error(err, self.hass, self._config_entry, self.name, pin):
+            err_type = handle_lock_api_error(err, self.name, pin)
+            if err_type == "invalid_pin" and pin:
+                self._config_entry.async_start_reauth(self.hass)
+            
+            if not err_type:
                 _LOGGER.error(
                     "Error triggering unlatch for %s: %s", self.name, err
                 )
-        except ConnectionError as err:
-            _LOGGER.error(
-                "Connection failed while triggering unlatch for %s: %s", self.name, err
-            )

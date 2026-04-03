@@ -85,8 +85,6 @@ def get_group_type(group_data: dict) -> str:
 
 def handle_lock_api_error(
     err: Exception,
-    hass: HomeAssistant,
-    config_entry: ConfigEntry,
     entity_name: str,
     pin: str | None,
 ) -> str | None:
@@ -98,9 +96,7 @@ def handle_lock_api_error(
 
     # Check for invalid PIN errors
     if any(s in error_str_lower for s in INVALID_PIN_ERROR_STRINGS):
-        if pin:
-            config_entry.async_start_reauth(hass)
-        else:
+        if not pin:
             _LOGGER.warning(
                 "Lock '%s' requires a PIN to function. "
                 "Please configure it: Settings → Devices & Services → "

@@ -194,20 +194,27 @@ async def async_discover_entities(
                         if uid:
                             valid_entity_unique_ids.add(uid)
 
-                        # Add Unlatch button for door locks (creates extra entity for HomeKit support)
-                        if base_channel_type == "DOOR_LOCK_CHANNEL":
-                            try:
-                                unlatch_btn = button.HcuDoorUnlatchButton(
-                                    coordinator, client, device_data, channel_index, config_entry
-                                )
-                                entities[Platform.BUTTON].append(unlatch_btn)
-                                unlatch_uid = getattr(unlatch_btn, "unique_id", None)
-                                if unlatch_uid:
-                                    valid_entity_unique_ids.add(unlatch_uid)
-                            except (AttributeError, TypeError) as e:
-                                _LOGGER.error(
-                                    "Failed to create Unlatch button for %s: %s", device_data.get("id"), e
-                                )
+                        # Add additional entities defined in the registry for this channel
+                        # Some channels create multiple entities (e.g., Lock + Unlatch Button)
+                        for extra_class_name in channel_mapping.get("extra_entities", []):
+                            if extra_module := class_module_map.get(extra_class_name):
+                                try:
+                                    extra_entity_class = getattr(extra_module, extra_class_name)
+                                    extra_platform = getattr(extra_entity_class, "PLATFORM")
+                                    
+                                    # Create the extra entity using the same logic as the main entity
+                                    extra_entity = extra_entity_class(
+                                        coordinator, client, device_data, channel_index, **init_kwargs
+                                    )
+                                    entities[extra_platform].append(extra_entity)
+                                    extra_uid = getattr(extra_entity, "unique_id", None)
+                                    if extra_uid:
+                                        valid_entity_unique_ids.add(extra_uid)
+                                except (AttributeError, TypeError) as e:
+                                    _LOGGER.error(
+                                        "Failed to create extra entity '%s' for device %s, channel %s: %s",
+                                        extra_class_name, device_data.get("id"), channel_index, e
+                                    )
                         
                     except (AttributeError, TypeError) as e:
                         _LOGGER.error(

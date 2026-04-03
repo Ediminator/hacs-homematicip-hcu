@@ -198,17 +198,14 @@ class HcuLock(HcuBaseEntity, LockEntity):
                 self._pin_required = False
 
         except HcuApiError as err:
-            err_type = handle_lock_api_error(err, self.hass, self._config_entry, self.name, pin)
+            err_type = handle_lock_api_error(err, self.name, pin)
             
             if err_type == "invalid_pin":
                 self._pin_required = True
+                if pin:
+                    self._config_entry.async_start_reauth(self.hass)
             elif not err_type:
                 _LOGGER.error("Failed to set lock state for %s: %s", self.name, err)
-
-        except ConnectionError as err:
-            _LOGGER.error(
-                "Connection failed while setting lock state for %s: %s", self.name, err
-            )
 
         finally:
             # Reset assumed state to let coordinator updates provide actual state

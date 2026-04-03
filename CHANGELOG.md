@@ -19,14 +19,19 @@ Fixed confusing error logs when Home Assistant cannot authenticate with the HCU 
 
 **Centralized Lock Error Handling**
 
-Refactored lock error handling into a shared `handle_lock_api_error()` utility in `util.py`. Extracted all lock and motor state strings (`LOCKED`, `UNLOCKED`, `OPEN`, `LOCKING`, `UNLOCKING`, `OPENING`, `JAMMED`) and error patterns to named constants. Error detection is now robust and case-insensitive.
+Refactored lock error handling into a shared `handle_lock_api_error()` utility in `util.py`. API side-effects (like triggering re-authentication) were moved specifically to the entity platforms (`lock.py`, `button.py`) to align with Home Assistant architectural patterns. Extracted all lock and motor state strings and error patterns to named constants.
+
+**Advanced Entity Discovery Registry**
+
+Implemented a more flexible, registry-based discovery mechanism in `discovery.py`. Secondary entities (like the HomeKit Unlatch button) are now discovered through an `extra_entities` mapping in `const.py`, removing hardcoded platform-specific logic and improving codebase maintainability.
 
 **Files Changed:**
-- `custom_components/hcu_integration/button.py` — Added `HcuDoorUnlatchButton` class.
-- `custom_components/hcu_integration/lock.py` — Refactored to use shared error handler and constants.
-- `custom_components/hcu_integration/util.py` — Added `handle_lock_api_error()` utility.
-- `custom_components/hcu_integration/const.py` — Added lock state and error constants.
-- `custom_components/hcu_integration/manifest.json` — Version bump to 1.21.7.
+- `custom_components/hcu_integration/button.py` — Removed redundant error handling; updated unlatch button re-auth logic.
+- `custom_components/hcu_integration/lock.py` — Updated re-auth logic for API authentication errors.
+- `custom_components/hcu_integration/util.py` — Refactored to separate error identification from side-effects.
+- `custom_components/hcu_integration/discovery.py` — Implemented registry-based discovery for extra entities.
+- `custom_components/hcu_integration/const.py` — Added extra entity mapping for door lock channels.
+- `custom_components/hcu_integration/manifest.json` — Version bump to 1.12.7.
 
 ---
 ## 1.21.6 - 2026-04-03

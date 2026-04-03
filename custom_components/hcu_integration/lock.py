@@ -14,6 +14,12 @@ from .const import (
     LOCK_STATE_LOCKED,
     LOCK_STATE_UNLOCKED,
     LOCK_STATE_OPEN,
+    LOCK_STATE_JAMMED,
+    MOTOR_STATE_LOCKING,
+    MOTOR_STATE_UNLOCKING,
+    MOTOR_STATE_OPENING,
+    MOTOR_STATE_JAMMED,
+    CHANNEL_TYPE_ACCESS_AUTHORIZATION,
 )
 from .entity import HcuBaseEntity
 from .api import HcuApiClient, HcuApiError
@@ -83,7 +89,7 @@ class HcuLock(HcuBaseEntity, LockEntity):
             return None
 
         # Return True/False based on actual state comparison
-        return motor_state == "LOCKING" or lock_state == "LOCKING"
+        return motor_state == MOTOR_STATE_LOCKING or lock_state == MOTOR_STATE_LOCKING
 
     @property
     def is_unlocking(self) -> bool | None:
@@ -96,7 +102,7 @@ class HcuLock(HcuBaseEntity, LockEntity):
             return None
 
         # Return True/False based on actual state comparison
-        return motor_state == "UNLOCKING" or lock_state == "UNLOCKING"
+        return motor_state == MOTOR_STATE_UNLOCKING or lock_state == MOTOR_STATE_UNLOCKING
 
     @property
     def is_jammed(self) -> bool | None:
@@ -113,8 +119,8 @@ class HcuLock(HcuBaseEntity, LockEntity):
         # Return True/False based on actual state comparison
         return (
             lock_jammed is True
-            or motor_state == "JAMMED"
-            or lock_state == "JAMMED"
+            or motor_state == MOTOR_STATE_JAMMED
+            or lock_state == LOCK_STATE_JAMMED
         )
 
     @property
@@ -128,7 +134,7 @@ class HcuLock(HcuBaseEntity, LockEntity):
             return None
 
         # Return True/False based on actual state comparison
-        return motor_state == "OPENING" or lock_state == "OPENING"
+        return motor_state == MOTOR_STATE_OPENING or lock_state == MOTOR_STATE_OPENING
 
     @property
     def extra_state_attributes(self) -> dict:
@@ -158,7 +164,7 @@ class HcuLock(HcuBaseEntity, LockEntity):
         authorized_channels = [
             ch_id
             for ch_id, ch_data in self._device.get("functionalChannels", {}).items()
-            if ch_data.get("functionalChannelType") == "ACCESS_AUTHORIZATION_CHANNEL"
+            if ch_data.get("functionalChannelType") == CHANNEL_TYPE_ACCESS_AUTHORIZATION
             and ch_data.get("authorized") is True
         ]
 

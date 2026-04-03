@@ -102,7 +102,7 @@ class HcuDoorOpenerButton(HcuBaseEntity, ButtonEntity):
         _LOGGER.info("Triggering door opener for %s", self.entity_id)
         try:
             await self._client.async_send_door_command(
-                self._device_id, self._channel_index, "OPEN"
+                self._device_id, self._channel_index, LOCK_STATE_OPEN
             )
         except (HcuApiError, ConnectionError) as err:
             _LOGGER.error(

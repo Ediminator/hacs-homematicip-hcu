@@ -1133,6 +1133,16 @@ WINDOW_STATE_CLOSED = "CLOSED"
 LOCK_STATE_OPEN = "OPEN"
 LOCK_STATE_LOCKED = "LOCKED"
 LOCK_STATE_UNLOCKED = "UNLOCKED"
+LOCK_STATE_JAMMED = "JAMMED"
+
+# Motor States
+MOTOR_STATE_LOCKING = "LOCKING"
+MOTOR_STATE_UNLOCKING = "UNLOCKING"
+MOTOR_STATE_OPENING = "OPENING"
+MOTOR_STATE_JAMMED = "JAMMED"
+
+# Access Authorization
+CHANNEL_TYPE_ACCESS_AUTHORIZATION = "ACCESS_AUTHORIZATION_CHANNEL"
 
 # Error Types (lowercase for case-insensitive matching)
 INVALID_PIN_ERROR_STRINGS = ("invalid_authorization_pin", "invalid_pin")
@@ -1143,11 +1153,11 @@ LOCK_AUTH_ERROR_MSG = (
     "Access denied for %s. The Home Assistant Integration plugin user "
     "does not have permission to control this lock. "
     "\n\nTo fix this issue:\n"
-    "0. CRITICAL: Ensure your HCU Firmware is updated to version 1.6.16 or higher.\n"
-    "1. Delete any old 'Home Assistant' profiles if they appear grayed out.\n"
-    "2. Open the HomematicIP app on your phone\n"
-    "3. Go to Settings → Access Control → Access Profiles\n"
-    "4. Create a new access profile for this lock and add the 'Home Assistant Integration' user.\n"
+    "1. CRITICAL: Ensure your HCU Firmware is updated to version 1.6.16 or higher.\n"
+    "2. Delete any old 'Home Assistant' profiles if they appear grayed out.\n"
+    "3. Open the HomematicIP app on your phone\n"
+    "4. Go to Settings → Access Control → Access Profiles\n"
+    "5. Create a new access profile for this lock and add the 'Home Assistant Integration' user.\n"
     "\nKNOWN LIMITATION: Even on 1.6.16, the plugin user may still appear grayed out or expired in the app. "
     "This is a known UI bug with the HCU firmware. The integration has properly registered with the HCU, "
     "but the HomematicIP app UI often lags.\n"

@@ -15,11 +15,11 @@ Added a dedicated `HcuDoorUnlatchButton` for HmIP-DLD door locks. Because Apple 
 
 **Enhanced Authentication Diagnostics for Plugin Users**
 
-Fixed confusing error logs when Home Assistant cannot authenticate with the HCU for specific locks. The integration now catches `CLIENT_INVALID_AUTHORIZATION` errors and prints a crystal clear 5-step troubleshooting flow to the logs, forcing users to delete stale profiles and verify they are on HCU Firmware 1.6.16+.
+Fixed confusing error logs when Home Assistant cannot authenticate with the HCU for specific locks. The integration now catches `CLIENT_INVALID_AUTHORIZATION` errors and prints a crystal clear **1-to-5 step troubleshooting flow** to the logs, forcing users to delete stale profiles and verify they are on HCU Firmware 1.6.16+.
 
 **Centralized Lock Error Handling**
 
-Refactored lock error handling into a shared `handle_lock_api_error()` utility in `util.py`. Extracted lock state strings (`LOCKED`, `UNLOCKED`, `OPEN`) and error patterns to named constants. Error detection is now case-insensitive.
+Refactored lock error handling into a shared `handle_lock_api_error()` utility in `util.py`. Extracted all lock and motor state strings (`LOCKED`, `UNLOCKED`, `OPEN`, `LOCKING`, `UNLOCKING`, `OPENING`, `JAMMED`) and error patterns to named constants. Error detection is now robust and case-insensitive.
 
 **Files Changed:**
 - `custom_components/hcu_integration/button.py` — Added `HcuDoorUnlatchButton` class.

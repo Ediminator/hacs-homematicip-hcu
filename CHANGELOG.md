@@ -11,6 +11,7 @@ add close_cover_tilt, open_cover_tilt, stop_cover_tilt to cover devices and cove
 
 **Disable logging for empty groups**
 add groups to ALLOWED_EMPTY_GROUPS
+SECURITY_ZONE, META, INDOOR_CLIMATE, ENERGY, SECURITY, ACCESS_CONTROL, ENVIRONMENT, SECURITY_BACKUP_ALARM_SWITCHING
 
 **Files Changed:**
 - `custom_components/hcu_integration/const.py` — add groups to ALLOWED_EMPTY_GROUPS.

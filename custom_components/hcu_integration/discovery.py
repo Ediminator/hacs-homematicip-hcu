@@ -29,6 +29,7 @@ from . import (
 )
 from .api import HcuApiClient
 from .const import (
+    CHANNEL_TYPE_MULTI_MODE_INPUT,
     CHANNEL_TYPE_MULTI_MODE_INPUT_TRANSMITTER,
     DEACTIVATED_BY_DEFAULT_DEVICES,
     DOMAIN,

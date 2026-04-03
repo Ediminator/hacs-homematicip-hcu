@@ -30,7 +30,6 @@ TILT_FEATURES = (
     | CoverEntityFeature.STOP_TILT
 )
 
-
 def _level_to_position(level: float | None) -> int | None:
     """Convert HCU level (0.0-1.0, 1.0 is closed) to Home Assistant position (0-100, 0 is closed)."""
     if level is None:
@@ -161,7 +160,7 @@ class HcuCover(HcuBaseEntity, CoverEntity):
         self._attr_assumed_state = True
         shutter_level = round((100 - position) / 100.0, 2)
         await self._async_set_level(self._device_id, self._channel_index, shutter_level)
-
+        
     async def async_set_cover_tilt_position(self, **kwargs: Any) -> None:
         """Move the cover tilt to a specific position."""
         position = kwargs.get(ATTR_TILT_POSITION, 100)
@@ -181,7 +180,41 @@ class HcuCover(HcuBaseEntity, CoverEntity):
         await self._client.async_set_slats_level(
             self._device_id, self._channel_index, slats_level, shutter_level=current_level
         )
+    
+    async def async_open_cover_tilt(self, **kwargs: Any) -> None:
+        """Open tilt position."""
+        self._attr_assumed_state = True
+        current_level = self._channel.get(self._level_property)
+        if current_level is None:
+            _LOGGER.warning(
+                "Cannot set tilt position for %s: current level unknown",
+                self.name,
+            )
+            return
 
+        await self._client.async_set_slats_level(
+            self._device_id, self._channel_index, 0.0, shutter_level=current_level
+        )
+    
+    async def async_close_cover_tilt(self, **kwargs: Any) -> None:
+        """Close tilt position."""
+        self._attr_assumed_state = True
+        current_level = self._channel.get(self._level_property)
+        if current_level is None:
+            _LOGGER.warning(
+                "Cannot set tilt position for %s: current level unknown",
+                self.name,
+            )
+            return
+
+        await self._client.async_set_slats_level(
+            self._device_id, self._channel_index, 1.0, shutter_level=current_level
+        )
+        
+    async def async_stop_cover_tilt(self, **kwargs: Any) -> None:
+        """Stop cover tilt."""
+        self._attr_assumed_state = True
+        await self._client.async_stop_cover(self._device_id, self._channel_index)
 
 class HcuGarageDoorCover(HcuBaseEntity, CoverEntity):
     """Representation of an HCU Garage Door Cover."""

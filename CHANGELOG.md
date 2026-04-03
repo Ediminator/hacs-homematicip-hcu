@@ -7,8 +7,10 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 ### 🐛 Bug Fixes
 
 **Cover Improvement**
-
 add close_cover_tilt, open_cover_tilt, stop_cover_tilt to cover devices and cover groups
+
+**Disable logging for empty groups**
+add groups to ALLOWED_EMPTY_GROUPS
 
 **Files Changed:**
 - `custom_components/hcu_integration/const.py` — add groups to ALLOWED_EMPTY_GROUPS.

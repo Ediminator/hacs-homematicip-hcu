@@ -56,10 +56,11 @@ class HcuLock(HcuBaseEntity, LockEntity):
         client: HcuApiClient,
         device_data: dict,
         channel_index: str,
-        config_entry: ConfigEntry,
+        **kwargs: Any,
     ):
-        super().__init__(coordinator, client, device_data, channel_index)
-        self._config_entry = config_entry
+        """Initialize the lock."""
+        super().__init__(coordinator, client, device_data, channel_index, **kwargs)
+        self._config_entry = coordinator.config_entry
         self._set_entity_name(channel_label=self._channel.get("label"))
         self._attr_unique_id = f"{self._device_id}_{self._channel_index}_lock"
 
@@ -206,6 +207,11 @@ class HcuLock(HcuBaseEntity, LockEntity):
                     self._config_entry.async_start_reauth(self.hass)
             elif not err_type:
                 _LOGGER.error("Failed to set lock state for %s: %s", self.name, err)
+
+        except ConnectionError as err:
+            _LOGGER.error(
+                "Connection failed while setting lock state for %s: %s", self.name, err
+            )
 
         finally:
             # Reset assumed state to let coordinator updates provide actual state

@@ -177,18 +177,8 @@ async def async_discover_entities(
                     try:
                         entity_class = getattr(module, class_name)
                         platform = getattr(entity_class, "PLATFORM")
-                        init_kwargs = {"config_entry": config_entry} if base_channel_type == "DOOR_LOCK_CHANNEL" else {}
 
-                        # Log siren entity creation for debugging
-                        if class_name == "HcuSiren":
-                            _LOGGER.debug(
-                                "Creating siren entity: device=%s, channel=%s, type=%s",
-                                device_data.get("id"),
-                                channel_index,
-                                channel_type,
-                            )
-
-                        entity = entity_class(coordinator, client, device_data, channel_index, **init_kwargs)
+                        entity = entity_class(coordinator, client, device_data, channel_index)
                         entities[platform].append(entity)
                         uid = getattr(entity, "unique_id", None)
                         if uid:
@@ -204,7 +194,7 @@ async def async_discover_entities(
                                     
                                     # Create the extra entity using the same logic as the main entity
                                     extra_entity = extra_entity_class(
-                                        coordinator, client, device_data, channel_index, **init_kwargs
+                                        coordinator, client, device_data, channel_index
                                     )
                                     entities[extra_platform].append(extra_entity)
                                     extra_uid = getattr(extra_entity, "unique_id", None)

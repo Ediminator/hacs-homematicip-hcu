@@ -88,6 +88,7 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, E
         client: HcuApiClient,
         device_data: dict[str, Any],
         channel_index: str,
+        **kwargs: Any,
     ) -> None:
         """Initialize the base entity."""
         super().__init__(coordinator)

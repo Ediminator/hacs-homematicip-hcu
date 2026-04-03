@@ -31,7 +31,7 @@ Implemented a more flexible, registry-based discovery mechanism in `discovery.py
 - `custom_components/hcu_integration/util.py` — Refactored to separate error identification from side-effects.
 - `custom_components/hcu_integration/discovery.py` — Implemented registry-based discovery for extra entities.
 - `custom_components/hcu_integration/const.py` — Added extra entity mapping for door lock channels.
-- `custom_components/hcu_integration/manifest.json` — Version bump to 1.12.7.
+- `custom_components/hcu_integration/manifest.json` — Version bump to 1.21.7.
 
 ---
 ## 1.21.6 - 2026-04-03

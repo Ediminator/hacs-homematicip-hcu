@@ -108,6 +108,10 @@ class HcuDoorOpenerButton(HcuBaseEntity, ButtonEntity):
             _LOGGER.error(
                 "Error triggering door opener for %s: %s", self.entity_id, err
             )
+        except ConnectionError as err:
+            _LOGGER.error(
+                "Connection failed while triggering door opener for %s: %s", self.entity_id, err
+            )
             
 class HcuDoorImpulseButton(HcuBaseEntity, ButtonEntity):
     """Representation of a button to trigger a door impulse (e.g., HmIP-WGC)."""
@@ -141,6 +145,10 @@ class HcuDoorImpulseButton(HcuBaseEntity, ButtonEntity):
             _LOGGER.error(
                 "Error triggering door impulse for %s: %s", self.entity_id, err
             )
+        except ConnectionError as err:
+            _LOGGER.error(
+                "Connection failed while triggering door impulse for %s: %s", self.entity_id, err
+            )
 
 class HcuDeviceIdentifyButton(HcuBaseEntity, ButtonEntity):
     """Representation of a button to trigger device identify (blink/beep)."""
@@ -173,6 +181,10 @@ class HcuDeviceIdentifyButton(HcuBaseEntity, ButtonEntity):
             _LOGGER.error(
                 "Error triggering identify for %s: %s", self.entity_id, err
             )
+        except ConnectionError as err:
+            _LOGGER.error(
+                "Connection failed while triggering identify for %s: %s", self.entity_id, err
+            )
 
 class HcuDoorUnlatchButton(HcuBaseEntity, ButtonEntity):
     """Representation of a button to unlatch a door lock (e.g., HmIP-DLD)."""
@@ -186,11 +198,11 @@ class HcuDoorUnlatchButton(HcuBaseEntity, ButtonEntity):
         client: HcuApiClient,
         device_data: dict,
         channel_index: str,
-        config_entry: ConfigEntry,
+        **kwargs: Any,
     ):
         """Initialize the door unlatch button."""
-        super().__init__(coordinator, client, device_data, channel_index)
-        self._config_entry = config_entry
+        super().__init__(coordinator, client, device_data, channel_index, **kwargs)
+        self._config_entry = coordinator.config_entry
         self._set_entity_name(channel_label=self._channel.get("label"), feature_name="Unlatch")
         self._attr_unique_id = f"{self._device_id}_{self._channel_index}_unlatch"
 
@@ -212,3 +224,7 @@ class HcuDoorUnlatchButton(HcuBaseEntity, ButtonEntity):
                 _LOGGER.error(
                     "Error triggering unlatch for %s: %s", self.name, err
                 )
+        except ConnectionError as err:
+            _LOGGER.error(
+                "Connection failed while triggering unlatch for %s: %s", self.name, err
+            )

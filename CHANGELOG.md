@@ -3,6 +3,24 @@
 All notable changes to the Homematic IP Local (HCU) integration will be documented in this file.
 
 ---
+## 1.21.6 - 2026-04-03
+
+### ✨ New Features
+
+**HCU Plugin Configuration Dashboard**
+
+This release fixes the ""blank plugin user"" issue where clicking the gear icon for the Home Assistant integration on the HCU webview would open an empty page. The configuration page now displays a useful informational dashboard:
+
+- **Status Dashboard:** Shows real-time integration status (READY/ERROR), version number, and total connected device count directly on the HCU.
+- **Resource Links:** Provides clickable shortcuts to your Home Assistant dashboard, official documentation, and the issue tracker.
+- **Spec Compliance:** Correctly implements the `friendlyName` parameter in `PluginStateResponse` as required by the Connect API reference implementations.
+
+**Files Changed:**
+- `custom_components/hcu_integration/api.py` — Implemented dashboard logic and spec-compliant responses.
+- `custom_components/hcu_integration/const.py` — Added plugin metadata constants and version bump.
+- `custom_components/hcu_integration/manifest.json` — Version bump to 1.21.6.
+
+---
 ## 1.21.5 - 2026-03-31
 
 ### ✨ New Features

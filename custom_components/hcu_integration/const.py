@@ -23,6 +23,7 @@ from homeassistant.const import (
     UnitOfFrequency,
     EntityCategory,
 )
+from typing import Final, Any
 
 # Domain of the integration
 DOMAIN = "hcu_integration"
@@ -90,7 +91,7 @@ PLUGIN_FRIENDLY_NAME = {
     "de": "Home Assistant Integration",
     "en": "Home Assistant Integration",
 }
-PLUGIN_VERSION = "1.21.6"
+PLUGIN_VERSION = "1.21.7"
 PLUGIN_DOCUMENTATION_URL = "https://github.com/Ediminator/hacs-homematicip-hcu"
 PLUGIN_ISSUE_TRACKER_URL = "https://github.com/Ediminator/hacs-homematicip-hcu/issues"
 
@@ -1012,7 +1013,7 @@ HMIP_CHANNEL_TYPE_TO_ENTITY = {
     "DOOR_CHANNEL": {"class": "HcuGarageDoorCover"},
     "DOOR_SWITCH_CHANNEL": {"class": "HcuDoorOpenerButton"},
     "IMPULSE_OUTPUT_CHANNEL": {"class": "HcuDoorImpulseButton"},
-    "DOOR_LOCK_CHANNEL": {"class": "HcuLock"},
+    "DOOR_LOCK_CHANNEL": {"class": "HcuLock", "extra_entities": ["HcuDoorUnlatchButton"]},
     "ROTARY_HANDLE_CHANNEL": {"class": "HcuWindowStateSensor"},
     # Event channel types - create HcuButtonEvent entities for button devices
     "KEY_CHANNEL": {"class": "HcuButtonEvent"},  # For HmIP-WRC2, HmIP-BRC2, HmIP-WRC6-A, HmIP-WKP
@@ -1128,6 +1129,41 @@ ABSENCE_TYPE_VACATION = "VACATION"
 WINDOW_STATE_OPEN = "OPEN"
 WINDOW_STATE_TILTED = "TILTED"
 WINDOW_STATE_CLOSED = "CLOSED"
+
+# Lock States
+LOCK_STATE_OPEN: Final = "OPEN"
+LOCK_STATE_LOCKED: Final = "LOCKED"
+LOCK_STATE_UNLOCKED: Final = "UNLOCKED"
+LOCK_STATE_JAMMED: Final = "JAMMED"
+
+# Motor States
+MOTOR_STATE_LOCKING: Final = "LOCKING"
+MOTOR_STATE_UNLOCKING: Final = "UNLOCKING"
+MOTOR_STATE_OPENING: Final = "OPENING"
+MOTOR_STATE_JAMMED: Final = "JAMMED"
+
+# Access Authorization
+CHANNEL_TYPE_ACCESS_AUTHORIZATION = "ACCESS_AUTHORIZATION_CHANNEL"
+
+# Error Types (lowercase for case-insensitive matching)
+INVALID_PIN_ERROR_STRINGS = ("invalid_authorization_pin", "invalid_pin")
+ACCESS_DENIED_ERROR_STRINGS = ("access_denied", "invalid_request", "client_invalid_authorization")
+
+# Error Messages
+LOCK_AUTH_ERROR_MSG = (
+    "Access denied for %s. The Home Assistant Integration plugin user "
+    "does not have permission to control this lock. "
+    "\n\nTo fix this issue:\n"
+    "1. CRITICAL: Ensure your HCU Firmware is updated to version 1.6.16 or higher.\n"
+    "2. Delete any old 'Home Assistant' profiles if they appear grayed out.\n"
+    "3. Open the HomematicIP app on your phone\n"
+    "4. Go to Settings → Access Control → Access Profiles\n"
+    "5. Create a new access profile for this lock and add the 'Home Assistant Integration' user.\n"
+    "\nKNOWN LIMITATION: Even on 1.6.16, the plugin user may still appear grayed out or expired in the app. "
+    "This is a known UI bug with the HCU firmware. The integration has properly registered with the HCU, "
+    "but the HomematicIP app UI often lags.\n"
+    "Please check the 'has_access_authorization' attribute on the lock entity to verify authorization status."
+)
 
 # Groups that are allowed to be discovered even without channels
 ALLOWED_EMPTY_GROUPS = ("SECURITY_ZONE", "META")

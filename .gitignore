@@ -59,5 +59,8 @@ venv.bak/
 # OS
 .DS_Store
 Thumbs.db
-
 desktop.ini
+
+# Agent Files
+.agent/
+.agents/

@@ -425,6 +425,8 @@ async def async_discover_entities(
         "HEATING": (Platform.CLIMATE, climate.HcuClimate, {"config_entry": config_entry}),
         "SHUTTER": (Platform.COVER, cover.HcuCoverGroup, {}),
         "SWITCHING": (Platform.SWITCH, switch.HcuSwitchGroup, {}),
+        "SWITCHING_PROFILE": (Platform.SWITCH, switch.HcuSwitchGroup, {}),
+        "LINKED_SWITCHING": (Platform.SWITCH, switch.HcuSwitchGroup, {}),
         "LIGHT": (Platform.LIGHT, light.HcuLightGroup, {}),
         "EXTENDED_LINKED_SWITCHING": (Platform.SWITCH, switch.HcuSwitchGroup, {}),
         "EXTENDED_LINKED_SHUTTER": (Platform.COVER, cover.HcuCoverGroup, {}),
@@ -517,7 +519,8 @@ async def async_discover_entities(
             )
         else:
             # Log unknown group types to help diagnose missing entities
-            if group_type:
+            # Ignore META, SECURITY and INDOOR_CLIMATE
+            if group_type not in ALLOWED_EMPTY_GROUPS:
                 _LOGGER.warning(
                     "Unknown group type '%s' for group '%s' (id: %s) - no entity created. "
                     "If you expected an entity for this group, please report this as an issue.",

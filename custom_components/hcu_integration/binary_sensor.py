@@ -124,13 +124,19 @@ class HcuWindowBinarySensor(HcuBinarySensor):
     ):
         super().__init__(coordinator, client, device_data, channel_index, feature, mapping)
         
-        # Determine the correct device_class based on the channelRole
+        # Determine the correct device_class and name based on the channelRole
         channel_role = self._channel.get("channelRole")
         if channel_role == CHANNEL_ROLE_DOOR_SENSOR:
             self._attr_device_class = BinarySensorDeviceClass.DOOR
+            self._set_entity_name(
+                channel_label=self._channel.get("label"), feature_name="Door"
+            )
         else:
             # WINDOW_SENSOR or default fallback
             self._attr_device_class = BinarySensorDeviceClass.WINDOW
+            self._set_entity_name(
+                channel_label=self._channel.get("label"), feature_name="Window"
+            )
     
     def _is_on_from_value(self, value: Any) -> bool:
         """

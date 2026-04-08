@@ -190,8 +190,8 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, E
     def _meta_group_label(self) -> str | None:
         """Return the meta group label from the channel or channel 0."""
         # First check the current channel
-        if label := self._get_meta_group_label_from_channel_data(self._channel):
-            return label
+        #if label := self._get_meta_group_label_from_channel_data(self._channel):
+        #    return label
         
         #Fallback
         ch0 = (self._device.get("functionalChannels") or {}).get("0") or {}

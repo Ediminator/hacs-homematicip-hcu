@@ -149,6 +149,28 @@ class HcuWateringSwitch(SwitchStateMixin, HcuBaseEntity, SwitchEntity):
         """Turn the watering off."""
         await self._async_set_optimistic_state(False, "watering switch")
 
+    async def async_turn_on_with_time(self, on_time: float) -> None:
+        """Turn the switch on for a specific duration."""
+        # Store previous state for rollback
+        previous_is_on = self._attr_is_on
+        previous_assumed_state = self._attr_assumed_state
+
+        # Optimistic update
+        self._attr_is_on = True
+        self._attr_assumed_state = True
+        self.async_write_ha_state()
+        
+        try:
+            await self._client.async_set_watering_switch_state(
+                self._device_id, self._channel_index, True, on_time=on_time
+            )
+        except (HcuApiError, ConnectionError) as err:
+            _LOGGER.error("Failed to turn on %s with time: %s", self.name, err)
+            # Revert to previous state
+            self._attr_is_on = previous_is_on
+            self._attr_assumed_state = previous_assumed_state
+            self.async_write_ha_state()
+
 
 class HcuSwitchGroup(HcuSwitchingGroupBase, SwitchEntity):
     """Representation of a Homematic IP HCU switching group."""

@@ -721,8 +721,15 @@ class HcuApiClient:
         path = self._get_api_path_with_optional_time("SET_SWITCH_STATE", "SET_SWITCH_STATE_WITH_TIME", effective_on_time)
         await self.async_device_control(path, device_id, channel_index, body)
 
-    async def async_set_watering_switch_state(self, device_id: str, channel_index: int, is_on: bool) -> None:
-        await self.async_device_control(API_PATHS["SET_WATERING_SWITCH_STATE"], device_id, channel_index, {"wateringActive": is_on})
+    async def async_set_watering_switch_state(self, device_id: str, channel_index: int, is_on: bool, on_time: float | None = None) -> None:
+        
+        body = {"wateringActive": is_on}
+        effective_on_time = on_time if is_on else None
+        if effective_on_time is not None:
+            body["wateringTime"] = effective_on_time
+        
+        path = self._get_api_path_with_optional_time("SET_WATERING_SWITCH_STATE", "SET_WATERING_SWITCH_STATE_WITH_TIME", effective_on_time)
+        await self.async_device_control(path, device_id, channel_index, body)
 
     async def async_set_dim_level(self, device_id: str, channel_index: int, dim_level: float, ramp_time: float | None = None) -> None:
         body = {"dimLevel": dim_level}

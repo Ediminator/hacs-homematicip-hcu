@@ -260,6 +260,7 @@ HMIP_DEVICE_TYPE_TO_DEVICE_CLASS = {
     "GARAGE_DOOR_MODULE": CoverDeviceClass.GARAGE,
     "HOERMANN_DRIVES_MODULE": CoverDeviceClass.GARAGE,
     "SHUTTER_ACTUATOR": CoverDeviceClass.SHUTTER,
+    "WATERING_ACTUATOR": SwitchDeviceClass.SWITCH,
     "PLUGABLE_SWITCH": SwitchDeviceClass.OUTLET,
     "PLUGABLE_SWITCH_MEASURING": SwitchDeviceClass.OUTLET,
     "BRAND_SWITCH_MEASURING": SwitchDeviceClass.SWITCH,
@@ -546,6 +547,33 @@ HMIP_FEATURE_TO_ENTITY = {
         "icon": "mdi:meter-gas",
         "state_class": SensorStateClass.MEASUREMENT,
     },
+    "waterVolume": {
+        "class": "HcuGenericSensor",
+        "name": "Water Volume",
+        "unit": UnitOfVolume.CUBIC_METERS,
+        "device_class": SensorDeviceClass.WATER,
+        "state_class": SensorStateClass.TOTAL_INCREASING,
+    },
+    "waterVolumeSinceOpen": {
+        "class": "HcuGenericSensor",
+        "name": "Water Volume Since Open",
+        "unit": UnitOfVolume.CUBIC_METERS,
+        "device_class": SensorDeviceClass.WATER,
+        "state_class": SensorStateClass.TOTAL_INCREASING,
+    },
+    "wateringAmountTarget": {
+        "class": "HcuGenericSensor",
+        "name": "Watering Amount Target",
+        "unit": UnitOfVolume.CUBIC_METERS,
+        "device_class": SensorDeviceClass.WATER,
+        "state_class": SensorStateClass.TOTAL_INCREASING,
+    },
+    "waterFlow": {
+        "class": "HcuGenericSensor",
+        "name": "Water Flow",
+        "unit": "m³/h",
+        "state_class": SensorStateClass.MEASUREMENT,
+    },
     "valvePosition": {
         "class": "HcuGenericSensor",
         "name": "Valve Position",
@@ -559,6 +587,21 @@ HMIP_FEATURE_TO_ENTITY = {
         "unit": UnitOfSpeed.KILOMETERS_PER_HOUR,
         "device_class": SensorDeviceClass.WIND_SPEED,
         "state_class": SensorStateClass.MEASUREMENT,
+    },
+    "onTime": {
+        "class": "HcuGenericSensor",
+        "name": "OnTime",
+        "unit": UnitOfTime.SECONDS,
+        "device_class": SensorDeviceClass.DURATION,
+        "state_class": SensorStateClass.MEASUREMENT,
+    },
+    "wateringOnTime": {
+        "class": "HcuGenericSensor",
+        "name": "OnTime",
+        "unit": UnitOfTime.SECONDS,
+        "device_class": SensorDeviceClass.DURATION,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "entity_registry_enabled_default": False,
     },
     "windDirection": {
         "class": "HcuGenericSensor",
@@ -937,6 +980,7 @@ HMIP_FEATURE_TO_ENTITY = {
         "device_class": BinarySensorDeviceClass.RUNNING,
         "entity_registry_enabled_default": False,
     },
+    
 }
 
 # Special mapping for dutyCycle binary sensor (device-level warning flag)
@@ -1001,6 +1045,7 @@ HMIP_CHANNEL_TYPE_TO_ENTITY = {
     "SWITCH_MEASURING_CHANNEL": {"class": "HcuSwitch"},
     "WIRED_SWITCH_CHANNEL": {"class": "HcuSwitch"},
     "MULTI_MODE_INPUT_SWITCH_CHANNEL": {"class": "HcuSwitch"},
+    "WATERING_ACTUATOR_CHANNEL": {"class": "HcuWateringSwitch"},
     CHANNEL_TYPE_MULTI_MODE_INPUT_TRANSMITTER: {"class": "HcuDoorbellEvent"},
     "WATERING_CONTROLLER_CHANNEL": {"class": "HcuWateringSwitch"},
     "CONDITIONAL_SWITCH_CHANNEL": {"class": "HcuSwitch"},

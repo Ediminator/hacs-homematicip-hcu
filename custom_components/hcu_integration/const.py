@@ -145,6 +145,7 @@ API_PATHS = {
     "ENABLE_SIMPLE_RULE": "/hmip/rule/enableSimpleRule",
     "GET_SYSTEM_STATE": "/hmip/home/getSystemState",
     "RESET_ENERGY_COUNTER": "/hmip/device/control/resetEnergyCounter",
+    "RESET_WATER_VOLUME": "/hmip/device/control/resetWaterVolume",
     "SEND_DOOR_COMMAND": "/hmip/device/control/sendDoorCommand",
     "SEND_DOOR_IMPULSE": "/hmip/device/control/startImpulse",
     "DEVICE_IDENTIFY": "/hmip/device/control/setIdentify",

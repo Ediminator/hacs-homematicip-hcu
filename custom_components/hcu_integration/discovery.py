@@ -293,7 +293,6 @@ async def async_discover_entities(
                         if uid:
                             valid_entity_unique_ids.add(uid)
 
-
                         # Add reset button for energy counters
                         if feature == "energyCounter":
                             entity = button.HcuResetEnergyButton(coordinator, client, device_data, channel_index)
@@ -301,6 +300,15 @@ async def async_discover_entities(
                             uid = getattr(entity, "unique_id", None)
                             if uid:
                                 valid_entity_unique_ids.add(uid)
+                                
+                        # Add reset button for water volume
+                        if feature == "waterVolume":
+                            entity = button.HcuResetWaterVolume(coordinator, client, device_data, channel_index)
+                            entities[Platform.BUTTON].append(entity)
+                            uid = getattr(entity, "unique_id", None)
+                            if uid:
+                                valid_entity_unique_ids.add(uid)
+                                
 
                     except (AttributeError, TypeError) as e:
                         _LOGGER.error(

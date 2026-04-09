@@ -836,6 +836,9 @@ class HcuApiClient:
     async def async_reset_energy_counter(self, device_id: str, channel_index: int) -> None:
         await self.async_device_control(API_PATHS["RESET_ENERGY_COUNTER"], device_id, channel_index)
 
+    async def async_reset_water_volume(self, device_id: str, channel_index: int) -> None:
+        await self.async_device_control(API_PATHS["RESET_WATER_VOLUME"], device_id, channel_index)
+
     async def async_enable_simple_rule(self, rule_id: str, enabled: bool) -> None:
         await self.async_home_control(API_PATHS["ENABLE_SIMPLE_RULE"], {"ruleId": rule_id, "enabled": enabled})
 

@@ -110,7 +110,7 @@ class HcuResetWaterVolume(HcuBaseEntity, ButtonEntity):
             )
         except (HcuApiError, ConnectionError) as err:
             _LOGGER.error(
-                "Error resetting water volumr for %s: %s", self.entity_id, err
+                "Error resetting water volume for %s: %s", self.entity_id, err
             )
 
 

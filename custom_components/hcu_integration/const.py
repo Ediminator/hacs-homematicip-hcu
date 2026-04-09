@@ -175,6 +175,7 @@ API_PATHS = {
     "SET_SWITCH_STATE_WITH_TIME": "/hmip/device/control/setSwitchStateWithTime",
     "SET_SWITCHING_GROUP_STATE": "/hmip/group/switching/setState",
     "SET_WATERING_SWITCH_STATE": "/hmip/device/control/setWateringSwitchState",
+    "SET_WATERING_SWITCH_STATE_WITH_TIME": "/hmip/device/control/setWateringSwitchStateWithTime",
     "SET_GROUP_WATERING_SWITCH_STATE": "/hmip/group/linked/control/setWateringSwitchState",
     "SET_GROUP_WATERING_SWITCH_STATE_WITH_TIME": "/hmip/group/linked/control/setWateringSwitchStateWithTime",
     "SET_ZONES_ACTIVATION": "/hmip/home/security/setExtendedZonesActivation",
@@ -567,7 +568,7 @@ HMIP_FEATURE_TO_ENTITY = {
         "name": "Watering Amount Target",
         "unit": UnitOfVolume.CUBIC_METERS,
         "device_class": SensorDeviceClass.WATER,
-        "state_class": SensorStateClass.TOTAL_INCREASING,
+        "state_class": SensorStateClass.MEASUREMENT,
     },
     "waterFlow": {
         "class": "HcuGenericSensor",
@@ -595,6 +596,7 @@ HMIP_FEATURE_TO_ENTITY = {
         "unit": UnitOfTime.SECONDS,
         "device_class": SensorDeviceClass.DURATION,
         "state_class": SensorStateClass.MEASUREMENT,
+        "entity_registry_enabled_default": False,
     },
     "wateringOnTime": {
         "class": "HcuGenericSensor",

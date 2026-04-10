@@ -134,6 +134,10 @@ ATTR_ON_TIME = "on_time"
 ATTR_PATH = "path"
 ATTR_BODY = "body"
 ATTR_USER_MESSAGE_ID = "userMessageId"
+ATTR_USER_MESSAGE_MESSAGE = "message"
+ATTR_USER_MESSAGE_TITLE = "title"
+ATTR_USER_MESSAGE_BEHAVIOR_TYPE = "behaviorType"
+ATTR_USER_MESSAGE_CATEOGORY = "messageCategory"
 
 # --- API Path Constants ---
 API_PATHS = {

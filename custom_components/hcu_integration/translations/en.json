@@ -220,21 +220,37 @@
             }
         },
         "create_user_message_request": {
-            "name": "Create a User Message",
-            "description": "Create a User Message that is displayed in the Homematic IP app. See the EQ3 API documentation for details.",
-            "fields": {
-                "body": {
-                    "name": "Request Body",
-                    "description": "Describe the message in the body. Use parameters like messageCategory, userMessageId, title, message, behaviorType, and timestamp. See the EQ3 API documentation for details."
-                }
+          "name": "Create a User Message",
+          "description": "Creates a user message that is displayed in the Homematic IP app. See the eQ-3 API documentation for details.",
+          "fields": {
+            "messageCategory": {
+              "name": "Message Category",
+              "description": "Select the category of the user message."
+            },
+            "userMessageId": {
+              "name": "User Message ID",
+              "description": "Enter a unique identifier for the user message."
+            },
+            "title": {
+              "name": "Title",
+              "description": "Localized title of the message as an object with language keys, for example de and en."
+            },
+            "message": {
+              "name": "Message",
+              "description": "Localized message text as an object with language keys, for example de and en."
+            },
+            "behaviorType": {
+              "name": "Behavior Type",
+              "description": "Select how the message can be acknowledged or dismissed in the Homematic IP app."
             }
+          }
         },
         "delete_user_message_request": {
             "name": "Delete a User Message",
             "description": "Delete a previously created User Message from the Homematic IP app. See the EQ3 API documentation for details.",
             "fields": {
                 "userMessageId": {
-                    "name": "User Message Id",
+                    "name": "User Message ID",
                     "description": "Use the User Message ID of the previously created User Message here."
                 }
             }

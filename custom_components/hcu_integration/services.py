@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from functools import partial
 from typing import TYPE_CHECKING
 
@@ -22,6 +23,10 @@ from .const import (
     ATTR_PATH,
     ATTR_BODY,
     ATTR_USER_MESSAGE_ID,
+    ATTR_USER_MESSAGE_MESSAGE,
+    ATTR_USER_MESSAGE_TITLE,
+    ATTR_USER_MESSAGE_BEHAVIOR_TYPE,
+    ATTR_USER_MESSAGE_CATEOGORY,
     DOMAIN,
     SERVICE_ACTIVATE_ECO_MODE,
     SERVICE_ACTIVATE_PARTY_MODE,
@@ -33,6 +38,7 @@ from .const import (
     SERVICE_SEND_API_COMMAND,
     SERVICE_USER_MESSAGE,
     SERVICE_USER_MESSAGE_DELETE,
+    
 )
 
 if TYPE_CHECKING:
@@ -250,24 +256,42 @@ async def async_handle_send_api_command(hass: HomeAssistant, call: ServiceCall) 
         _LOGGER.error("Error calling send_api_command for path %s: %s", path, err)
     
 async def async_create_user_message_request(hass: HomeAssistant, call: ServiceCall) -> None:
-    body = call.data.get(ATTR_BODY)
+    user_message_id = call.data.get(ATTR_USER_MESSAGE_ID)
+    message = call.data.get(ATTR_USER_MESSAGE_MESSAGE)
+    title = call.data.get(ATTR_USER_MESSAGE_TITLE)
+    behavior_type = call.data.get(ATTR_USER_MESSAGE_BEHAVIOR_TYPE)
+    message_category = call.data.get(ATTR_USER_MESSAGE_CATEOGORY)
 
-    if not isinstance(body, dict):
-        if body is None:
-            _LOGGER.error("Required attribute '%s' missing for create_user_message_request", ATTR_BODY)
-        else:
-            _LOGGER.error("Attribute '%s' must be an object/dictionary for create_user_message_request", ATTR_BODY)
+    if not isinstance(title, dict):
+        _LOGGER.error("Attribute '%s' must be an object/dictionary", ATTR_USER_MESSAGE_TITLE)
         return
+
+    if not isinstance(message, dict):
+        _LOGGER.error("Attribute '%s' must be an object/dictionary", ATTR_USER_MESSAGE_MESSAGE)
+        return
+
+    if isinstance(title, dict) and "title" in title:
+        title = title["title"]
+
+    if isinstance(message, dict) and "message" in message:
+        message = message["message"]
+
+    body = {
+        "messageCategory": message_category,
+        "userMessageId": user_message_id,
+        "title": title,
+        "message": message,
+        "behaviorType": behavior_type,
+        "timestamp": int(time.time()),
+    }
 
     try:
         client = _get_client_for_service(hass)
-        await client.async_create_user_message_request(
-            body=body,
-        )
-        
-    except (HcuApiError, ConnectionError) as err:
-        _LOGGER.error("Error calling create_user_message_request for path %s: %s", path, err)
+        await client.async_create_user_message_request(body=body)
 
+    except (HcuApiError, ConnectionError) as err:
+        _LOGGER.error("Error calling create_user_message_request: %s", err)
+    
 async def async_delete_user_message_request(hass: HomeAssistant, call: ServiceCall) -> None:
     user_message_id = call.data.get(ATTR_USER_MESSAGE_ID)
 

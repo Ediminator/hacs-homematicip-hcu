@@ -574,6 +574,7 @@ HMIP_FEATURE_TO_ENTITY = {
         "class": "HcuGenericSensor",
         "name": "Water Flow",
         "unit": "m³/h",
+        "device_class": SensorDeviceClass.WATER,
         "state_class": SensorStateClass.MEASUREMENT,
     },
     "valvePosition": {
@@ -589,22 +590,6 @@ HMIP_FEATURE_TO_ENTITY = {
         "unit": UnitOfSpeed.KILOMETERS_PER_HOUR,
         "device_class": SensorDeviceClass.WIND_SPEED,
         "state_class": SensorStateClass.MEASUREMENT,
-    },
-    "onTime": {
-        "class": "HcuGenericSensor",
-        "name": "OnTime",
-        "unit": UnitOfTime.SECONDS,
-        "device_class": SensorDeviceClass.DURATION,
-        "state_class": SensorStateClass.MEASUREMENT,
-        "entity_registry_enabled_default": False,
-    },
-    "wateringOnTime": {
-        "class": "HcuGenericSensor",
-        "name": "OnTime",
-        "unit": UnitOfTime.SECONDS,
-        "device_class": SensorDeviceClass.DURATION,
-        "state_class": SensorStateClass.MEASUREMENT,
-        "entity_registry_enabled_default": False,
     },
     "windDirection": {
         "class": "HcuGenericSensor",

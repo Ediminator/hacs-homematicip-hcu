@@ -574,7 +574,7 @@ HMIP_FEATURE_TO_ENTITY = {
         "class": "HcuGenericSensor",
         "name": "Water Flow",
         "unit": "m³/h",
-        "device_class": SensorDeviceClass.WATER,
+        "icon": "mdi:water",
         "state_class": SensorStateClass.MEASUREMENT,
     },
     "valvePosition": {

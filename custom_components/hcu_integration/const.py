@@ -145,6 +145,7 @@ API_PATHS = {
     "ENABLE_SIMPLE_RULE": "/hmip/rule/enableSimpleRule",
     "GET_SYSTEM_STATE": "/hmip/home/getSystemState",
     "RESET_ENERGY_COUNTER": "/hmip/device/control/resetEnergyCounter",
+    "RESET_WATER_VOLUME": "/hmip/device/control/resetWaterVolume",
     "SEND_DOOR_COMMAND": "/hmip/device/control/sendDoorCommand",
     "SEND_DOOR_IMPULSE": "/hmip/device/control/startImpulse",
     "DEVICE_IDENTIFY": "/hmip/device/control/setIdentify",
@@ -174,6 +175,7 @@ API_PATHS = {
     "SET_SWITCH_STATE_WITH_TIME": "/hmip/device/control/setSwitchStateWithTime",
     "SET_SWITCHING_GROUP_STATE": "/hmip/group/switching/setState",
     "SET_WATERING_SWITCH_STATE": "/hmip/device/control/setWateringSwitchState",
+    "SET_WATERING_SWITCH_STATE_WITH_TIME": "/hmip/device/control/setWateringSwitchStateWithTime",
     "SET_GROUP_WATERING_SWITCH_STATE": "/hmip/group/linked/control/setWateringSwitchState",
     "SET_GROUP_WATERING_SWITCH_STATE_WITH_TIME": "/hmip/group/linked/control/setWateringSwitchStateWithTime",
     "SET_ZONES_ACTIVATION": "/hmip/home/security/setExtendedZonesActivation",
@@ -260,6 +262,7 @@ HMIP_DEVICE_TYPE_TO_DEVICE_CLASS = {
     "GARAGE_DOOR_MODULE": CoverDeviceClass.GARAGE,
     "HOERMANN_DRIVES_MODULE": CoverDeviceClass.GARAGE,
     "SHUTTER_ACTUATOR": CoverDeviceClass.SHUTTER,
+    "WATERING_ACTUATOR": SwitchDeviceClass.SWITCH,
     "PLUGABLE_SWITCH": SwitchDeviceClass.OUTLET,
     "PLUGABLE_SWITCH_MEASURING": SwitchDeviceClass.OUTLET,
     "BRAND_SWITCH_MEASURING": SwitchDeviceClass.SWITCH,
@@ -544,6 +547,34 @@ HMIP_FEATURE_TO_ENTITY = {
         "name": "Current Gas Flow",
         "unit": "m³/h",
         "icon": "mdi:meter-gas",
+        "state_class": SensorStateClass.MEASUREMENT,
+    },
+    "waterVolume": {
+        "class": "HcuGenericSensor",
+        "name": "Water Volume",
+        "unit": UnitOfVolume.CUBIC_METERS,
+        "device_class": SensorDeviceClass.WATER,
+        "state_class": SensorStateClass.TOTAL_INCREASING,
+    },
+    "waterVolumeSinceOpen": {
+        "class": "HcuGenericSensor",
+        "name": "Water Volume Since Open",
+        "unit": UnitOfVolume.CUBIC_METERS,
+        "device_class": SensorDeviceClass.WATER,
+        "state_class": SensorStateClass.TOTAL_INCREASING,
+    },
+    "wateringAmountTarget": {
+        "class": "HcuGenericSensor",
+        "name": "Watering Amount Target",
+        "unit": UnitOfVolume.CUBIC_METERS,
+        "device_class": SensorDeviceClass.WATER,
+        "state_class": SensorStateClass.MEASUREMENT,
+    },
+    "waterFlow": {
+        "class": "HcuGenericSensor",
+        "name": "Water Flow",
+        "unit": "m³/h",
+        "icon": "mdi:water",
         "state_class": SensorStateClass.MEASUREMENT,
     },
     "valvePosition": {
@@ -937,6 +968,7 @@ HMIP_FEATURE_TO_ENTITY = {
         "device_class": BinarySensorDeviceClass.RUNNING,
         "entity_registry_enabled_default": False,
     },
+    
 }
 
 # Special mapping for dutyCycle binary sensor (device-level warning flag)
@@ -1001,6 +1033,7 @@ HMIP_CHANNEL_TYPE_TO_ENTITY = {
     "SWITCH_MEASURING_CHANNEL": {"class": "HcuSwitch"},
     "WIRED_SWITCH_CHANNEL": {"class": "HcuSwitch"},
     "MULTI_MODE_INPUT_SWITCH_CHANNEL": {"class": "HcuSwitch"},
+    "WATERING_ACTUATOR_CHANNEL": {"class": "HcuWateringSwitch"},
     CHANNEL_TYPE_MULTI_MODE_INPUT_TRANSMITTER: {"class": "HcuDoorbellEvent"},
     "WATERING_CONTROLLER_CHANNEL": {"class": "HcuWateringSwitch"},
     "CONDITIONAL_SWITCH_CHANNEL": {"class": "HcuSwitch"},

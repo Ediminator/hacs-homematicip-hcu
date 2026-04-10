@@ -76,6 +76,44 @@ class HcuResetEnergyButton(HcuBaseEntity, ButtonEntity):
                 "Error resetting energy counter for %s: %s", self.entity_id, err
             )
 
+class HcuResetWaterVolume(HcuBaseEntity, ButtonEntity):
+    """Representation of a button to reset the water volume."""
+
+    PLATFORM = Platform.BUTTON
+    _attr_has_entity_name = True
+    _attr_icon = "mdi:reload"
+
+    def __init__(
+        self,
+        coordinator: "HcuCoordinator",
+        client: HcuApiClient,
+        device_data: dict,
+        channel_index: str,
+    ):
+        """Initialize the reset button."""
+        super().__init__(coordinator, client, device_data, channel_index)
+
+        # REFACTOR: Correctly call the centralized naming helper for feature entities.
+        self._set_entity_name(
+            channel_label=self._channel.get("label"), feature_name="Reset Water Volume"
+        )
+        self._attr_unique_id = (
+            f"{self._device_id}_{self._channel_index}_reset_water_volume"
+        )
+
+    async def async_press(self) -> None:
+        """Handle the button press action."""
+        _LOGGER.info("Resetting water volume for %s", self.entity_id)
+        try:
+            await self._client.async_reset_water_volume(
+                self._device_id, self._channel_index
+            )
+        except (HcuApiError, ConnectionError) as err:
+            _LOGGER.error(
+                "Error resetting water volume for %s: %s", self.entity_id, err
+            )
+
+
 class HcuDoorOpenerButton(HcuBaseEntity, ButtonEntity):
     """Representation of a button to trigger a door opener (e.g., HmIP-FDC)."""
 

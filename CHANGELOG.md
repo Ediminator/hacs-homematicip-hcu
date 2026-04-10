@@ -2,6 +2,25 @@
 
 All notable changes to the Homematic IP Local (HCU) integration will be documented in this file.
 
+WATERING_ACTUATOR_CHANNEL not exposed as controllable entity
+
+## 1.21.9 - 2026-04-10
+
+### ✨ New Features
+
+**WATERING_ACTUATOR_CHANNEL**
+- add wateringAmountTarget, waterFlow, waterVolume, waterVolumeSinceOpen and resetWaterVolume for WATERING_ACTUATOR_CHANNEL
+
+### 🐛 Bug Fixes
+
+- The room assignment of the device is now correctly applied.
+
+**Files Changed:**
+- `custom_components/hcu_integration/const.py` — add groups to ALLOWED_EMPTY_GROUPS.
+- `custom_components/hcu_integration/cover.py` — Cover Improvement
+- `custom_components/hcu_integration/discovery.py` — Disable logging for empty groups.
+
+---
 ## 1.21.8 - 2026-04-03
 
 ### 🐛 Bug Fixes

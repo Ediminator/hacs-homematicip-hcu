@@ -20,8 +20,8 @@ WATERING_ACTUATOR_CHANNEL not exposed as controllable entity
 - `custom_components/hcu_integration/api.py` — add set_watering_switch_state and reset_water_volume
 - `custom_components/hcu_integration/button.py` — add class HcuResetWaterVolume
 - `custom_components/hcu_integration/const.py` — add all sensors and API_PATHS for WATERING_ACTUATOR_CHANNEL 
-- `custom_components/hcu_integration/discvoery.py` — add logic to add HcuResetWaterVolume.
-- `custom_components/hcu_integration/entity.py` — 
+- `custom_components/hcu_integration/discvoery.py` — add logic to add HcuResetWaterVolume
+- `custom_components/hcu_integration/entity.py` — fix meta to suggested_area for devices
 - `custom_components/hcu_integration/switch.py` — add async_turn_on_with_time
 
 ---

@@ -8,20 +8,27 @@ WATERING_ACTUATOR_CHANNEL not exposed as controllable entity
 
 ### ✨ New Features
 
-**WATERING_ACTUATOR_CHANNEL**
+**USER MESSAGE SERVICE**
+- rebuild User Message Service for userfriendly UI
+  
+**WATERING ACTUATOR CHANNEL**
 - add wateringAmountTarget, waterFlow, waterVolume, waterVolumeSinceOpen and resetWaterVolume for WATERING_ACTUATOR_CHANNEL
 - add WATERING_ACTUATOR_CHANNEL to hcu_integration.switch_on_with_time
 
 ### 🐛 Bug Fixes
 
-- The room assignment of the device is now correctly applied.
+- The suggested_area of the device is now correctly applied.
 
 **Files Changed:**
-- `custom_components/hcu_integration/api.py` — add set_watering_switch_state and reset_water_volume
+- `custom_components/hcu_integration/translation/de.py` — add new translations for new fields in User Message Service
+- `custom_components/hcu_integration/translation/en.py` — add new translations for new fields in User Message Service
+- `custom_components/hcu_integration/api.py` — add set_watering_switch_state, reset_water_volume and add variable for User Message Service
 - `custom_components/hcu_integration/button.py` — add class HcuResetWaterVolume
 - `custom_components/hcu_integration/const.py` — add all sensors and API_PATHS for WATERING_ACTUATOR_CHANNEL 
 - `custom_components/hcu_integration/discvoery.py` — add logic to add HcuResetWaterVolume
 - `custom_components/hcu_integration/entity.py` — fix meta to suggested_area for devices
+- `custom_components/hcu_integration/services.py` — rebuild User Message Service for userfriendly UI
+- `custom_components/hcu_integration/services.yaml` — add new fields for User Message Service for userfriendly UI
 - `custom_components/hcu_integration/switch.py` — add async_turn_on_with_time
 
 ---

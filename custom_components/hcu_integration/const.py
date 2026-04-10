@@ -91,7 +91,7 @@ PLUGIN_FRIENDLY_NAME = {
     "de": "Home Assistant Integration",
     "en": "Home Assistant Integration",
 }
-PLUGIN_VERSION = "1.21.9"
+PLUGIN_VERSION = "1.21.8"
 PLUGIN_DOCUMENTATION_URL = "https://github.com/Ediminator/hacs-homematicip-hcu"
 PLUGIN_ISSUE_TRACKER_URL = "https://github.com/Ediminator/hacs-homematicip-hcu/issues"
 
@@ -134,6 +134,10 @@ ATTR_ON_TIME = "on_time"
 ATTR_PATH = "path"
 ATTR_BODY = "body"
 ATTR_USER_MESSAGE_ID = "userMessageId"
+ATTR_USER_MESSAGE_MESSAGE = "message"
+ATTR_USER_MESSAGE_TITLE = "title"
+ATTR_USER_MESSAGE_BEHAVIOR_TYPE = "behaviorType"
+ATTR_USER_MESSAGE_MESSAGE_CATEOGORY = "messageCategory"
 
 # --- API Path Constants ---
 API_PATHS = {

@@ -181,6 +181,14 @@ send_api_command:
         text:
     body:
       required: true
+      default: |
+            {
+              "opticalSignalBehaviour": "FLASH_MIDDLE",
+              "simpleRGBColorState": "PURPLE",
+              "dimLevel": 0.42,
+              "channelIndex": 8,
+              "deviceId": "3014F711A00023E0C9A5E9356"
+            }
       example: |
             {
               "opticalSignalBehaviour": "FLASH_MIDDLE",
@@ -196,25 +204,80 @@ create_user_message_request:
   name: Create User Message
   description: Create a User Message that is displayed in the Homematic IP app. See the EQ3 API documentation for details.
   fields:
-    body:
+    messageCategory:
       required: true
+      name: Message Category
+      description: Select the category of the user message.
+      default: "INFO"
+      example: "INFO"
+      selector:
+        select:
+          mode: dropdown
+          options:
+            - label: INFO
+              value: INFO
+            - label: ERROR
+              value: ERROR
+            - label: WARN
+              value: WARN
+    userMessageId:
+      required: true
+      name: User Message ID
+      description: Enter a unique identifier for the user message.
+      default: "USER_MESSAGE"
+      example: "USER_MESSAGE"
+      selector:
+        text:
+    title:
+      required: true
+      name: Title
+      description: Localized title of the message as an object with language keys
+      default:
+        title: |
+          en: "Title in English"
+          de: "Titel auf Deutsch"
       example: |
-        messageCategory: INFO
-        userMessageId: USER_MESSAGE
         title:
-          en: "Message from Home Assistant"
-          de: "Nachricht von Home Assistant"
-        message:
-          en: "{{ state_attr('sensor.waste_badge', 'friendly_name') }} wird {{ states('sensor.waste_badge') }} abgeholt."
-          de: "{{ state_attr('sensor.waste_badge', 'friendly_name') }} wird {{ states('sensor.waste_badge') }} abgeholt."
-        behaviorType: NOT_DISMISSIBLE
-        timestamp: "{{ as_timestamp(utcnow()) | int }}"
+          en: "Title in English"
+          de: "Titel auf Deutsch"
       selector:
         object:
+    message:
+      required: true
+      name: Message
+      description: Localized message text as an object with language keys.
+      default:
+        message: |
+          en: "Text in English"
+          de: "Text auf Deutsch"
+      example: |
+        message:
+          en: "Text in English"
+          de: "Text auf Deutsch"
+      selector:
+        object:
+    behaviorType:
+        required: true
+        name: Behavior Type
+        description: Select how the message can be acknowledged or dismissed in the Homematic IP app.
+        default: "ACKNOWLEDGEABLE_BY_OK"
+        example: "ACKNOWLEDGEABLE_BY_OK"
+        selector:
+          select:
+            mode: dropdown
+            options:
+              - label: ACKNOWLEDGEABLE_BY_OK
+                value: ACKNOWLEDGEABLE_BY_OK
+              - label: ACKNOWLEDGEABLE_BY_YES_NO
+                value: ACKNOWLEDGEABLE_BY_YES_NO
+              - label: DISMISSIBLE
+                value: DISMISSIBLE
+              - label: NOT_DISMISSIBLE
+                value: NOT_DISMISSIBLE
 
 delete_user_message_request:
   name: Delete a User Message
-  description: Delete a previously created User Message from the Homematic IP app. See the EQ3 API documentation for details.
+  description: Delete a previously created User Message from the Homematic IP app.
   fields:
     userMessageId:
       name: User Message Id
@@ -223,3 +286,4 @@ delete_user_message_request:
       required: true
       selector:
         text:
+

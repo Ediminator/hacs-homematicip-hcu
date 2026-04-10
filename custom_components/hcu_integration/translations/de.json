@@ -220,14 +220,30 @@
             }
         },
         "create_user_message_request": {
-            "name": "Erstelle eine User Message Nachricht",
-            "description": "Erstelle eine User Message Nachricht die in der Homematic IP App angezeigt wird. Siehe API-Dokumentation von EQ3 für Details",
-            "fields": {
-                "body": {
-                    "name": "Anfrage Body",
-                    "description": "Beschreibe in dem Body die Nachricht. Verwende Parameter wie messageCategory, userMessageId, title, message, behaviorType und timestamp. Siehe API-Dokumentation von EQ3 für Details"
-                }
+          "name": "User Message erstellen",
+          "description": "Erstellt eine User Message, die in der Homematic IP App angezeigt wird. Siehe die eQ-3 API-Dokumentation für Details.",
+          "fields": {
+            "messageCategory": {
+              "name": "User Message Kategorie",
+              "description": "Wähle die Kategorie der User Message."
+            },
+            "userMessageId": {
+              "name": "User Message ID",
+              "description": "Gib eine eindeutige Kennung für die User Message an."
+            },
+            "title": {
+              "name": "Titel",
+              "description": "Lokalisierter Titel der Nachricht als Objekt mit Sprachschlüsseln, zum Beispiel de und en."
+            },
+            "message": {
+              "name": "Nachricht",
+              "description": "Lokalisierter Nachrichtentext als Objekt mit Sprachschlüsseln, zum Beispiel de und en."
+            },
+            "behaviorType": {
+              "name": "Verhaltenstyp",
+              "description": "Lege fest, wie die Nachricht in der Homematic IP App bestätigt oder ausgeblendet werden kann."
             }
+          }
         },
         "delete_user_message_request": {
             "name": "Lösche eine User Message Nachricht",

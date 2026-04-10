@@ -26,7 +26,7 @@ from .const import (
     ATTR_USER_MESSAGE_MESSAGE,
     ATTR_USER_MESSAGE_TITLE,
     ATTR_USER_MESSAGE_BEHAVIOR_TYPE,
-    ATTR_USER_MESSAGE_MESSAGE_CATEOGORY,
+    ATTR_USER_MESSAGE_CATEOGORY,
     DOMAIN,
     SERVICE_ACTIVATE_ECO_MODE,
     SERVICE_ACTIVATE_PARTY_MODE,
@@ -260,7 +260,7 @@ async def async_create_user_message_request(hass: HomeAssistant, call: ServiceCa
     message = call.data.get(ATTR_USER_MESSAGE_MESSAGE)
     title = call.data.get(ATTR_USER_MESSAGE_TITLE)
     behavior_type = call.data.get(ATTR_USER_MESSAGE_BEHAVIOR_TYPE)
-    message_category = call.data.get(ATTR_USER_MESSAGE_MESSAGE_CATEOGORY)
+    message_category = call.data.get(ATTR_USER_MESSAGE_CATEOGORY)
 
     if not isinstance(title, dict):
         _LOGGER.error("Attribute '%s' must be an object/dictionary", ATTR_USER_MESSAGE_TITLE)

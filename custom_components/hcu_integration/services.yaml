@@ -181,14 +181,6 @@ send_api_command:
         text:
     body:
       required: true
-      default: |
-            {
-              "opticalSignalBehaviour": "FLASH_MIDDLE",
-              "simpleRGBColorState": "PURPLE",
-              "dimLevel": 0.42,
-              "channelIndex": 8,
-              "deviceId": "3014F711A00023E0C9A5E9356"
-            }
       example: |
             {
               "opticalSignalBehaviour": "FLASH_MIDDLE",
@@ -233,7 +225,7 @@ create_user_message_request:
       name: Title
       description: Localized title of the message as an object with language keys
       default:
-        title: |
+        title:
           en: "Title in English"
           de: "Titel auf Deutsch"
       example: |
@@ -247,7 +239,7 @@ create_user_message_request:
       name: Message
       description: Localized message text as an object with language keys.
       default:
-        message: |
+        message: 
           en: "Text in English"
           de: "Text auf Deutsch"
       example: |
@@ -257,23 +249,23 @@ create_user_message_request:
       selector:
         object:
     behaviorType:
-        required: true
-        name: Behavior Type
-        description: Select how the message can be acknowledged or dismissed in the Homematic IP app.
-        default: "ACKNOWLEDGEABLE_BY_OK"
-        example: "ACKNOWLEDGEABLE_BY_OK"
-        selector:
-          select:
-            mode: dropdown
-            options:
-              - label: ACKNOWLEDGEABLE_BY_OK
-                value: ACKNOWLEDGEABLE_BY_OK
-              - label: ACKNOWLEDGEABLE_BY_YES_NO
-                value: ACKNOWLEDGEABLE_BY_YES_NO
-              - label: DISMISSIBLE
-                value: DISMISSIBLE
-              - label: NOT_DISMISSIBLE
-                value: NOT_DISMISSIBLE
+      required: true
+      name: Behavior Type
+      description: Select how the message can be acknowledged or dismissed in the Homematic IP app.
+      default: "ACKNOWLEDGEABLE_BY_OK"
+      example: "ACKNOWLEDGEABLE_BY_OK"
+      selector:
+        select:
+          mode: dropdown
+          options:
+            - label: ACKNOWLEDGEABLE_BY_OK
+              value: ACKNOWLEDGEABLE_BY_OK
+            - label: ACKNOWLEDGEABLE_BY_YES_NO
+              value: ACKNOWLEDGEABLE_BY_YES_NO
+            - label: DISMISSIBLE
+              value: DISMISSIBLE
+            - label: NOT_DISMISSIBLE
+              value: NOT_DISMISSIBLE
 
 delete_user_message_request:
   name: Delete a User Message

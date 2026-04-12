@@ -233,11 +233,11 @@
             },
             "title": {
               "name": "Titel",
-              "description": "Lokalisierter Titel der Nachricht als Objekt mit Sprachschlüsseln, zum Beispiel de und en."
+              "description": "Gib einen Titel für die Nachricht ein. Es kann entweder ein Text oder ein Language Object sein."
             },
             "message": {
               "name": "Nachricht",
-              "description": "Lokalisierter Nachrichtentext als Objekt mit Sprachschlüsseln, zum Beispiel de und en."
+              "description": "Gib einen Nachrichtentext ein. Es kann entweder ein Text oder ein Language Object sein."
             },
             "behaviorType": {
               "name": "Verhaltenstyp",

@@ -5,7 +5,9 @@ from __future__ import annotations
 import logging
 import time
 from functools import partial
-from typing import TYPE_CHECKING
+from typing import Any, TYPE_CHECKING
+from collections.abc import Mapping
+
 
 from homeassistant.const import ATTR_ENTITY_ID, ATTR_TEMPERATURE, Platform
 from homeassistant.core import HomeAssistant, ServiceCall, split_entity_id
@@ -26,7 +28,7 @@ from .const import (
     ATTR_USER_MESSAGE_MESSAGE,
     ATTR_USER_MESSAGE_TITLE,
     ATTR_USER_MESSAGE_BEHAVIOR_TYPE,
-    ATTR_USER_MESSAGE_CATEOGORY,
+    ATTR_USER_MESSAGE_CATEGORY,
     DOMAIN,
     SERVICE_ACTIVATE_ECO_MODE,
     SERVICE_ACTIVATE_PARTY_MODE,
@@ -255,26 +257,49 @@ async def async_handle_send_api_command(hass: HomeAssistant, call: ServiceCall) 
     except (HcuApiError, ConnectionError) as err:
         _LOGGER.error("Error calling send_api_command for path %s: %s", path, err)
     
-async def async_create_user_message_request(hass: HomeAssistant, call: ServiceCall) -> None:
+def _as_multilang(value: Any, field_name: str) -> dict[str, str] | None:
+    """Return value as multilingual dict.
+
+    - dict -> unchanged
+    - str -> build {"de": value, "en": value}
+    """
+    if isinstance(value, str):
+        return {
+            "de": value,
+            "en": value,
+        }
+
+    if isinstance(value, Mapping):
+        if not all(isinstance(k, str) for k in value):
+            _LOGGER.error("All keys in '%s' must be strings", field_name)
+            return None
+
+        if not all(isinstance(v, str) for v in value.values()):
+            _LOGGER.error("All values in '%s' must be strings", field_name)
+            return None
+
+        return dict(value)
+
+    _LOGGER.error("Attribute '%s' must be either a string or a dictionary", field_name)
+    return None
+
+
+async def async_create_user_message_request(
+    hass: HomeAssistant, call: ServiceCall
+) -> None:
     user_message_id = call.data.get(ATTR_USER_MESSAGE_ID)
-    message = call.data.get(ATTR_USER_MESSAGE_MESSAGE)
-    title = call.data.get(ATTR_USER_MESSAGE_TITLE)
+    raw_message = call.data.get(ATTR_USER_MESSAGE_MESSAGE)
+    raw_title = call.data.get(ATTR_USER_MESSAGE_TITLE)
     behavior_type = call.data.get(ATTR_USER_MESSAGE_BEHAVIOR_TYPE)
-    message_category = call.data.get(ATTR_USER_MESSAGE_CATEOGORY)
+    message_category = call.data.get(ATTR_USER_MESSAGE_CATEGORY)
 
-    if not isinstance(title, dict):
-        _LOGGER.error("Attribute '%s' must be an object/dictionary", ATTR_USER_MESSAGE_TITLE)
+    title = _as_multilang(raw_title, ATTR_USER_MESSAGE_TITLE)
+    if title is None:
         return
 
-    if not isinstance(message, dict):
-        _LOGGER.error("Attribute '%s' must be an object/dictionary", ATTR_USER_MESSAGE_MESSAGE)
+    message = _as_multilang(raw_message, ATTR_USER_MESSAGE_MESSAGE)
+    if message is None:
         return
-
-    if isinstance(title, dict) and "title" in title:
-        title = title["title"]
-
-    if isinstance(message, dict) and "message" in message:
-        message = message["message"]
 
     body = {
         "messageCategory": message_category,
@@ -288,7 +313,6 @@ async def async_create_user_message_request(hass: HomeAssistant, call: ServiceCa
     try:
         client = _get_client_for_service(hass)
         await client.async_create_user_message_request(body=body)
-
     except (HcuApiError, ConnectionError) as err:
         _LOGGER.error("Error calling create_user_message_request: %s", err)
     

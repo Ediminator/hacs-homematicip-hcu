@@ -4,7 +4,7 @@ Support for Homematic IP HCU action buttons.
 Stateless buttons are handled via events in the coordinator.
 """
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.button import ButtonEntity
 from homeassistant.config_entries import ConfigEntry

@@ -233,11 +233,11 @@
             },
             "title": {
               "name": "Title",
-              "description": "Localized title of the message as an object with language keys, for example de and en."
+              "description": "Enter a title of the message."
             },
             "message": {
               "name": "Message",
-              "description": "Localized message text as an object with language keys, for example de and en."
+              "description": "Enter the message text."
             },
             "behaviorType": {
               "name": "Behavior Type",

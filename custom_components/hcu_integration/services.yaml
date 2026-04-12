@@ -224,30 +224,18 @@ create_user_message_request:
       required: true
       name: Title
       description: Localized title of the message as an object with language keys
-      default:
-        title:
-          en: "Title in English"
-          de: "Titel auf Deutsch"
-      example: |
-        title:
-          en: "Title in English"
-          de: "Titel auf Deutsch"
+      default: "Title"
+      example: "Title"
       selector:
-        object:
+        text:
     message:
       required: true
       name: Message
       description: Localized message text as an object with language keys.
-      default:
-        message: 
-          en: "Text in English"
-          de: "Text auf Deutsch"
-      example: |
-        message:
-          en: "Text in English"
-          de: "Text auf Deutsch"
+      default: "Text"
+      example: "Text"
       selector:
-        object:
+        text:
     behaviorType:
       required: true
       name: Behavior Type

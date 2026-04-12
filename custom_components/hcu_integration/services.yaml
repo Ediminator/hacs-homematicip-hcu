@@ -223,7 +223,7 @@ create_user_message_request:
     title:
       required: true
       name: Title
-      description: Localized title of the message as an object with language keys
+      description: The title of the message. Can be a string or an object with language keys.
       default: "Title"
       example: "Title"
       selector:
@@ -231,7 +231,7 @@ create_user_message_request:
     message:
       required: true
       name: Message
-      description: Localized message text as an object with language keys.
+      description: The message can be a string or an object with language keys.
       default: "Text"
       example: "Text"
       selector:

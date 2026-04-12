@@ -137,7 +137,7 @@ ATTR_USER_MESSAGE_ID = "userMessageId"
 ATTR_USER_MESSAGE_MESSAGE = "message"
 ATTR_USER_MESSAGE_TITLE = "title"
 ATTR_USER_MESSAGE_BEHAVIOR_TYPE = "behaviorType"
-ATTR_USER_MESSAGE_CATEOGORY = "messageCategory"
+ATTR_USER_MESSAGE_CATEGORY = "messageCategory"
 
 # --- API Path Constants ---
 API_PATHS = {

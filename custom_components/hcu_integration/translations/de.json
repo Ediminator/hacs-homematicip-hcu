@@ -233,11 +233,11 @@
             },
             "title": {
               "name": "Titel",
-              "description": "Gib ein Titel der Nachricht ein."
+              "description": "Gib einen Titel für die Nachricht ein."
             },
             "message": {
               "name": "Nachricht",
-              "description": "Gib ein Nachrichtentext ein."
+              "description": "Gib einen Nachrichtentext ein."
             },
             "behaviorType": {
               "name": "Verhaltenstyp",

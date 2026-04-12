@@ -289,6 +289,7 @@ HMIP_DEVICE_TYPE_TO_DEVICE_CLASS = {
     "BRAND_REMOTE_CONTROL_2": None,
     "PUSH_BUTTON_2": None,
     "DOOR_LOCK_DRIVE": None,
+    "DOOR_LOCK_DRIVE_PRO": None,
     "TEMPERATURE_HUMIDITY_SENSOR_OUTDOOR": None,
     "TILT_VIBRATION_SENSOR": None,  # Binary sensors handle this
     "GLASS_WALL_THERMOSTAT_CARBON": None,
@@ -566,13 +567,6 @@ HMIP_FEATURE_TO_ENTITY = {
         "unit": UnitOfVolume.CUBIC_METERS,
         "device_class": SensorDeviceClass.WATER,
         "state_class": SensorStateClass.TOTAL_INCREASING,
-    },
-    "wateringAmountTarget": {
-        "class": "HcuGenericSensor",
-        "name": "Watering Amount Target",
-        "unit": UnitOfVolume.CUBIC_METERS,
-        "device_class": SensorDeviceClass.WATER,
-        "state_class": SensorStateClass.MEASUREMENT,
     },
     "waterFlow": {
         "class": "HcuGenericSensor",
@@ -1051,6 +1045,7 @@ HMIP_CHANNEL_TYPE_TO_ENTITY = {
     "DOOR_SWITCH_CHANNEL": {"class": "HcuDoorOpenerButton"},
     "IMPULSE_OUTPUT_CHANNEL": {"class": "HcuDoorImpulseButton"},
     "DOOR_LOCK_CHANNEL": {"class": "HcuLock", "extra_entities": ["HcuDoorUnlatchButton"]},
+    "DOOR_LOCK_PRO_CHANNEL": {"class": "HcuLock", "extra_entities": ["HcuDoorUnlatchButton"]},
     "ROTARY_HANDLE_CHANNEL": {"class": "HcuWindowStateSensor"},
     # Event channel types - create HcuButtonEvent entities for button devices
     "KEY_CHANNEL": {"class": "HcuButtonEvent"},  # For HmIP-WRC2, HmIP-BRC2, HmIP-WRC6-A, HmIP-WKP

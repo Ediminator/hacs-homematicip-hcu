@@ -2,8 +2,21 @@
 
 All notable changes to the Homematic IP Local (HCU) integration will be documented in this file.
 
-WATERING_ACTUATOR_CHANNEL not exposed as controllable entity
+## 1.21.10 - 2026-04-12
 
+### ✨ New Features
+
+****DOOR_LOCK_DRIVE_PRO****
+- Prepare for DOOR_LOCK_DRIVE_PRO
+  
+**USER MESSAGE SERVICE**
+- rebuild User Message Service for userfriendly UI
+
+### 🐛 Bug Fixes
+
+- error log #325
+
+---
 ## 1.21.9 - 2026-04-10
 
 ### ✨ New Features

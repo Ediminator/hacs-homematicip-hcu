@@ -722,6 +722,18 @@ data:
   body:
      messageCategory: INFO
      userMessageId: USER_MESSAGE
+     title: Message from Home Assistant
+     message: "Test Message with Entity States {{ states('sensor.State') }}."
+     behaviorType: NOT_DISMISSIBLE
+```
+or 
+
+```yaml
+action: hcu_integration.create_user_message_request
+data:
+  body:
+     messageCategory: INFO
+     userMessageId: USER_MESSAGE
      title:
        en: Message from Home Assistant
        de: Nachricht von Home Assistant
@@ -729,7 +741,6 @@ data:
        en: "Test Message with Entity States {{ states('sensor.State') }}."
        de: "Test Nachricht mit Entität Status {{ states('sensor.Status') }}."
      behaviorType: NOT_DISMISSIBLE
-     timestamp: "{{ as_timestamp(utcnow()) | int }}"
 ```
 
 ### `hcu_integration.delete_user_message_request`

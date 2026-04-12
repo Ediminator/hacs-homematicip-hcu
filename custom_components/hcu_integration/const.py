@@ -568,13 +568,6 @@ HMIP_FEATURE_TO_ENTITY = {
         "device_class": SensorDeviceClass.WATER,
         "state_class": SensorStateClass.TOTAL_INCREASING,
     },
-    "wateringAmountTarget": {
-        "class": "HcuGenericSensor",
-        "name": "Watering Amount Target",
-        "unit": UnitOfVolume.CUBIC_METERS,
-        "device_class": SensorDeviceClass.WATER,
-        "state_class": SensorStateClass.MEASUREMENT,
-    },
     "waterFlow": {
         "class": "HcuGenericSensor",
         "name": "Water Flow",

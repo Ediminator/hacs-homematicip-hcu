@@ -62,7 +62,7 @@ class HcuPinTextEntity(TextEntity):
         value = value.strip()
 
         if not _PIN_PATTERN.fullmatch(value):
-            raise HomeAssistantError("PIN muss genau aus 4 Ziffern bestehen.")
+            raise HomeAssistantError("PIN must consist of exactly 4 digits.")
 
         new_data = {
             **self._config_entry.data,

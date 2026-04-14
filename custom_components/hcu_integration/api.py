@@ -830,9 +830,9 @@ class HcuApiClient:
             
         await self.async_device_control(API_PATHS["SET_LOCK_STATE"], device_id, channel_index, body)
 
-    async def async_pull_Latch(self, device_id: str, channel_index: int, pin: str | None) -> None:
-        """ pull Latch """
-        
+    async def async_pull_latch(self, device_id: str, channel_index: int, pin: str | None) -> None:
+        """Pull the door latch."""
+        body = {}
         # Only include PIN in payload if provided
         if pin:
             body["authorizationPin"] = pin

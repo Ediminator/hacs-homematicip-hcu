@@ -41,6 +41,7 @@ PLATFORMS: list[Platform] = [
     Platform.SENSOR,
     Platform.SIREN,
     Platform.SWITCH,
+    Platform.TEXT,
     Platform.UPDATE,
 ]
 
@@ -152,6 +153,7 @@ API_PATHS = {
     "RESET_WATER_VOLUME": "/hmip/device/control/resetWaterVolume",
     "SEND_DOOR_COMMAND": "/hmip/device/control/sendDoorCommand",
     "SEND_DOOR_IMPULSE": "/hmip/device/control/startImpulse",
+    "SET_PULL_LATCH": "/hmip/device/control/pullLatch",
     "DEVICE_IDENTIFY": "/hmip/device/control/setIdentify",
     "SET_COLOR_TEMP": "/hmip/device/control/setColorTemperatureDimLevel",
     "SET_COLOR_TEMP_WITH_TIME": "/hmip/device/control/setColorTemperatureDimLevelWithTime",
@@ -1042,7 +1044,7 @@ HMIP_CHANNEL_TYPE_TO_ENTITY = {
     "SHADING_CHANNEL": {"class": "HcuCover"},  # For HmIP-HDM1 HunterDouglas shading actuators
     "GARAGE_DOOR_CHANNEL": {"class": "HcuGarageDoorCover"},
     "DOOR_CHANNEL": {"class": "HcuGarageDoorCover"},
-    "DOOR_SWITCH_CHANNEL": {"class": "HcuDoorOpenerButton"},
+    "DOOR_SWITCH_CHANNEL": {"class": "HcuDoorPullLatchButton", "extra_entities": ["HcuPinTextEntity"]},},
     "IMPULSE_OUTPUT_CHANNEL": {"class": "HcuDoorImpulseButton"},
     "DOOR_LOCK_CHANNEL": {"class": "HcuLock", "extra_entities": ["HcuDoorUnlatchButton"]},
     "DOOR_LOCK_PRO_CHANNEL": {"class": "HcuLock", "extra_entities": ["HcuDoorUnlatchButton"]},

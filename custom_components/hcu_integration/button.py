@@ -114,7 +114,7 @@ class HcuResetWaterVolume(HcuBaseEntity, ButtonEntity):
             )
 
 
-class HcuDoorOpenerButton(HcuBaseEntity, ButtonEntity):
+class HcuDoorPullLatchButton(HcuBaseEntity, ButtonEntity):
     """Representation of a button to trigger a door opener (e.g., HmIP-FDC)."""
 
     PLATFORM = Platform.BUTTON
@@ -131,16 +131,16 @@ class HcuDoorOpenerButton(HcuBaseEntity, ButtonEntity):
         super().__init__(coordinator, client, device_data, channel_index)
 
         # Set entity name using the centralized naming helper
-        self._set_entity_name(channel_label=self._channel.get("label"), feature_name="Open")
+        self._set_entity_name(channel_label=self._channel.get("label"), feature_name="Pull Latch")
 
-        self._attr_unique_id = f"{self._device_id}_{self._channel_index}_open"
+        self._attr_unique_id = f"{self._device_id}_{self._channel_index}_pull_latch"
 
     async def async_press(self) -> None:
-        """Trigger the door opener (sends 1s pulse to open door)."""
+        """Trigger the door opener."""
         _LOGGER.info("Triggering door opener for %s", self.entity_id)
         try:
-            await self._client.async_send_door_command(
-                self._device_id, self._channel_index, LOCK_STATE_OPEN
+            await self._client.async_pull_latch(
+                self._device_id, self._channel_index, pin=pin
             )
         except HcuApiError as err:
             _LOGGER.error(

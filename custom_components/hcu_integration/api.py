@@ -830,6 +830,15 @@ class HcuApiClient:
             
         await self.async_device_control(API_PATHS["SET_LOCK_STATE"], device_id, channel_index, body)
 
+    async def async_pull_Latch(self, device_id: str, channel_index: int, pin: str | None) -> None:
+        """ pull Latch """
+        
+        # Only include PIN in payload if provided
+        if pin:
+            body["authorizationPin"] = pin
+            
+        await self.async_device_control(API_PATHS["SET_PULL_LATCH"], device_id, channel_index, body)
+
     async def async_set_sound_file(self, device_id: str, channel_index: int, sound_file: str, volume: float, duration: float) -> None:
         await self.async_device_control(API_PATHS["SET_SOUND_FILE"], device_id, channel_index, {"soundFile": sound_file, "volumeLevel": volume, "onTime": duration})
 

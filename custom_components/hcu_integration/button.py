@@ -129,7 +129,7 @@ class HcuDoorPullLatchButton(HcuBaseEntity, ButtonEntity):
     ):
         """Initialize the door opener button."""
         super().__init__(coordinator, client, device_data, channel_index)
-
+        self._config_entry = coordinator.config_entry
         # Set entity name using the centralized naming helper
         self._set_entity_name(channel_label=self._channel.get("label"), feature_name="Pull Latch")
 

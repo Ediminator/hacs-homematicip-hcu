@@ -137,6 +137,7 @@ class HcuDoorPullLatchButton(HcuBaseEntity, ButtonEntity):
 
     async def async_press(self) -> None:
         """Trigger the door opener."""
+        pin = self._config_entry.data.get(CONF_PIN)
         _LOGGER.info("Triggering door opener for %s", self.entity_id)
         try:
             await self._client.async_pull_latch(

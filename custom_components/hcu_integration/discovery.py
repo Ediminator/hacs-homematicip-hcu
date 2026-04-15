@@ -88,7 +88,7 @@ async def async_discover_entities(
         "HcuButtonEvent": event,
         "HcuLock": lock,
         "HcuResetEnergyButton": button,
-        "HcuDoorOpenerButton": button,
+        "HcuDoorPullLatchButton": button,
         "HcuDoorImpulseButton": button,
         "HcuDoorUnlatchButton": button,
         "HcuDeviceIdentifyButton": button,

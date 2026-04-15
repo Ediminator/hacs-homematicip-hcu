@@ -144,12 +144,17 @@ class HcuDoorPullLatchButton(HcuBaseEntity, ButtonEntity):
                 self._device_id, self._channel_index, pin=pin
             )
         except HcuApiError as err:
-            _LOGGER.error(
-                "Error triggering door opener for %s: %s", self.entity_id, err
-            )
+            err_type = handle_lock_api_error(err, self.name, pin)
+            if err_type == "invalid_pin" and pin:
+                self._config_entry.async_start_reauth(self.hass)
+            
+            if not err_type:
+                _LOGGER.error(
+                    "Error triggering pull latch for %s: %s", self.name, err
+                )
         except ConnectionError as err:
             _LOGGER.error(
-                "Connection failed while triggering door opener for %s: %s", self.entity_id, err
+                "Connection failed while triggering pull latch for %s: %s", self.name, err
             )
             
 class HcuDoorImpulseButton(HcuBaseEntity, ButtonEntity):

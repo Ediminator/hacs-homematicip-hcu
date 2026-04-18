@@ -217,8 +217,8 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
             attributes |= {"window_state": window_state}
         if (cooling := self._group.get("cooling")) is not None:
             attributes |= {"cooling": cooling}
-        if (coolingIgnored := self._group.get("coolingIgnored")) is not None:
-            attributes |= {"coolingIgnored": coolingIgnored}
+        if (cooling_ignored := self._group.get("coolingIgnored")) is not None:
+            attributes |= {"cooling_ignored": cooling_ignored}
         return attributes
 
     @property
@@ -253,13 +253,14 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
             return HVACAction.IDLE
     
         cooling = self._group.get("cooling")
-        cooling_ignored = self._group.get("coolingIgnored")
-    
-        if cooling and not cooling_ignored and valve_pos > 0:
-            return HVACAction.COOLING
+        if cooling:
+            cooling_ignored = self._group.get("coolingIgnored")
+            if not cooling_ignored and valve_pos > 0:
+                return HVACAction.COOLING
+            return HVACAction.IDLE
     
         return HVACAction.HEATING if valve_pos > 0 else HVACAction.IDLE
-
+        
     async def async_set_temperature(self, **kwargs: Any) -> None:
         """Set new target temperature."""
         temperature = kwargs.get(ATTR_TEMPERATURE)

@@ -215,6 +215,10 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
             attributes |= {"valve_position": valve_pos}
         if (window_state := self._group.get("windowState")) is not None:
             attributes |= {"window_state": window_state}
+        if (cooling := self._group.get("cooling")) is not None:
+            attributes |= {"cooling": cooling}
+        if (coolingIgnored := self._group.get("coolingIgnored")) is not None:
+            attributes |= {"coolingIgnored": coolingIgnored}
         return attributes
 
     @property
@@ -237,16 +241,25 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
         # Return the maximum valve position to represent the heating demand of the group.
         return int(round(max(valve_positions) * 100))
 
+    
     @property
     def hvac_action(self) -> HVACAction:
         """Return the current HVAC action."""
         if self.hvac_mode == HVACMode.OFF:
             return HVACAction.OFF
+    
         valve_pos = self.current_valve_position
         if valve_pos is None:
             return HVACAction.IDLE
+    
+        cooling = self._group.get("cooling")
+        cooling_ignored = self._group.get("coolingIgnored")
+    
+        if cooling and not cooling_ignored and valve_pos > 0:
+            return HVACAction.COOLING
+    
         return HVACAction.HEATING if valve_pos > 0 else HVACAction.IDLE
-        
+
     async def async_set_temperature(self, **kwargs: Any) -> None:
         """Set new target temperature."""
         temperature = kwargs.get(ATTR_TEMPERATURE)

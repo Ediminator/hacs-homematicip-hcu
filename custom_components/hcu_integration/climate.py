@@ -57,7 +57,6 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
 
     PLATFORM = Platform.CLIMATE
     _attr_translation_key = "hcu_climate"
-    _attr_hvac_modes = [HVACMode.AUTO, HVACMode.HEAT, HVACMode.OFF]
     _attr_temperature_unit = UnitOfTemperature.CELSIUS
     _attr_supported_features = (
         ClimateEntityFeature.TARGET_TEMPERATURE | ClimateEntityFeature.PRESET_MODE
@@ -97,7 +96,14 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
         ]
 
         self._update_attributes_from_group_data()
-        
+    
+    def _is_effective_cooling(self) -> bool:
+        """Return whether cooling is currently active and not ignored."""
+        return (
+            self._group.get("cooling") is True
+            and self._group.get("coolingIgnored") is not True
+        )
+
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
@@ -112,6 +118,11 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
 
         control_mode = self._group.get("controlMode")
         target_temp = self._group.get("setPointTemperature")
+
+        manual_hvac_mode = (
+            HVACMode.COOL if self._is_effective_cooling() else HVACMode.HEAT
+        )
+        self._attr_hvac_modes = [HVACMode.AUTO, manual_hvac_mode, HVACMode.OFF]
 
         # Prevent state flapping during optimistic updates
         if (
@@ -129,9 +140,7 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
         else:
             if control_mode == "MANUAL":
                 self._attr_hvac_mode = (
-                    HVACMode.OFF
-                    if target_temp is not None and target_temp <= self.min_temp
-                    else HVACMode.HEAT
+                    HVACMode.COOL if self._is_effective_cooling() else HVACMode.HEAT
                 )
             elif control_mode in ("AUTOMATIC", "ECO"):
                 self._attr_hvac_mode = HVACMode.AUTO
@@ -215,6 +224,10 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
             attributes |= {"valve_position": valve_pos}
         if (window_state := self._group.get("windowState")) is not None:
             attributes |= {"window_state": window_state}
+        if (cooling := self._group.get("cooling")) is not None:
+            attributes |= {"cooling": cooling}
+        if (cooling_ignored := self._group.get("coolingIgnored")) is not None:
+            attributes |= {"cooling_ignored": cooling_ignored}
         return attributes
 
     @property
@@ -237,14 +250,24 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
         # Return the maximum valve position to represent the heating demand of the group.
         return int(round(max(valve_positions) * 100))
 
+    
     @property
     def hvac_action(self) -> HVACAction:
         """Return the current HVAC action."""
         if self.hvac_mode == HVACMode.OFF:
             return HVACAction.OFF
+    
         valve_pos = self.current_valve_position
         if valve_pos is None:
             return HVACAction.IDLE
+    
+        cooling = self._group.get("cooling")
+        if cooling:
+            cooling_ignored = self._group.get("coolingIgnored")
+            if not cooling_ignored and valve_pos > 0:
+                return HVACAction.COOLING
+            return HVACAction.IDLE
+    
         return HVACAction.HEATING if valve_pos > 0 else HVACAction.IDLE
         
     async def async_set_temperature(self, **kwargs: Any) -> None:
@@ -298,19 +321,19 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
                     self._group_id, "AUTOMATIC"
                 )
 
-        elif hvac_mode == HVACMode.HEAT:
+        elif hvac_mode in (HVACMode.HEAT, HVACMode.COOL):
             comfort_temp = self._config_entry.options.get(
                 CONF_COMFORT_TEMPERATURE, DEFAULT_COMFORT_TEMPERATURE
             )
-            self._attr_target_temperature = comfort_temp
+            #self._attr_target_temperature = comfort_temp
             self.async_write_ha_state()
 
             if self._group.get("controlMode") != "MANUAL":
                 await self._client.async_set_group_control_mode(self._group_id, "MANUAL")
 
-            await self._client.async_set_group_setpoint_temperature(
-                self._group_id, comfort_temp
-            )
+            #await self._client.async_set_group_setpoint_temperature(
+            #    self._group_id, comfort_temp
+            #)
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:
         """Set new preset mode."""
@@ -327,15 +350,16 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
             #elif preset_mode == PRESET_ECO:
             #    Disable Set EcoMode from Heating Group
             #    await self._client.async_activate_absence_permanent()
-            elif preset_mode == PRESET_PARTY:
-                comfort_temp = self._config_entry.options.get(
-                    CONF_COMFORT_TEMPERATURE, DEFAULT_COMFORT_TEMPERATURE
-                )
-                end_time = dt_util.now() + timedelta(hours=4)
-                await self.async_activate_party_mode(
-                    temperature=comfort_temp,
-                    end_time_str=end_time.strftime("%Y_%m_%d %H:%M"),
-                )
+            #elif preset_mode == PRESET_PARTY:
+            #    Disable Set PRESET_PARTY from Heating Group
+            #    comfort_temp = self._config_entry.options.get(
+            #        CONF_COMFORT_TEMPERATURE, DEFAULT_COMFORT_TEMPERATURE
+            #    )
+            #    end_time = dt_util.now() + timedelta(hours=4)
+            #    await self.async_activate_party_mode(
+            #        temperature=comfort_temp,
+            #        end_time_str=end_time.strftime("%Y_%m_%d %H:%M"),
+            #    )
 
             elif preset_mode in self._profiles:
                 if current_preset == PRESET_BOOST:

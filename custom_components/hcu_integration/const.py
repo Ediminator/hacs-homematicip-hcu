@@ -326,7 +326,7 @@ HMIP_FEATURE_TO_ENTITY = {
     },
     "soilTemperature": {
         "class": "HcuTemperatureSensor",
-        "name": "Temperature",
+        "name": "Soil Temperature",
         "unit": UnitOfTemperature.CELSIUS,
         "device_class": SensorDeviceClass.TEMPERATURE,
         "state_class": SensorStateClass.MEASUREMENT,
@@ -343,6 +343,7 @@ HMIP_FEATURE_TO_ENTITY = {
         "name": "Soil Moisture Raw Value",
         "state_class": SensorStateClass.MEASUREMENT,
         "icon": "mdi:water-percent-off",
+        "entity_registry_enabled_default": False,
     },
     "airPressure": {
         "class": "HcuGenericSensor",

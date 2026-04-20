@@ -342,7 +342,7 @@ HMIP_FEATURE_TO_ENTITY = {
         "class": "HcuGenericSensor",
         "name": "Soil Moisture Raw Value",
         "state_class": SensorStateClass.MEASUREMENT,
-        "icon": "mdi:water-percent-off",
+        "icon": "mdi:water-percent",
         "entity_registry_enabled_default": False,
     },
     "airPressure": {

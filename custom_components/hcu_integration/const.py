@@ -324,6 +324,27 @@ HMIP_FEATURE_TO_ENTITY = {
         "device_class": SensorDeviceClass.TEMPERATURE,
         "state_class": SensorStateClass.MEASUREMENT,
     },
+    "soilTemperature": {
+        "class": "HcuTemperatureSensor",
+        "name": "Soil Temperature",
+        "unit": UnitOfTemperature.CELSIUS,
+        "device_class": SensorDeviceClass.TEMPERATURE,
+        "state_class": SensorStateClass.MEASUREMENT,
+    },
+    "soilMoisture": {
+        "class": "HcuGenericSensor",
+        "name": "Soil Moisture",
+        "unit": PERCENTAGE,
+        "device_class": SensorDeviceClass.MOISTURE,
+        "state_class": SensorStateClass.MEASUREMENT,
+    },
+    "soilMoistureRawValue": {
+        "class": "HcuGenericSensor",
+        "name": "Soil Moisture Raw Value",
+        "state_class": SensorStateClass.MEASUREMENT,
+        "icon": "mdi:water-percent",
+        "entity_registry_enabled_default": False,
+    },
     "airPressure": {
         "class": "HcuGenericSensor",
         "name": "Air Pressure",

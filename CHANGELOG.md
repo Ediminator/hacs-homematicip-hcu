@@ -2,6 +2,18 @@
 
 All notable changes to the Homematic IP Local (HCU) integration will be documented in this file.
 
+## 1.21.11 - 2026-04-x
+
+### ✨ New Features
+
+- Climate entities now correctly display cooling mode in Home Assistant
+- add soilTemperature, soilMoisture, soilMoistureRawValue
+
+### 🐛 Bug Fixes
+
+
+
+---
 ## 1.21.10 - 2026-04-12
 
 ### ✨ New Features

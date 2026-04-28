@@ -97,11 +97,24 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
 
         self._update_attributes_from_group_data()
     
+    def _is_cooling(self) -> bool:
+        """Return whether cooling is currently active and not ignored."""
+        return (
+            self._group.get("cooling") is True
+        )
+    
     def _is_effective_cooling(self) -> bool:
         """Return whether cooling is currently active and not ignored."""
         return (
             self._group.get("cooling") is True
             and self._group.get("coolingIgnored") is not True
+        )
+    
+    def _is_cooling_blocked_or_ignored(self) -> bool:
+        """Return whether cooling is active but ignored or not allowed."""
+        return (
+            self._group.get("coolingIgnored") is True
+            or self._group.get("coolingAllowed") is False
         )
 
     @callback
@@ -118,11 +131,14 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
 
         control_mode = self._group.get("controlMode")
         target_temp = self._group.get("setPointTemperature")
-
-        manual_hvac_mode = (
-            HVACMode.COOL if self._is_effective_cooling() else HVACMode.HEAT
-        )
-        self._attr_hvac_modes = [HVACMode.AUTO, manual_hvac_mode, HVACMode.OFF]
+        
+        if self._is_cooling():
+            if self._is_cooling_blocked_or_ignored():
+                self._attr_hvac_modes = [HVACMode.OFF]
+            elif self._is_effective_cooling():
+                self._attr_hvac_modes = [HVACMode.AUTO, HVACMode.COOL, HVACMode.OFF]
+        else:
+            self._attr_hvac_modes = [HVACMode.AUTO, HVACMode.HEAT, HVACMode.OFF]
 
         # Prevent state flapping during optimistic updates
         if (
@@ -228,6 +244,8 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
             attributes |= {"cooling": cooling}
         if (cooling_ignored := self._group.get("coolingIgnored")) is not None:
             attributes |= {"cooling_ignored": cooling_ignored}
+        if (cooling_allowed := self._group.get("coolingAllowed")) is not None:
+            attributes |= {"cooling_allowed": cooling_allowed}
         return attributes
 
     @property
@@ -270,11 +288,32 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
     
         return HVACAction.HEATING if valve_pos > 0 else HVACAction.IDLE
         
+    @property
+    def hvac_mode(self) -> HVACMode:
+        """Return the current HVAC Mode."""
+        if self._group.get("controlMode") == "AUTOMATIC":
+            return HVACMode.AUTO
+        elif self._group.get("controlMode") == "OFF":
+            return HVACMode.OFF
+        elif self._group.get("controlMode") == "MANUAL":
+            if self._is_cooling():
+                if self._is_cooling_blocked_or_ignored():
+                    return HVACMode.OFF
+                elif self._is_effective_cooling():
+                    return HVACMode.COOL
+            else:
+                return HVACMode.HEAT
+        return HVACMode.OFF
+        
     async def async_set_temperature(self, **kwargs: Any) -> None:
         """Set new target temperature."""
         temperature = kwargs.get(ATTR_TEMPERATURE)
         if temperature is None:
             return
+        
+        if self._is_cooling():
+            if self._is_cooling_blocked_or_ignored():
+                return
 
         self._attr_assumed_state = True
         self._attr_target_temperature = temperature

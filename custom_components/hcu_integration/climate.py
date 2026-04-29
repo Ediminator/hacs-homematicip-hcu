@@ -110,7 +110,7 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
     def _is_eco_mode_active(self) -> bool:
         """Return currently eco mode"""
         return(
-            self._heating_home.get("absenceType") in (ABSENCE_TYPE_PERIOD, ABSENCE_TYPE_PERMANENT)
+            self._indoor_climate_data.get("absenceType") in (ABSENCE_TYPE_PERIOD, ABSENCE_TYPE_PERMANENT)
             and self._group.get("ecoAllowed") is True
         )
     
@@ -162,7 +162,7 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
 
         # Determine Target Temperature
         if self._is_eco_mode_active():
-            self._attr_target_temperature = self._heating_home.get("ecoTemperature")
+            self._attr_target_temperature = self._indoor_climate_data.get("ecoTemperature")
         else:
             self._attr_target_temperature = self._group.get("setPointTemperature")
 

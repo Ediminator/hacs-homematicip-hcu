@@ -100,7 +100,7 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
         
     @property
     def _indoor_climate_data(self) -> dict:
-        """Return currently heating home"""
+        """Return indoor climate data."""
         return(
             self._client.state.get("home", {})
             .get("functionalHomes", {})
@@ -368,7 +368,7 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
         """Set new HVAC mode."""
         self._attr_assumed_state = True
-        #self._attr_hvac_mode = hvac_mode
+        self._attr_hvac_mode = hvac_mode
 
         if hvac_mode == HVACMode.OFF:
             self._attr_target_temperature = self.min_temp
@@ -406,7 +406,8 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
         current_preset = self.preset_mode
         self._attr_assumed_state = True
         self._attr_preset_mode = preset_mode
-
+        self.async_write_ha_state()
+        
         try:
             if preset_mode == PRESET_BOOST:
                 await self._client.async_set_group_boost(

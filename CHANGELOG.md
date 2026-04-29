@@ -2,7 +2,7 @@
 
 All notable changes to the Homematic IP Local (HCU) integration will be documented in this file.
 
-## 1.21.11 - 2026-04-x
+## 1.21.11 - 2026-04-29
 
 ### ✨ New Features
 
@@ -11,8 +11,8 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 
 ### 🐛 Bug Fixes
 
-
-
+- Prepare HmIP-FDC with the correct api command
+  
 ---
 ## 1.21.10 - 2026-04-12
 

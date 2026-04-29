@@ -137,7 +137,7 @@ class HcuDoorPullLatchButton(HcuBaseEntity, ButtonEntity):
         self._attr_unique_id = f"{self._device_id}_{self._channel_index}_pull_latch"
 
     async def async_press(self) -> None:
-        """pull latch."""
+        """Pull the door latch."""
         pin = self._config_entry.data.get(CONF_PIN)
         _LOGGER.info("Triggering pull latch for %s", self.entity_id)
         try:

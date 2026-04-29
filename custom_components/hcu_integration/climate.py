@@ -76,25 +76,6 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
         self._default_profile_index = "PROFILE_1"
 
         self._profiles: dict[str, str] = {}
-        for profile in self._group.get("profiles", {}).values():
-            if profile.get("enabled") and profile.get("visible"):
-                profile_index = profile["index"]
-                profile_name = profile.get("name")
-
-                if profile_index == "PROFILE_1":
-                    # Always include PROFILE_1, name it 'Standard' if unnamed
-                    self._default_profile_name = profile_name or "Standard"
-                    self._profiles[self._default_profile_name] = profile_index
-                elif profile_name:  # Only include other profiles if they have a name
-                    self._profiles[profile_name] = profile_index
-
-        self._attr_preset_modes = [
-            PRESET_BOOST,
-            PRESET_ECO,
-            PRESET_PARTY,
-            *self._profiles.keys(),
-        ]
-
         self._update_attributes_from_group_data()
     
     def _is_cooling(self) -> bool:
@@ -113,10 +94,28 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
     def _is_cooling_blocked_or_ignored(self) -> bool:
         """Return whether cooling is active but ignored or not allowed."""
         return (
+            self._group.get("coolingAllowed") is False
+            or(
             self._group.get("coolingIgnored") is True
-            or self._group.get("coolingAllowed") is False
+            and self._group.get("coolingAllowed") is True)
         )
-
+        
+    @property
+    def _heating_home(self) -> dict:
+        """Return currently heating home"""
+        return(
+            self._client.state.get("home", {})
+            .get("functionalHomes", {})
+            .get("INDOOR_CLIMATE", {})
+        )
+    
+    def _is_eco_mode_active(self) -> bool:
+        """Return currently eco mode"""
+        return(
+            self._heating_home.get("absenceType") in (ABSENCE_TYPE_PERIOD, ABSENCE_TYPE_PERMANENT)
+            and self._group.get("ecoAllowed") is True
+        )
+    
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
@@ -164,36 +163,10 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
                 self._attr_hvac_mode = HVACMode.OFF
 
         # Determine Target Temperature
-        heating_home = (
-            self._client.state.get("home", {})
-            .get("functionalHomes", {})
-            .get("INDOOR_CLIMATE", {})
-        )
-
-        is_eco_mode_active = (
-            heating_home.get("absenceType") in (ABSENCE_TYPE_PERIOD, ABSENCE_TYPE_PERMANENT)
-            and self._group.get("ecoAllowed") is True
-        )
-        
-        if is_eco_mode_active:
-            self._attr_target_temperature = heating_home.get("ecoTemperature")
+        if self._is_eco_mode_active():
+            self._attr_target_temperature = self._heating_home.get("ecoTemperature")
         else:
             self._attr_target_temperature = self._group.get("setPointTemperature")
-
-        # Determine Preset Mode
-        if self._group.get("boostMode"):
-            self._attr_preset_mode = PRESET_BOOST
-        elif is_eco_mode_active:
-            self._attr_preset_mode = PRESET_ECO
-        elif self._group.get("partyMode"):
-            self._attr_preset_mode = PRESET_PARTY
-        else:
-            active_profile_index = self._group.get("activeProfile")
-            self._attr_preset_mode = self._default_profile_name
-            for name, index in self._profiles.items():
-                if index == active_profile_index:
-                    self._attr_preset_mode = name
-                    break
 
     @property
     def current_humidity(self) -> int | None:
@@ -246,6 +219,7 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
             attributes |= {"cooling_ignored": cooling_ignored}
         if (cooling_allowed := self._group.get("coolingAllowed")) is not None:
             attributes |= {"cooling_allowed": cooling_allowed}
+        attributes |= {"is_cooling_blocked_or_ignored": self._is_cooling_blocked_or_ignored()}
         return attributes
 
     @property
@@ -279,32 +253,84 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
         if valve_pos is None:
             return HVACAction.IDLE
     
-        cooling = self._group.get("cooling")
-        if cooling:
-            cooling_ignored = self._group.get("coolingIgnored")
-            if not cooling_ignored and valve_pos > 0:
+        if self._is_cooling():
+            if self._is_cooling_blocked_or_ignored():
+                return HVACAction.OFF
+            elif self._is_effective_cooling() and valve_pos > 0:
                 return HVACAction.COOLING
-            return HVACAction.IDLE
-    
-        return HVACAction.HEATING if valve_pos > 0 else HVACAction.IDLE
+            else: 
+                return HVACAction.IDLE
+        else:
+            return HVACAction.HEATING if valve_pos > 0 else HVACAction.IDLE
         
     @property
     def hvac_mode(self) -> HVACMode:
         """Return the current HVAC Mode."""
+        if self._is_cooling():
+                if self._is_cooling_blocked_or_ignored():
+                    return HVACMode.OFF
+            
         if self._group.get("controlMode") == "AUTOMATIC":
             return HVACMode.AUTO
         elif self._group.get("controlMode") == "OFF":
             return HVACMode.OFF
-        elif self._group.get("controlMode") == "MANUAL":
+        
+        if self._group.get("controlMode") == "MANUAL":
             if self._is_cooling():
-                if self._is_cooling_blocked_or_ignored():
-                    return HVACMode.OFF
-                elif self._is_effective_cooling():
+                if self._is_effective_cooling():
                     return HVACMode.COOL
             else:
                 return HVACMode.HEAT
-        return HVACMode.OFF
         
+    @property
+    def preset_modes_map(self) -> dict[str, str]:
+        """Return mapping of profile name -> index, dynamically from group data."""
+        profiles: dict[str, str] = {}
+        default_name = "Standard"
+        for profile in self._group.get("profiles", {}).values():
+            if profile.get("enabled") and profile.get("visible"):
+                profile_index = profile["index"]
+                profile_name = profile.get("name")
+                if profile_index == "PROFILE_1":
+                    default_name = profile_name or "Standard"
+                    profiles[default_name] = profile_index
+                elif profile_name:
+                    profiles[profile_name] = profile_index
+        self._default_profile_name = default_name
+        return profiles
+    
+    @property
+    def preset_mode(self) -> str:
+        """Return the current preset mode."""
+        if self._is_cooling():
+            if self._is_cooling_blocked_or_ignored():
+                return PRESET_ECO
+
+        current_map = self.preset_modes_map
+        if self._group.get("boostMode"):
+            return PRESET_BOOST
+        elif self._is_eco_mode_active():
+            return PRESET_ECO
+        elif self._group.get("partyMode"):
+            return PRESET_PARTY
+        else:
+            active_profile_index = self._group.get("activeProfile")
+            for name, index in current_map.items():
+                if index == active_profile_index:
+                    return name
+            return self._default_profile_name
+            
+    @property
+    def preset_modes(self) -> list[str]:
+        """Return available preset modes."""
+        if self._is_cooling():
+            if self._is_cooling_blocked_or_ignored():
+                return [PRESET_ECO]
+            elif self._is_effective_cooling():
+                return [PRESET_BOOST, PRESET_ECO, PRESET_PARTY, *self.preset_modes_map.keys()]
+        else:
+            return [PRESET_BOOST, PRESET_ECO, PRESET_PARTY, *self.preset_modes_map.keys()]
+                
     async def async_set_temperature(self, **kwargs: Any) -> None:
         """Set new target temperature."""
         temperature = kwargs.get(ATTR_TEMPERATURE)
@@ -341,7 +367,7 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
         """Set new HVAC mode."""
         self._attr_assumed_state = True
-        self._attr_hvac_mode = hvac_mode
+        #self._attr_hvac_mode = hvac_mode
 
         if hvac_mode == HVACMode.OFF:
             self._attr_target_temperature = self.min_temp
@@ -379,13 +405,14 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
         current_preset = self.preset_mode
         self._attr_assumed_state = True
         self._attr_preset_mode = preset_mode
-        self.async_write_ha_state()
 
         try:
             if preset_mode == PRESET_BOOST:
                 await self._client.async_set_group_boost(
                     group_id=self._group_id, boost=True
                 )
+            
+            #This Action must be executed globally
             #elif preset_mode == PRESET_ECO:
             #    Disable Set EcoMode from Heating Group
             #    await self._client.async_activate_absence_permanent()
@@ -400,15 +427,17 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
             #        end_time_str=end_time.strftime("%Y_%m_%d %H:%M"),
             #    )
 
-            elif preset_mode in self._profiles:
+            elif preset_mode in self.preset_modes_map:
                 if current_preset == PRESET_BOOST:
                     await self._client.async_set_group_boost(
                         group_id=self._group_id, boost=False
                     )
-                elif current_preset == PRESET_ECO:
-                    await self._client.async_deactivate_absence()
-                elif current_preset == PRESET_PARTY:
-                    await self._client.async_deactivate_vacation()
+                #elif current_preset == PRESET_ECO:
+                    #await self._client.async_deactivate_absence()
+                    #This Action must be executed globally
+                #elif current_preset == PRESET_PARTY:
+                    #await self._client.async_deactivate_vacation()
+                    #This Action must be executed globally
 
                 if self._group.get("controlMode") != "AUTOMATIC":
                     await self._client.async_set_group_control_mode(
@@ -416,11 +445,15 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
                     )
 
                 await self._client.async_set_group_active_profile(
-                    group_id=self._group_id, profile_index=self._profiles[preset_mode]
+                    group_id=self._group_id, profile_index=self.preset_modes_map[preset_mode]
                 )
+            self._attr_assumed_state = False
+            self._attr_preset_mode = None
+            self.async_write_ha_state()
         except (HcuApiError, ConnectionError) as err:
             _LOGGER.error("Failed to set preset mode: %s", err)
             self._attr_assumed_state = False
+            self._attr_preset_mode = None
             self.async_write_ha_state()
 
     async def async_activate_party_mode(

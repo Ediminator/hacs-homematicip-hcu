@@ -94,10 +94,8 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
     def _is_cooling_blocked_or_ignored(self) -> bool:
         """Return whether cooling is active but ignored or not allowed."""
         return (
-            self._group.get("coolingAllowed") is False
-            or(
-            self._group.get("coolingIgnored") is True
-            and self._group.get("coolingAllowed") is True)
+            not self._group.get("coolingAllowed", True)
+            or self._group.get("coolingIgnored", False)
         )
         
     @property
@@ -301,6 +299,10 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
     @property
     def preset_mode(self) -> str:
         """Return the current preset mode."""
+        
+        if self._attr_assumed_state and self._attr_preset_mode is not None:
+            return self._attr_preset_mode
+
         if self._is_cooling():
             if self._is_cooling_blocked_or_ignored():
                 return PRESET_ECO

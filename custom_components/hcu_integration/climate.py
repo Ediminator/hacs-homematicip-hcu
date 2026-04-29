@@ -79,7 +79,7 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
         self._update_attributes_from_group_data()
     
     def _is_cooling(self) -> bool:
-        """Return whether cooling is currently active and not ignored."""
+        """Return whether cooling is currently active."""
         return (
             self._group.get("cooling") is True
         )

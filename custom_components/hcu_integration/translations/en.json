@@ -260,6 +260,9 @@
         "button": {
             "hcu_device_identify":{
                 "name": "Identify"
+            },
+            "hcu_pull_latch":{
+                "name": "Pull Latch"
             }
         },
         "event": {

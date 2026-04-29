@@ -260,6 +260,9 @@
         "button": {
             "hcu_device_identify":{
                 "name": "Identifizieren"
+            },
+            "hcu_pull_latch":{
+                "name": "Türverriegelung öffnen"
             }
         },
         "event": {

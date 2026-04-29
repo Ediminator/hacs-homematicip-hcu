@@ -114,10 +114,11 @@ class HcuResetWaterVolume(HcuBaseEntity, ButtonEntity):
             )
 
 
-class HcuDoorOpenerButton(HcuBaseEntity, ButtonEntity):
+class HcuDoorPullLatchButton(HcuBaseEntity, ButtonEntity):
     """Representation of a button to trigger a door opener (e.g., HmIP-FDC)."""
 
     PLATFORM = Platform.BUTTON
+    _attr_translation_key = "hcu_pull_latch"
     _attr_icon = "mdi:door"
 
     def __init__(
@@ -129,26 +130,32 @@ class HcuDoorOpenerButton(HcuBaseEntity, ButtonEntity):
     ):
         """Initialize the door opener button."""
         super().__init__(coordinator, client, device_data, channel_index)
-
+        self._config_entry = coordinator.config_entry
         # Set entity name using the centralized naming helper
-        self._set_entity_name(channel_label=self._channel.get("label"), feature_name="Open")
+        self._set_entity_name(channel_label=self._channel.get("label"), feature_name="Pull Latch")
 
-        self._attr_unique_id = f"{self._device_id}_{self._channel_index}_open"
+        self._attr_unique_id = f"{self._device_id}_{self._channel_index}_pull_latch"
 
     async def async_press(self) -> None:
-        """Trigger the door opener (sends 1s pulse to open door)."""
-        _LOGGER.info("Triggering door opener for %s", self.entity_id)
+        """pull latch."""
+        pin = self._config_entry.data.get(CONF_PIN)
+        _LOGGER.info("Triggering pull latch for %s", self.entity_id)
         try:
-            await self._client.async_send_door_command(
-                self._device_id, self._channel_index, LOCK_STATE_OPEN
+            await self._client.async_pull_latch(
+                self._device_id, self._channel_index, pin=pin
             )
         except HcuApiError as err:
-            _LOGGER.error(
-                "Error triggering door opener for %s: %s", self.entity_id, err
-            )
+            err_type = handle_lock_api_error(err, self.name, pin)
+            if err_type == "invalid_pin" and pin:
+                self._config_entry.async_start_reauth(self.hass)
+            
+            if not err_type:
+                _LOGGER.error(
+                    "Error triggering pull latch for %s: %s", self.name, err
+                )
         except ConnectionError as err:
             _LOGGER.error(
-                "Connection failed while triggering door opener for %s: %s", self.entity_id, err
+                "Connection failed while triggering pull latch for %s: %s", self.name, err
             )
             
 class HcuDoorImpulseButton(HcuBaseEntity, ButtonEntity):

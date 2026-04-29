@@ -74,7 +74,8 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
         self._config_entry = config_entry
         self._default_profile_name = "Standard"
         self._default_profile_index = "PROFILE_1"
-
+        
+        self._attr_preset_mode = None
         self._profiles: dict[str, str] = {}
         self._update_attributes_from_group_data()
     

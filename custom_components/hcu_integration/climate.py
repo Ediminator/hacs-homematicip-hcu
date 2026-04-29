@@ -266,21 +266,20 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
     @property
     def hvac_mode(self) -> HVACMode:
         """Return the current HVAC Mode."""
-        if self._is_cooling():
-                if self._is_cooling_blocked_or_ignored():
-                    return HVACMode.OFF
-            
-        if self._group.get("controlMode") == "AUTOMATIC":
-            return HVACMode.AUTO
-        elif self._group.get("controlMode") == "OFF":
+        if self._attr_assumed_state and self._attr_hvac_mode is not None:
+            return self._attr_hvac_mode
+
+        if self._is_cooling() and self._is_cooling_blocked_or_ignored():
             return HVACMode.OFF
-        
-        if self._group.get("controlMode") == "MANUAL":
-            if self._is_cooling():
-                if self._is_effective_cooling():
-                    return HVACMode.COOL
-            else:
-                return HVACMode.HEAT
+            
+        control_mode = self._group.get("controlMode")
+        if control_mode in ("AUTOMATIC", "ECO"):
+            return HVACMode.AUTO
+        if control_mode == "OFF":
+            return HVACMode.OFF
+        if control_mode == "MANUAL":
+            return HVACMode.COOL if self._is_effective_cooling() else HVACMode.HEAT
+        return HVACMode.OFF
         
     @property
     def preset_modes_map(self) -> dict[str, str]:

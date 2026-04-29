@@ -99,7 +99,7 @@ class HcuClimate(HcuGroupBaseEntity, ClimateEntity):
         )
         
     @property
-    def _heating_home(self) -> dict:
+    def _indoor_climate_data(self) -> dict:
         """Return currently heating home"""
         return(
             self._client.state.get("home", {})

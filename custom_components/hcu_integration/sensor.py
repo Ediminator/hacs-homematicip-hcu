@@ -12,6 +12,9 @@ from homeassistant.util import dt as dt_util
 
 from .api import HcuApiClient
 from .entity import HcuBaseEntity, HcuHomeBaseEntity
+from .const import (
+    HMIP_ON_TIME_INFINITE,
+)
 
 if TYPE_CHECKING:
     from . import HcuCoordinator
@@ -104,6 +107,7 @@ class HcuGenericSensor(HcuBaseEntity, SensorEntity):
         self._attr_native_unit_of_measurement = mapping.get("unit")
         self._attr_state_class = mapping.get("state_class")
         self._attr_icon = mapping.get("icon")
+        self._attr_suggested_display_precision = mapping.get("suggested_display_precision") 
         self._attr_entity_category = mapping.get("entity_category")
 
         if "entity_registry_enabled_default" in mapping:
@@ -135,17 +139,23 @@ class HcuGenericSensor(HcuBaseEntity, SensorEntity):
     @property
     def native_value(self) -> float | str | None:
         """Return the sensor value, with special handling for certain features."""
-        value = self._channel.get(self._feature)
+        channel_data = self._channel
+        internal_link_config = channel_data.get("internalLinkConfiguration") or {}
+        channel_data = {**channel_data, **internal_link_config}
+        
+        value = channel_data.get(self._feature)
         if value is None:
             return None
-
         if self._feature == "valvePosition":
             return round(value * 100.0, 1)
         if self._feature == "vaporAmount":
             return round(value, 2)
         if self._feature == "dutyCycleLevel":
             return round(value, 1)
-
+        if self._feature == "onTime":
+            if value == HMIP_ON_TIME_INFINITE:
+                return 0
+            return round(value, 0)
         return value
 
 

@@ -1057,6 +1057,9 @@ HMIP_CHANNEL_ROLE_TO_ENTITY = {
         "name": "Window",
         "device_class": BinarySensorDeviceClass.WINDOW,
     },
+    "KEY_OR_SWITCH_FOR_GROUP": {
+        "class": "HcuButtonEvent"
+    }
 }
     
 HMIP_CHANNEL_TYPE_TO_ENTITY = {

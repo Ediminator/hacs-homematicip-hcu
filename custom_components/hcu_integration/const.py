@@ -1099,7 +1099,7 @@ HMIP_CHANNEL_TYPE_TO_ENTITY = {
     "KEY_REMOTE_CONTROL_CHANNEL": {"class": "HcuButtonEvent"},
     "SWITCH_INPUT_CHANNEL": {"class": "HcuButtonEvent"},
     "SINGLE_KEY_CHANNEL": {"class": "HcuButtonEvent"},
-    #CHANNEL_TYPE_MULTI_MODE_INPUT: {"class": "HcuButtonEvent"},
+    CHANNEL_TYPE_MULTI_MODE_INPUT: {"class": "HcuButtonEvent"},
     # Channel types that were missing from the v1.17.0 fix - now restored:
     "BRAND_REMOTE_CONTROL": {"class": "HcuButtonEvent"},
     "BRAND_WALL_MOUNTED_TRANSMITTER": {"class": "HcuButtonEvent"},

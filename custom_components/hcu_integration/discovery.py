@@ -150,7 +150,7 @@ async def async_discover_entities(
             channel_mapping = None
             
             # First check if a channel role is found.
-            if channel_role and channel_role in HMIP_CHANNEL_ROLE_TO_ENTITY:
+            if channel_role in HMIP_CHANNEL_ROLE_TO_ENTITY:
                 base_channel_type = channel_role
                 channel_mapping = HMIP_CHANNEL_ROLE_TO_ENTITY[base_channel_type]
                 _LOGGER.debug(
@@ -193,8 +193,18 @@ async def async_discover_entities(
                         entity_mapping = channel_mapping.copy()
                         feature = entity_mapping.get("feature")
                         if feature is not None:
+                            _LOGGER.debug(
+                                "feature ist set : %s, feature: %s",
+                                entity_mapping, feature
+                            )
+            
                             entity = entity_class(coordinator, client, device_data, channel_index, feature, entity_mapping)
                         else:
+                            _LOGGER.debug(
+                                "feature ist not set : %s",
+                                platform
+                            )
+            
                             entity = entity_class(coordinator, client, device_data, channel_index)
                         entities[platform].append(entity)
                         uid = getattr(entity, "unique_id", None)

@@ -1055,6 +1055,7 @@ HMIP_CHANNEL_ROLE_TO_ENTITY = {
     "WINDOW_SENSOR": {
         "class": "HcuWindowBinarySensor",
         "name": "Window",
+        "feature": "window_state",
         "device_class": BinarySensorDeviceClass.WINDOW,
     },
     "KEY_OR_SWITCH_FOR_GROUP": {

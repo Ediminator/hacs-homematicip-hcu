@@ -191,7 +191,7 @@ async def async_discover_entities(
                         entity_class = getattr(module, class_name)
                         platform = getattr(entity_class, "PLATFORM")
                         entity_mapping = channel_mapping.copy()
-                        feature = entity_mapping.get("name")
+                        feature = entity_mapping.get("feature")
                         if feature is not None:
                             entity = entity_class(coordinator, client, device_data, channel_index, feature, entity_mapping)
                         else:

@@ -50,8 +50,9 @@ class HcuDoorbellEvent(HcuBaseEntity, EventEntity):
 
     PLATFORM = Platform.EVENT
 
+    _attr_translation_key = "hcu_doorbell_event"
     _attr_device_class = EventDeviceClass.DOORBELL
-    _attr_event_types = ["press"]
+    _attr_event_types = ["ring"]
 
     def __init__(
         self,
@@ -71,7 +72,7 @@ class HcuDoorbellEvent(HcuBaseEntity, EventEntity):
     @callback
     def handle_trigger(self) -> None:
         """Handle an event trigger from the coordinator."""
-        self._trigger_event("press")
+        self._trigger_event("ring")
 
 
 class HcuButtonEvent(HcuBaseEntity, EventEntity):

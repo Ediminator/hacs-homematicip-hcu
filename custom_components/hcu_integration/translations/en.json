@@ -278,6 +278,15 @@
                         }
                     }
                 }
+            },
+            "hcu_doorbell_event": {
+                "state_attributes": {
+                    "event_type": {
+                        "state": {
+                            "ring": "Doorbell pressed"
+                        }
+                    }
+                }
             }
         }, 
         "light": {

@@ -89,6 +89,11 @@ class HcuBinarySensor(HcuBaseEntity, BinarySensorEntity):
         if value is None:
             return None
             
+        _LOGGER.debug(
+                    "binary_ison: %s, feature: %s",
+                    value, self._feature
+                )
+            
         return self._is_on_from_value(value)
 
     def _is_on_from_value(self, value: Any) -> bool:

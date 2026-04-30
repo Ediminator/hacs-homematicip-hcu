@@ -36,6 +36,7 @@ from .const import (
     HMIP_CHANNEL_TYPE_TO_ENTITY,
     HMIP_FEATURE_TO_ENTITY,
     HMIP_OPTIONAL_FEATURE_TO_ENTITY,
+    HMIP_CHANNEL_ROLE_TO_ENTITY,
     MULTI_FUNCTION_CHANNEL_DEVICES,
     PLATFORMS,
     EVENT_CHANNEL_TYPES,
@@ -144,19 +145,25 @@ async def async_discover_entities(
             is_unused_channel = is_deactivated_by_default and not channel_data.get("groups")
 
             channel_type = channel_data.get("functionalChannelType")
+            channel_role = channel_data.get("channelRole")
             base_channel_type = None
             channel_mapping = None
-
-            # Match channel type, including indexed variants (e.g., SWITCH_CHANNEL_1)
-            if channel_type in HMIP_CHANNEL_TYPE_TO_ENTITY:
-                base_channel_type = channel_type
-                channel_mapping = HMIP_CHANNEL_TYPE_TO_ENTITY[base_channel_type]
+            
+            # First check if a channel role is found.
+            if channel_role in HMIP_CHANNEL_ROLE_TO_ENTITY:
+                base_channel_type = channel_role
+                channel_mapping = HMIP_CHANNEL_ROLE_TO_ENTITY[base_channel_type]
             elif channel_type:
-                for base_type in HMIP_CHANNEL_TYPE_TO_ENTITY:
-                    if channel_type.startswith(base_type):
-                        base_channel_type = base_type
-                        channel_mapping = HMIP_CHANNEL_TYPE_TO_ENTITY[base_channel_type]
-                        break
+                # Fallback: Match channel type, including indexed variants (e.g., SWITCH_CHANNEL_1)
+                if channel_type in HMIP_CHANNEL_TYPE_TO_ENTITY:
+                    base_channel_type = channel_type
+                    channel_mapping = HMIP_CHANNEL_TYPE_TO_ENTITY[base_channel_type]
+                else:
+                    for base_type in HMIP_CHANNEL_TYPE_TO_ENTITY:
+                        if channel_type.startswith(base_type):
+                            base_channel_type = base_type
+                            channel_mapping = HMIP_CHANNEL_TYPE_TO_ENTITY[base_channel_type]
+                            break
 
             # Create channel-based entities (lights, switches, covers, locks, event)
             if channel_mapping:
@@ -179,8 +186,13 @@ async def async_discover_entities(
                     try:
                         entity_class = getattr(module, class_name)
                         platform = getattr(entity_class, "PLATFORM")
-
-                        entity = entity_class(coordinator, client, device_data, channel_index)
+                        entity_mapping = channel_mapping.copy()
+                        feature = entity_mapping.get("feature")
+                        if feature is not None:
+                            processed_features.add(feature)
+                            entity = entity_class(coordinator, client, device_data, channel_index, feature, entity_mapping)
+                        else:
+                            entity = entity_class(coordinator, client, device_data, channel_index)
                         entities[platform].append(entity)
                         uid = getattr(entity, "unique_id", None)
                         if uid:
@@ -188,24 +200,42 @@ async def async_discover_entities(
 
                         # Add additional entities defined in the registry for this channel
                         # Some channels create multiple entities (e.g., Lock + Unlatch Button)
-                        for extra_class_name in channel_mapping.get("extra_entities", []):
+                        for extra_cfg in channel_mapping.get("extra_entities", []):
+                            # Backward compatible: old style with just "HcuSomeEntity"
+                            if isinstance(extra_cfg, str):
+                                extra_class_name = extra_cfg
+                                only_channel_types = None
+                            else:
+                                extra_class_name = extra_cfg.get("class")
+                                only_channel_types = set(extra_cfg.get("only_channel_types", [])) or None
+                        
+                            if not extra_class_name:
+                                continue
+                        
+                            if only_channel_types and channel_type not in only_channel_types:
+                                continue
+                        
                             if extra_module := class_module_map.get(extra_class_name):
                                 try:
                                     extra_entity_class = getattr(extra_module, extra_class_name)
                                     extra_platform = getattr(extra_entity_class, "PLATFORM")
-                                    
-                                    # Create the extra entity using the same logic as the main entity
+                        
                                     extra_entity = extra_entity_class(
                                         coordinator, client, device_data, channel_index
                                     )
                                     entities[extra_platform].append(extra_entity)
+                        
                                     extra_uid = getattr(extra_entity, "unique_id", None)
                                     if extra_uid:
                                         valid_entity_unique_ids.add(extra_uid)
+                        
                                 except (AttributeError, TypeError) as e:
                                     _LOGGER.error(
                                         "Failed to create extra entity '%s' for device %s, channel %s: %s",
-                                        extra_class_name, device_data.get("id"), channel_index, e
+                                        extra_class_name,
+                                        device_data.get("id"),
+                                        channel_index,
+                                        e,
                                     )
                         
                     except (AttributeError, TypeError) as e:

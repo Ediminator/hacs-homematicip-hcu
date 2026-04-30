@@ -1058,6 +1058,12 @@ HMIP_CHANNEL_ROLE_TO_ENTITY = {
         "name": "Window",
         "feature": "windowState",
         "device_class": BinarySensorDeviceClass.WINDOW,
+        "extra_entities": [
+            {
+                "class": "HcuWindowStateSensor",
+                "only_channel_types": ["ROTARY_HANDLE_CHANNEL"],
+            }
+        ],
     },
     "KEY_OR_SWITCH_FOR_GROUP": {
         "class": "HcuButtonEvent"
@@ -1094,16 +1100,6 @@ HMIP_CHANNEL_TYPE_TO_ENTITY = {
     "DOOR_LOCK_PRO_CHANNEL": {"class": "HcuLock", "extra_entities": ["HcuDoorUnlatchButton"]},
     "ROTARY_HANDLE_CHANNEL": {"class": "HcuWindowStateSensor"},
     # Event channel types - create HcuButtonEvent entities for button devices
-    "KEY_CHANNEL": {"class": "HcuButtonEvent"},  # For HmIP-WRC2, HmIP-BRC2, HmIP-WRC6-A, HmIP-WKP
-    "WALL_MOUNTED_TRANSMITTER_CHANNEL": {"class": "HcuButtonEvent"},
-    "KEY_REMOTE_CONTROL_CHANNEL": {"class": "HcuButtonEvent"},
-    "SWITCH_INPUT_CHANNEL": {"class": "HcuButtonEvent"},
-    "SINGLE_KEY_CHANNEL": {"class": "HcuButtonEvent"},
-    CHANNEL_TYPE_MULTI_MODE_INPUT: {"class": "HcuButtonEvent"},
-    # Channel types that were missing from the v1.17.0 fix - now restored:
-    "BRAND_REMOTE_CONTROL": {"class": "HcuButtonEvent"},
-    "BRAND_WALL_MOUNTED_TRANSMITTER": {"class": "HcuButtonEvent"},
-    "REMOTE_CONTROL_TRANSMITTER": {"class": "HcuButtonEvent"},
     "ACCELERATION_SENSOR_CHANNEL": None,
     "CLIMATE_CONTROL_CHANNEL": None,
     "CLIMATE_CONTROL_INPUT_CHANNEL": None,

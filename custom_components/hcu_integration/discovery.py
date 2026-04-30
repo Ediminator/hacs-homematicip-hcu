@@ -189,6 +189,7 @@ async def async_discover_entities(
                         entity_mapping = channel_mapping.copy()
                         feature = entity_mapping.get("feature")
                         if feature is not None:
+                            processed_features.add(feature)
                             entity = entity_class(coordinator, client, device_data, channel_index, feature, entity_mapping)
                         else:
                             entity = entity_class(coordinator, client, device_data, channel_index)
@@ -199,24 +200,42 @@ async def async_discover_entities(
 
                         # Add additional entities defined in the registry for this channel
                         # Some channels create multiple entities (e.g., Lock + Unlatch Button)
-                        for extra_class_name in channel_mapping.get("extra_entities", []):
+                        for extra_cfg in channel_mapping.get("extra_entities", []):
+                            # Backward compatible: old style with just "HcuSomeEntity"
+                            if isinstance(extra_cfg, str):
+                                extra_class_name = extra_cfg
+                                only_channel_types = None
+                            else:
+                                extra_class_name = extra_cfg.get("class")
+                                only_channel_types = set(extra_cfg.get("only_channel_types", [])) or None
+                        
+                            if not extra_class_name:
+                                continue
+                        
+                            if only_channel_types and channel_type not in only_channel_types:
+                                continue
+                        
                             if extra_module := class_module_map.get(extra_class_name):
                                 try:
                                     extra_entity_class = getattr(extra_module, extra_class_name)
                                     extra_platform = getattr(extra_entity_class, "PLATFORM")
-                                    
-                                    # Create the extra entity using the same logic as the main entity
+                        
                                     extra_entity = extra_entity_class(
                                         coordinator, client, device_data, channel_index
                                     )
                                     entities[extra_platform].append(extra_entity)
+                        
                                     extra_uid = getattr(extra_entity, "unique_id", None)
                                     if extra_uid:
                                         valid_entity_unique_ids.add(extra_uid)
+                        
                                 except (AttributeError, TypeError) as e:
                                     _LOGGER.error(
                                         "Failed to create extra entity '%s' for device %s, channel %s: %s",
-                                        extra_class_name, device_data.get("id"), channel_index, e
+                                        extra_class_name,
+                                        device_data.get("id"),
+                                        channel_index,
+                                        e,
                                     )
                         
                     except (AttributeError, TypeError) as e:

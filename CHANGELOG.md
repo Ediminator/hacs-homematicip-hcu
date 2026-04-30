@@ -7,8 +7,6 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 ### ✨ New Features
 
 - add Diagnostic Sensor for internalLinkConfiguration onTime
-
-### 🐛 Bug Fixes
   
 ---
 ## 1.21.11 - 2026-04-29

@@ -42,6 +42,8 @@ class HcuSwitch(SwitchStateMixin, HcuBaseEntity, SwitchEntity):
         client: HcuApiClient,
         device_data: dict,
         channel_index: str,
+        feature: str | None = None,
+        mapping: dict | None = None,
     ):
         super().__init__(coordinator, client, device_data, channel_index)
 

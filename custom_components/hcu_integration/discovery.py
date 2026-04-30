@@ -36,6 +36,7 @@ from .const import (
     HMIP_CHANNEL_TYPE_TO_ENTITY,
     HMIP_FEATURE_TO_ENTITY,
     HMIP_OPTIONAL_FEATURE_TO_ENTITY,
+    HMIP_CHANNEL_ROLE_TO_ENTITY,
     MULTI_FUNCTION_CHANNEL_DEVICES,
     PLATFORMS,
     EVENT_CHANNEL_TYPES,
@@ -144,19 +145,29 @@ async def async_discover_entities(
             is_unused_channel = is_deactivated_by_default and not channel_data.get("groups")
 
             channel_type = channel_data.get("functionalChannelType")
+            channel_role = channel_data.get("channelRole")
             base_channel_type = None
             channel_mapping = None
-
-            # Match channel type, including indexed variants (e.g., SWITCH_CHANNEL_1)
-            if channel_type in HMIP_CHANNEL_TYPE_TO_ENTITY:
-                base_channel_type = channel_type
-                channel_mapping = HMIP_CHANNEL_TYPE_TO_ENTITY[base_channel_type]
+            
+            # First check if a channel role is found.
+            if channel_role and channel_role in HMIP_CHANNEL_ROLE_TO_ENTITY:
+                base_channel_type = channel_role
+                channel_mapping = HMIP_CHANNEL_ROLE_TO_ENTITY[base_channel_type]
+                _LOGGER.debug(
+                    "Found Channel_Role: %s, channel_mapping: %s",
+                    channel_role, channel_mapping
+                )
             elif channel_type:
-                for base_type in HMIP_CHANNEL_TYPE_TO_ENTITY:
-                    if channel_type.startswith(base_type):
-                        base_channel_type = base_type
-                        channel_mapping = HMIP_CHANNEL_TYPE_TO_ENTITY[base_channel_type]
-                        break
+                # Fallback: Match channel type, including indexed variants (e.g., SWITCH_CHANNEL_1)
+                if channel_type in HMIP_CHANNEL_TYPE_TO_ENTITY:
+                    base_channel_type = channel_type
+                    channel_mapping = HMIP_CHANNEL_TYPE_TO_ENTITY[base_channel_type]
+                else:
+                    for base_type in HMIP_CHANNEL_TYPE_TO_ENTITY:
+                        if channel_type.startswith(base_type):
+                            base_channel_type = base_type
+                            channel_mapping = HMIP_CHANNEL_TYPE_TO_ENTITY[base_channel_type]
+                            break
 
             # Create channel-based entities (lights, switches, covers, locks, event)
             if channel_mapping:
@@ -179,8 +190,12 @@ async def async_discover_entities(
                     try:
                         entity_class = getattr(module, class_name)
                         platform = getattr(entity_class, "PLATFORM")
-
-                        entity = entity_class(coordinator, client, device_data, channel_index)
+                        entity_mapping = channel_mapping.copy()
+                        feature = entity_mapping.get("name")
+                        if feature is not None:
+                            entity = entity_class(coordinator, client, device_data, channel_index, feature, entity_mapping)
+                        else:
+                            entity = entity_class(coordinator, client, device_data, channel_index)
                         entities[platform].append(entity)
                         uid = getattr(entity, "unique_id", None)
                         if uid:

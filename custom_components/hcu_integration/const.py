@@ -889,11 +889,6 @@ HMIP_FEATURE_TO_ENTITY = {
         "device_class": BinarySensorDeviceClass.CONNECTIVITY,
         "entity_category": EntityCategory.DIAGNOSTIC,
     },
-    "windowState": {
-        "class": "HcuWindowBinarySensor",
-        "name": "Window",
-        "device_class": BinarySensorDeviceClass.WINDOW,
-    },
     "motionDetected": {
         "class": "HcuBinarySensor",
         "name": "Motion",
@@ -1052,6 +1047,18 @@ DEVICE_CHANNEL_EVENT_TYPES = frozenset({
     "PRESS_LONG_STOP",
 })
 
+HMIP_CHANNEL_ROLE_TO_ENTITY = { 
+    "DOOR_BELL_INPUT": {
+        "class": "HcuDoorbellEvent",
+        "name": "Doorbell",
+    },
+    "WINDOW_SENSOR": {
+        "class": "HcuWindowBinarySensor",
+        "name": "Window",
+        "device_class": BinarySensorDeviceClass.WINDOW,
+    },
+}
+    
 HMIP_CHANNEL_TYPE_TO_ENTITY = {
     "DIMMER_CHANNEL": {"class": "HcuLight"},
     "MULTI_MODE_INPUT_DIMMER_CHANNEL": {"class": "HcuLight"}, 
@@ -1067,7 +1074,6 @@ HMIP_CHANNEL_TYPE_TO_ENTITY = {
     "WIRED_SWITCH_CHANNEL": {"class": "HcuSwitch"},
     "MULTI_MODE_INPUT_SWITCH_CHANNEL": {"class": "HcuSwitch"},
     "WATERING_ACTUATOR_CHANNEL": {"class": "HcuWateringSwitch"},
-    CHANNEL_TYPE_MULTI_MODE_INPUT_TRANSMITTER: {"class": "HcuDoorbellEvent"},
     "WATERING_CONTROLLER_CHANNEL": {"class": "HcuWateringSwitch"},
     "CONDITIONAL_SWITCH_CHANNEL": {"class": "HcuSwitch"},
     "OPEN_COLLECTOR_CHANNEL_8": {"class": "HcuSwitch"},
@@ -1088,7 +1094,7 @@ HMIP_CHANNEL_TYPE_TO_ENTITY = {
     "KEY_REMOTE_CONTROL_CHANNEL": {"class": "HcuButtonEvent"},
     "SWITCH_INPUT_CHANNEL": {"class": "HcuButtonEvent"},
     "SINGLE_KEY_CHANNEL": {"class": "HcuButtonEvent"},
-    CHANNEL_TYPE_MULTI_MODE_INPUT: {"class": "HcuButtonEvent"},
+    #CHANNEL_TYPE_MULTI_MODE_INPUT: {"class": "HcuButtonEvent"},
     # Channel types that were missing from the v1.17.0 fix - now restored:
     "BRAND_REMOTE_CONTROL": {"class": "HcuButtonEvent"},
     "BRAND_WALL_MOUNTED_TRANSMITTER": {"class": "HcuButtonEvent"},

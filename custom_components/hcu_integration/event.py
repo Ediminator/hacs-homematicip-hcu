@@ -59,6 +59,8 @@ class HcuDoorbellEvent(HcuBaseEntity, EventEntity):
         client: HcuApiClient,
         device_data: dict[str, Any],
         channel_index: str,
+        feature: str,
+        mapping: dict,
     ):
         super().__init__(coordinator, client, device_data, channel_index)
 

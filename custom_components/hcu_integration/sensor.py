@@ -12,6 +12,9 @@ from homeassistant.util import dt as dt_util
 
 from .api import HcuApiClient
 from .entity import HcuBaseEntity, HcuHomeBaseEntity
+from .const import (
+    HMIP_ON_TIME_INFINITE,
+)
 
 if TYPE_CHECKING:
     from . import HcuCoordinator
@@ -150,7 +153,7 @@ class HcuGenericSensor(HcuBaseEntity, SensorEntity):
         if self._feature == "dutyCycleLevel":
             return round(value, 1)
         if self._feature == "onTime":
-            if value == 111600:
+            if value == HMIP_ON_TIME_INFINITE:
                 return 0
             return round(value, 0)
         return value

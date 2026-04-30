@@ -66,6 +66,9 @@ DEFAULT_COMFORT_TEMPERATURE = 21.0
 DEFAULT_MIN_TEMP = 5.0
 DEFAULT_MAX_TEMP = 30.0
 
+# --- Actuator specific Constants ---
+HMIP_ON_TIME_INFINITE = 111600
+
 # --- Manufacturer Constants ---
 MANUFACTURER_EQ3 = "eQ-3"
 MANUFACTURER_HUE = "Philips Hue"
@@ -993,10 +996,10 @@ HMIP_FEATURE_TO_ENTITY = {
         "name": "InternalOnTime",
         "unit": "s",
         "device_class": SensorDeviceClass.DURATION,
-        "state_class": None,
-        "entity_category": EntityCategory.DIAGNOSTIC,
+        "state_class": SensorStateClass.TOTAL_INCREASING,
+        "entity_category": EntityCategory.DIAGNOSTIC ,
         "entity_registry_enabled_default": False,
-        "suggested_display_precision": 0,
+        "suggested_display_precision": 0, 
     },
     
 }

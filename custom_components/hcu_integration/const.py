@@ -44,6 +44,16 @@ PLATFORMS: list[Platform] = [
     Platform.UPDATE,
 ]
 
+# --- API and Plugin Constants ---
+PLUGIN_ID = "de.homeassistant.hcu.integration"
+PLUGIN_FRIENDLY_NAME = {
+    "de": "Home Assistant Integration",
+    "en": "Home Assistant Integration",
+}
+PLUGIN_VERSION = "1.21.12"
+PLUGIN_DOCUMENTATION_URL = "https://github.com/Ediminator/hacs-homematicip-hcu"
+PLUGIN_ISSUE_TRACKER_URL = "https://github.com/Ediminator/hacs-homematicip-hcu/issues"
+
 # --- Configuration Constants ---
 CONF_PIN = "pin"
 CONF_AUTH_PORT = "auth_port"
@@ -87,16 +97,6 @@ DOCS_URL_LOCK_PIN_CONFIG = "https://github.com/Ediminator/hacs-homematicip-hcu#s
 CHANNEL_TYPE_MULTI_MODE_INPUT_TRANSMITTER = "MULTI_MODE_INPUT_TRANSMITTER"
 CHANNEL_TYPE_MULTI_MODE_INPUT = "MULTI_MODE_INPUT_CHANNEL"
 CHANNEL_TYPE_ALARM_SIREN = "ALARM_SIREN_CHANNEL"
-
-# --- API and Plugin Constants ---
-PLUGIN_ID = "de.homeassistant.hcu.integration"
-PLUGIN_FRIENDLY_NAME = {
-    "de": "Home Assistant Integration",
-    "en": "Home Assistant Integration",
-}
-PLUGIN_VERSION = "1.21.11"
-PLUGIN_DOCUMENTATION_URL = "https://github.com/Ediminator/hacs-homematicip-hcu"
-PLUGIN_ISSUE_TRACKER_URL = "https://github.com/Ediminator/hacs-homematicip-hcu/issues"
 
 # --- Timing Constants ---
 WEBSOCKET_CONNECT_TIMEOUT = 10

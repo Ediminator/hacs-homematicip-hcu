@@ -997,7 +997,7 @@ HMIP_FEATURE_TO_ENTITY = {
         "unit": "s",
         "device_class": SensorDeviceClass.DURATION,
         "state_class": SensorStateClass.TOTAL_INCREASING,
-        "entity_category": EntityCategory.DIAGNOSTIC ,
+        "entity_category": EntityCategory.DIAGNOSTIC,
         "entity_registry_enabled_default": False,
         "suggested_display_precision": 0, 
     },

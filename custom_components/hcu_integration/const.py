@@ -988,6 +988,16 @@ HMIP_FEATURE_TO_ENTITY = {
         "device_class": BinarySensorDeviceClass.RUNNING,
         "entity_registry_enabled_default": False,
     },
+    "onTime": {
+        "class": "HcuGenericSensor",
+        "name": "InternalOnTime",
+        "unit": "s",
+        "device_class": SensorDeviceClass.DURATION,
+        "state_class": SensorStateClass.TOTAL_INCREASING,
+        "entity_category": EntityCategory.DIAGNOSTIC ,
+        "entity_registry_enabled_default": False,
+        "suggested_display_precision": 0, 
+    },
     
 }
 

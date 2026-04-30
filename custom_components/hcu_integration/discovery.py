@@ -137,6 +137,8 @@ async def async_discover_entities(
                 valid_entity_unique_ids.add(uid)
 
         for channel_index, channel_data in device_data.get("functionalChannels", {}).items():
+            internal_link_config = channel_data.get("internalLinkConfiguration") or {}
+            channel_data = {**channel_data, **internal_link_config}
             processed_features = set()
             is_deactivated_by_default = device_data.get("type") in DEACTIVATED_BY_DEFAULT_DEVICES
             is_unused_channel = is_deactivated_by_default and not channel_data.get("groups")

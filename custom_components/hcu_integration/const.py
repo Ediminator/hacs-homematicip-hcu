@@ -993,10 +993,10 @@ HMIP_FEATURE_TO_ENTITY = {
         "name": "InternalOnTime",
         "unit": "s",
         "device_class": SensorDeviceClass.DURATION,
-        "state_class": SensorStateClass.TOTAL_INCREASING,
-        "entity_category": EntityCategory.DIAGNOSTIC ,
+        "state_class": None,
+        "entity_category": EntityCategory.DIAGNOSTIC,
         "entity_registry_enabled_default": False,
-        "suggested_display_precision": 0, 
+        "suggested_display_precision": 0,
     },
     
 }

@@ -266,7 +266,7 @@ time_fired: 2025-10-26T10:30:45.123456+00:00
 **What each field means:**
 - `device_id`: The unique ID of your button device (SGTIN)
 - `channel`: Which button was pressed (1, 2, 3, etc.)
-- `type`: The type of the button event (`KEY_PRESS_SHORT`, `KEY_PRESS_LONG`,
+- `type`: The type of the button event (`DOOR_BELL_SENSOR_EVENT`, `KEY_PRESS_SHORT`, `KEY_PRESS_LONG`,
           `KEY_PRESS_LONG_START` or `KEY_PRESS_LONG_STOP`)
 
 **Please note**: A long button press first generates a single `KEY_PRESS_LONG`

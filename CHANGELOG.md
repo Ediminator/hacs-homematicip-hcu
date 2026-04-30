@@ -4,12 +4,12 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 
 ## 2.0.0.beta1 - 2026-04-30
 
-### Breaking Changes
-- The Doorbell sensor has now the event type "DOOR_BELL_SENSOR_EVENT" on "hcu_integration_event"
+### ⚠️ Breaking Changes
+- The Doorbell sensor has now the event type "DOOR_BELL_SENSOR_EVENT" on "hcu_integration_event" (#40)
   
 ### ✨ New Features
 
-- The internal logic has been completely reworked to provide a more stable and flexible structure.
+- The internal logic has been completely reworked to provide a more stable and flexible structure. (#175)
   - Introduced Channel Role as an additional basis for entity creation
   - Doorbell sensor is now properly integrated and working as expected
     

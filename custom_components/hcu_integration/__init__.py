@@ -382,12 +382,13 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
                 )
 
                 if should_fire:
+                    visible_ch_idx = self._get_visible_channel_idx(device_id, ch_idx)
                     _LOGGER.debug(
                         "Timestamp button press: device=%s, channel=%s (new_ts=%s, old_ts=%s)",
-                        device_id, ch_idx, new_timestamp, old_timestamp,
+                        device_id, visible_ch_idx, new_timestamp, old_timestamp,
                     )
-                    self._fire_button_event(device_id, ch_idx, "PRESS_SHORT")
-                    self._trigger_event_entity(device_id, ch_idx, "PRESS_SHORT")
+                    self._fire_button_event(device_id, visible_ch_idx, "PRESS_SHORT")
+                    self._trigger_event_entity(device_id, visible_ch_idx, "PRESS_SHORT")
                     
     def _fire_button_event(
         self, device_id: str, channel_idx: str, event_type: str

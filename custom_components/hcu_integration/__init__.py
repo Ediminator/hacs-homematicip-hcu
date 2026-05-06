@@ -264,7 +264,7 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
 
         for event_data in events.values():
             if not isinstance(event_data, dict):
-            continue
+                continue
 
             if event_data.get("pushEventType") != "DEVICE_CHANNEL_EVENT":
                 continue

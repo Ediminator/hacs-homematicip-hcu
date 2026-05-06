@@ -294,8 +294,7 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
             visible_channel_idx = channel_idx
             device = self.client.state.get("devices", {}).get(device_id, {})
             channel = device.get("functionalChannels", {}).get(channel_idx, {})
-            if (visible := channel.get("visibleChannelIndex")) is not None:
-                visible_channel_idx = str(visible)
+            
             if (visible := channel.get("visibleChannelIndex")) is not None:
                 visible_channel_idx = str(visible)
                 _LOGGER.debug(

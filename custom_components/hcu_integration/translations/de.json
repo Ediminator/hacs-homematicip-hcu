@@ -100,6 +100,16 @@
             "internal_error": "Interner Fehler: Client nicht verfügbar."
         }
     },
+    "device_automation": {
+        "trigger_type": {
+            "press": "\"Taste {subtype}\": gedrückt",
+            "press_short": "\"Taste {subtype}\": kurz gedrückt",
+            "press_long": "\"Taste {subtype}\": lang gedrückt",
+            "press_long_start": "\"Taste {subtype}\": langer Tastendruck gestartet",
+            "press_long_stop": "\"Taste {subtype}\": nach langem Tastendruck losgelassen",
+            "ring": "\"Klingel {subtype}\": gedrückt"
+        }
+    },
     "services": {
         "play_sound": {
             "name": "Sound abspielen",

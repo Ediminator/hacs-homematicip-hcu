@@ -102,12 +102,12 @@
     },
     "device_automation": {
         "trigger_type": {
-            "press": "\"Taste {subtype}\" wurde gedrückt",
-            "press_short": "\"Taste {subtype}\" wurde kurz gedrückt",
-            "press_long": "\"Taste {subtype}\" wurde lang gedrückt",
-            "press_long_start": "\"Taste {subtype}\" wurde langer Tastendruck gestartet",
-            "press_long_stop": "\"Taste {subtype}\" wurde nach langem Tastendruck los gelassen",
-            "ring": "\"Klingel {subtype}\" wurde gedrückt"
+            "press": "\"Taste {subtype}\": gedrückt",
+            "press_short": "\"Taste {subtype}\": kurz gedrückt",
+            "press_long": "\"Taste {subtype}\": lang gedrückt",
+            "press_long_start": "\"Taste {subtype}\": langer Tastendruck gestartet",
+            "press_long_stop": "\"Taste {subtype}\": nach langem Tastendruck losgelassen",
+            "ring": "\"Klingel {subtype}\": gedrückt"
         }
     },
     "services": {

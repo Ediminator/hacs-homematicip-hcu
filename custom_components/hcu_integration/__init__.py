@@ -76,11 +76,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     coordinator.entities = await async_discover_entities(hass, client, entry, coordinator)
 
-    coordinator._event_entities = {
-        (e._device_id, e._channel_index_str): e
-        for e in coordinator.entities.get(Platform.EVENT, [])
-        if hasattr(e, "handle_trigger")
-    }
+    coordinator._event_entities = {}
+    for e in coordinator.entities.get(Platform.EVENT, []):
+        if not hasattr(e, "handle_trigger"):
+            continue
+        channel_data = (
+            client.state
+            .get("devices", {})
+            .get(e._device_id, {})
+            .get("functionalChannels", {})
+            .get(e._channel_index_str, {})
+        )
+        visible_idx = channel_data.get("visibleChannelIndex")
+        lookup_key = str(visible_idx) if visible_idx is not None else e._channel_index_str
+        coordinator._event_entities[(e._device_id, lookup_key)] = e
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
@@ -305,7 +314,7 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
             self._trigger_event_entity(device_id, visible_channel_idx, event_type)
             updated_device_ids.add(device_id)
 
-            return updated_device_ids
+        return updated_device_ids
 
     def _extract_event_channels(self, events: dict[str, Any]) -> set[tuple[str, str]]:
         """Extract channels that support button events from DEVICE_CHANGED events."""
@@ -406,7 +415,17 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
                     for e in self.entities.get(Platform.EVENT, [])
                     if hasattr(e, "handle_trigger")
                     and e._device_id == device_id
-                    and e._channel_index_str == channel_idx
+                    and (
+                    e._channel_index_str == channel_idx
+                    or str(
+                        self.client.state
+                        .get("devices", {})
+                        .get(device_id, {})
+                        .get("functionalChannels", {})
+                        .get(e._channel_index_str, {})
+                        .get("visibleChannelIndex", "")
+                    ) == channel_idx
+                )
                 ),
                 None,
             )

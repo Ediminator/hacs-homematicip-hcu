@@ -278,7 +278,6 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
             if event_data.get("pushEventType") != "DEVICE_CHANNEL_EVENT":
                 continue
 
-            # Frühes Logging — rohe HCU-Daten vor jeder Verarbeitung
             _LOGGER.debug("Raw DEVICE_CHANNEL_EVENT from HCU: %s", event_data)
  
             device_id = event_data.get("deviceId")
@@ -292,7 +291,6 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
                 _LOGGER.debug("Unknown channel event type: %s", event_type)
                 continue
 
-            # visibleChannelIndex aus den Coordinator-Daten holen
             visible_channel_idx = channel_idx
             device = self.client.state.get("devices", {}).get(device_id, {})
             channel = device.get("functionalChannels", {}).get(channel_idx, {})

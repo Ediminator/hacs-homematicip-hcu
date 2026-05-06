@@ -100,6 +100,16 @@
             "internal_error": "Internal error: Client not available."
         }
     },
+    "device_automation": {
+        "trigger_type": {
+            "press": "\"Button {subtype}\" was pressed",
+            "press_short": "\"Button {subtype}\" was pressed short",
+            "press_long": "\"Button {subtype}\" was pressed long",
+            "press_long_start": "\"Button {subtype}\" long press started",
+            "press_long_stop": "\"Button {subtype}\" long press released",
+            "ring": "\"Doorbell {subtype}\" was pressed"
+        }
+    },
     "services": {
         "play_sound": {
             "name": "Play Sound",

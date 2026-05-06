@@ -366,14 +366,14 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
                     )
                     self._fire_button_event(device_id, ch_idx, "PRESS_SHORT")
                     self._trigger_event_entity(device_id, ch_idx, "PRESS_SHORT")
-
+                    
     def _fire_button_event(
         self, device_id: str, channel_idx: str, event_type: str
     ) -> None:
         """Fire a button event to Home Assistant event bus."""
         self.hass.bus.async_fire(
             f"{DOMAIN}_event",
-            {"device_id": device_id, "channel": channel_idx, "type": event_type},
+            {"device_id": device_id, "subtype": f"channel_{channel_idx}", "type": event_type},
         )
 
     def _trigger_event_entity(

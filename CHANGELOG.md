@@ -2,19 +2,22 @@
 
 All notable changes to the Homematic IP Local (HCU) integration will be documented in this file.
 
-## 2.0.0.beta1 - 2026-04-30
+## 2.0.0.beta2 - 2026-05-xx
+
+> ⏱️ **Please take your time with this update.** Due to the breaking changes listed above, carefully review all your automations before updating.
 
 ### ⚠️ Breaking Changes
-- The Doorbell sensor has now the event type "DOOR_BELL_SENSOR_EVENT" on "hcu_integration_event" (#40)
-  
-### ✨ New Features
+- The Doorbell sensor now uses the event type `DOOR_BELL_SENSOR_EVENT` on `hcu_integration_event` (#40)
+- The field `channel` in the event data of `hcu_integration_event` has been renamed to `subtype`. Update your automations accordingly.
+- On devices where individual buttons can be combined into a button pair, button presses were reported on the wrong channel. This is now corrected via a workaround. If you are affected, update your automations accordingly.
 
+### ✨ New Features
 - The internal logic has been completely reworked to provide a more stable and flexible structure. (#175)
   - Introduced Channel Role as an additional basis for entity creation
   - Doorbell sensor is now properly integrated and working as expected
-    
----
+- Added device trigger support, making it easier to use button presses directly as triggers in automations
 
+---
 ## 1.21.12 - 2026-04-30
 
 ### ✨ New Features

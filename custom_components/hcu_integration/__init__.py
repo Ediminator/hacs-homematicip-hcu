@@ -264,11 +264,14 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
 
         for event_data in events.values():
             if not isinstance(event_data, dict):
-                continue
+            continue
 
             if event_data.get("pushEventType") != "DEVICE_CHANNEL_EVENT":
                 continue
 
+            # Frühes Logging — rohe HCU-Daten vor jeder Verarbeitung
+            _LOGGER.debug("Raw DEVICE_CHANNEL_EVENT from HCU: %s", event_data)
+ 
             device_id = event_data.get("deviceId")
             channel_idx = str(event_data.get("channelIndex", ""))
             event_type = event_data.get("channelEventType")
@@ -280,16 +283,28 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
                 _LOGGER.debug("Unknown channel event type: %s", event_type)
                 continue
 
+            # visibleChannelIndex aus den Coordinator-Daten holen
+            visible_channel_idx = channel_idx
+            device_data = self.data.get(device_id, {})
+            hcu_data = device_data.get("hcu_data", {})
+            channel = hcu_data.get("functionalChannels", {}).get(channel_idx, {})
+            if (visible := channel.get("visibleChannelIndex")) is not None:
+                visible_channel_idx = str(visible)
+                _LOGGER.debug(
+                    "Channel index remapped: device=%s, raw=%s → visible=%s",
+                    device_id, channel_idx, visible_channel_idx,
+                )
+
             _LOGGER.debug(
                 "Button event: device=%s, channel=%s, type=%s",
-                device_id, channel_idx, event_type,
+                device_id, visible_channel_idx, event_type,
             )
 
-            self._fire_button_event(device_id, channel_idx, event_type)
-            self._trigger_event_entity(device_id, channel_idx, event_type)
+            self._fire_button_event(device_id, visible_channel_idx, event_type)
+            self._trigger_event_entity(device_id, visible_channel_idx, event_type)
             updated_device_ids.add(device_id)
 
-        return updated_device_ids
+            return updated_device_ids
 
     def _extract_event_channels(self, events: dict[str, Any]) -> set[tuple[str, str]]:
         """Extract channels that support button events from DEVICE_CHANGED events."""

@@ -94,7 +94,7 @@ class HcuButtonEvent(HcuBaseEntity, EventEntity):
     ):
         super().__init__(coordinator, client, device_data, channel_index)
         self._set_entity_name(channel_label=self._channel.get("label"))
-        visible_index = self._channel.get("visibleChannelIndex") or self._channel_index_str
+        visible_index = str(v) if (v := self._channel.get("visibleChannelIndex")) is not None else self._channel_index_str
         self._attr_unique_id = f"{self._device_id}_{visible_index}_button_event"
 
     @callback

@@ -80,15 +80,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     for e in coordinator.entities.get(Platform.EVENT, []):
         if not hasattr(e, "handle_trigger"):
             continue
-        channel_data = (
-            client.state
-            .get("devices", {})
-            .get(e._device_id, {})
-            .get("functionalChannels", {})
-            .get(e._channel_index_str, {})
-        )
-        visible_idx = channel_data.get("visibleChannelIndex")
-        lookup_key = str(visible_idx) if visible_idx is not None else e._channel_index_str
+        lookup_key = coordinator._get_visible_channel_idx(e._device_id, e._channel_index_str)
         coordinator._event_entities[(e._device_id, lookup_key)] = e
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
@@ -267,6 +259,18 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
         if all_updated:
             self.async_set_updated_data(all_updated)
 
+    def _get_visible_channel_idx(self, device_id: str, channel_idx: str) -> str:
+        """Return visibleChannelIndex for a channel if available, otherwise channel_idx."""
+        channel = (
+            self.client.state
+            .get("devices", {})
+            .get(device_id, {})
+            .get("functionalChannels", {})
+            .get(channel_idx, {})
+        )
+        visible = channel.get("visibleChannelIndex")
+        return str(visible) if visible is not None else channel_idx
+
     def _handle_device_channel_events(self, events: dict[str, Any]) -> set[str]:
         """Handle DEVICE_CHANNEL_EVENT type events (stateless buttons)."""
         updated_device_ids: set[str] = set()
@@ -291,12 +295,8 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
                 _LOGGER.debug("Unknown channel event type: %s", event_type)
                 continue
 
-            visible_channel_idx = channel_idx
-            device = self.client.state.get("devices", {}).get(device_id, {})
-            channel = device.get("functionalChannels", {}).get(channel_idx, {})
-            
-            if (visible := channel.get("visibleChannelIndex")) is not None:
-                visible_channel_idx = str(visible)
+            visible_channel_idx = self._get_visible_channel_idx(device_id, channel_idx)
+            if visible_channel_idx != channel_idx:
                 _LOGGER.debug(
                     "Channel index remapped: device=%s, raw=%s → visible=%s",
                     device_id, channel_idx, visible_channel_idx,
@@ -413,16 +413,9 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
                     if hasattr(e, "handle_trigger")
                     and e._device_id == device_id
                     and (
-                    e._channel_index_str == channel_idx
-                    or str(
-                        self.client.state
-                        .get("devices", {})
-                        .get(device_id, {})
-                        .get("functionalChannels", {})
-                        .get(e._channel_index_str, {})
-                        .get("visibleChannelIndex", "")
-                    ) == channel_idx
-                )
+                        e._channel_index_str == channel_idx
+                        or self._get_visible_channel_idx(device_id, e._channel_index_str) == channel_idx
+                    )
                 ),
                 None,
             )

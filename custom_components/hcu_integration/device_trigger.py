@@ -9,7 +9,10 @@ import voluptuous as vol
 from homeassistant.components.device_automation import DEVICE_TRIGGER_BASE_SCHEMA
 from homeassistant.const import CONF_DEVICE_ID, CONF_DOMAIN, CONF_PLATFORM, CONF_TYPE
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant
+import logging
 from homeassistant.helpers import device_registry as dr
+
+_LOGGER = logging.getLogger(__name__)
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.trigger import TriggerActionType, TriggerInfo
 from homeassistant.helpers.typing import ConfigType

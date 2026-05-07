@@ -107,7 +107,7 @@ async def async_attach_trigger(
             event_trigger.CONF_PLATFORM: "event",
             event_trigger.CONF_EVENT_TYPE: f"{DOMAIN}_event",
             event_trigger.CONF_EVENT_DATA: {
-                "device_id": hcu_device_id,
+                CONF_DEVICE_ID: hcu_device_id,
                 CONF_TYPE: config[CONF_TYPE],
                 "subtype": config["subtype"],
             },

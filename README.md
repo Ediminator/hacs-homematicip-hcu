@@ -253,7 +253,7 @@ When a button is pressed, you'll see something like this:
 event_type: hcu_integration_event
 data:
   device_id: 3014F711A00048240995D6BC
-  channel: "1"
+  subtype: "1"
   type: KEY_PRESS_SHORT
 origin: LOCAL
 time_fired: 2025-10-26T10:30:45.123456+00:00
@@ -261,9 +261,8 @@ time_fired: 2025-10-26T10:30:45.123456+00:00
 
 **What each field means:**
 - `device_id`: The unique ID of your button device (SGTIN)
-- `channel`: Which button was pressed (1, 2, 3, etc.)
-- `type`: The type of the button event (`KEY_PRESS_SHORT`, `KEY_PRESS_LONG`,
-          `KEY_PRESS_LONG_START` or `KEY_PRESS_LONG_STOP`)
+- `subtype`: Which button was pressed (1, 2, 3, etc.)
+- `type`: The type of the button event (`DOOR_BELL_SENSOR_EVENT`, `KEY_PRESS_SHORT`, `KEY_PRESS_LONG`, `KEY_PRESS_LONG_START` or `KEY_PRESS_LONG_STOP`)
 
 **Please note**: A long button press first generates a single `KEY_PRESS_LONG`
 event, followed by a single `KEY_PRESS_LONG_START` event. As long as the button

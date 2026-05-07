@@ -278,7 +278,7 @@ approximately every 0.35 seconds. When the button is released, a single
 **Important:** You'll need these values for your automations!
 
 - Write down your `device_id`
-- Note which `channel` corresponds to each physical button
+- Note which `subtype` corresponds to each physical button
 
 **💡 Tip:** You can find your device_id more easily in the diagnostics file - see the [Diagnostics section](#-diagnostics--troubleshooting) below.
 
@@ -287,6 +287,27 @@ approximately every 0.35 seconds. When the button is released, a single
 ### Creating Button Automations
 
 Now that you've confirmed your buttons work, let's create automations!
+
+#### Method 0: Device Triggers (Easiest — since v2.0.0)
+
+Starting with v2.0.0, this integration supports **Home Assistant Device Triggers**. This is the simplest way to create button automations — no YAML required.
+
+1. Go to **Settings** → **Automations & Scenes**
+2. Click **+ CREATE AUTOMATION** → **Create new automation**
+3. **Add Trigger:**
+   - Click **ADD TRIGGER**
+   - Select **Device**
+   - Choose your Homematic IP button device
+   - Select the trigger type, e.g. `Button 1 - Short press`
+4. **Add Action** and **Save**
+
+**Supported trigger types for buttons:** `press`, `press_short`, `press_long`, `press_long_start`, `press_long_stop`
+
+**Supported trigger types for doorbell:** `ring`
+
+> 💡 **Tip:** Device Triggers use the same underlying events as the YAML method — they are just a convenient UI wrapper.
+
+---
 
 #### Method 1: Visual Editor (Recommended for Beginners)
 
@@ -303,9 +324,9 @@ Now that you've confirmed your buttons work, let's create automations!
    - Select **Template**
    - Template:
      ```jinja
-     {{ trigger.event.data.device_id == '3014F711A00048240995D6BC' and trigger.event.data.channel == '1' }}
+     {{ trigger.event.data.device_id == '3014F711A00048240995D6BC' and trigger.event.data.subtype == '1' }}
      ```
-   - Replace the `device_id` and `channel` with your values!
+   - Replace the `device_id` and `subtype` with your values!
 5. **Add Action:**
    - Click **ADD ACTION**
    - Select **Call service**
@@ -327,7 +348,7 @@ triggers:
   - event_type: hcu_integration_event
     event_data:
       device_id: 3014F711A00048240995D6BC
-      channel: "1"
+      subtype: "1"
     trigger: event
 actions:
   - target:
@@ -350,28 +371,28 @@ actions:
   - choose:
       - conditions:
           - condition: template
-            value_template: "{{ trigger.event.data.channel == '1' }}"
+            value_template: "{{ trigger.event.data.subtype == '1' }}"
         sequence:
           - target:
               entity_id: light.kitchen_main
             action: light.turn_on
       - conditions:
           - condition: template
-            value_template: "{{ trigger.event.data.channel == '2' }}"
+            value_template: "{{ trigger.event.data.subtype == '2' }}"
         sequence:
           - target:
               entity_id: light.kitchen_main
             action: light.turn_off
       - conditions:
           - condition: template
-            value_template: "{{ trigger.event.data.channel == '3' }}"
+            value_template: "{{ trigger.event.data.subtype == '3' }}"
         sequence:
           - target:
               entity_id: light.kitchen_cabinet
             action: light.turn_on
       - conditions:
           - condition: template
-            value_template: "{{ trigger.event.data.channel == '4' }}"
+            value_template: "{{ trigger.event.data.subtype == '4' }}"
         sequence:
           - target:
               entity_id: light.kitchen_cabinet
@@ -388,7 +409,7 @@ triggers:
   - event_type: hcu_integration_event
     event_data:
       device_id: 3014F711A00048240995D6BC
-      channel: "1"
+      subtype: "1"
     trigger: event
 actions:
   - if:
@@ -444,7 +465,7 @@ triggers:
   - event_type: hcu_integration_event
     event_data:
       device_id: 3014F711A00048240995D6BC
-      channel: "1"
+      subtype: "1"
     trigger: event
 actions:
   - choose:

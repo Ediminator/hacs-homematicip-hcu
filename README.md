@@ -64,10 +64,6 @@ These groups only appear when the HCU has assigned physical devices to them. If 
 
 > **💡 Tip:** Even without a Homematic IP boiler actuator (HmIP-WHS2), you can use the Heat Demand binary sensor to control a third-party relay (Shelly, Zigbee plug) connected to your boiler via Home Assistant automations.
 
-### Room Groups (hidden)
-
-The HCU auto-creates hidden room groups containing all switches and lights in each physical room. These are filtered out to reduce UI clutter. User-created groups (Direct Connections) are always visible.
-
 ---
 
 ## 📦 Requirements

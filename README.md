@@ -262,6 +262,7 @@ time_fired: 2025-10-26T10:30:45.123456+00:00
 **What each field means:**
 - `device_id`: The unique ID of your button device (SGTIN)
 - `subtype`: Which button was pressed (1, 2, 3, etc.)
+    - ⚠️ Note (since v2.0.0): Use subtype instead of channel to identify which button was pressed.
 - `type`: The type of the button event (`DOOR_BELL_SENSOR_EVENT`, `KEY_PRESS_SHORT`, `KEY_PRESS_LONG`, `KEY_PRESS_LONG_START` or `KEY_PRESS_LONG_STOP`)
 
 **Please note**: A long button press first generates a single `KEY_PRESS_LONG`

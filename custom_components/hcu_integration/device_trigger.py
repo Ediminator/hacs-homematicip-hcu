@@ -25,16 +25,15 @@ from .const import DOMAIN
 # Button event trigger types — match HcuButtonEvent._attr_event_types
 
 TRIGGER_TYPES_BUTTON = frozenset({
-    "press",
-    "press_short",
-    "press_long",
-    "press_long_start",
-    "press_long_stop",
+    "KEY_PRESS_SHORT",
+    "KEY_PRESS_LONG",
+    "KEY_PRESS_LONG_START",
+    "KEY_PRESS_LONG_STOP",
 })
 
 # Doorbell event trigger types — match HcuDoorbellEvent._attr_event_types
 
-TRIGGER_TYPES_DOORBELL = frozenset({"ring"})
+TRIGGER_TYPES_DOORBELL = frozenset({"DOOR_BELL_SENSOR_EVENT"})
 
 TRIGGER_SCHEMA = DEVICE_TRIGGER_BASE_SCHEMA.extend(
     {

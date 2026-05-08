@@ -93,10 +93,12 @@ async def async_attach_trigger(
     # Look up the HCU identifier from the device registry entry.
     device_reg = dr.async_get(hass)
     device = device_reg.async_get(config[CONF_DEVICE_ID])
-    hcu_device_id = next(
-        (id_val for domain_name, id_val in device.identifiers if domain_name == DOMAIN),
-        None,
-    ) if device else None
+    hcu_device_id = None
+    if device := device_reg.async_get(config[CONF_DEVICE_ID]):
+        hcu_device_id = next(
+            (id_val for domain_name, id_val in device.identifiers if domain_name == DOMAIN),
+            None,
+        )
 
     if not hcu_device_id:
         _LOGGER.error(

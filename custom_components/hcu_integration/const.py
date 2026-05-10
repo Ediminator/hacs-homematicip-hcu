@@ -1023,6 +1023,7 @@ EVENT_TYPES = frozenset({
     (
         "button",
         frozenset({
+            ("PRESS",                "press"),
             ("PRESS_SHORT",          "press_short"),
             ("PRESS_LONG",           "press_long"),
             ("PRESS_LONG_START",     "press_long_start"),

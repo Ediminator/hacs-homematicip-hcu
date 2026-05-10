@@ -1038,6 +1038,14 @@ EVENT_TYPES = frozenset({
     ),
 })
 
+DEVICE_CHANNEL_EVENT_TYPES = frozenset({
+    "press",
+    "press_short",
+    "press_long",
+    "press_long_start",
+    "press_long_stop",
+    "ring",
+})
 
 HMIP_CHANNEL_ROLE_TO_ENTITY = { 
     "DOOR_BELL_INPUT": {

@@ -288,7 +288,6 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
             event_type = event_data.get("channelEventType")
 
             #Eventtype Normalization
-            event_type = event_data.get("channelEventType")
             if event_type and event_type.startswith("KEY_"):
                 event_type = event_type[4:]
             event_type = event_type.lower() if event_type else None

@@ -26,7 +26,6 @@ from .const import DOMAIN, EVENT_TYPES
 # Button event trigger types — match HcuButtonEvent._attr_event_types
 
 TRIGGER_TYPES_BUTTON = frozenset({
-    "press",
     "press_short",
     "press_long",
     "press_long_start",

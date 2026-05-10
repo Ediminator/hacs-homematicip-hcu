@@ -102,7 +102,6 @@
     },
     "device_automation": {
         "trigger_type": {
-            "press": "\"Button {subtype}\" was pressed",
             "press_short": "\"Button {subtype}\" was pressed short",
             "press_long": "\"Button {subtype}\" was pressed long",
             "press_long_start": "\"Button {subtype}\" long press started",
@@ -280,7 +279,6 @@
                 "state_attributes": {
                     "event_type": {
                         "state": {
-                            "press": "pressed", 
                             "press_long": "Long pressed", 
                             "press_long_stop": "Long press released", 
                             "press_long_start": "Long press started", 

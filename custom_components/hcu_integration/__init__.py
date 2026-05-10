@@ -26,6 +26,7 @@ from .const import (
     DEFAULT_HCU_AUTH_PORT,
     DEFAULT_HCU_WEBSOCKET_PORT,
     DEVICE_CHANNEL_EVENT_ONLY_TYPES,
+    DEVICE_CHANNEL_EVENT_TYPES,
     DOMAIN,
     MULTI_FUNCTION_CHANNEL_DEVICES,
     PLATFORMS,
@@ -276,11 +277,10 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
         for event_data in events.values():
             if not isinstance(event_data, dict):
                 continue
+            _LOGGER.debug("Raw DEVICE_CHANNEL_EVENT from HCU: %s", event_data)
 
             if event_data.get("pushEventType") != "DEVICE_CHANNEL_EVENT":
                 continue
-
-            _LOGGER.debug("Raw DEVICE_CHANNEL_EVENT from HCU: %s", event_data)
 
             device_id = event_data.get("deviceId")
             channel_idx = str(event_data.get("channelIndex", ""))
@@ -289,7 +289,7 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
             #Eventtype Normalization
             if event_type and event_type.startswith("KEY_"):
                 event_type = event_type[4:]
-            event_type = event_type.lower() if event_type else None
+            event_type = event_type.lower()
             if event_type == "door_bell_sensor_event":
                 event_type = "ring"
 

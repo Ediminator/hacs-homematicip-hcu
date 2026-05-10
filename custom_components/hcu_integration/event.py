@@ -75,7 +75,7 @@ class HcuDoorbellEvent(HcuBaseEntity, EventEntity):
     @callback
     def handle_trigger(self, event_type: str | None = None) -> None:
         """Handle an event trigger from the coordinator."""
-        self._trigger_event(event_type)
+        self._trigger_event("ring")
 
 
 class HcuButtonEvent(HcuBaseEntity, EventEntity):
@@ -104,4 +104,4 @@ class HcuButtonEvent(HcuBaseEntity, EventEntity):
     @callback
     def handle_trigger(self, event_type: str | None = None) -> None:
         """Handle an event trigger from the coordinator."""
-        self._trigger_event(event_type)
+        self._trigger_event("event_type")

@@ -295,9 +295,9 @@ class HcuApiClient:
                 if msg.type == aiohttp.WSMsgType.TEXT:
                     try:
                         data = msg.json()
-                        self._handle_incoming_message(data)
                     except ValueError as err:
-                        _LOGGER.warning("Failed to parse JSON from WebSocket: %s", err)
+                        _LOGGER.warning("Failed to parse JSON from WebSocket: %s, %s", err, msg.json())
+                    self._handle_incoming_message(data)
                 elif msg.type in (aiohttp.WSMsgType.CLOSED, aiohttp.WSMsgType.ERROR):
                     raise ConnectionAbortedError(
                         f"WebSocket connection issue: {msg.data}"

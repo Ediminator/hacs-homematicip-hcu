@@ -92,7 +92,6 @@ async def async_attach_trigger(
     # The bus event uses the HCU device SGTIN as device_id, not the HA device registry UUID.
     # Look up the HCU identifier from the device registry entry.
     device_reg = dr.async_get(hass)
-    device = device_reg.async_get(config[CONF_DEVICE_ID])
     hcu_device_id = None
     if device := device_reg.async_get(config[CONF_DEVICE_ID]):
         hcu_device_id = next(

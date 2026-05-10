@@ -288,13 +288,12 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
             event_type = event_data.get("channelEventType")
 
             #Eventtype Normalization
-            translated_event_type = None
-            
-            for _, mappings in EVENT_TYPES:
-                mapping_dict = dict(mappings)
-                if event_type in mapping_dict:
-                    translated_event_type = mapping_dict[event_type]
-                    break
+            event_type = event_data.get("channelEventType")
+            if event_type and event_type.startswith("KEY_"):
+                event_type = event_type[4:]
+            event_type = event_type.lower() if event_type else None
+            if event_type == "DOORBELL_EVENT:
+                event_type = "ring"
 
             if not all([device_id, channel_idx, event_type]):
                 continue
@@ -302,18 +301,6 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
             if event_type not in DEVICE_CHANNEL_EVENT_TYPES:
                 _LOGGER.debug("Unknown channel event type: %s", event_type)
                 continue
-
-            visible_channel_idx = self._get_visible_channel_idx(device_id, channel_idx)
-            if visible_channel_idx != channel_idx:
-                _LOGGER.debug(
-                    "Channel index remapped: device=%s, raw=%s → visible=%s",
-                    device_id, channel_idx, visible_channel_idx,
-                )
-
-            _LOGGER.debug(
-                "Button event: device=%s, channel=%s, type=%s",
-                device_id, channel_idx, event_type,
-            )
 
             self._fire_button_event(device_id, channel_idx, event_type)
             self._trigger_event_entity(device_id, channel_idx, event_type)
@@ -383,10 +370,7 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
                 )
                 return
 
-        if event_type and isinstance(entity, event.HcuButtonEvent):
-            entity.handle_trigger(event_type)
-        else:
-            entity.handle_trigger(event_type)
+        entity.handle_trigger(event_type)
 
     async def _listen_for_events(self) -> None:
         """WebSocket listener with auto-reconnection."""

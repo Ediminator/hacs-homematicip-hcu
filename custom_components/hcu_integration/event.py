@@ -73,7 +73,7 @@ class HcuDoorbellEvent(HcuBaseEntity, EventEntity):
         self._attr_unique_id = f"{self._device_id}_{visible_index}_doorbell_event"
 
     @callback
-    def handle_trigger(self) -> None:
+    def handle_trigger(self, event_type: str | None = None) -> None:
         """Handle an event trigger from the coordinator."""
         self._trigger_event(event_type)
 

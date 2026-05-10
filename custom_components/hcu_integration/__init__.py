@@ -291,7 +291,7 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
             if event_type and event_type.startswith("KEY_"):
                 event_type = event_type[4:]
             event_type = event_type.lower() if event_type else None
-            if event_type == "DOOR_BELL_SENSOR_EVENT":
+            if event_type == "door_bell_sensor_event":
                 event_type = "ring"
 
             if not all([device_id, channel_idx, event_type]):

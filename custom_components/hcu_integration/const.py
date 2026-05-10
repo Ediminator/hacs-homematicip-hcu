@@ -1019,33 +1019,32 @@ DEVICE_CHANNEL_EVENT_ONLY_TYPES = {
     CHANNEL_TYPE_MULTI_MODE_INPUT_TRANSMITTER,  # HmIP-FCI1/6 etc. - sends explicit DEVICE_CHANNEL_EVENT
 }
 
-# Channel types for timestamp-based button detection
-# Note: DEVICE_CHANNEL_EVENT_ONLY_TYPES are intentionally excluded from this set
-# to prevent false positives from configuration changes
-EVENT_CHANNEL_TYPES = {
-    "WALL_MOUNTED_TRANSMITTER_CHANNEL",
-    "KEY_REMOTE_CONTROL_CHANNEL",
-    "SWITCH_INPUT_CHANNEL",
-    # Channel types that were missing from the v1.17.0 fix:
-    "BRAND_REMOTE_CONTROL",  # Used by some button devices
-    "BRAND_WALL_MOUNTED_TRANSMITTER",  # Used by some wall-mounted switches
-    "REMOTE_CONTROL_TRANSMITTER",  # Used by some remote controls
-    # Note: HmIP-BSL uses NOTIFICATION_LIGHT_CHANNEL for button inputs (channels 2-3)
-    # These are multi-function channels that serve as BOTH button inputs AND backlight LEDs
-    # Button events are handled via DEVICE_CHANNEL_EVENT, not timestamp-based detection
-}
+EVENT_TYPES = frozenset({
+    (
+        "button",
+        frozenset({
+            ("PRESS",                "press"),
+            ("PRESS_SHORT",          "press_short"),
+            ("PRESS_LONG",           "press_long"),
+            ("PRESS_LONG_START",     "press_long_start"),
+            ("PRESS_LONG_STOP",      "press_long_stop"),
+        }),
+    ),
+    (
+        "doorbell",
+        frozenset({
+            ("DOOR_BELL_SENSOR_EVENT", "ring"),
+        }),
+    ),
+})
 
 DEVICE_CHANNEL_EVENT_TYPES = frozenset({
-    "KEY_PRESS_SHORT",
-    "KEY_PRESS_LONG",
-    "KEY_PRESS_LONG_START",
-    "KEY_PRESS_LONG_STOP",
-    # Some devices (e.g., HmIP-BSL KEY_CHANNEL) may use shorter event names
-    "PRESS_SHORT",
-    "PRESS_LONG",
-    "PRESS_LONG_START",
-    "PRESS_LONG_STOP",
-    "DOOR_BELL_SENSOR_EVENT",
+    "press",
+    "press_short",
+    "press_long",
+    "press_long_start",
+    "press_long_stop",
+    "ring",
 })
 
 HMIP_CHANNEL_ROLE_TO_ENTITY = { 

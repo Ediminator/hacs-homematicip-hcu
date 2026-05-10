@@ -9,14 +9,19 @@ import voluptuous as vol
 from homeassistant.components.device_automation import DEVICE_TRIGGER_BASE_SCHEMA
 from homeassistant.const import CONF_DEVICE_ID, CONF_DOMAIN, CONF_PLATFORM, CONF_TYPE
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
+
+import logging
+_LOGGER = logging.getLogger(__name__)
+
 from homeassistant.helpers.trigger import TriggerActionType, TriggerInfo
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.components.event import DOMAIN as EVENT_DOMAIN
 from homeassistant.components.homeassistant.triggers import event as event_trigger
 
 
-from .const import DOMAIN
+from .const import DOMAIN, EVENT_TYPES
 
 # Button event trigger types — match HcuButtonEvent._attr_event_types
 
@@ -25,7 +30,7 @@ TRIGGER_TYPES_BUTTON = frozenset({
     "press_short",
     "press_long",
     "press_long_start",
-    "press_long_stop",
+    "press_long_stop"
 })
 
 # Doorbell event trigger types — match HcuDoorbellEvent._attr_event_types
@@ -85,12 +90,29 @@ async def async_attach_trigger(
     trigger_info: TriggerInfo,
 ) -> CALLBACK_TYPE:
     """Attach a trigger to a device event on the event bus."""
+    # The bus event uses the HCU device SGTIN as device_id, not the HA device registry UUID.
+    # Look up the HCU identifier from the device registry entry.
+    device_reg = dr.async_get(hass)
+    hcu_device_id = None
+    if device := device_reg.async_get(config[CONF_DEVICE_ID]):
+        hcu_device_id = next(
+            (id_val for domain_name, id_val in device.identifiers if domain_name == DOMAIN),
+            None,
+        )
+
+    if not hcu_device_id:
+        _LOGGER.error(
+            "Cannot attach trigger: HCU device ID not found for HA device %s",
+            config[CONF_DEVICE_ID],
+        )
+        return lambda: None
+
     event_config = event_trigger.TRIGGER_SCHEMA(
         {
             event_trigger.CONF_PLATFORM: "event",
             event_trigger.CONF_EVENT_TYPE: f"{DOMAIN}_event",
             event_trigger.CONF_EVENT_DATA: {
-                CONF_DEVICE_ID: config[CONF_DEVICE_ID],
+                CONF_DEVICE_ID: hcu_device_id,
                 CONF_TYPE: config[CONF_TYPE],
                 "subtype": config["subtype"],
             },
@@ -99,6 +121,7 @@ async def async_attach_trigger(
     return await event_trigger.async_attach_trigger(
         hass, event_config, action, trigger_info, platform_type="device"
     )
+
     
 async def async_get_trigger_capabilities(
     hass: HomeAssistant, config: ConfigType

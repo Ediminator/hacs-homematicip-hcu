@@ -73,9 +73,9 @@ class HcuDoorbellEvent(HcuBaseEntity, EventEntity):
         self._attr_unique_id = f"{self._device_id}_{visible_index}_doorbell_event"
 
     @callback
-    def handle_trigger(self) -> None:
+    def handle_trigger(self, event_type: str | None = None) -> None:
         """Handle an event trigger from the coordinator."""
-        self._trigger_event("ring")
+        self._trigger_event(event_type)
 
 
 class HcuButtonEvent(HcuBaseEntity, EventEntity):
@@ -104,10 +104,4 @@ class HcuButtonEvent(HcuBaseEntity, EventEntity):
     @callback
     def handle_trigger(self, event_type: str | None = None) -> None:
         """Handle an event trigger from the coordinator."""
-        # Use a generic "press" for timestamp-based events (where event_type is None)
-        # and as a fallback for unexpected event types.
-        normalized_event = event_type.lower().replace("key_", "") if event_type else "press"
-        if normalized_event in self._attr_event_types:
-            self._trigger_event(normalized_event)
-        else:
-            self._trigger_event("press")
+        self._trigger_event(event_type)

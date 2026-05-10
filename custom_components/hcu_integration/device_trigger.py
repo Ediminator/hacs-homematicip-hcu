@@ -9,31 +9,32 @@ import voluptuous as vol
 from homeassistant.components.device_automation import DEVICE_TRIGGER_BASE_SCHEMA
 from homeassistant.const import CONF_DEVICE_ID, CONF_DOMAIN, CONF_PLATFORM, CONF_TYPE
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant
-import logging
 from homeassistant.helpers import device_registry as dr
-
-_LOGGER = logging.getLogger(__name__)
 from homeassistant.helpers import entity_registry as er
+
+import logging
+_LOGGER = logging.getLogger(__name__)
+
 from homeassistant.helpers.trigger import TriggerActionType, TriggerInfo
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.components.event import DOMAIN as EVENT_DOMAIN
 from homeassistant.components.homeassistant.triggers import event as event_trigger
 
 
-from .const import DOMAIN
+from .const import DOMAIN, EVENT_TYPES
 
 # Button event trigger types — match HcuButtonEvent._attr_event_types
 
 TRIGGER_TYPES_BUTTON = frozenset({
-    "KEY_PRESS_SHORT",
-    "KEY_PRESS_LONG",
-    "KEY_PRESS_LONG_START",
-    "KEY_PRESS_LONG_STOP",
+    "press_short",
+    "press_long",
+    "press_long_start",
+    "press_long_stop"
 })
 
 # Doorbell event trigger types — match HcuDoorbellEvent._attr_event_types
 
-TRIGGER_TYPES_DOORBELL = frozenset({"DOOR_BELL_SENSOR_EVENT"})
+TRIGGER_TYPES_DOORBELL = frozenset({"ring"})
 
 TRIGGER_SCHEMA = DEVICE_TRIGGER_BASE_SCHEMA.extend(
     {

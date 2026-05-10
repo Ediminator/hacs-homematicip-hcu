@@ -102,7 +102,6 @@
     },
     "device_automation": {
         "trigger_type": {
-            "press": "\"Taste {subtype}\": gedrückt",
             "press_short": "\"Taste {subtype}\": kurz gedrückt",
             "press_long": "\"Taste {subtype}\": lang gedrückt",
             "press_long_start": "\"Taste {subtype}\": langer Tastendruck gestartet",
@@ -280,7 +279,6 @@
                 "state_attributes": {
                     "event_type": {
                         "state": {
-                            "press": "Gedrückt", 
                             "press_long": "Lange gedrückt", 
                             "press_long_stop": "Nach langem Tastendruck los gelassen", 
                             "press_long_start": "Langer Tastendruck gestartet", 

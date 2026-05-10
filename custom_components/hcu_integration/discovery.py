@@ -39,7 +39,6 @@ from .const import (
     HMIP_CHANNEL_ROLE_TO_ENTITY,
     MULTI_FUNCTION_CHANNEL_DEVICES,
     PLATFORMS,
-    EVENT_CHANNEL_TYPES,
     MANUFACTURER_EQ3,
     CONF_DISABLED_GROUPS,
     ALLOWED_EMPTY_GROUPS,
@@ -168,12 +167,6 @@ async def async_discover_entities(
             # Create channel-based entities (lights, switches, covers, locks, event)
             if channel_mapping:
                 class_name = channel_mapping["class"]
-                # Skip EVENT_CHANNEL_TYPES, allowing only specific event entity classes
-                if base_channel_type in EVENT_CHANNEL_TYPES and class_name not in (
-                    "HcuDoorbellEvent",
-                    "HcuButtonEvent",
-                ):
-                    continue
                 if is_unused_channel:
                     continue
 

@@ -75,7 +75,7 @@ class HcuDoorbellEvent(HcuBaseEntity, EventEntity):
     @callback
     def handle_trigger(self) -> None:
         """Handle an event trigger from the coordinator."""
-        self._trigger_event("ring")
+        self._trigger_event(event_type)
 
 
 class HcuButtonEvent(HcuBaseEntity, EventEntity):
@@ -85,7 +85,7 @@ class HcuButtonEvent(HcuBaseEntity, EventEntity):
     
     _attr_translation_key = "hcu_button_event"
     _attr_device_class = EventDeviceClass.BUTTON
-    _attr_event_types = ["press", "press_short", "press_long", "press_long_start", "press_long_stop"]
+    _attr_event_types = ["press_short", "press_long", "press_long_start", "press_long_stop"]
 
     def __init__(
         self,
@@ -104,10 +104,4 @@ class HcuButtonEvent(HcuBaseEntity, EventEntity):
     @callback
     def handle_trigger(self, event_type: str | None = None) -> None:
         """Handle an event trigger from the coordinator."""
-        # Use a generic "press" for timestamp-based events (where event_type is None)
-        # and as a fallback for unexpected event types.
-        normalized_event = event_type.lower().replace("key_", "") if event_type else "press"
-        if normalized_event in self._attr_event_types:
-            self._trigger_event(normalized_event)
-        else:
-            self._trigger_event("press")
+        self._trigger_event(event_type)

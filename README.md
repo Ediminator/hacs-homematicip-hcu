@@ -262,14 +262,14 @@ time_fired: 2025-10-26T10:30:45.123456+00:00
 **What each field means:**
 - `device_id`: The unique ID of your button device (SGTIN)
 - `subtype`: Which button was pressed (1, 2, 3, etc.)
-    - ⚠️ Note (since v2.0.0): Use subtype instead of channel to identify which button was pressed.
-- `type`: The type of the button event (`DOOR_BELL_SENSOR_EVENT`, `KEY_PRESS_SHORT`, `KEY_PRESS_LONG`, `KEY_PRESS_LONG_START` or `KEY_PRESS_LONG_STOP`)
-
-**Please note**: A long button press first generates a single `KEY_PRESS_LONG`
-event, followed by a single `KEY_PRESS_LONG_START` event. As long as the button
-is pressed, a sequence of periodic `KEY_PRESS_LONG` events is then generated
+   - **⚠️ Note (since v2.0.0):** Use subtype instead of channel to identify which button was pressed.
+- `type`: The type of the button event (`ring`, `press`, `press_short`, `press_long`, `press_long_start` or `press_long_stop`)
+   - **⚠️ Note (since v2.0.0):** type are now lowercase and no longer prefixed with a "key_")
+**Please note**: A long button press first generates a single `press_long`
+event, followed by a single `press_long_start` event. As long as the button
+is pressed, a sequence of periodic `press_long` events is then generated
 approximately every 0.35 seconds. When the button is released, a single
-`KEY_PRESS_LONG_STOP` event is generated.
+`press_long_stop` event is generated.
 
 
 
@@ -324,7 +324,7 @@ Starting with v2.0.0, this integration supports **Home Assistant Device Triggers
    - Select **Template**
    - Template:
      ```jinja
-     {{ trigger.event.data.device_id == '3014F711A00048240995D6BC' and trigger.event.data.subtype == '1' }}
+     {{ trigger.event.data.device_id == '3014F711A00048240995D6BC' and trigger.event.data.subtype == '1' and trigger.event.data.type  == 'press_short' }}
      ```
    - Replace the `device_id` and `subtype` with your values!
 5. **Add Action:**
@@ -349,6 +349,7 @@ triggers:
     event_data:
       device_id: 3014F711A00048240995D6BC
       subtype: "1"
+      type: press_short
     trigger: event
 actions:
   - target:
@@ -371,28 +372,28 @@ actions:
   - choose:
       - conditions:
           - condition: template
-            value_template: "{{ trigger.event.data.subtype == '1' }}"
+            value_template: "{{ trigger.event.data.subtype == '1' and trigger.event.data.type  == 'press_short' }}"
         sequence:
           - target:
               entity_id: light.kitchen_main
             action: light.turn_on
       - conditions:
           - condition: template
-            value_template: "{{ trigger.event.data.subtype == '2' }}"
+            value_template: "{{ trigger.event.data.subtype == '2' and trigger.event.data.type  == 'press_short' }}"
         sequence:
           - target:
               entity_id: light.kitchen_main
             action: light.turn_off
       - conditions:
           - condition: template
-            value_template: "{{ trigger.event.data.subtype == '3' }}"
+            value_template: "{{ trigger.event.data.subtype == '3' and trigger.event.data.type  == 'press_short' }}"
         sequence:
           - target:
               entity_id: light.kitchen_cabinet
             action: light.turn_on
       - conditions:
           - condition: template
-            value_template: "{{ trigger.event.data.subtype == '4' }}"
+            value_template: "{{ trigger.event.data.subtype == '4' and trigger.event.data.type  == 'press_short' }}"
         sequence:
           - target:
               entity_id: light.kitchen_cabinet
@@ -410,6 +411,7 @@ triggers:
     event_data:
       device_id: 3014F711A00048240995D6BC
       subtype: "1"
+      type: press_short
     trigger: event
 actions:
   - if:
@@ -471,20 +473,20 @@ actions:
   - choose:
       - conditions:
           - condition: template
-            value_template: "{{ trigger.event.data.type == 'KEY_PRESS_SHORT' }}"
+            value_template: "{{ trigger.event.data.type == 'press_short' }}"
         sequence:
           - target:
               entity_id: light.light_office
             action: light.toggle
       - conditions:
           - condition: template
-            value_template: "{{ trigger.event.data.type == 'KEY_PRESS_LONG' }}"
+            value_template: "{{ trigger.event.data.type == 'press_long' }}"
         sequence:
           - repeat:
               while:
                 - condition: template
                   value_template: |
-                    {{ trigger.event.data.type == 'KEY_PRESS_LONG' }}
+                    {{ trigger.event.data.type == 'press_long' }}
               sequence:
                 - data:
                     entity_id: light.light_office

@@ -135,18 +135,18 @@ class HcuDoorPullLatchButton(HcuBaseEntity, ButtonEntity):
         self._set_entity_name(channel_label=self._channel.get("label"), feature_name="Pull Latch")
         self._attr_unique_id = f"{self._device_id}_{self._channel_index}_pull_latch"
 
-        # Find the matching ACCESS_AUTHORIZATION_CHANNEL for this DOOR_SWITCH_CHANNEL.
-        # The authorization channel shares the same groupIndex as the switch channel.
+        channels = self._device.get("functionalChannels", {})
+        switch_group_index = self._channel.get("groupIndex")
+        self._authorization_channel_index = None
+        self._authorization_profile_label = None
+    
+    async def async_added_to_hass(self) -> None:
+        """Run when entity is added to HA – now self.hass is available."""
+        await super().async_added_to_hass()
         result = self._find_authorization_channel()
         if result is not None:
             self._authorization_channel_index, self._authorization_profile_label = result
-        else:
-            self._authorization_channel_index = None
-            self._authorization_profile_label = None
-        _LOGGER.debug(
-                "debug: %s, %s", self._authorization_channel_index, self._authorization_profile_label
-            )
-
+            
     def _find_authorization_channel(self) -> tuple[int, str] | None:
         """Find the ACCESS_AUTHORIZATION_CHANNEL index that belongs to this switch channel."""
         client_id = self._config_entry.data.get(CONF_CLIENT_ID)
@@ -224,10 +224,9 @@ class HcuDoorPullLatchButton(HcuBaseEntity, ButtonEntity):
                 "The Home Assistant Integration is not authorized to control device '%s' channel %s. "
                 "Please open the Homematic IP app, go to → More → Access authorisations, "
                 "add the 'Home Assistant Integration' user to the authorisation profile, "
-                "then reload the integration in Home Assistant. %s",
+                "then reload the integration in Home Assistant.",
                 self._device_id,
                 self._channel_index,
-                client_id,
             )
             return
             

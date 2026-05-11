@@ -322,64 +322,19 @@ class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
     async def async_step_reconfigure(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """Handle a reconfiguration flow for changing HCU connection details."""
+        """Handle reconfiguration – step 1: host and ports."""
         entry = self.hass.config_entries.async_get_entry(self.context["entry_id"])
         errors = {}
-
+    
         if user_input is not None:
-            new_host = user_input[CONF_HOST]
-            new_auth_port = user_input[CONF_AUTH_PORT]
-            new_websocket_port = user_input[CONF_WEBSOCKET_PORT]
-
-            listener_task = None
-            client = None
-            try:
-                session = aiohttp_client.async_get_clientsession(self.hass)
-                client = HcuApiClient(
-                    self.hass,
-                    new_host,
-                    entry.data[CONF_TOKEN],
-                    session,
-                    new_auth_port,
-                    new_websocket_port,
-                )
-
-                await client.connect()
-                listener_task = self.hass.async_create_task(client.listen())
-                await client.get_system_state()
-
-                self.hass.config_entries.async_update_entry(
-                    entry,
-                    data={
-                        **entry.data,
-                        CONF_HOST: new_host,
-                        CONF_AUTH_PORT: new_auth_port,
-                        CONF_WEBSOCKET_PORT: new_websocket_port,
-                    },
-                )
-                await self.hass.config_entries.async_reload(entry.entry_id)
-                return self.async_abort(reason="reconfigure_successful")
-
-            except (
-                HcuApiError,
-                ConnectionError,
-                asyncio.TimeoutError,
-                aiohttp.ClientError,
-            ):
-                _LOGGER.error("Failed to connect to new HCU host/port combination")
-                errors["base"] = "cannot_connect"
-            except ValueError as err:
-                _LOGGER.error("Invalid configuration or response: %s", err)
-                errors["base"] = "invalid_config"
-            except Exception:
-                _LOGGER.exception("Unexpected error during reconfiguration.")
-                errors["base"] = "unknown"
-            finally:
-                if listener_task:
-                    listener_task.cancel()
-                if client and client.is_connected:
-                    await client.disconnect()
-
+            self._config_data = {
+                **entry.data,
+                CONF_HOST: user_input[CONF_HOST],
+                CONF_AUTH_PORT: user_input[CONF_AUTH_PORT],
+                CONF_WEBSOCKET_PORT: user_input[CONF_WEBSOCKET_PORT],
+            }
+            return await self.async_step_reconfigure_auth()
+    
         return self.async_show_form(
             step_id="reconfigure",
             data_schema=vol.Schema(
@@ -397,6 +352,78 @@ class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
                     ): int,
                 }
             ),
+            errors=errors,
+        )
+    
+    
+    async def async_step_reconfigure_auth(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Handle reconfiguration – step 2: activation key and token renewal."""
+        errors = {}
+        host = self._config_data[CONF_HOST]
+        auth_port = self._config_data[CONF_AUTH_PORT]
+    
+        if user_input is not None:
+            activation_key = user_input["activation_key"]
+            session = aiohttp_client.async_get_clientsession(self.hass)
+            ssl_context = await create_unverified_ssl_context(self.hass)
+    
+            listener_task = None
+            client = None
+            try:
+                new_token = await self._async_get_auth_token(
+                    session, host, auth_port, activation_key, ssl_context
+                )
+                new_client_id = await self._async_confirm_auth_token(
+                    session, host, auth_port, activation_key, new_token, ssl_context
+                )
+    
+                # Verify connection with new credentials
+                client = HcuApiClient(
+                    self.hass,
+                    host,
+                    new_token,
+                    session,
+                    self._config_data[CONF_AUTH_PORT],
+                    self._config_data[CONF_WEBSOCKET_PORT],
+                )
+                await client.connect()
+                listener_task = self.hass.async_create_task(client.listen())
+                await client.get_system_state()
+    
+                entry = self.hass.config_entries.async_get_entry(self.context["entry_id"])
+                self.hass.config_entries.async_update_entry(
+                    entry,
+                    data={
+                        **entry.data,
+                        CONF_HOST: self._config_data[CONF_HOST],
+                        CONF_AUTH_PORT: self._config_data[CONF_AUTH_PORT],
+                        CONF_WEBSOCKET_PORT: self._config_data[CONF_WEBSOCKET_PORT],
+                        CONF_TOKEN: new_token,
+                        CONF_CLIENT_ID: new_client_id,
+                    },
+                )
+                await self.hass.config_entries.async_reload(entry.entry_id)
+                return self.async_abort(reason="reconfigure_successful")
+    
+            except (aiohttp.ClientError, asyncio.TimeoutError):
+                errors["base"] = "cannot_connect"
+            except ValueError:
+                errors["base"] = "invalid_key"
+            except Exception:
+                _LOGGER.exception("Unexpected error during reconfiguration.")
+                errors["base"] = "unknown"
+            finally:
+                if listener_task:
+                    listener_task.cancel()
+                if client and client.is_connected:
+                    await client.disconnect()
+    
+        return self.async_show_form(
+            step_id="reconfigure_auth",
+            data_schema=vol.Schema({vol.Required("activation_key"): str}),
+            description_placeholders={"hcu_ip": host},
             errors=errors,
         )
 

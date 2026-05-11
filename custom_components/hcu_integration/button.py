@@ -113,7 +113,6 @@ class HcuResetWaterVolume(HcuBaseEntity, ButtonEntity):
                 "Error resetting water volume for %s: %s", self.entity_id, err
             )
 
-
 class HcuDoorPullLatchButton(HcuBaseEntity, ButtonEntity):
     """Representation of a button to trigger a door opener (e.g., HmIP-FDC)."""
 
@@ -133,16 +132,71 @@ class HcuDoorPullLatchButton(HcuBaseEntity, ButtonEntity):
         self._config_entry = coordinator.config_entry
         # Set entity name using the centralized naming helper
         self._set_entity_name(channel_label=self._channel.get("label"), feature_name="Pull Latch")
-
         self._attr_unique_id = f"{self._device_id}_{self._channel_index}_pull_latch"
 
+        # Find the matching ACCESS_AUTHORIZATION_CHANNEL for this DOOR_SWITCH_CHANNEL.
+        # The authorization channel shares the same groupIndex as the switch channel.
+        self._authorization_channel_index: int | None = self._find_authorization_channel()
+
+    def _find_authorization_channel(self) -> int | None:
+        """Find the ACCESS_AUTHORIZATION_CHANNEL index that belongs to this switch channel."""
+        channels = self._device.get("functionalChannels", {})
+        _LOGGER.debug("channels type: %s", type(channels))
+        _LOGGER.debug("channels value: %s", channels)
+        switch_group_index = self._channel.get("groupIndex")
+
+        # Collect all ACCESS_AUTHORIZATION_CHANNEL candidates with matching groupIndex
+        candidates: list[tuple[int, list[str]]] = []  # (channel_index, group_ids)
+        for ch_idx, ch_data in channels.items():
+            if (
+                ch_data.get("functionalChannelType") == "ACCESS_AUTHORIZATION_CHANNEL"
+                and ch_data.get("groupIndex") == switch_group_index
+            ):
+                candidates.append((int(ch_idx), list(ch_data.get("groups", []))))
+
+        if not candidates:
+            return None
+
+        # Filter: only keep channels that are referenced by an ACCESS_AUTHORIZATION_PROFILE group
+        profiled: list[tuple[int, str]] = []  # (channel_index, profile_label)
+        for ch_idx, group_ids in candidates:
+            for group_id in group_ids:
+                group = self._client.get_group_by_id(str(group_id)) or {}
+                if group.get("type") == "ACCESS_AUTHORIZATION_PROFILE":
+                    label = group.get("label", "")
+                    profiled.append((ch_idx, label))
+
+        if not profiled:
+            # No profile assigned at all, fall back to first candidate
+            return candidates[0][0]
+
+        if len(profiled) == 1:
+            return profiled[0][0]
+
+        # Multiple profiles → find the one labeled "homeassistant"
+        for ch_idx, label in profiled:
+            normalized = label.lower().replace(" ", "")
+            if "homeassistant" in normalized:
+                return ch_idx
+
+        # No "homeassistant" label found → log warning and return first
+        _LOGGER.warning(
+            "Multiple ACCESS_AUTHORIZATION_PROFILEs found for %s channel %s, "
+            "but none is labeled 'homeassistant'. Using first match. "
+            "Profiles: %s",
+            self._device_id,
+            self._channel_index,
+            [(idx, lbl) for idx, lbl in profiled],
+        )
+        return profiled[0][0]
+    
     async def async_press(self) -> None:
         """Pull the door latch."""
         pin = self._config_entry.data.get(CONF_PIN)
         _LOGGER.info("Triggering pull latch for %s", self.entity_id)
         try:
             await self._client.async_pull_latch(
-                self._device_id, self._channel_index, pin=pin
+                self._device_id, self._authorization_channel_index, pin=pin
             )
         except HcuApiError as err:
             err_type = handle_lock_api_error(err, self.name, pin)

@@ -44,6 +44,7 @@ from .const import (
     CONF_COMFORT_TEMPERATURE,
     DEFAULT_COMFORT_TEMPERATURE,
     CONF_AUTH_PORT,
+    CONF_CLIENT_ID,
     CONF_WEBSOCKET_PORT,
     CONF_ENTITY_PREFIX,
     CONF_PLATFORM_OVERRIDES,
@@ -159,6 +160,7 @@ class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
         errors = {}
         host = self._config_data["host"]
         auth_port = self._config_data["auth_port"]
+        
 
         if user_input is not None:
             activation_key = user_input["activation_key"]
@@ -169,7 +171,7 @@ class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
                 auth_token = await self._async_get_auth_token(
                     session, host, auth_port, activation_key, ssl_context
                 )
-                await self._async_confirm_auth_token(
+                client_id = await self._async_confirm_auth_token(
                     session, host, auth_port, activation_key, auth_token, ssl_context
                 )
 
@@ -180,6 +182,7 @@ class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
 
                 # Save token and prefix to config data
                 self._config_data[CONF_TOKEN] = auth_token
+                self._config_data[CONF_CLIENT_ID] = client_id
                 
                 # Add entity prefix if provided
                 if prefix := self._config_data.get(CONF_ENTITY_PREFIX, "").strip():
@@ -431,7 +434,7 @@ class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
         key: str,
         token: str,
         ssl_context,
-    ) -> None:
+    ) -> str:
         """Confirm the new auth token with the HCU."""
         url = f"https://{host}:{port}/hmip/auth/confirmConnectApiAuthToken"
         headers = {"VERSION": "12"}
@@ -441,8 +444,10 @@ class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
             url, headers=headers, json=body, ssl=ssl_context
         ) as response:
             response.raise_for_status()
-            if not (await response.json()).get("clientId"):
+            data = await response.json()
+            if not (client_id := data.get("clientId")):
                 raise ValueError("HCU did not confirm the authToken.")
+            return client_id
 
 class HcuOptionsFlowHandler(OptionsFlow):
     """Handle an options flow for the HCU integration."""

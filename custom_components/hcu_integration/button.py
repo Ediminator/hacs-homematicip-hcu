@@ -17,6 +17,7 @@ from .api import HcuApiClient, HcuApiError
 from .util import handle_lock_api_error
 from .const import (
     CONF_PIN,
+    CONF_CLIENT_ID,
     LOCK_STATE_OPEN,
 )
 
@@ -136,17 +137,31 @@ class HcuDoorPullLatchButton(HcuBaseEntity, ButtonEntity):
 
         # Find the matching ACCESS_AUTHORIZATION_CHANNEL for this DOOR_SWITCH_CHANNEL.
         # The authorization channel shares the same groupIndex as the switch channel.
-        self._authorization_channel_index: int | None = self._find_authorization_channel()
+        result = self._find_authorization_channel()
+        if result is not None:
+            self._authorization_channel_index, self._authorization_profile_label = result
+        else:
+            self._authorization_channel_index = None
+            self._authorization_profile_label = None
+        _LOGGER.debug(
+                "debug: %s, %s", self._authorization_channel_index, self._authorization_profile_label
+            )
 
-    def _find_authorization_channel(self) -> int | None:
+    def _find_authorization_channel(self) -> tuple[int, str] | None:
         """Find the ACCESS_AUTHORIZATION_CHANNEL index that belongs to this switch channel."""
+        client_id = self._config_entry.data.get(CONF_CLIENT_ID)
+        if not client_id:
+            _LOGGER.error(
+                "No clientId found for this integration. "
+                "Please go to Settings → Integrations → Homematic IP HCU → Configure"
+                "and re-authorize the integration.",
+            )
+            return None
+
         channels = self._device.get("functionalChannels", {})
-        _LOGGER.debug("channels type: %s", type(channels))
-        _LOGGER.debug("channels value: %s", channels)
         switch_group_index = self._channel.get("groupIndex")
 
-        # Collect all ACCESS_AUTHORIZATION_CHANNEL candidates with matching groupIndex
-        candidates: list[tuple[int, list[str]]] = []  # (channel_index, group_ids)
+        candidates: list[tuple[int, list[str]]] = []
         for ch_idx, ch_data in channels.items():
             if (
                 ch_data.get("functionalChannelType") == "ACCESS_AUTHORIZATION_CHANNEL"
@@ -157,43 +172,66 @@ class HcuDoorPullLatchButton(HcuBaseEntity, ButtonEntity):
         if not candidates:
             return None
 
-        # Filter: only keep channels that are referenced by an ACCESS_AUTHORIZATION_PROFILE group
-        profiled: list[tuple[int, str]] = []  # (channel_index, profile_label)
+        profiled: list[tuple[int, str]] = []
+        client_authorized = False
         for ch_idx, group_ids in candidates:
             for group_id in group_ids:
                 group = self._client.get_group_by_id(str(group_id)) or {}
-                if group.get("type") == "ACCESS_AUTHORIZATION_PROFILE":
-                    label = group.get("label", "")
-                    profiled.append((ch_idx, label))
+                if (
+                    group.get("type") == "ACCESS_AUTHORIZATION_PROFILE"
+                ):
+                    authorized_clients = group.get("clientIds", [])
+                    if client_id in authorized_clients:
+                        client_authorized = True
+                        profiled.append((ch_idx, group.get("label", "")))
 
-        if not profiled:
-            # No profile assigned at all, fall back to first candidate
-            return candidates[0][0]
+        if not client_authorized:
+            _LOGGER.error(
+                "The Home Assistant Integration is not authorized to control device '%s' channel %s. "
+                "Please open the Homematic IP app, go to → More → Access authorisations, "
+                "add the 'Home Assistant Integration' user to the authorisation profile, "
+                "then reload the integration in Home Assistant.",
+                self._device_id,
+                self._channel_index,
+            )
+            return None
 
-        if len(profiled) == 1:
-            return profiled[0][0]
+        if len(profiled) > 1:
+            _LOGGER.warning(
+                "Multiple ACCESS_AUTHORIZATION_PROFILEs found for %s channel %s. "
+                "Using first match.",
+                self._device_id,
+                self._channel_index,
+            )
 
-        # Multiple profiles → find the one labeled "homeassistant"
-        for ch_idx, label in profiled:
-            normalized = label.lower().replace(" ", "")
-            if "homeassistant" in normalized:
-                return ch_idx
-
-        # No "homeassistant" label found → log warning and return first
-        _LOGGER.warning(
-            "Multiple ACCESS_AUTHORIZATION_PROFILEs found for %s channel %s, "
-            "but none is labeled 'homeassistant'. Using first match. "
-            "Profiles: %s",
-            self._device_id,
-            self._channel_index,
-            [(idx, lbl) for idx, lbl in profiled],
-        )
-        return profiled[0][0]
+        return profiled[0]
     
     async def async_press(self) -> None:
         """Pull the door latch."""
         pin = self._config_entry.data.get(CONF_PIN)
-        _LOGGER.info("Triggering pull latch for %s", self.entity_id)
+        client_id = self._config_entry.data.get(CONF_CLIENT_ID)
+        
+        if not client_id:
+            _LOGGER.error(
+                "No clientId found for this integration. "
+                "Please go to Settings → Integrations → Homematic IP HCU → Configure"
+                "and re-authorize the integration.",
+            )
+            return
+            
+        if self._authorization_channel_index is None: 
+            _LOGGER.error(
+                "The Home Assistant Integration is not authorized to control device '%s' channel %s. "
+                "Please open the Homematic IP app, go to → More → Access authorisations, "
+                "add the 'Home Assistant Integration' user to the authorisation profile, "
+                "then reload the integration in Home Assistant. %s",
+                self._device_id,
+                self._channel_index,
+                client_id,
+            )
+            return
+            
+        _LOGGER.debug("Triggering pull latch for %s with ACCESS_AUTHORIZATION_PROFILE %s", self.entity_id, self._authorization_profile_label)
         try:
             await self._client.async_pull_latch(
                 self._device_id, self._authorization_channel_index, pin=pin

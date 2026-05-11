@@ -37,7 +37,6 @@ TO_REDACT_HA: set[str] = set()
 
 def _redact_data(data: Any, keys_to_redact: set[str]) -> Any:
     """Recursively redact sensitive data in a dictionary or list."""
-    return data
     if isinstance(data, dict):
         redacted = data.copy()
         for key, value in redacted.items():

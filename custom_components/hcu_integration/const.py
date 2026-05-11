@@ -58,6 +58,7 @@ PLUGIN_ISSUE_TRACKER_URL = "https://github.com/Ediminator/hacs-homematicip-hcu/i
 CONF_PIN = "pin"
 CONF_AUTH_PORT = "auth_port"
 CONF_WEBSOCKET_PORT = "websocket_port"
+CONF_CLIENT_ID = "client_id"
 CONF_ENTITY_PREFIX = "entity_prefix"
 CONF_PLATFORM_OVERRIDES = "platform_overrides"  # Dict mapping entity unique_id to platform override
 DEFAULT_HCU_AUTH_PORT = 6969

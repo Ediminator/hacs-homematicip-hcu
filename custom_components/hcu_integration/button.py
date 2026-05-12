@@ -149,7 +149,20 @@ class HcuDoorPullLatchButton(HcuBaseEntity, ButtonEntity):
         result = self._find_authorization_channel()
         if result is not None:
             self._authorization_channel_index, self._authorization_profile_label = result
-            
+    
+    def _get_pin(self) -> str | None:
+        """First device specified PIN, then global PIN as fallback."""
+        config_entry = self.coordinator.config_entry
+        pins = config_entry.options.get(CONF_PULL_LATCH_PINS, {})
+        if code := pins.get(self._attr_unique_id):
+            _LOGGER.debug("Device '%s': using specified device pin", self.name)
+            return code
+        if global_pin := config_entry.data.get(CONF_PIN):
+            _LOGGER.debug("Device '%s': using global PIN from config entry", self.name)
+            return global_pin
+        _LOGGER.debug("Device '%s': no PIN available", self.name)
+        return None
+        
     def _find_authorization_channel(self) -> tuple[int, str] | None:
         """Find the ACCESS_AUTHORIZATION_CHANNEL index that belongs to this switch channel."""
         client_id = self._config_entry.data.get(CONF_CLIENT_ID)
@@ -220,8 +233,7 @@ class HcuDoorPullLatchButton(HcuBaseEntity, ButtonEntity):
     
     async def async_press(self) -> None:
         """Pull the door latch."""
-        pins = self._config_entry.options.get(CONF_PULL_LATCH_PINS, {})
-        pin = pins.get(self._attr_unique_id) or self._config_entry.data.get(CONF_PIN)
+        pin = self._get_pin()
         
         client_id = self._config_entry.data.get(CONF_CLIENT_ID)
         
@@ -392,10 +404,23 @@ class HcuDoorUnlatchButton(HcuBaseEntity, ButtonEntity):
         self._config_entry = coordinator.config_entry
         self._set_entity_name(channel_label=self._channel.get("label"), feature_name="Unlatch")
         self._attr_unique_id = f"{self._device_id}_{self._channel_index}_unlatch"
-
+    
+    def _get_pin_from_lock(self) -> str | None:
+        """Get PIN from associated lock entity, then global PIN as fallback."""
+        for lock in self.coordinator.entities.get(Platform.LOCK, []):
+            if lock._device_id == self._device_id and lock._channel_index == self._channel_index:
+                if pin := lock._get_pin():
+                    _LOGGER.debug("Device '%s': using PIN from associated lock", self.name)
+                    return pin
+        if global_pin := self._config_entry.data.get(CONF_PIN):
+            _LOGGER.debug("Device '%s': using global PIN from config entry", self.name)
+            return global_pin
+        _LOGGER.debug("Device '%s': no PIN available", self.name)
+        return None
+    
     async def async_press(self) -> None:
         """Pull the door latch to open the door."""
-        pin = self._config_entry.data.get(CONF_PIN)
+        pin = self._get_pin_from_lock()
         _LOGGER.info("Triggering unlatch for %s", self.name)
         
         try:

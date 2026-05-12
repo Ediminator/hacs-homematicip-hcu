@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.text import TextEntity, TextMode
-from homeassistant.const import Platform
+from homeassistant.const import Platform, EntityCategory
 
 from .const import CONF_PULL_LATCH_PINS
 from .entity import HcuBaseEntity
@@ -38,6 +38,8 @@ class HcuPullLatchPin(HcuBaseEntity, TextEntity):
     _attr_mode = TextMode.PASSWORD
     _attr_native_min = 0
     _attr_native_max = 20
+    _attr_entity_category = EntityCategory.CONFIG
+
 
     def __init__(
         self,

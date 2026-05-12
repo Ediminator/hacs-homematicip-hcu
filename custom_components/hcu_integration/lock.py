@@ -1,6 +1,8 @@
 # custom_components/hcu_integration/lock.py
+from __future__ import annotations
+
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform

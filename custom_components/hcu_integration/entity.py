@@ -173,12 +173,6 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, E
         """Return the latest parent device data from the client's state cache."""
         return self._client.get_device_by_address(self._device_id) or {}
 
-    def _get_pin(self) -> str | None:
-        """Return Global or device spezificed PIN"""
-        config_entry = self.coordinator.config_entry
-        pins = config_entry.options.get(CONF_PULL_LATCH_PINS, {})
-        return pins.get(self._attr_unique_id) or config_entry.data.get(CONF_PIN)
-    
     @property
     def _channel(self) -> dict[str, Any]:
         """Return the latest channel data from the parent device's data structure."""

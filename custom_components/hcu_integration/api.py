@@ -281,7 +281,7 @@ class HcuApiClient:
                     "CONFIG_TEMPLATE_REQUEST": self._send_config_template_response,
                     "CONFIG_UPDATE_REQUEST": self._send_config_update_response,
                 }
-            asyncio.create_task(handler_map[msg_type](msg_id))
+                asyncio.create_task(handler_map[msg_type](msg_id))
         elif self._event_callback:
             self._event_callback(msg)
 

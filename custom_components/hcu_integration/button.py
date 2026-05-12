@@ -181,7 +181,7 @@ class HcuDoorPullLatchButton(HcuBaseEntity, ButtonEntity):
                 ch_data.get("functionalChannelType") == "ACCESS_AUTHORIZATION_CHANNEL"
                 and ch_data.get("groupIndex") == switch_group_index
             ):
-                candidates.append((int(ch_idx), list(ch_data.get("groups", []))))
+                candidates.append((int(ch_idx), list(ch_data.get("groups") or [])))
 
         if not candidates:
             return None

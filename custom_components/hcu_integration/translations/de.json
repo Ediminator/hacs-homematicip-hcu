@@ -359,6 +359,11 @@
                     "tilted": "Gekippt"
                 }
             }
-        }
+        },
+		"text": {
+			"hcu_pull_latch_pin": {
+				"name": "Pull Latch PIN"
+			}
+		}
     }
 }

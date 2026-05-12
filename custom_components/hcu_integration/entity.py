@@ -8,7 +8,7 @@ from homeassistant.helpers.entity import DeviceInfo, Entity
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN, CONF_ENTITY_PREFIX, HOMEMATIC_MODEL_PREFIXES, CONF_ADVANCED_ATTRIBUTES
+from .const import DOMAIN, CONF_ENTITY_PREFIX, HOMEMATIC_MODEL_PREFIXES, CONF_ADVANCED_ATTRIBUTES, CONF_PIN, CONF_PULL_LATCH_PINS
 from .api import HcuApiClient, HcuApiError
 from .util import get_device_manufacturer
 
@@ -173,6 +173,12 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, E
         """Return the latest parent device data from the client's state cache."""
         return self._client.get_device_by_address(self._device_id) or {}
 
+    def _get_pin(self) -> str | None:
+        """Return Global or device spezificed PIN"""
+        config_entry = self.coordinator.config_entry
+        pins = config_entry.options.get(CONF_PULL_LATCH_PINS, {})
+        return pins.get(self._attr_unique_id) or config_entry.data.get(CONF_PIN)
+    
     @property
     def _channel(self) -> dict[str, Any]:
         """Return the latest channel data from the parent device's data structure."""

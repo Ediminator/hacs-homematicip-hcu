@@ -25,6 +25,7 @@ from . import (
     sensor,
     siren,
     switch,
+    text,
     update,
 )
 from .api import HcuApiClient
@@ -91,6 +92,7 @@ async def async_discover_entities(
         "HcuDoorPullLatchButton": button,
         "HcuDoorImpulseButton": button,
         "HcuDoorUnlatchButton": button,
+        "HcuPullLatchPin": text,
         "HcuDeviceIdentifyButton": button,
         "HcuGenericSensor": sensor,
         "HcuTemperatureSensor": sensor,

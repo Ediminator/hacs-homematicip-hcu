@@ -18,6 +18,7 @@ from .api import HcuApiClient, HcuApiError
 from .util import handle_lock_api_error
 from .const import (
     CONF_PIN,
+    CONF_PULL_LATCH_PINS,
     CONF_CLIENT_ID,
     DOMAIN,
     LOCK_STATE_OPEN,
@@ -219,7 +220,9 @@ class HcuDoorPullLatchButton(HcuBaseEntity, ButtonEntity):
     
     async def async_press(self) -> None:
         """Pull the door latch."""
-        pin = self._config_entry.data.get(CONF_PIN)
+        pins = self._config_entry.options.get(CONF_PULL_LATCH_PINS, {})
+        pin = pins.get(self._attr_unique_id) or self._config_entry.data.get(CONF_PIN)
+        
         client_id = self._config_entry.data.get(CONF_CLIENT_ID)
         
         if not client_id:

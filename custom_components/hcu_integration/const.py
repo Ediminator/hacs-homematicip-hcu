@@ -41,6 +41,7 @@ PLATFORMS: list[Platform] = [
     Platform.SENSOR,
     Platform.SIREN,
     Platform.SWITCH,
+    Platform.TEXT,
     Platform.UPDATE,
 ]
 
@@ -56,6 +57,7 @@ PLUGIN_ISSUE_TRACKER_URL = "https://github.com/Ediminator/hacs-homematicip-hcu/i
 
 # --- Configuration Constants ---
 CONF_PIN = "pin"
+CONF_PULL_LATCH_PINS = "pull_latch_pins"
 CONF_AUTH_PORT = "auth_port"
 CONF_WEBSOCKET_PORT = "websocket_port"
 CONF_CLIENT_ID = "client_id"
@@ -1092,7 +1094,7 @@ HMIP_CHANNEL_TYPE_TO_ENTITY = {
     "BLIND_CHANNEL": {"class": "HcuCover"},
     "BRAND_BLIND_CHANNEL": {"class": "HcuCover"},  # For HmIP-HDM1 HunterDouglas blinds
     "SHADING_CHANNEL": {"class": "HcuCover"},  # For HmIP-HDM1 HunterDouglas shading actuators
-    "GARAGE_DOOR_CHANNEL": {"class": "HcuGarageDoorCover"},
+    "GARAGE_DOOR_CHANNEL": {"class": "HcuGarageDoorCover","extra_entities": ["HcuPullLatchPin"]},
     "DOOR_CHANNEL": {"class": "HcuGarageDoorCover"},
     "DOOR_SWITCH_CHANNEL": {"class": "HcuDoorPullLatchButton"},
     "IMPULSE_OUTPUT_CHANNEL": {"class": "HcuDoorImpulseButton"},

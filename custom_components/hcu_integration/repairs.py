@@ -4,57 +4,12 @@ import logging
 import voluptuous as vol
 
 from homeassistant.components.repairs import RepairsFlow
+from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResult
 
 from .const import DOMAIN, CONF_PIN
 
 _LOGGER = logging.getLogger(__name__)
-
-
-class InvalidPinNotificationFlow(RepairsFlow):
-    """Repair flow that only informs about an invalid PIN — no input required."""
-
-    def __init__(self, device_name: str) -> None:
-        """Initialize the notification flow."""
-        self._device_name = device_name
-
-    async def async_step_init(self, user_input=None) -> FlowResult:
-        """Handle the first step."""
-        return await self.async_step_confirm()
-
-    async def async_step_confirm(self, user_input=None) -> FlowResult:
-        """Show the PIN failure notice and confirm."""
-        if user_input is not None:
-            return self.async_create_entry(data={})
-
-        return self.async_show_form(
-            step_id="confirm",
-            description_placeholders={"device_name": self._device_name},
-        )
-
-class AccessAuthorizationRepairFlow(RepairsFlow):
-    """Repair flow for CLIENT_ACCESS_DENIED on a device channel."""
-
-    def __init__(self, device_id: str, channel_index: int) -> None:
-        """Initialize the repair flow."""
-        self._device_id = device_id
-        self._channel_index = channel_index
-
-    async def async_step_init(
-        self, user_input: dict | None = None
-    ) -> data_entry_flow.FlowResult:
-        """Handle the first (and only) step."""
-        if user_input is not None:
-            return self.async_create_entry(data={})
-
-        return self.async_show_form(
-            step_id="init",
-            description_placeholders={
-                "device_id": self._device_id,
-                "channel_index": str(self._channel_index),
-            },
-        )
-
 
 class InvalidPinNotificationFlow(RepairsFlow):
     """Repair flow that only informs about an invalid PIN — no input required."""

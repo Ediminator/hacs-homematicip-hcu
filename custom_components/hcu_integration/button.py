@@ -138,8 +138,6 @@ class HcuDoorPullLatchButton(HcuBaseEntity, ButtonEntity):
         self._set_entity_name(channel_label=self._channel.get("label"), feature_name="Pull Latch")
         self._attr_unique_id = f"{self._device_id}_{self._channel_index}_pull_latch"
 
-        channels = self._device.get("functionalChannels", {})
-        switch_group_index = self._channel.get("groupIndex")
         self._authorization_channel_index = None
         self._authorization_profile_label = None
     
@@ -195,7 +193,7 @@ class HcuDoorPullLatchButton(HcuBaseEntity, ButtonEntity):
                 group = self._client.get_group_by_id(str(group_id)) or {}
                 if (
                     group.get("type") == "ACCESS_AUTHORIZATION_PROFILE"
-                    and group.get("authorizationPinAssigned") is True  # ← hier
+                    and group.get("authorizationPinAssigned") is True
                 ):
                     authorized_clients = group.get("clientIds", [])
                     if client_id in authorized_clients:
@@ -288,21 +286,20 @@ class HcuDoorPullLatchButton(HcuBaseEntity, ButtonEntity):
         except HcuApiError as err:
             err_type = handle_lock_api_error(err, self.name, pin)
             if err_type == "invalid_pin" and pin:
-                if err_type == "invalid_pin" and pin:
-                    ir.async_create_issue(
-                        hass=self.hass,
-                        domain=DOMAIN,
-                        issue_id=f"pin_failed_{self._device_id}",
-                        is_fixable=True,
-                        severity=ir.IssueSeverity.ERROR,
-                        translation_key="pin_failed",
-                        data={
-                            "entry_id": self._config_entry.entry_id,
-                            "device_name": self.name,
-                        },
-                        translation_placeholders={"device_name": self.name},
-                    )
-            
+                ir.async_create_issue(
+                    hass=self.hass,
+                    domain=DOMAIN,
+                    issue_id=f"pin_failed_{self._device_id}",
+                    is_fixable=True,
+                    severity=ir.IssueSeverity.ERROR,
+                    translation_key="pin_failed",
+                    data={
+                        "entry_id": self._config_entry.entry_id,
+                        "device_name": self.name,
+                    },
+                    translation_placeholders={"device_name": self.name},
+                )
+        
             if not err_type:
                 _LOGGER.error(
                     "Error triggering pull latch for %s: %s", self.name, err

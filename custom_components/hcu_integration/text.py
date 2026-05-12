@@ -6,7 +6,10 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.text import TextEntity, TextMode
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform, EntityCategory
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import CONF_PULL_LATCH_PINS
 from .entity import HcuBaseEntity

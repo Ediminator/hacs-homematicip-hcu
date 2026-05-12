@@ -41,6 +41,7 @@ PLATFORMS: list[Platform] = [
     Platform.SENSOR,
     Platform.SIREN,
     Platform.SWITCH,
+    Platform.TEXT,
     Platform.UPDATE,
 ]
 
@@ -56,8 +57,10 @@ PLUGIN_ISSUE_TRACKER_URL = "https://github.com/Ediminator/hacs-homematicip-hcu/i
 
 # --- Configuration Constants ---
 CONF_PIN = "pin"
+CONF_PULL_LATCH_PINS = "pull_latch_pins"
 CONF_AUTH_PORT = "auth_port"
 CONF_WEBSOCKET_PORT = "websocket_port"
+CONF_CLIENT_ID = "client_id"
 CONF_ENTITY_PREFIX = "entity_prefix"
 CONF_PLATFORM_OVERRIDES = "platform_overrides"  # Dict mapping entity unique_id to platform override
 DEFAULT_HCU_AUTH_PORT = 6969
@@ -1093,7 +1096,7 @@ HMIP_CHANNEL_TYPE_TO_ENTITY = {
     "SHADING_CHANNEL": {"class": "HcuCover"},  # For HmIP-HDM1 HunterDouglas shading actuators
     "GARAGE_DOOR_CHANNEL": {"class": "HcuGarageDoorCover"},
     "DOOR_CHANNEL": {"class": "HcuGarageDoorCover"},
-    "DOOR_SWITCH_CHANNEL": {"class": "HcuDoorPullLatchButton"},
+    "DOOR_SWITCH_CHANNEL": {"class": "HcuDoorPullLatchButton", "extra_entities": ["HcuPullLatchPin"]},
     "IMPULSE_OUTPUT_CHANNEL": {"class": "HcuDoorImpulseButton"},
     "DOOR_LOCK_CHANNEL": {"class": "HcuLock", "extra_entities": ["HcuDoorUnlatchButton"]},
     "DOOR_LOCK_PRO_CHANNEL": {"class": "HcuLock", "extra_entities": ["HcuDoorUnlatchButton"]},

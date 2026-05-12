@@ -50,6 +50,9 @@ type HcuData = dict[str, "HcuCoordinator"]
 
 SERVICE_ENTRIES_KEY = f"{DOMAIN}_service_entries"
 
+async def async_setup(hass: HomeAssistant, config: dict) -> bool:
+    """Set up the HCU component."""
+    return True
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Homematic IP Local (HCU) from a config entry."""
@@ -69,7 +72,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     domain_data = cast(HcuData, hass.data.setdefault(DOMAIN, {}))
     domain_data[entry.entry_id] = coordinator
-
     if not await coordinator.async_setup():
         return False
 

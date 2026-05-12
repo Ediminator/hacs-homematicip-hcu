@@ -10,6 +10,7 @@ from homeassistant.components.button import ButtonEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .entity import HcuBaseEntity
@@ -18,6 +19,7 @@ from .util import handle_lock_api_error
 from .const import (
     CONF_PIN,
     CONF_CLIENT_ID,
+    DOMAIN,
     LOCK_STATE_OPEN,
 )
 
@@ -179,6 +181,7 @@ class HcuDoorPullLatchButton(HcuBaseEntity, ButtonEntity):
                 group = self._client.get_group_by_id(str(group_id)) or {}
                 if (
                     group.get("type") == "ACCESS_AUTHORIZATION_PROFILE"
+                    and group.get("authorizationPinAssigned") is True  # ← hier
                 ):
                     authorized_clients = group.get("clientIds", [])
                     if client_id in authorized_clients:
@@ -188,13 +191,21 @@ class HcuDoorPullLatchButton(HcuBaseEntity, ButtonEntity):
         if not client_authorized:
             _LOGGER.error(
                 "The Home Assistant Integration is not authorized to control device '%s' channel %s. "
+                "Either the integration is not added to an Access Authorization Profile, "
+                "or no PIN is stored in the profile. "
                 "Please open the Homematic IP app, go to → More → Access authorisations, "
-                "add the 'Home Assistant Integration' user to the authorisation profile, "
+                "add the 'Home Assistant Integration' user to the authorisation profile and ensure a PIN is set, "
                 "then reload the integration in Home Assistant.",
                 self._device_id,
                 self._channel_index,
             )
             return None
+        
+        ir.async_delete_issue(
+            hass=self.hass,
+            domain=DOMAIN,
+            issue_id=f"access_authorization_{self._device_id}_{self._channel_index}",
+        )    
 
         if len(profiled) > 1:
             _LOGGER.warning(
@@ -222,13 +233,37 @@ class HcuDoorPullLatchButton(HcuBaseEntity, ButtonEntity):
         if self._authorization_channel_index is None: 
             _LOGGER.error(
                 "The Home Assistant Integration is not authorized to control device '%s' channel %s. "
+                "Either the integration is not added to an Access Authorization Profile, "
+                "or no PIN is stored in the profile. "
                 "Please open the Homematic IP app, go to → More → Access authorisations, "
-                "add the 'Home Assistant Integration' user to the authorisation profile, "
+                "add the 'Home Assistant Integration' user to the authorisation profile and ensure a PIN is set, "
                 "then reload the integration in Home Assistant.",
                 self._device_id,
                 self._channel_index,
             )
+            ir.async_create_issue(
+                hass=self.hass,
+                domain=DOMAIN,
+                issue_id=f"access_authorization_{self._device_id}_{self._channel_index}",
+                is_fixable=True,
+                severity=ir.IssueSeverity.ERROR,
+                translation_key="access_authorization",
+                translation_placeholders={
+                    "device_name": self._device.get("label", self._device_id),
+                    "channel_index": str(self._channel_index),
+                },
+                data={
+                    "device_name": self._device.get("label", self._device_id),
+                    "channel_index": self._channel_index,
+                },
+            )
             return
+
+        ir.async_delete_issue(
+            hass=self.hass,
+            domain=DOMAIN,
+            issue_id=f"access_authorization_{self._device_id}_{self._channel_index}",
+        )        
             
         _LOGGER.debug("Triggering pull latch for %s with ACCESS_AUTHORIZATION_PROFILE %s", self.entity_id, self._authorization_profile_label)
         try:
@@ -238,7 +273,20 @@ class HcuDoorPullLatchButton(HcuBaseEntity, ButtonEntity):
         except HcuApiError as err:
             err_type = handle_lock_api_error(err, self.name, pin)
             if err_type == "invalid_pin" and pin:
-                self._config_entry.async_start_reauth(self.hass)
+                if err_type == "invalid_pin" and pin:
+                    ir.async_create_issue(
+                        hass=self.hass,
+                        domain=DOMAIN,
+                        issue_id=f"pin_failed_{self._device_id}",
+                        is_fixable=True,
+                        severity=ir.IssueSeverity.ERROR,
+                        translation_key="pin_failed",
+                        data={
+                            "entry_id": self._config_entry.entry_id,
+                            "device_name": self.name,
+                        },
+                        translation_placeholders={"device_name": self.name},
+                    )
             
             if not err_type:
                 _LOGGER.error(
@@ -354,7 +402,19 @@ class HcuDoorUnlatchButton(HcuBaseEntity, ButtonEntity):
         except HcuApiError as err:
             err_type = handle_lock_api_error(err, self.name, pin)
             if err_type == "invalid_pin" and pin:
-                self._config_entry.async_start_reauth(self.hass)
+                ir.async_create_issue(
+                    hass=self.hass,
+                    domain=DOMAIN,
+                    issue_id=f"pin_failed_{self._device_id}",
+                    is_fixable=True,
+                    severity=ir.IssueSeverity.ERROR,
+                    translation_key="pin_failed",
+                    data={
+                        "entry_id": self._config_entry.entry_id,
+                        "device_name": self.name,
+                    },
+                    translation_placeholders={"device_name": self.name},
+                )
             
             if not err_type:
                 _LOGGER.error(

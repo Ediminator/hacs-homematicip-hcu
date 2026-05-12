@@ -66,12 +66,6 @@ if TYPE_CHECKING:
 
 _LOGGER = logging.getLogger(__name__)
 
-
-async def async_setup(hass: HomeAssistant, config: dict):
-    """Set up the HCU component."""
-    return True
-
-
 async def async_will_remove_config_entry(
     hass: HomeAssistant, config_entry: ConfigEntry
 ) -> None:
@@ -111,7 +105,11 @@ class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
     VERSION = 1
     reauth_entry: ConfigEntry | None = None
 
-    _config_data: dict[str, Any] = {}
+    def __init__(self) -> None:
+        """Initialize the config flow."""
+        super().__init__()
+        self._config_data: dict[str, Any] = {}
+
 
     @staticmethod
     @callback
@@ -158,10 +156,9 @@ class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
     ) -> FlowResult:
         """Handle the authentication step where the user provides an activation key."""
         errors = {}
-        host = self._config_data["host"]
+        host = self._config_data.get("host", "HOST_NOT_FOUND")
         auth_port = self._config_data["auth_port"]
         
-
         if user_input is not None:
             activation_key = user_input["activation_key"]
             session = aiohttp_client.async_get_clientsession(self.hass)
@@ -297,27 +294,7 @@ class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
         self.reauth_entry = self.hass.config_entries.async_get_entry(
             self.context["entry_id"]
         )
-        return await self.async_step_reauth_confirm()
-
-    async def async_step_reauth_confirm(
-        self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
-        """Handle the PIN reauthentication form."""
-        if user_input is not None and self.reauth_entry:
-            new_data = {**self.reauth_entry.data, CONF_PIN: user_input[CONF_PIN]}
-            self.hass.config_entries.async_update_entry(
-                self.reauth_entry, data=new_data
-            )
-            await self.hass.config_entries.async_reload(self.reauth_entry.entry_id)
-            return self.async_abort(reason="reauth_successful")
-
-        return self.async_show_form(
-            step_id="reauth_confirm",
-            data_schema=vol.Schema({vol.Required(CONF_PIN): str}),
-            description_placeholders={
-                "info": "Your door lock requires a PIN for operation. Please enter the PIN you configured in your Homematic IP app."
-            },
-        )
+        return await self.async_step_reconfigure()
 
     async def async_step_reconfigure(
         self, user_input: dict[str, Any] | None = None
@@ -352,6 +329,7 @@ class HcuConfigFlow(ConfigFlow, domain=DOMAIN):
                     ): int,
                 }
             ),
+            description_placeholders={"hcu_ip": entry.data[CONF_HOST]},
             errors=errors,
         )
     

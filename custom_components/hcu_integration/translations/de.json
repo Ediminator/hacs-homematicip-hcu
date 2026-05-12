@@ -6,22 +6,16 @@
                 "description": "Geben Sie die Verbindungsdetails für Ihre Homematic IP HCU ein.",
                 "data": {
                     "host": "Hostname oder IP-Adresse",
+					"entity_prefix": "Entitätspräfix (Optional)",
                     "auth_port": "Authentifizierungs-API-Port (Standard: 6969)",
                     "websocket_port": "WebSocket-API-Port (Standard: 9001)"
                 }
             },
             "auth": {
                 "title": "Mit HCU authentifizieren",
-                "description": "Bitte geben Sie den Aktivierungsschlüssel für '{hcu_ip}' aus der HCU WebUI > Einstellungen > Connect ein.",
+                "description": "Bitte geben Sie den Aktivierungsschlüssel für {hcu_ip} aus der HCU WebUI > Einstellungen > Connect ein.",
                 "data": {
                     "activation_key": "Aktivierungsschlüssel"
-                }
-            },
-            "reauth_confirm": {
-                "title": "Türschloss-PIN erforderlich",
-                "description": "{info}",
-                "data": {
-                    "pin": "PIN"
                 }
             },
             "select_oems": {
@@ -30,7 +24,27 @@
                 "data": {
                     "selected_oems": "Zu importierende Hersteller"
                 }
-            }
+            },
+			"reauth_confirm": {
+				"title": "Neu-Autorisierung erforderlich",
+				"description": "Die Integration muss neu autorisiert werden."
+			},
+			"reconfigure": {
+				"title": "HCU neu konfigurieren",
+				"description": "Gib die neuen Verbindungsdetails für deine Homematic IP HCU ein.",
+				"data": {
+					"host": "Hostname oder IP-Adresse",
+					"auth_port": "Authentifizierungs-API-Port",
+					"websocket_port": "WebSocket-API-Port"
+				}
+			},
+			"reconfigure_auth": {
+				"title": "Integration neu autorisieren",
+				"description": "Bitte gib den Aktivierungsschlüssel für {hcu_ip} aus der HCU WebUI > Einstellungen > Connect ein.",
+				"data": {
+					"activation_key": "Aktivierungsschlüssel"
+				}
+			}
         },
         "error": {
             "cannot_connect": "Verbindung zur HCU fehlgeschlagen. Host und Ports prüfen.",
@@ -100,7 +114,32 @@
             "internal_error": "Interner Fehler: Client nicht verfügbar."
         }
     },
-    "device_automation": {
+    "issues": {
+		"pin_failed": {
+			"title": "PIN-Fehler für {device_name}",
+			"description": "Der Autorisierungs-PIN für {device_name} ist fehlgeschlagen.",
+			"fix_flow": {
+				"step": {
+					"confirm": {
+						"title": "PIN anpassen",
+						"description": "Der Autorisierungs-PIN für **{device_name}** ist fehlgeschlagen. Der gerätespezifische PIN hat Vorrang: Öffne die Geräteeinstellungen für {device_name} in Home Assistant und aktualisiere dort den PIN. Alternativ kann der globale PIN unter Einstellungen → Integrationen → Homematic IP HCU → Konfigurieren → Türschloss-PIN aktualisiert werden. Danach die Integration neu laden."
+					}
+				}
+			}
+		},
+		"access_authorization": {
+			"title": "Gerät nicht autorisiert: {device_name} Kanal {channel_index}",
+			"fix_flow": {
+				"step": {
+					"confirm": {
+						"title": "Zugriffsberechtigung einrichten",
+						"description": "Die Integration ist nicht berechtigt, Gerät **{device_name}** Kanal **{channel_index}** zu steuern.\n\nSo behebst du das Problem:\n1. Öffne die **Homematic IP** App\n2. Gehe zu → **Mehr** → **Zugriffsberechtigungen**\n3. Füge den Benutzer **'Home Assistant Integration'** zum Berechtigungsprofil hinzu\n4. Stelle sicher, dass eine PIN hinterlegt ist\n5. Klicke unten auf **Bestätigen** und lade anschließend die Integration in Home Assistant neu."
+					}
+				}
+			}
+		}
+	},
+	"device_automation": {
         "trigger_type": {
             "press_short": "\"Taste {subtype}\": kurz gedrückt",
             "press_long": "\"Taste {subtype}\": lang gedrückt",

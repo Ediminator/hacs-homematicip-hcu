@@ -1,16 +1,17 @@
 # custom_components/hcu_integration/lock.py
 import logging
 from typing import TYPE_CHECKING
-import json
 
-from homeassistant.components.lock import LockEntity, LockEntityFeature
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
+from homeassistant.components.lock import LockEntity, LockEntityFeature, ATTR_CODE
+from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import (
     CONF_PIN,
+    DOMAIN,
     LOCK_STATE_LOCKED,
     LOCK_STATE_UNLOCKED,
     LOCK_STATE_OPEN,
@@ -49,7 +50,8 @@ class HcuLock(HcuBaseEntity, LockEntity):
 
     PLATFORM = Platform.LOCK
     _attr_supported_features = LockEntityFeature.OPEN
-
+    _attr_code_format = r"^\d+$"
+    
     def __init__(
         self,
         coordinator: "HcuCoordinator",
@@ -174,10 +176,20 @@ class HcuLock(HcuBaseEntity, LockEntity):
             attrs["authorized_access_channels"] = authorized_channels
 
         return attrs
+    
+    def _get_pin(self, kwargs: dict) -> str | None:
+        """First Entity-Code, then global PIN as fallback."""
+        if code := kwargs.get(ATTR_CODE):
+            _LOGGER.debug("Lock '%s': using entity code from service call", self.name)
+            return code
+        if global_pin := self._config_entry.data.get(CONF_PIN):
+            _LOGGER.debug("Lock '%s': using global PIN from config entry", self.name)
+            return global_pin
+        _LOGGER.debug("Lock '%s': no PIN available", self.name)
+        return None
 
-    async def _set_lock_state(self, state: str) -> None:
+    async def _set_lock_state(self, state: str, pin: str | None = None) -> None:
         """Send the command to set the lock state."""
-        pin = self._config_entry.data.get(CONF_PIN)
 
         _LOGGER.debug(
             "Setting lock state for '%s' to %s (channel: %s, device: %s)",
@@ -203,8 +215,19 @@ class HcuLock(HcuBaseEntity, LockEntity):
             
             if err_type == "invalid_pin":
                 self._pin_required = True
-                if pin:
-                    self._config_entry.async_start_reauth(self.hass)
+                ir.async_create_issue(
+                    hass=self.hass,
+                    domain=DOMAIN,
+                    issue_id=f"pin_failed_{self._device_id}",
+                    is_fixable=True,
+                    severity=ir.IssueSeverity.ERROR,
+                    translation_key="pin_failed",
+                    data={
+                        "entry_id": self._config_entry.entry_id,
+                        "device_name": self.name,
+                    },
+                    translation_placeholders={"device_name": self.name},
+                )
             elif not err_type:
                 _LOGGER.error("Failed to set lock state for %s: %s", self.name, err)
 
@@ -221,12 +244,12 @@ class HcuLock(HcuBaseEntity, LockEntity):
 
     async def async_lock(self, **kwargs) -> None:
         """Lock the door."""
-        await self._set_lock_state(LOCK_STATE_LOCKED)
+        await self._set_lock_state(LOCK_STATE_LOCKED, pin=self._get_pin(kwargs))
 
     async def async_unlock(self, **kwargs) -> None:
         """Unlock the door."""
-        await self._set_lock_state(LOCK_STATE_UNLOCKED)
+        await self._set_lock_state(LOCK_STATE_UNLOCKED, pin=self._get_pin(kwargs))
 
     async def async_open(self, **kwargs) -> None:
         """Open the door latch."""
-        await self._set_lock_state(LOCK_STATE_OPEN)
+        await self._set_lock_state(LOCK_STATE_OPEN, pin=self._get_pin(kwargs))

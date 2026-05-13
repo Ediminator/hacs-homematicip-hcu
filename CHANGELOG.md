@@ -2,25 +2,35 @@
 
 All notable changes to the Homematic IP Local (HCU) integration will be documented in this file.
 
-## 2.0.0.beta3 - 2026-05-12
-> ⏱️ **Please take your time with this update.** Due to the breaking changes listed above, carefully review all your automations before updating.
+## 2.0.0.beta3 - 2026-05-13
+
+> [!NOTE]
+> Please take your time with this update. Due to the breaking changes listed below, carefully review all your automations before updating.
+
 ### ⚠️ Breaking Changes
+
 - The Doorbell sensor now uses the event type `ring` on `hcu_integration_event` (#40)
-- The type of the button event (ring, press, press_short, press_long, press_long_start or press_long_stop) are now lowercase and no longer prefixed with a "key_") 
-- The field `channel` in the event data of `hcu_integration_event` has been renamed to `subtype`. **Update your automations accordingly.**
-- On devices where individual buttons can be combined into a button pair, button presses were reported on the wrong channel. This is now corrected via a workaround. **If you are affected, update your automations accordingly.**
+- The button event types (`ring`, `press`, `press_short`, `press_long`, `press_long_start` or `press_long_stop`) are now lowercase and no longer prefixed with `key_`
+- The `channel` field in the event data of `hcu_integration_event` has been renamed to `subtype`. Update your automations accordingly.
+- On devices where individual buttons can be combined into a button pair, button presses were reported on the wrong channel. This has been corrected via a workaround. If you are affected, update your automations accordingly.
+
 ### ✨ New Features
-- The internal logic has been completely reworked to provide a more stable and flexible structure. (#175)
+
+- The internal logic has been completely reworked for a more stable and flexible structure. (#175)
   - Introduced Channel Role as an additional basis for entity creation
   - Doorbell sensor is now properly integrated and working as expected
 - Added device trigger support, making it easier to use button presses directly as triggers in automations. More in README.md
+
 ### HmIP-FDC & Lock
+
 - Full support for HmIP-FDC: the integration now finds and uses the correct `ACCESS_AUTHORIZATION_CHANNEL` to trigger the pull latch, respecting the HCU's access-authorization model
-- New **Pull Latch PIN** entity (password text, config category) for every FDC channel — set a per-device PIN directly in Home Assistant without going through the options flow
-  - PIN priority: device-specific PIN → global PIN
 - The integration's `clientId` is now saved during setup and used for authorization checks; refresh it via **Settings → Integrations → HCU → Configure**
 - Reconfigure flow is now two steps: first update host/ports, then renew the activation token — the `clientId` is refreshed automatically
 - PIN failures and missing access-authorization entries are now reported as actionable issues in **Settings → Repairs** instead of triggering a full re-authentication
+
+**New PIN logic for all access profile devices.** There is now a Device Code and a Global Code. The Device Code takes priority, with the Global Code as a fallback.
+
+---
 ## 1.21.12 - 2026-04-30
 
 ### ✨ New Features

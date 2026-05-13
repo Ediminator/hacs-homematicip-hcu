@@ -24,7 +24,7 @@ from .const import (
     MOTOR_STATE_JAMMED,
     CHANNEL_TYPE_ACCESS_AUTHORIZATION,
 )
-from .entity import HcuBaseEntity
+from .entity import HcuBaseEntity, HcuAccessMixin
 from .api import HcuApiClient, HcuApiError
 from .util import handle_lock_api_error
 
@@ -47,7 +47,7 @@ async def async_setup_entry(
         async_add_entities(entities)
 
 
-class HcuLock(HcuBaseEntity, LockEntity):
+class HcuLock(HcuAccessMixin, HcuBaseEntity, LockEntity):
     """Representation of a Homematic IP HCU door lock."""
 
     PLATFORM = Platform.LOCK
@@ -144,8 +144,9 @@ class HcuLock(HcuBaseEntity, LockEntity):
     @property
     def extra_state_attributes(self) -> dict:
         """Return additional state attributes."""
+        pin = self._get_pin()
         attrs = (super().extra_state_attributes or {}) | {
-            "pin_configured": bool(self._config_entry.data.get(CONF_PIN)),
+            "pin_configured": bool(pin),
         }
         # Add PIN requirement status if determined
         if self._pin_required is not None:
@@ -178,17 +179,6 @@ class HcuLock(HcuBaseEntity, LockEntity):
             attrs["authorized_access_channels"] = authorized_channels
 
         return attrs
-    
-    def _get_pin(self, kwargs: dict) -> str | None:
-        """First Entity-Code, then global PIN as fallback."""
-        if code := kwargs.get(ATTR_CODE):
-            _LOGGER.debug("Lock '%s': using entity code from service call", self.name)
-            return code
-        if global_pin := self._config_entry.data.get(CONF_PIN):
-            _LOGGER.debug("Lock '%s': using global PIN from config entry", self.name)
-            return global_pin
-        _LOGGER.debug("Lock '%s': no PIN available", self.name)
-        return None
 
     async def _set_lock_state(self, state: str, pin: str | None = None) -> None:
         """Send the command to set the lock state."""
@@ -246,12 +236,12 @@ class HcuLock(HcuBaseEntity, LockEntity):
 
     async def async_lock(self, **kwargs) -> None:
         """Lock the door."""
-        await self._set_lock_state(LOCK_STATE_LOCKED, pin=self._get_pin(kwargs))
+        await self._set_lock_state(LOCK_STATE_LOCKED, pin=self._get_pin())
 
     async def async_unlock(self, **kwargs) -> None:
         """Unlock the door."""
-        await self._set_lock_state(LOCK_STATE_UNLOCKED, pin=self._get_pin(kwargs))
+        await self._set_lock_state(LOCK_STATE_UNLOCKED, pin=self._get_pin())
 
     async def async_open(self, **kwargs) -> None:
         """Open the door latch."""
-        await self._set_lock_state(LOCK_STATE_OPEN, pin=self._get_pin(kwargs))
+        await self._set_lock_state(LOCK_STATE_OPEN, pin=self._get_pin())

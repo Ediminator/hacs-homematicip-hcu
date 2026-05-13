@@ -11,7 +11,7 @@ from homeassistant.const import Platform, EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import CONF_PULL_LATCH_PINS
+from .const import CONF_DEVICE_PINS
 from .entity import HcuBaseEntity
 
 if TYPE_CHECKING:
@@ -32,11 +32,11 @@ async def async_setup_entry(
         if entities := coordinator.entities.get(Platform.TEXT):
             async_add_entities(entities)
     
-class HcuPullLatchPin(HcuBaseEntity, TextEntity):
+class HcuDevicePin(HcuBaseEntity, TextEntity):
     """PIN input field for a Pull Latch button."""
 
     PLATFORM = Platform.TEXT
-    _attr_translation_key = "hcu_pull_latch_pin"
+    _attr_translation_key = "hcu_device_pin"
     _attr_icon = "mdi:lock-outline"
     _attr_mode = TextMode.PASSWORD
     _attr_native_min = 0
@@ -53,26 +53,23 @@ class HcuPullLatchPin(HcuBaseEntity, TextEntity):
     ) -> None:
         super().__init__(coordinator, client, device_data, channel_index)
         self._config_entry = coordinator.config_entry
-        self._set_entity_name(
-            channel_label=self._channel.get("label"), feature_name="Pull Latch PIN"
-        )
-        self._attr_unique_id = f"{self._device_id}_{channel_index}_pull_latch_pin"
-        self._pin_key = f"{self._device_id}_{channel_index}_pull_latch"
+        self._attr_unique_id = f"{self._device_id}_device_pin"
+        self._pin_key = self._device_id
         
     @property
     def native_value(self) -> str:
-        return self._config_entry.options.get(CONF_PULL_LATCH_PINS, {}).get(
+        return self._config_entry.options.get(CONF_DEVICE_PINS, {}).get(
             self._pin_key, ""
         )
 
     async def async_set_value(self, value: str) -> None:
-        new_pins = dict(self._config_entry.options.get(CONF_PULL_LATCH_PINS, {}))
+        new_pins = dict(self._config_entry.options.get(CONF_DEVICE_PINS, {}))
         if value:
             new_pins[self._pin_key] = value
         else:
             new_pins.pop(self._pin_key, None)
         self.hass.config_entries.async_update_entry(
             self._config_entry,
-            options={**self._config_entry.options, CONF_PULL_LATCH_PINS: new_pins},
+            options={**self._config_entry.options, CONF_DEVICE_PINS: new_pins},
         )
         self.async_write_ha_state()

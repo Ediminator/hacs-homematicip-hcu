@@ -92,7 +92,7 @@ async def async_discover_entities(
         "HcuDoorPullLatchButton": button,
         "HcuDoorImpulseButton": button,
         "HcuDoorUnlatchButton": button,
-        "HcuPullLatchPin": text,
+        "HcuDevicePin": text,
         "HcuDeviceIdentifyButton": button,
         "HcuGenericSensor": sensor,
         "HcuTemperatureSensor": sensor,
@@ -150,7 +150,7 @@ async def async_discover_entities(
             base_channel_type = None
             channel_mapping = None
             
-            # First check if a channel role is found.
+            #First check if a channel role is found.
             if channel_role in HMIP_CHANNEL_ROLE_TO_ENTITY:
                 base_channel_type = channel_role
                 channel_mapping = HMIP_CHANNEL_ROLE_TO_ENTITY[base_channel_type]

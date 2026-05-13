@@ -18,7 +18,7 @@ from .api import HcuApiClient, HcuApiError
 from .util import handle_lock_api_error
 from .const import (
     CONF_PIN,
-    CONF_PULL_LATCH_PINS,
+    CONF_DEVICE_PINS,
     CONF_CLIENT_ID,
     DOMAIN,
     LOCK_STATE_OPEN,
@@ -151,7 +151,7 @@ class HcuDoorPullLatchButton(HcuBaseEntity, ButtonEntity):
     def _get_pin(self) -> str | None:
         """First device specified PIN, then global PIN as fallback."""
         config_entry = self.coordinator.config_entry
-        pins = config_entry.options.get(CONF_PULL_LATCH_PINS, {})
+        pins = config_entry.options.get(CONF_DEVICE_PINS, {})
         if code := pins.get(self._attr_unique_id):
             _LOGGER.debug("Device '%s': using specified device pin", self.name)
             return code
@@ -164,12 +164,12 @@ class HcuDoorPullLatchButton(HcuBaseEntity, ButtonEntity):
     def _find_authorization_channel(self) -> tuple[int, str] | None:
         """Find the ACCESS_AUTHORIZATION_CHANNEL index that belongs to this switch channel."""
         client_id = self._config_entry.data.get(CONF_CLIENT_ID)
+        client_id = self._config_entry.data.get(CONF_CLIENT_ID)
         if not client_id:
             _LOGGER.error(
-                "No clientId found for this integration. "
-                "Please go to Settings → Integrations → Homematic IP HCU → Configure"
-                "and re-authorize the integration.",
+                "No clientId found for this integration. Triggering reconfiguration flow.",
             )
+            self._config_entry.async_start_reauth(self.hass)
             return None
 
         channels = self._device.get("functionalChannels", {})

@@ -1,7 +1,7 @@
 # custom_components/hcu_integration/switch.py
 from typing import TYPE_CHECKING, Any
 
-from homeassistant.components.switch import SwitchEntity
+from homeassistant.components.switch import SwitchEntity, SwitchDeviceClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, callback
@@ -50,7 +50,13 @@ class HcuSwitch(SwitchStateMixin, HcuBaseEntity, SwitchEntity):
         self._attr_unique_id = f"{self._device_id}_{self._channel_index}_on"
 
         device_type = self._device.get("type")
-        self._attr_device_class = HMIP_DEVICE_TYPE_TO_DEVICE_CLASS.get(device_type)
+        switch_visualization = self._channel.get("switchVisualization")
+        if switch_visualization == "OUTLET":
+            self._attr_device_class = SwitchDeviceClass.OUTLET
+        elif switch_visualization == "SWITCH":
+            self._attr_device_class = SwitchDeviceClass.SWITCH
+        else:
+            self._attr_device_class = HMIP_DEVICE_TYPE_TO_DEVICE_CLASS.get(device_type)
         self._init_switch_state()
 
     @callback

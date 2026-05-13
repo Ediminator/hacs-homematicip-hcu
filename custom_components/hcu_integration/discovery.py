@@ -144,6 +144,7 @@ async def async_discover_entities(
             processed_features = set()
             is_deactivated_by_default = device_data.get("type") in DEACTIVATED_BY_DEFAULT_DEVICES
             is_unused_channel = is_deactivated_by_default and not channel_data.get("groups")
+            is_unused_device_channel = not channel_data.get("groups")
 
             channel_type = channel_data.get("functionalChannelType")
             channel_role = channel_data.get("channelRole")
@@ -170,7 +171,7 @@ async def async_discover_entities(
             if channel_mapping:
                 class_name = channel_mapping["class"]
                 if is_unused_channel:
-                    continue
+                    break
 
                 # Note: Some channels serve multiple functions (e.g., HmIP-BSL NOTIFICATION_LIGHT_CHANNEL)
                 # - These channels create light entities for backlight control
@@ -179,20 +180,29 @@ async def async_discover_entities(
                 # - See MULTI_FUNCTION_CHANNEL_DEVICES in const.py for device-specific mappings
                 if module := class_module_map.get(class_name):
                     try:
-                        entity_class = getattr(module, class_name)
-                        platform = getattr(entity_class, "PLATFORM")
-                        entity_mapping = channel_mapping.copy()
-                        feature = entity_mapping.get("feature")
-                        if feature is not None:
-                            processed_features.add(feature)
-                            entity = entity_class(coordinator, client, device_data, channel_index, feature, entity_mapping)
+                        if not is_unused_device_channel:    
+                            entity_class = getattr(module, class_name)
+                            platform = getattr(entity_class, "PLATFORM")
+                            entity_mapping = channel_mapping.copy()
+                            feature = entity_mapping.get("feature")
+                            if feature is not None:
+                                processed_features.add(feature)
+                                entity = entity_class(coordinator, client, device_data, channel_index, feature, entity_mapping)
+                            else:
+                                entity = entity_class(coordinator, client, device_data, channel_index)
+                            entities[platform].append(entity)
+                            uid = getattr(entity, "unique_id", None)
+                            if uid:
+                                valid_entity_unique_ids.add(uid)
                         else:
-                            entity = entity_class(coordinator, client, device_data, channel_index)
-                        entities[platform].append(entity)
-                        uid = getattr(entity, "unique_id", None)
-                        if uid:
-                            valid_entity_unique_ids.add(uid)
-
+                            _LOGGER.debug(
+                                "Skipping unconfigured channel %s (%s) on device %s (%s)",
+                                channel_index,
+                                channel_type,
+                                device_data.get("id"),
+                                device_data.get("label"),
+                            )
+                            
                         # Add additional entities defined in the registry for this channel
                         # Some channels create multiple entities (e.g., Lock + Unlatch Button)
                         for extra_cfg in channel_mapping.get("extra_entities", []):

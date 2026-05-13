@@ -171,7 +171,7 @@ async def async_discover_entities(
             if channel_mapping:
                 class_name = channel_mapping["class"]
                 if is_unused_channel:
-                    break
+                    continue
 
                 # Note: Some channels serve multiple functions (e.g., HmIP-BSL NOTIFICATION_LIGHT_CHANNEL)
                 # - These channels create light entities for backlight control

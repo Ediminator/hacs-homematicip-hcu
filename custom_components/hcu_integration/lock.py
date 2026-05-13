@@ -47,7 +47,7 @@ async def async_setup_entry(
         async_add_entities(entities)
 
 
-class HcuLock(HcuBaseEntity, LockEntity):
+class HcuLock(HcuAccessMixin, HcuBaseEntity, LockEntity):
     """Representation of a Homematic IP HCU door lock."""
 
     PLATFORM = Platform.LOCK

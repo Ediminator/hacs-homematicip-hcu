@@ -361,8 +361,8 @@
             }
         },
 		"text": {
-			"hcu_pull_latch_pin": {
-				"name": "Pull Latch PIN"
+			"hcu_device_pin": {
+				"name": "Device PIN"
 			}
 		}
     }

@@ -36,7 +36,7 @@ class HcuDevicePin(HcuBaseEntity, TextEntity):
     """PIN input field for a Pull Latch button."""
 
     PLATFORM = Platform.TEXT
-    _attr_translation_key = "hcu_Device_pin"
+    _attr_translation_key = "hcu_device_pin"
     _attr_icon = "mdi:lock-outline"
     _attr_mode = TextMode.PASSWORD
     _attr_native_min = 0
@@ -53,11 +53,9 @@ class HcuDevicePin(HcuBaseEntity, TextEntity):
     ) -> None:
         super().__init__(coordinator, client, device_data, channel_index)
         self._config_entry = coordinator.config_entry
-        self._set_entity_name(
-            channel_label=self._channel.get("label"), feature_name="Device PIN"
-        )
-        self._attr_unique_id = f"{self._device_id}_{channel_index}_device_pin"
-        self._pin_key = f"{self._device_id}_{channel_index}_device_latch"
+        self._set_entity_name(feature_name="Device PIN")
+        self._attr_unique_id = f"{self._device_id}_device_pin"
+        self._pin_key = self._device_id
         
     @property
     def native_value(self) -> str:

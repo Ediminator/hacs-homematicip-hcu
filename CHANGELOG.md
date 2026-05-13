@@ -20,6 +20,7 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
   - Introduced Channel Role as an additional basis for entity creation
   - Doorbell sensor is now properly integrated and working as expected
 - Added device trigger support, making it easier to use button presses directly as triggers in automations. More in README.md
+- Device Channels that have not been configured in the Homematic IP app are no longer displayed. (#255)
 
 ### HmIP-FDC & Lock
 

@@ -234,14 +234,14 @@ class HcuLock(HcuAccessMixin, HcuBaseEntity, LockEntity):
             self._attr_assumed_state = False
             self.async_write_ha_state()
 
-    async def async_lock(self) -> None:
+    async def async_lock(self, **kwargs) -> None:
         """Lock the door."""
         await self._set_lock_state(LOCK_STATE_LOCKED, pin=self._get_pin())
 
-    async def async_unlock(self) -> None:
+    async def async_unlock(self, **kwargs) -> None:
         """Unlock the door."""
         await self._set_lock_state(LOCK_STATE_UNLOCKED, pin=self._get_pin())
 
-    async def async_open(self) -> None:
+    async def async_open(self, **kwargs) -> None:
         """Open the door latch."""
         await self._set_lock_state(LOCK_STATE_OPEN, pin=self._get_pin())

@@ -53,7 +53,6 @@ class HcuDevicePin(HcuBaseEntity, TextEntity):
     ) -> None:
         super().__init__(coordinator, client, device_data, channel_index)
         self._config_entry = coordinator.config_entry
-        self._set_entity_name(feature_name="Device PIN")
         self._attr_unique_id = f"{self._device_id}_device_pin"
         self._pin_key = self._device_id
         

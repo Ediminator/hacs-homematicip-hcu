@@ -6,9 +6,10 @@ import logging
 from homeassistant.core import callback
 from homeassistant.helpers.entity import DeviceInfo, Entity
 from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN, CONF_ENTITY_PREFIX, HOMEMATIC_MODEL_PREFIXES, CONF_ADVANCED_ATTRIBUTES, CONF_PIN, CONF_DEVICE_PINS
+from .const import DOMAIN, CONF_ENTITY_PREFIX, HOMEMATIC_MODEL_PREFIXES, CONF_ADVANCED_ATTRIBUTES, CONF_PIN, CONF_DEVICE_PINS, CONF_CLIENT_ID
 from .api import HcuApiClient, HcuApiError
 from .util import get_device_manufacturer
 
@@ -75,6 +76,95 @@ class SwitchStateMixin:
             self._attr_assumed_state = False
             self.async_write_ha_state()  # type: ignore[attr-defined]
 
+class HcuAccessMixin:
+    """Mixin for entities that need PIN lookup and ACCESS_AUTHORIZATION_CHANNEL resolution."""
+
+    coordinator: "HcuCoordinator"
+    _attr_unique_id: str | None
+    _device_id: str
+    _channel_index: int
+    _device: dict
+    _channel: dict
+    _client: "HcuApiClient"
+    name: str | None
+    hass: Any
+
+    def _get_pin(self) -> str | None:
+        """Return the PIN: device-specific first, then global config PIN as fallback."""
+        config_entry = self.coordinator.config_entry
+        pins = config_entry.options.get(CONF_DEVICE_PINS, {})
+        if device_pin := pins.get(self._device.get("id")):
+            _LOGGER.debug("Device '%s': using specified device pin", self.name)
+            return device_pin
+        if global_pin := config_entry.data.get(CONF_PIN):
+            _LOGGER.debug("Device '%s': using global PIN from config entry", self.name)
+            return global_pin
+        _LOGGER.debug("Device '%s': no PIN available", self.name)
+        return None
+
+    def _find_authorization_channel(self) -> tuple[int, str] | None:
+        """Find the ACCESS_AUTHORIZATION_CHANNEL index belonging to this channel."""
+        config_entry = self.coordinator.config_entry
+        client_id = config_entry.data.get(CONF_CLIENT_ID)
+        if not client_id:
+            _LOGGER.error("No clientId found for this integration. Triggering reconfiguration flow.")
+            config_entry.async_start_reauth(self.hass)
+            return None
+
+        channels = self._device.get("functionalChannels", {})
+        switch_group_index = self._channel.get("groupIndex")
+
+        candidates: list[tuple[int, list[str]]] = []
+        for ch_idx, ch_data in channels.items():
+            if (
+                ch_data.get("functionalChannelType") == "ACCESS_AUTHORIZATION_CHANNEL"
+                and ch_data.get("groupIndex") == switch_group_index
+            ):
+                candidates.append((int(ch_idx), list(ch_data.get("groups") or [])))
+
+        if not candidates:
+            return None
+
+        profiled: list[tuple[int, str]] = []
+        client_authorized = False
+        for ch_idx, group_ids in candidates:
+            for group_id in group_ids:
+                group = self._client.get_group_by_id(str(group_id)) or {}
+                if (
+                    group.get("type") == "ACCESS_AUTHORIZATION_PROFILE"
+                    and group.get("authorizationPinAssigned") is True
+                    and client_id in group.get("clientIds", [])
+                ):
+                    client_authorized = True
+                    profiled.append((ch_idx, group.get("label", "")))
+
+        if not client_authorized:
+            _LOGGER.error(
+                "The Home Assistant Integration is not authorized to control device '%s' channel %s. "
+                "Either the integration is not added to an Access Authorization Profile, "
+                "or no PIN is stored in the profile. "
+                "Please open the Homematic IP app, go to → More → Access authorisations, "
+                "add the 'Home Assistant Integration' user to the authorisation profile and ensure a PIN is set, "
+                "then reload the integration in Home Assistant.",
+                self._device_id,
+                self._channel_index,
+            )
+            return None
+
+        ir.async_delete_issue(
+            hass=self.hass,
+            domain=DOMAIN,
+            issue_id=f"access_authorization_{self._device_id}_{self._channel_index}",
+        )
+
+        if len(profiled) > 1:
+            _LOGGER.warning(
+                "Multiple ACCESS_AUTHORIZATION_PROFILEs found for %s channel %s. Using first match.",
+                self._device_id,
+                self._channel_index,
+            )
+
+        return profiled[0]
 
 class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, Entity):
     """Base class for entities tied to a specific Homematic IP device channel."""

@@ -673,10 +673,10 @@ async def async_discover_entities(
     # Build a lookup map: unique_id -> expected domain (platform)
     # Used to detect entities that moved platforms (e.g. switch → light)
     uid_to_expected_domain: dict[str, str] = {
-        getattr(e, "unique_id"): platform.value
+        uid: platform.value
         for platform, entity_list in entities.items()
         for e in entity_list
-        if getattr(e, "unique_id", None)
+        if (uid := getattr(e, "unique_id", None))
     }
     
     ent_reg = er.async_get(hass)

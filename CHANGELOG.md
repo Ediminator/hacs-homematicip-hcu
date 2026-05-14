@@ -2,7 +2,7 @@
 
 All notable changes to the Homematic IP Local (HCU) integration will be documented in this file.
 
-## 2.0.0.beta4 - 2026-05-13
+## 2.0.0.beta5 - 2026-05-13
 
 > [!NOTE]
 > Please take your time with this update. Due to the breaking changes listed below, carefully review all your automations before updating.
@@ -21,7 +21,7 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
   - Doorbell sensor is now properly integrated and working as expected
 - Added device trigger support, making it easier to use button presses directly as triggers in automations. More in README.md
 - Device Channels that have not been configured in the Homematic IP app are no longer displayed. (#255)
-- Switches are now displayed as outlet or switch depending on the setting in the Homematic IP app.
+- Switches are now displayed as outlet, switch or light depending on the setting in the Homematic IP app.
 
 ### HmIP-FDC & Lock
 

@@ -16,6 +16,10 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 - Switches are now displayed as outlet, switch or light depending on the setting in the Homematic IP app.
   Note: Existing switch entities configured as "Light" may no longer appear under the switch platform. Please check your automations and dashboards after updating.
   
+### 🐛 Bug Fixes 
+
+- Fixed serial number assignment for devices with non-standard model type casing (e.g. HMIP-PS, HMIP-SWDO).
+
 ### ✨ New Features
 
 - The internal logic has been completely reworked for a more stable and flexible structure. (#175)

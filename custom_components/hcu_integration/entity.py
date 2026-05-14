@@ -307,7 +307,7 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, E
             via_device=(DOMAIN, hcu_device_id),
         )
     
-        if model_type and model_type.startswith(HOMEMATIC_MODEL_PREFIXES):
+        if model_type and model_type.lower().startswith(tuple(p.lower() for p in HOMEMATIC_MODEL_PREFIXES)):
             device_info_kwargs["serial_number"] = self._device_id
             
         if meta is not None:

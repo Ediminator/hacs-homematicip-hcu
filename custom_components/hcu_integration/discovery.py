@@ -670,6 +670,15 @@ async def async_discover_entities(
     # -------------------------------------------------------------------------
     # Remove entity registry entries that no longer exist in the current HCU state.
     
+    # Build a lookup map: unique_id -> expected domain (platform)
+    # Used to detect entities that moved platforms (e.g. switch → light)
+    uid_to_expected_domain: dict[str, str] = {
+        uid: platform.value
+        for platform, entity_list in entities.items()
+        for e in entity_list
+        if (uid := getattr(e, "unique_id", None))
+    }
+    
     ent_reg = er.async_get(hass)
     entry_entities = er.async_entries_for_config_entry(ent_reg, config_entry.entry_id)
     
@@ -699,6 +708,31 @@ async def async_discover_entities(
                     exc_info=True,
                 )
         else:
+            # Check if the entity moved to a different platform (e.g. switch → light)
+            # This happens when switchVisualization changes in the Homematic IP app
+            expected_domain = uid_to_expected_domain.get(ent.unique_id)
+            if expected_domain and ent.domain != expected_domain:
+                _LOGGER.info(
+                    "Removing entity that moved platforms (%s → %s): %s (unique_id: %s)",
+                    ent.domain,
+                    expected_domain,
+                    ent.entity_id,
+                    ent.unique_id,
+                )
+                try:
+                    ent_reg.async_remove(ent.entity_id)
+                except asyncio.CancelledError:
+                    raise
+                except Exception:
+                    _LOGGER.warning(
+                        "Failed to remove platform-migrated entity '%s' (entity_id: %s, unique_id: %s)",
+                        ent.name,
+                        ent.entity_id,
+                        ent.unique_id,
+                        exc_info=True,
+                    )
+                continue
+            
             # Retroactively disable entities that are ONLY newly disabled by default
             # Extract feature name from unique_id
             # We use a generator expression with max() and a default value

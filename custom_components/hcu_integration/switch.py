@@ -6,16 +6,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.components.light import (
-    ATTR_BRIGHTNESS,
-    ATTR_COLOR_TEMP_KELVIN,
-    ATTR_EFFECT,
-    ATTR_HS_COLOR,
-    ATTR_TRANSITION,
-    ColorMode,
-    LightEntity,
-    LightEntityFeature,
-)
+
 import logging
 from .const import HMIP_DEVICE_TYPE_TO_DEVICE_CLASS, API_PATHS
 from .entity import HcuBaseEntity, SwitchStateMixin, HcuSwitchingGroupBase

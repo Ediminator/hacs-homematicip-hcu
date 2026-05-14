@@ -21,6 +21,7 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
+from .switch import HcuSwitch
 from .entity import HcuBaseEntity, HcuSwitchingGroupBase
 from .api import HcuApiClient
 from .const import (
@@ -344,6 +345,17 @@ class HcuLight(HcuBaseEntity, LightEntity):
         else:
             await self._client.async_set_dim_level(self._device_id, self._channel_index, 0.0, ramp_time)
 
+class HcuSwitchLight(HcuSwitch, LightEntity):
+    """Switch channel registered as a Light entity in Home Assistant."""
+    PLATFORM = Platform.LIGHT
+
+    def __init__(self, coordinator, client, device_data, channel_index):
+        super().__init__(coordinator, client, device_data, channel_index)
+        # Clear any switch-specific device class set by HcuSwitch.__init__
+        self._attr_device_class = None
+        # Only on/off supported – no dimming or color
+        self._attr_color_mode = ColorMode.ONOFF
+        self._attr_supported_color_modes = {ColorMode.ONOFF}
 
 class HcuNotificationLight(HcuBaseEntity, LightEntity):
     """Representation of a Homematic IP notification light (e.g., HmIP-MP3P)."""

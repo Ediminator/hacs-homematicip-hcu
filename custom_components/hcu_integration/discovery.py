@@ -79,6 +79,7 @@ async def async_discover_entities(
     
     class_module_map = {
         "HcuLight": light,
+        "HcuSwitchLight": light,
         "HcuNotificationLight": light,
         "HcuSiren": siren,
         "HcuSwitch": switch,
@@ -180,9 +181,23 @@ async def async_discover_entities(
                 # - See MULTI_FUNCTION_CHANNEL_DEVICES in const.py for device-specific mappings
                 if module := class_module_map.get(class_name):
                     try:
-                        if not is_unused_device_channel:    
+                        if not is_unused_device_channel:
                             entity_class = getattr(module, class_name)
                             platform = getattr(entity_class, "PLATFORM")
+                            
+                            # Determine the correct entity class based on switchVisualization
+                            if class_name == "HcuSwitch":
+                                switch_visualization = channel_data.get("switchVisualization")
+                                if switch_visualization == "LIGHT":
+                                    # Register as LightEntity instead of SwitchEntity
+                                    entity_class = getattr(light, "HcuSwitchLight")
+                                    platform = Platform.LIGHT
+                                    _LOGGER.debug(
+                                        "Switch channel registered as LightEntity due to switchVisualization=LIGHT: device=%s, channel=%s",
+                                        device_data.get("id"),
+                                        channel_index,
+                                    )
+                                
                             entity_mapping = channel_mapping.copy()
                             feature = entity_mapping.get("feature")
                             if feature is not None:

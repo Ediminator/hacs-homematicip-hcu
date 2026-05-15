@@ -1069,6 +1069,9 @@ HMIP_CHANNEL_ROLE_TO_ENTITY = {
     },
     "KEY_OR_SWITCH_FOR_GROUP": {
         "class": "HcuButtonEvent"
+    },
+    "HOT_WATER_PROFILE": {
+        "class": "HcuButtonEvent"
     }
 }
     

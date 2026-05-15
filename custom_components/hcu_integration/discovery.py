@@ -84,6 +84,7 @@ async def async_discover_entities(
         "HcuSiren": siren,
         "HcuSwitch": switch,
         "HcuWateringSwitch": switch,
+        "HcuConfigUseInternalOnTime": switch,
         "HcuCover": cover,
         "HcuGarageDoorCover": cover,
         "HcuDoorbellEvent": event,

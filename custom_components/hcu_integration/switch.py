@@ -3,9 +3,10 @@ from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.switch import SwitchEntity, SwitchDeviceClass
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
+from homeassistant.const import Platform, STATE_ON, EntityCategory
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.restore_state import RestoreEntity
 
 import logging
 from .const import HMIP_DEVICE_TYPE_TO_DEVICE_CLASS, API_PATHS
@@ -176,6 +177,49 @@ class HcuWateringSwitch(SwitchStateMixin, HcuBaseEntity, SwitchEntity):
             self._attr_is_on = previous_is_on
             self._attr_assumed_state = previous_assumed_state
             self.async_write_ha_state()
+
+
+class HcuConfigUseInternalOnTime(RestoreEntity, HcuBaseEntity, SwitchEntity):
+    """HA-local config switch per channel: whether to use internal on-time when switching.
+
+    State is stored in HA only (not in HCU). Default: off.
+    """
+
+    PLATFORM = Platform.SWITCH
+    _attr_entity_category = EntityCategory.CONFIG
+    _attr_icon = "mdi:timer-cog-outline"
+
+    def __init__(
+        self,
+        coordinator: "HcuCoordinator",
+        client: HcuApiClient,
+        device_data: dict,
+        channel_index: str,
+    ):
+        super().__init__(coordinator, client, device_data, channel_index)
+        self._set_entity_name(feature_name="Use Internal On Time")
+        self._attr_unique_id = f"{self._device_id}_{self._channel_index}_useInternalOnTime"
+        self._attr_is_on = False
+
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+        if (last_state := await self.async_get_last_state()) is not None:
+            self._attr_is_on = last_state.state == STATE_ON
+
+    @property
+    def is_on(self) -> bool:
+        return self._attr_is_on
+
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        self._attr_is_on = True
+        self.async_write_ha_state()
+
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        self._attr_is_on = False
+        self.async_write_ha_state()
+
+    def _handle_coordinator_update(self) -> None:
+        pass
 
 
 class HcuSwitchGroup(HcuSwitchingGroupBase, SwitchEntity):

@@ -1072,6 +1072,9 @@ HMIP_CHANNEL_ROLE_TO_ENTITY = {
     },
     "HOT_WATER_PROFILE": {
         "class": "HcuButtonEvent"
+    },
+    "ECO_MODE_ACTIVATION": {
+        "class": "HcuButtonEvent"
     }
 }
     

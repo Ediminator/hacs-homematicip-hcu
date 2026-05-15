@@ -997,7 +997,8 @@ HMIP_FEATURE_TO_ENTITY = {
         "state_class": SensorStateClass.TOTAL_INCREASING,
         "entity_category": EntityCategory.DIAGNOSTIC,
         "entity_registry_enabled_default": False,
-        "suggested_display_precision": 0, 
+        "suggested_display_precision": 0,
+        "config_companion": "HcuConfigUseInternalOnTime",
     },
     
 }
@@ -1073,23 +1074,23 @@ HMIP_CHANNEL_ROLE_TO_ENTITY = {
 }
     
 HMIP_CHANNEL_TYPE_TO_ENTITY = {
-    "DIMMER_CHANNEL": {"class": "HcuLight", "extra_entities": ["HcuConfigUseInternalOnTime"]},
-    "MULTI_MODE_INPUT_DIMMER_CHANNEL": {"class": "HcuLight", "extra_entities": ["HcuConfigUseInternalOnTime"]},
-    "RGBW_AUTOMATION_CHANNEL": {"class": "HcuLight", "extra_entities": ["HcuConfigUseInternalOnTime"]},
-    "UNIVERSAL_LIGHT_CHANNEL": {"class": "HcuLight", "extra_entities": ["HcuConfigUseInternalOnTime"]},
-    "NOTIFICATION_LIGHT_CHANNEL": {"class": "HcuLight", "extra_entities": ["HcuConfigUseInternalOnTime"]},
-    "OPTICAL_SIGNAL_CHANNEL": {"class": "HcuLight", "extra_entities": ["HcuConfigUseInternalOnTime"]},
-    "NOTIFICATION_MP3_SOUND_CHANNEL": {"class": "HcuNotificationLight", "extra_entities": ["HcuConfigUseInternalOnTime"]},
-    "BACKLIGHT_CHANNEL": {"class": "HcuLight", "extra_entities": ["HcuConfigUseInternalOnTime"]},
+    "DIMMER_CHANNEL": {"class": "HcuLight"},
+    "MULTI_MODE_INPUT_DIMMER_CHANNEL": {"class": "HcuLight"},
+    "RGBW_AUTOMATION_CHANNEL": {"class": "HcuLight"},
+    "UNIVERSAL_LIGHT_CHANNEL": {"class": "HcuLight"},
+    "NOTIFICATION_LIGHT_CHANNEL": {"class": "HcuLight"},
+    "OPTICAL_SIGNAL_CHANNEL": {"class": "HcuLight"},
+    "NOTIFICATION_MP3_SOUND_CHANNEL": {"class": "HcuNotificationLight"},
+    "BACKLIGHT_CHANNEL": {"class": "HcuLight"},
     "ALARM_SIREN_CHANNEL": {"class": "HcuSiren"},
-    "SWITCH_CHANNEL": {"class": "HcuSwitch", "extra_entities": ["HcuConfigUseInternalOnTime"]},
-    "SWITCH_MEASURING_CHANNEL": {"class": "HcuSwitch", "extra_entities": ["HcuConfigUseInternalOnTime"]},
-    "WIRED_SWITCH_CHANNEL": {"class": "HcuSwitch", "extra_entities": ["HcuConfigUseInternalOnTime"]},
-    "MULTI_MODE_INPUT_SWITCH_CHANNEL": {"class": "HcuSwitch", "extra_entities": ["HcuConfigUseInternalOnTime"]},
-    "WATERING_ACTUATOR_CHANNEL": {"class": "HcuWateringSwitch", "extra_entities": ["HcuConfigUseInternalOnTime"]},
-    "WATERING_CONTROLLER_CHANNEL": {"class": "HcuWateringSwitch", "extra_entities": ["HcuConfigUseInternalOnTime"]},
-    "CONDITIONAL_SWITCH_CHANNEL": {"class": "HcuSwitch", "extra_entities": ["HcuConfigUseInternalOnTime"]},
-    "OPEN_COLLECTOR_CHANNEL_8": {"class": "HcuSwitch", "extra_entities": ["HcuConfigUseInternalOnTime"]},
+    "SWITCH_CHANNEL": {"class": "HcuSwitch"},
+    "SWITCH_MEASURING_CHANNEL": {"class": "HcuSwitch"},
+    "WIRED_SWITCH_CHANNEL": {"class": "HcuSwitch"},
+    "MULTI_MODE_INPUT_SWITCH_CHANNEL": {"class": "HcuSwitch"},
+    "WATERING_ACTUATOR_CHANNEL": {"class": "HcuWateringSwitch"},
+    "WATERING_CONTROLLER_CHANNEL": {"class": "HcuWateringSwitch"},
+    "CONDITIONAL_SWITCH_CHANNEL": {"class": "HcuSwitch"},
+    "OPEN_COLLECTOR_CHANNEL_8": {"class": "HcuSwitch"},
     "SHUTTER_CHANNEL": {"class": "HcuCover"},
     "BLIND_CHANNEL": {"class": "HcuCover"},
     "BRAND_BLIND_CHANNEL": {"class": "HcuCover"},  # For HmIP-HDM1 HunterDouglas blinds
@@ -1118,7 +1119,7 @@ HMIP_CHANNEL_TYPE_TO_ENTITY = {
     "TEMPERATURE_SENSOR_2_EXTERNAL_DELTA_CHANNEL": None,
     "WALL_MOUNTED_THERMOSTAT_CARBON_CHANNEL": None,
     "WALL_MOUNTED_THERMOSTAT_CHANNEL": None,
-    "EXTERNAL_SWITCH_CHANNEL": {"class": "HcuSwitch", "extra_entities": ["HcuConfigUseInternalOnTime"]},
+    "EXTERNAL_SWITCH_CHANNEL": {"class": "HcuSwitch"},
 }
 
 # --- Simple RGB Color State Constants ---

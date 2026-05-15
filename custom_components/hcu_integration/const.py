@@ -1013,6 +1013,20 @@ DUTY_CYCLE_BINARY_SENSOR_MAPPING = {
     "entity_registry_enabled_default": False,
 }
 
+# Config-Switch mapping: writable boolean channel properties exposed as SwitchEntity (EntityCategory.CONFIG).
+# Discovery creates one HcuConfigSwitch per channel that contains the feature key.
+HMIP_CONFIG_FEATURE_TO_ENTITY: dict[str, dict] = {
+    "useInternalOnTime": {
+        "class": "HcuConfigSwitch",
+        "name": "Use Internal On Time",
+        "api_path": "/hmip/device/control/setUseInternalOnTime",
+        "api_key": "useInternalOnTime",
+        "icon": "mdi:timer-cog-outline",
+        "entity_category": EntityCategory.CONFIG,
+        "entity_registry_enabled_default": True,
+    },
+}
+
 # Channel types that send DEVICE_CHANNEL_EVENT messages exclusively
 # These should NOT use timestamp-based detection to avoid false positives from configuration changes
 DEVICE_CHANNEL_EVENT_ONLY_TYPES = {

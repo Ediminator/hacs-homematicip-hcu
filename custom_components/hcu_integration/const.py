@@ -1075,6 +1075,12 @@ HMIP_CHANNEL_ROLE_TO_ENTITY = {
     },
     "ECO_MODE_ACTIVATION": {
         "class": "HcuButtonEvent"
+    },
+    "INPUT_FOR_SILENT_ALARM": {
+        "class": "HcuButtonEvent"
+    },
+    "KEY_OR_SWITCH_FOR_ALARM_ZONE": {
+        "class": "HcuButtonEvent"
     }
 }
     

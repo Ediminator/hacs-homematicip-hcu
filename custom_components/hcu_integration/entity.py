@@ -332,13 +332,18 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, E
                 attrs["attr_name"] = self._attr_name
             if hasattr(self, "_attr_has_entity_name"):
                 attrs["attr_has_entity_name"] = self._attr_has_entity_name
+            if hasattr(self, "_attr_translation_key"):
+                attrs["attr_translation_key"] = self._attr_translation_key
             if hasattr(self, "object_id_base"):
                 attrs["object_id_base"] = self.object_id_base
             if hasattr(self, "suggested_object_id"):
                 attrs["suggested_object_id"] = self.suggested_object_id
             switchVisualization = self._channel.get("switchVisualization")
             if switchVisualization is not None:
-                attrs["switchVisualization"] = switchVisualization
+                attrs["switch_visualization"] = switchVisualization
+            channelRole = self._channel.get("channelRole")
+            if channelRole is not None:
+                attrs["channel_role"] = channelRole
         
         return attrs
     

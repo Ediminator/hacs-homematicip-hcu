@@ -23,6 +23,7 @@ This integration connects directly to your HCU's local API, providing real-time 
 - [User Message to HCU](#user-message-to-hcu)
 - [Diagnostics & Troubleshooting](#-diagnostics--troubleshooting)
 - [FAQ](#-faq)
+- [Use Internal On Time](#-use-internal-on-time)
 - [Support](#-support)
 
 ---
@@ -810,6 +811,24 @@ Configure the door lock PIN in the integration options (Settings → Devices & S
 ### Can I control the HCU itself (reboot, updates, etc.)?
 
 No, this integration only controls devices connected to the HCU. HCU management must be done through the HCU web interface.
+
+---
+
+## ⏱️ Use Internal On Time
+
+Some switch and light channels in the Homematic IP app allow you to configure an **on-time** for the internal button — the duration after which the device turns itself off automatically.
+
+This integration exposes a **"Use Internal On Time"** config switch entity per channel. When enabled, any `turn_on` command sent through Home Assistant will pass the configured `onTime` to the device, causing it to switch off automatically after the set duration — without needing a separate timer or automation.
+
+**Typical use cases:**
+- Staircase lighting (e.g. HmIP-DRSI1)
+- Water valves (e.g. HmIP-MOD-OC8)
+- Any channel where a fixed on-duration is configured in the Homematic IP app
+
+**Notes:**
+- The entity is **disabled by default** and only appears on channels that have an `onTime` value configured in the Homematic IP app.
+- Configure the on-time in the Homematic IP app first, then enable the entity in Home Assistant.
+- The enabled state is persisted across Home Assistant restarts.
 
 ---
 

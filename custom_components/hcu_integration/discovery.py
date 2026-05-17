@@ -84,6 +84,7 @@ async def async_discover_entities(
         "HcuSiren": siren,
         "HcuSwitch": switch,
         "HcuWateringSwitch": switch,
+        "HcuConfigUseInternalOnTime": switch,
         "HcuCover": cover,
         "HcuGarageDoorCover": cover,
         "HcuDoorbellEvent": event,
@@ -352,7 +353,7 @@ async def async_discover_entities(
                             uid = getattr(entity, "unique_id", None)
                             if uid:
                                 valid_entity_unique_ids.add(uid)
-                                
+
                         # Add reset button for water volume
                         if feature == "waterVolume":
                             entity = button.HcuResetWaterVolume(coordinator, client, device_data, channel_index)
@@ -360,6 +361,23 @@ async def async_discover_entities(
                             uid = getattr(entity, "unique_id", None)
                             if uid:
                                 valid_entity_unique_ids.add(uid)
+
+                        # Create companion config entity if defined (e.g. HcuConfigUseInternalOnTime for onTime).
+                        # unique_id includes channel_index, so multiple channels per device are handled correctly.
+                        if companion_class_name := mapping.get("config_companion"):
+                            if companion_module := class_module_map.get(companion_class_name):
+                                try:
+                                    companion_class = getattr(companion_module, companion_class_name)
+                                    companion = companion_class(coordinator, client, device_data, channel_index)
+                                    entities[companion.PLATFORM].append(companion)
+                                    c_uid = getattr(companion, "unique_id", None)
+                                    if c_uid:
+                                        valid_entity_unique_ids.add(c_uid)
+                                except (AttributeError, TypeError) as e:
+                                    _LOGGER.error(
+                                        "Failed to create config companion '%s' for device %s, channel %s: %s",
+                                        companion_class_name, device_data.get("id"), channel_index, e,
+                                    )
                                 
 
                     except (AttributeError, TypeError) as e:

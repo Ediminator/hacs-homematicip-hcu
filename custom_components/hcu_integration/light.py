@@ -23,7 +23,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .switch import HcuSwitch
 from .entity import HcuBaseEntity, HcuSwitchingGroupBase
-from .api import HcuApiClient
+from .api import HcuApiClient, HcuApiError
 from .const import (
     API_PATHS,
     HMIP_RGB_COLOR_MAP,
@@ -223,8 +223,27 @@ class HcuLight(HcuBaseEntity, LightEntity):
         """
         return _convert_hs_to_simple_rgb(hs_color)
 
+    async def async_turn_on_with_time(self, on_time: float) -> None:
+        """Turn the light on for a specific duration using the configured internal on-time."""
+        self._attr_assumed_state = True
+        self.async_write_ha_state()
+        try:
+            current_brightness = self.brightness if self.is_on else None
+            dim_level = (current_brightness or 255) / 255.0
+            await self._client.async_set_dim_level(
+                self._device_id, self._channel_index, dim_level, on_time=on_time
+            )
+        except (HcuApiError, ConnectionError) as err:
+            _LOGGER.error("Failed to turn on %s with time: %s", self.name, err)
+            self._attr_assumed_state = False
+            self.async_write_ha_state()
+
     async def async_turn_on(self, **kwargs) -> None:
         """Turn the light on with optional color, temperature, brightness, or effect adjustments."""
+        if not kwargs and (on_time := self._get_internal_on_time()):
+            await self.async_turn_on_with_time(on_time)
+            return
+
         # Default to current brightness if the light is on, otherwise 100%.
         current_brightness = self.brightness if self.is_on else None
         target_brightness = kwargs.get(ATTR_BRIGHTNESS, current_brightness or 255)

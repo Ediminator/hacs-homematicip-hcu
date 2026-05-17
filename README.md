@@ -265,18 +265,10 @@ time_fired: 2025-10-26T10:30:45.123456+00:00
    - **⚠️ Note (since v2.0.0):** Use subtype instead of channel to identify which button was pressed.
 - `type`: The type of the button event (`ring`, `press`, `press_short`, `press_long`, `press_long_start` or `press_long_stop`)
    - **⚠️ Note (since v2.0.0):** type are now lowercase and no longer prefixed with a "key_")
-**Please note**: A long button press first generates a single `press_long`
-event, followed by a single `press_long_start` event. As long as the button
-is pressed, a sequence of periodic `press_long` events is then generated
-- `channel`: Which button was pressed (1, 2, 3, etc.)
-- `type`: The type of the button event (`DOOR_BELL_SENSOR_EVENT`, `KEY_PRESS_SHORT`, `KEY_PRESS_LONG`,
-          `KEY_PRESS_LONG_START` or `KEY_PRESS_LONG_STOP`)
-
-**Please note**: A long button press first generates a single `KEY_PRESS_LONG`
-event, followed by a single `KEY_PRESS_LONG_START` event. As long as the button
-is pressed, a sequence of periodic `KEY_PRESS_LONG` events is then generated
-approximately every 0.35 seconds. When the button is released, a single
-`press_long_stop` event is generated.
+   - `press_short`: fires once on a short press
+   - `press_long_start`: fires once at the beginning of a long press
+   - `press_long`: fires repeatedly (~every 250 ms) while the button is held
+   - `press_long_stop`: fires once when the button is released after a long press
 
 
 

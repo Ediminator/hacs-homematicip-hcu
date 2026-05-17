@@ -6,10 +6,13 @@
 
 This integration connects directly to your HCU's local API, providing real-time control and status updates for all your Homematic IP devices through Home Assistant.
 
+> **This is a passion project built entirely in personal spare time.** Its continued development depends on the community — every bug report, diagnostics file, and piece of user feedback directly shapes what gets supported and improved next. If this integration adds value to your setup, please consider giving back by sharing diagnostics, testing new features, or opening an issue on GitHub.
+
 ---
 
 ## 📋 Table of Contents
 
+- [Breaking Changes v2.0.0](#️-breaking-changes-v200)
 - [Features](#-features)
 - [Requirements](#-requirements)
 - [Installation](#-installation)
@@ -20,6 +23,7 @@ This integration connects directly to your HCU's local API, providing real-time 
 - [User Message to HCU](#user-message-to-hcu)
 - [Diagnostics & Troubleshooting](#-diagnostics--troubleshooting)
 - [FAQ](#-faq)
+- [Use Internal On Time](#-use-internal-on-time)
 - [Support](#-support)
 
 ---
@@ -265,18 +269,11 @@ time_fired: 2025-10-26T10:30:45.123456+00:00
    - **⚠️ Note (since v2.0.0):** Use subtype instead of channel to identify which button was pressed.
 - `type`: The type of the button event (`ring`, `press`, `press_short`, `press_long`, `press_long_start` or `press_long_stop`)
    - **⚠️ Note (since v2.0.0):** type are now lowercase and no longer prefixed with a "key_")
-**Please note**: A long button press first generates a single `press_long`
-event, followed by a single `press_long_start` event. As long as the button
-is pressed, a sequence of periodic `press_long` events is then generated
-- `channel`: Which button was pressed (1, 2, 3, etc.)
-- `type`: The type of the button event (`DOOR_BELL_SENSOR_EVENT`, `KEY_PRESS_SHORT`, `KEY_PRESS_LONG`,
-          `KEY_PRESS_LONG_START` or `KEY_PRESS_LONG_STOP`)
-
-**Please note**: A long button press first generates a single `KEY_PRESS_LONG`
-event, followed by a single `KEY_PRESS_LONG_START` event. As long as the button
-is pressed, a sequence of periodic `KEY_PRESS_LONG` events is then generated
-approximately every 0.35 seconds. When the button is released, a single
-`press_long_stop` event is generated.
+   - `ring`: fires once when the doorbell is pressed
+   - `press_short`: fires once on a short press
+   - `press_long_start`: fires once at the beginning of a long press
+   - `press_long`: fires repeatedly (~every 250 ms) while the button is held
+   - `press_long_stop`: fires once when the button is released after a long press
 
 
 
@@ -544,35 +541,6 @@ mode: restart
    - Channels 1, 2, 3, 4 are your buttons (ignore channel 0 - it's always the maintenance channel)
 
 ---
-
-### Troubleshooting Button Events
-
-**Problem: No events appear when I press buttons**
-
-✅ **Solutions:**
-1. **Update to v1.8.1 or later** - Critical bug fixes for HmIP-WGS and HmIP-WRC6
-2. **Verify the device is connected:**
-   - Check Settings → Devices & Services → Your device
-   - Make sure it's not showing as "unavailable"
-3. **Check you're listening to the right event:**
-   - Event type must be exactly: `hcu_integration_event` (no spaces, underscores)
-4. **Enable debug logging:**
-   - See [Debug Logging section](#debug-logging) below
-   - Look for lines like "Button press detected via..." in the logs
-5. **Verify your button device is actually a button:**
-   - Not all channels are buttons
-   - Check diagnostics to see the channel type
-
-**Problem: I see button entities in my old version**
-
-This is expected if you're upgrading from a very old version (pre-1.5.0). The old button entities were removed because:
-- They didn't reflect the actual button press (always showed "unknown")
-- Event-based triggers are more flexible and reliable
-- This matches Home Assistant's standard approach
-
-Simply delete the old button entities and use event-based automations instead.
-
----
 ## User Message to HCU
 
 <img src="https://raw.githubusercontent.com/Ediminator/hacs-homematicip-hcu/refs/heads/main/images/usermessage.jpeg" height="300"> 
@@ -795,19 +763,31 @@ When a new version is released:
 
 ---
 
+## ⚠️ Breaking Changes v2.0.0
+
+> **Please review all your automations carefully before updating to v2.0.0.**
+
+### Button & Remote Events
+
+- **Event types are now lowercase** and no longer prefixed with `key_`.
+  Old → New examples: `KEY_PRESS_SHORT` → `press_short`, `KEY_PRESS_LONG` → `press_long`
+- **`channel` field renamed to `subtype`** in the `hcu_integration_event` event data.
+  Update all automations that reference `trigger.event.data.channel` to use `trigger.event.data.subtype` instead.
+- **Doorbell sensor** now fires event type `ring` (previously `DOOR_BELL_SENSOR_EVENT`).
+- **Button pair correction:** On devices where individual buttons can be combined into a button pair, presses were previously reported on the wrong channel. This has been corrected — if you are affected, update your automations accordingly.
+
+### Switches
+
+- Switches are now displayed as **outlet**, **switch**, or **light** depending on the setting in the Homematic IP app.
+  Existing switch entities configured as "Light" may no longer appear under the switch platform — check your automations and dashboards after updating.
+
+---
+
 ## ❓ FAQ
 
 ### Can I use both the cloud integration and this local integration?
 
 Not recommended. Running both simultaneously may cause conflicts. Choose one approach.
-
-### My button device isn't working (HmIP-WGS, HmIP-WRC6, etc.)
-
-Make sure you're on **v1.8.1 or later**. This version includes critical fixes for button event detection. See the [Button Troubleshooting section](#troubleshooting-button-events) above.
-
-### Why don't I see button entities anymore?
-
-As of v1.5.0, button devices use **event-based triggers** instead of entities. This is the Home Assistant standard for stateless buttons and provides more flexibility. See the [Button section](#-working-with-buttons--remote-controls) for how to use them.
 
 ### My device isn't appearing in Home Assistant
 
@@ -831,6 +811,24 @@ Configure the door lock PIN in the integration options (Settings → Devices & S
 ### Can I control the HCU itself (reboot, updates, etc.)?
 
 No, this integration only controls devices connected to the HCU. HCU management must be done through the HCU web interface.
+
+---
+
+## ⏱️ Use Internal On Time
+
+Some switch and light channels in the Homematic IP app allow you to configure an **on-time** for the internal button — the duration after which the device turns itself off automatically.
+
+This integration exposes a **"Use Internal On Time"** config switch entity per channel. When enabled, any `turn_on` command sent through Home Assistant will pass the configured `onTime` to the device, causing it to switch off automatically after the set duration — without needing a separate timer or automation.
+
+**Typical use cases:**
+- Staircase lighting (e.g. HmIP-DRSI1)
+- Water valves (e.g. HmIP-MOD-OC8)
+- Any channel where a fixed on-duration is configured in the Homematic IP app
+
+**Notes:**
+- The entity is **disabled by default** and only appears on channels that have an `onTime` value configured in the Homematic IP app.
+- Configure the on-time in the Homematic IP app first, then enable the entity in Home Assistant.
+- The enabled state is persisted across Home Assistant restarts.
 
 ---
 

@@ -1,4 +1,5 @@
 # custom_components/hcu_integration/switch.py
+"""Switch platform for the Homematic IP HCU integration."""
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.switch import SwitchEntity, SwitchDeviceClass

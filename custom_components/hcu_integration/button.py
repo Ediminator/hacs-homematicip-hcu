@@ -1,8 +1,5 @@
 # custom_components/hcu_integration/button.py
-"""
-Support for Homematic IP HCU action buttons.
-Stateless buttons are handled via events in the coordinator.
-"""
+"""Button platform for the Homematic IP HCU integration."""
 import logging
 from typing import TYPE_CHECKING, Any
 

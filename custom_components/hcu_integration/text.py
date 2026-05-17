@@ -38,7 +38,7 @@ class HcuDevicePin(HcuBaseEntity, TextEntity):
     PLATFORM = Platform.TEXT
     _attr_translation_key = "hcu_device_pin"
     _attr_icon = "mdi:lock-outline"
-    _attr_mode = TextMode.TEXT
+    _attr_mode = TextMode.PASSWORD
     _attr_native_min = 0
     _attr_native_max = 20
     _attr_entity_category = EntityCategory.CONFIG

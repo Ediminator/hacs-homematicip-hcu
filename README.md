@@ -268,6 +268,7 @@ time_fired: 2025-10-26T10:30:45.123456+00:00
    - **⚠️ Note (since v2.0.0):** Use subtype instead of channel to identify which button was pressed.
 - `type`: The type of the button event (`ring`, `press`, `press_short`, `press_long`, `press_long_start` or `press_long_stop`)
    - **⚠️ Note (since v2.0.0):** type are now lowercase and no longer prefixed with a "key_")
+   - `ring`: fires once when the doorbell is pressed
    - `press_short`: fires once on a short press
    - `press_long_start`: fires once at the beginning of a long press
    - `press_long`: fires repeatedly (~every 250 ms) while the button is held

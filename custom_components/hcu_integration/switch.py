@@ -206,6 +206,17 @@ class HcuConfigUseInternalOnTime(RestoreEntity, HcuBaseEntity, SwitchEntity):
         if (last_state := await self.async_get_last_state()) is not None:
             self._attr_is_on = last_state.state == STATE_ON
 
+        if self._attr_is_on:
+            internal_link = self._channel.get("internalLinkConfiguration") or {}
+            on_time = self._channel.get("onTime") or internal_link.get("onTime") or 0
+            if on_time == 0 or on_time == HMIP_ON_TIME_INFINITE:
+                _LOGGER.debug(
+                    "Disabling 'Use Internal On Time' for %s on startup: onTime is not configured (value: %s)",
+                    self.name,
+                    on_time,
+                )
+                self._attr_is_on = False
+
     @property
     def is_on(self) -> bool:
         return self._attr_is_on

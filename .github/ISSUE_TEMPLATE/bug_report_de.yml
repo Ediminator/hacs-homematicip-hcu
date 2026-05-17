@@ -32,11 +32,13 @@ body:
     attributes:
       label: Bestätigung
       options:
-        - label: Ich habe die Liste **Good first issues** sowie bestehende Issues geprüft, um sicherzustellen, dass dieses Problem noch nicht gemeldet oder bereits gelöst wurde.
+        - label: Ich habe die **Good first issues** Liste und bestehende Issues überprüft, um sicherzustellen, dass dieses Problem noch nicht gemeldet oder gelöst wurde.
           required: true
         - label: Ich habe die **README** gelesen und alle relevanten Anweisungen befolgt.
           required: true
-        - label: Ich habe die Integration neu geladen, um mein Problem zu lösen.
+        - label: Nach einem Neustart der HCU habe ich gewartet, bis sich alle Sensoren und Aktoren bei der HCU gemeldet haben. Besonders Batterie-Sensoren benötigen gelegentlich einen manuellen Anstoß. Danach habe ich die Integration neu gestartet.
+          required: true
+        - label: Ich habe die **Breaking Changes** der letzten Updates gelesen, insbesondere die **2.0.0 Breaking Changes**, und diese lösen mein Problem nicht.
           required: true
 
   - type: textarea

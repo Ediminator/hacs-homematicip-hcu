@@ -38,7 +38,7 @@ class HcuDevicePin(HcuBaseEntity, TextEntity):
     PLATFORM = Platform.TEXT
     _attr_translation_key = "hcu_device_pin"
     _attr_icon = "mdi:lock-outline"
-    _attr_mode = TextMode.PASSWORD
+    _attr_mode = TextMode.TEXT
     _attr_native_min = 0
     _attr_native_max = 20
     _attr_entity_category = EntityCategory.CONFIG
@@ -55,14 +55,24 @@ class HcuDevicePin(HcuBaseEntity, TextEntity):
         self._config_entry = coordinator.config_entry
         self._attr_unique_id = f"{self._device_id}_device_pin"
         self._pin_key = self._device_id
-        
-    @property
-    def native_value(self) -> str:
+
+    def _stored_pin(self) -> str:
         return self._config_entry.options.get(CONF_DEVICE_PINS, {}).get(
             self._pin_key, ""
         )
 
+    @property
+    def native_value(self) -> str:
+        pin = self._stored_pin()
+        return "*" * len(pin) if pin else ""
+
     async def async_set_value(self, value: str) -> None:
+        # If the submitted value is all asterisks matching the current masked length,
+        # the user confirmed without changing the PIN — skip the update.
+        current_pin = self._stored_pin()
+        if value and set(value) == {"*"} and len(value) == len(current_pin):
+            return
+
         new_pins = dict(self._config_entry.options.get(CONF_DEVICE_PINS, {}))
         if value:
             new_pins[self._pin_key] = value

@@ -198,7 +198,7 @@ class HcuConfigUseInternalOnTime(RestoreEntity, HcuBaseEntity, SwitchEntity):
     ):
         super().__init__(coordinator, client, device_data, channel_index)
         self._set_entity_name(channel_label=self._channel.get("label"), feature_name="Use Internal On Time")
-        self._attr_unique_id = f"{self._device_id}_{self._channel_index}_useInternalOnTime"
+        self._attr_unique_id = f"{self._device_id}_{self._channel_index}_use_internal_on_time"
         self._attr_is_on = False
 
     async def async_added_to_hass(self) -> None:

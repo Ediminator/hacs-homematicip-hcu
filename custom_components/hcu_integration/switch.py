@@ -211,7 +211,8 @@ class HcuConfigUseInternalOnTime(RestoreEntity, HcuBaseEntity, SwitchEntity):
         return self._attr_is_on
 
     async def async_turn_on(self, **kwargs: Any) -> None:
-        on_time = self._channel.get("onTime", 0) or 0
+        internal_link = self._channel.get("internalLinkConfiguration") or {}
+        on_time = self._channel.get("onTime") or internal_link.get("onTime") or 0
         if on_time == 0 or on_time == HMIP_ON_TIME_INFINITE:
             _LOGGER.debug(
                 "Cannot enable 'Use Internal On Time' for %s: onTime is not configured (value: %s)",

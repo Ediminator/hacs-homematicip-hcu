@@ -6,7 +6,7 @@
 
 This integration connects directly to your HCU's local API, providing real-time control and status updates for all your Homematic IP devices through Home Assistant.
 
-> **This is a hobby project developed in private spare time.** It lives and grows through the community — bug reports, diagnostics files, and feedback from users are what make new device support and improvements possible. If this integration is useful to you, please consider contributing by sharing diagnostics, testing new features, or reporting issues on GitHub.
+> **This is a passion project built entirely in personal spare time.** Its continued development depends on the community — every bug report, diagnostics file, and piece of user feedback directly shapes what gets supported and improved next. If this integration adds value to your setup, please consider giving back by sharing diagnostics, testing new features, or opening an issue on GitHub.
 
 ---
 

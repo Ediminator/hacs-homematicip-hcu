@@ -9,7 +9,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
 
 import logging
-from .const import HMIP_DEVICE_TYPE_TO_DEVICE_CLASS, API_PATHS
+from .const import HMIP_DEVICE_TYPE_TO_DEVICE_CLASS, HMIP_ON_TIME_INFINITE, API_PATHS
 from .entity import HcuBaseEntity, SwitchStateMixin, HcuSwitchingGroupBase
 from .api import HcuApiClient, HcuApiError
 
@@ -211,6 +211,14 @@ class HcuConfigUseInternalOnTime(RestoreEntity, HcuBaseEntity, SwitchEntity):
         return self._attr_is_on
 
     async def async_turn_on(self, **kwargs: Any) -> None:
+        on_time = self._channel.get("onTime", 0) or 0
+        if on_time == 0 or on_time == HMIP_ON_TIME_INFINITE:
+            _LOGGER.debug(
+                "Cannot enable 'Use Internal On Time' for %s: onTime is not configured (value: %s)",
+                self.name,
+                on_time,
+            )
+            return
         self._attr_is_on = True
         self.async_write_ha_state()
 

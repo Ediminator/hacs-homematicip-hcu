@@ -793,14 +793,6 @@ When a new version is released:
 
 Not recommended. Running both simultaneously may cause conflicts. Choose one approach.
 
-### My button device isn't working (HmIP-WGS, HmIP-WRC6, etc.)
-
-Make sure you're on **v1.8.1 or later**. This version includes critical fixes for button event detection. See the [Button Troubleshooting section](#troubleshooting-button-events) above.
-
-### Why don't I see button entities anymore?
-
-As of v1.5.0, button devices use **event-based triggers** instead of entities. This is the Home Assistant standard for stateless buttons and provides more flexibility. See the [Button section](#-working-with-buttons--remote-controls) for how to use them.
-
 ### My device isn't appearing in Home Assistant
 
 1. Verify the device appears in the HCU web interface

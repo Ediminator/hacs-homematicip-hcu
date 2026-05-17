@@ -539,35 +539,6 @@ mode: restart
    - Channels 1, 2, 3, 4 are your buttons (ignore channel 0 - it's always the maintenance channel)
 
 ---
-
-### Troubleshooting Button Events
-
-**Problem: No events appear when I press buttons**
-
-✅ **Solutions:**
-1. **Update to v1.8.1 or later** - Critical bug fixes for HmIP-WGS and HmIP-WRC6
-2. **Verify the device is connected:**
-   - Check Settings → Devices & Services → Your device
-   - Make sure it's not showing as "unavailable"
-3. **Check you're listening to the right event:**
-   - Event type must be exactly: `hcu_integration_event` (no spaces, underscores)
-4. **Enable debug logging:**
-   - See [Debug Logging section](#debug-logging) below
-   - Look for lines like "Button press detected via..." in the logs
-5. **Verify your button device is actually a button:**
-   - Not all channels are buttons
-   - Check diagnostics to see the channel type
-
-**Problem: I see button entities in my old version**
-
-This is expected if you're upgrading from a very old version (pre-1.5.0). The old button entities were removed because:
-- They didn't reflect the actual button press (always showed "unknown")
-- Event-based triggers are more flexible and reliable
-- This matches Home Assistant's standard approach
-
-Simply delete the old button entities and use event-based automations instead.
-
----
 ## User Message to HCU
 
 <img src="https://raw.githubusercontent.com/Ediminator/hacs-homematicip-hcu/refs/heads/main/images/usermessage.jpeg" height="300"> 

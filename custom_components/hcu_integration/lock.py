@@ -1,4 +1,5 @@
 # custom_components/hcu_integration/lock.py
+"""Lock platform for the Homematic IP HCU integration."""
 from __future__ import annotations
 
 import logging

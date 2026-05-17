@@ -1,3 +1,4 @@
+# custom_components/hcu_integration/discovery.py
 """Entity discovery logic for the Homematic IP HCU integration."""
 
 from __future__ import annotations

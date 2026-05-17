@@ -816,6 +816,8 @@ No, this integration only controls devices connected to the HCU. HCU management 
 
 ## ⏱️ Use Internal On Time
 
+<img src="https://raw.githubusercontent.com/Ediminator/hacs-homematicip-hcu/refs/heads/main/images/internalontime.png" height="300"> 
+
 Some switch and light channels in the Homematic IP app allow you to configure an **on-time** for the internal button — the duration after which the device turns itself off automatically.
 
 This integration exposes a **"Use Internal On Time"** config switch entity per channel. When enabled, any `turn_on` command sent through Home Assistant will pass the configured `onTime` to the device, causing it to switch off automatically after the set duration — without needing a separate timer or automation.

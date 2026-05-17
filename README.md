@@ -21,9 +21,9 @@ This integration connects directly to your HCU's local API, providing real-time 
 - [Working with Buttons & Remote Controls](#-working-with-buttons--remote-controls)
 - [Available Actions](#-available-actions)
 - [User Message to HCU](#user-message-to-hcu)
+- [Use Internal On Time](#-use-internal-on-time)
 - [Diagnostics & Troubleshooting](#-diagnostics--troubleshooting)
 - [FAQ](#-faq)
-- [Use Internal On Time](#-use-internal-on-time)
 - [Support](#-support)
 
 ---

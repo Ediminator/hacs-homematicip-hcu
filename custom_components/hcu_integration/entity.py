@@ -3,13 +3,15 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 import logging
 
+from homeassistant.const import STATE_ON
 from homeassistant.core import callback
 from homeassistant.helpers.entity import DeviceInfo, Entity
 from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN, CONF_ENTITY_PREFIX, HOMEMATIC_MODEL_PREFIXES, CONF_ADVANCED_ATTRIBUTES, CONF_PIN, CONF_DEVICE_PINS, CONF_CLIENT_ID
+from .const import DOMAIN, CONF_ENTITY_PREFIX, HOMEMATIC_MODEL_PREFIXES, CONF_ADVANCED_ATTRIBUTES, CONF_PIN, CONF_DEVICE_PINS, CONF_CLIENT_ID, HMIP_ON_TIME_INFINITE
 from .api import HcuApiClient, HcuApiError
 from .util import get_device_manufacturer
 
@@ -371,6 +373,22 @@ class HcuBaseEntity(CoordinatorEntity["HcuCoordinator"], HcuEntityPrefixMixin, E
         maintenance_channel = self._device.get("functionalChannels", {}).get("0", {})
         return not maintenance_channel.get("unreach", False)
 
+
+    def _get_internal_on_time(self) -> float | None:
+        """Return onTime if the companion 'Use Internal On Time' config switch is ON, else None."""
+        companion_uid = f"{self._device_id}_{self._channel_index}_use_internal_on_time"
+        registry = er.async_get(self.hass)
+        entity_id = registry.async_get_entity_id("switch", DOMAIN, companion_uid)
+        if entity_id is None:
+            return None
+        state = self.hass.states.get(entity_id)
+        if state is None or state.state != STATE_ON:
+            return None
+        internal_link = self._channel.get("internalLinkConfiguration") or {}
+        on_time = self._channel.get("onTime") or internal_link.get("onTime") or 0
+        if on_time == 0 or on_time == HMIP_ON_TIME_INFINITE:
+            return None
+        return float(on_time)
 
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""

@@ -74,6 +74,9 @@ class HcuSwitch(SwitchStateMixin, HcuBaseEntity, SwitchEntity):
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the switch on."""
+        if on_time := self._get_internal_on_time():
+            await self.async_turn_on_with_time(on_time)
+            return
         await self._async_set_optimistic_state(True, "switch")
 
     async def async_turn_off(self, **kwargs: Any) -> None:

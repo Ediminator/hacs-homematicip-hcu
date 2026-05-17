@@ -12,6 +12,7 @@ This integration connects directly to your HCU's local API, providing real-time 
 
 ## 📋 Table of Contents
 
+- [Breaking Changes v2.0.0](#️-breaking-changes-v200)
 - [Features](#-features)
 - [Requirements](#-requirements)
 - [Installation](#-installation)
@@ -21,7 +22,6 @@ This integration connects directly to your HCU's local API, providing real-time 
 - [Available Actions](#-available-actions)
 - [User Message to HCU](#user-message-to-hcu)
 - [Diagnostics & Troubleshooting](#-diagnostics--troubleshooting)
-- [Breaking Changes v2.0.0](#️-breaking-changes-v200)
 - [FAQ](#-faq)
 - [Support](#-support)
 

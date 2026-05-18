@@ -271,7 +271,7 @@ delete_user_message_request:
   description: Delete a previously created User Message from the Homematic IP app.
   fields:
     user_message_id:
-      name: User Message Id
+      name: User Message ID
       description: "Use the User Message ID of the previously created User Message here."
       example: 'USER_MESSAGE'
       required: true

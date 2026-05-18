@@ -117,7 +117,6 @@
     "issues": {
 		"pin_failed": {
 			"title": "PIN-Fehler für {device_name}",
-			"description": "Der Autorisierungs-PIN für {device_name} ist fehlgeschlagen.",
 			"fix_flow": {
 				"step": {
 					"confirm": {
@@ -281,11 +280,11 @@
           "name": "User Message erstellen",
           "description": "Erstellt eine User Message, die in der Homematic IP App angezeigt wird. Siehe die eQ-3 API-Dokumentation für Details.",
           "fields": {
-            "messageCategory": {
+            "message_category": {
               "name": "User Message Kategorie",
               "description": "Wähle die Kategorie der User Message."
             },
-            "userMessageId": {
+            "user_message_id": {
               "name": "User Message ID",
               "description": "Gib eine eindeutige Kennung für die User Message an."
             },
@@ -297,7 +296,7 @@
               "name": "Nachricht",
               "description": "Gib einen Nachrichtentext ein. Es kann entweder ein Text oder ein Language Object sein."
             },
-            "behaviorType": {
+            "behavior_type": {
               "name": "Verhaltenstyp",
               "description": "Lege fest, wie die Nachricht in der Homematic IP App bestätigt oder ausgeblendet werden kann."
             }
@@ -307,7 +306,7 @@
             "name": "Lösche eine User Message Nachricht",
             "description": "Lösche eine Zuvor erstelle User Message Nachricht aus der Homematic IP App. Siehe API-Dokumentation von EQ3 für Details",
             "fields": {
-                "userMessageId": {
+                "user_message_id": {
                     "name": "User Message Id",
                     "description": "Verwende hier die User Message ID der zurvor angelegten User Message."
                 }

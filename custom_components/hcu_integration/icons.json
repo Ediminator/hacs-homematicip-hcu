@@ -22,8 +22,8 @@
                         "default": "mdi:thermostat",
                         "state": {
                             "boost": "mdi:rocket-launch",
-                            "Eco": "mdi:leaf",
-                            "Party": "mdi:party-popper"
+                            "eco": "mdi:leaf",
+                            "party": "mdi:party-popper"
                         }
                     }
                 }

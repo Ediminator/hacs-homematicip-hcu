@@ -127,8 +127,8 @@ SERVICE_USER_MESSAGE = "create_user_message_request"
 SERVICE_USER_MESSAGE_DELETE = "delete_user_message_request"
 
 # --- Preset Constants ---
-PRESET_ECO = "Eco"
-PRESET_PARTY = "Party"
+PRESET_ECO = "eco"
+PRESET_PARTY = "party"
 
 # --- Service Attribute Constants ---
 ATTR_SOUND_FILE = "sound_file"
@@ -141,11 +141,11 @@ ATTR_ON_TIME = "on_time"
 ATTR_PATH = "path"
 ATTR_BODY = "body"
 ATTR_COOLING = "cooling"
-ATTR_USER_MESSAGE_ID = "userMessageId"
+ATTR_USER_MESSAGE_ID = "user_message_id"
 ATTR_USER_MESSAGE_MESSAGE = "message"
 ATTR_USER_MESSAGE_TITLE = "title"
-ATTR_USER_MESSAGE_BEHAVIOR_TYPE = "behaviorType"
-ATTR_USER_MESSAGE_CATEGORY = "messageCategory"
+ATTR_USER_MESSAGE_BEHAVIOR_TYPE = "behavior_type"
+ATTR_USER_MESSAGE_CATEGORY = "message_category"
 
 # --- API Path Constants ---
 API_PATHS = {

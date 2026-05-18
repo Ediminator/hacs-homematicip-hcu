@@ -67,7 +67,8 @@
                 "menu_options": {
                     "global_settings": "Global Settings",
                     "lock_pin": "Lock PIN Configuration",
-                    "vacation": "Set Vacation Mode"
+                    "vacation": "Set Vacation Mode",
+                    "ha_entities": "Home Assistant Entities → HCU"
                 }
             },
             "global_settings": {
@@ -103,6 +104,16 @@
                 "data": {
                     "temperature": "Target Temperature",
                     "end_time": "End Date and Time"
+                }
+            },
+            "ha_entities": {
+                "title": "Home Assistant Entities → HCU",
+                "description": "Select Home Assistant entities (switch, light, sensor) to expose to the Homematic IP HCU. The HCU can then include and control these entities as plugin devices.",
+                "data": {
+                    "ha_entities": "Entities to expose"
+                },
+                "data_description": {
+                    "ha_entities": "Search and select switch, light, and sensor entities. They will appear as devices in the HCU and can be included in HCU rooms and automations."
                 }
             }
         },

@@ -67,7 +67,8 @@
                 "menu_options": {
                     "global_settings": "Globale Einstellungen",
                     "lock_pin": "Türschloss-PIN Konfiguration",
-                    "vacation": "Urlaubsmodus einstellen"
+                    "vacation": "Urlaubsmodus einstellen",
+                    "ha_entities": "Home Assistant Entitäten → HCU"
                 }
             },
             "global_settings": {
@@ -103,6 +104,16 @@
                 "data": {
                     "temperature": "Ziel-Temperatur",
                     "end_time": "Enddatum und -uhrzeit"
+                }
+            },
+            "ha_entities": {
+                "title": "Home Assistant Entitäten → HCU",
+                "description": "Wähle Home Assistant Entitäten (Schalter, Licht, Sensor) aus, die der Homematic IP HCU als Plugin-Geräte bereitgestellt werden sollen. Die HCU kann diese Entitäten dann einbinden und steuern.",
+                "data": {
+                    "ha_entities": "Bereitzustellende Entitäten"
+                },
+                "data_description": {
+                    "ha_entities": "Suche und wähle Schalter-, Licht- und Sensor-Entitäten aus. Diese erscheinen dann als Geräte in der HCU und können in HCU-Räumen und Automationen eingebunden werden."
                 }
             }
         },

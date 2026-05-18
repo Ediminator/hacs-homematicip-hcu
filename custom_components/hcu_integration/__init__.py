@@ -34,7 +34,9 @@ from .const import (
     WEBSOCKET_RECONNECT_INITIAL_DELAY,
     WEBSOCKET_RECONNECT_JITTER_MAX,
     WEBSOCKET_RECONNECT_MAX_DELAY,
+    CONF_HA_ENTITIES,
 )
+from .ha_entity_bridge import HaEntityBridge
 
 from .discovery import async_discover_entities
 from .services import (
@@ -86,6 +88,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
+    # Set up HA entity bridge
+    ha_entities = entry.options.get(CONF_HA_ENTITIES, [])
+    bridge = HaEntityBridge(
+        hass,
+        ha_entities,
+        client._send_message,
+        client.plugin_id,
+    )
+    client.set_ha_entity_bridge(bridge)
+    bridge.start_listening()
+    coordinator._ha_bridge = bridge
+
     # Register services (only once for first config entry)
     service_entries: set[str] = hass.data.setdefault(SERVICE_ENTRIES_KEY, set())
     if not service_entries:
@@ -107,6 +121,9 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         if not service_entries:
             async_unregister_services(hass)
             hass.data.pop(SERVICE_ENTRIES_KEY, None)
+
+    if hasattr(coordinator, "_ha_bridge") and coordinator._ha_bridge:
+        coordinator._ha_bridge.stop_listening()
 
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 

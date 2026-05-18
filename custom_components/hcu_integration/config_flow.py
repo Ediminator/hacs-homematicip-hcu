@@ -57,6 +57,7 @@ from .const import (
     CONF_DISABLED_GROUPS,
     CONF_SELECTED_OEMS,
     CONF_DISABLED_OEMS,
+    CONF_HA_ENTITIES,
     ATTR_END_TIME,
 )
 from .util import create_unverified_ssl_context, get_device_manufacturer, get_group_type
@@ -463,7 +464,7 @@ class HcuOptionsFlowHandler(OptionsFlow):
         """Manage the options for the integration."""
         return self.async_show_menu(
             step_id="init",
-            menu_options=["global_settings", "lock_pin", "vacation"],
+            menu_options=["global_settings", "lock_pin", "vacation", "ha_entities"],
         )
 
     async def async_step_global_settings(
@@ -686,6 +687,34 @@ class HcuOptionsFlowHandler(OptionsFlow):
                 }
             ),
             errors=errors,
+        )
+
+    async def async_step_ha_entities(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Select Home Assistant entities to expose to the HCU."""
+        if user_input is not None:
+            new_options = {**self.config_entry.options}
+            new_options[CONF_HA_ENTITIES] = user_input.get(CONF_HA_ENTITIES, [])
+            return self.async_create_entry(title="", data=new_options)
+
+        current = self.config_entry.options.get(CONF_HA_ENTITIES, [])
+
+        return self.async_show_form(
+            step_id="ha_entities",
+            data_schema=vol.Schema(
+                {
+                    vol.Optional(
+                        CONF_HA_ENTITIES,
+                        default=current,
+                    ): selector.EntitySelector(
+                        selector.EntitySelectorConfig(
+                            domain=["switch", "light", "sensor"],
+                            multiple=True,
+                        )
+                    ),
+                }
+            ),
         )
 
     async def _handle_device_removal(self, disabled_oems: list[str] | set[str]) -> None:

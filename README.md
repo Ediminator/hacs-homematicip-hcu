@@ -834,6 +834,40 @@ This integration exposes a **"Use Internal On Time"** config switch entity per c
 
 ---
 
+## Expose Home Assistant Entities to HCU
+
+You can expose **Home Assistant entities** (switch, light, sensor) to the Homematic IP HCU as plugin devices. This allows the HCU to include, display, and control these entities within its own rooms, groups, and automations.
+
+### How it works
+
+The integration acts as a **plugin** towards the HCU via the Connect API WebSocket. When you expose HA entities:
+- The HCU discovers them via **DiscoverResponse** and shows them as includable devices.
+- State changes in Home Assistant are pushed to the HCU in real time via **StatusEvent**.
+- Commands sent from the HCU (e.g., turning on a switch from the Homematic IP app) are forwarded back to Home Assistant via **ControlRequest**.
+
+### Supported entity types
+
+| HA Domain | HCU Device Type | Controllable |
+|-----------|----------------|-------------|
+| `switch`  | Switch         | Yes (on/off) |
+| `light`   | Dimmer         | Yes (on/off + brightness) |
+| `sensor`  | Sensor         | No (read-only) |
+
+### Configuration
+
+1. Go to **Settings → Devices & Services → Homematic IP HCU → Configure**
+2. Select **"Home Assistant Entities → HCU"**
+3. Use the search field to find and select the entities you want to expose
+4. Save — the HCU will discover the entities on the next DiscoverRequest
+
+**Notes:**
+- Only Switch, Light, and Sensor entities are supported at this time.
+- Sensor entities are read-only; the HCU can display their values but not control them.
+- The HCU must re-run device inclusion after you add or remove entities.
+- Entity IDs are used as stable device identifiers in the HCU.
+
+---
+
 ## 💬 Support
 
 - **Issues & Bug Reports:** [GitHub Issues](https://github.com/Ediminator/hacs-homematicip-hcu/issues)

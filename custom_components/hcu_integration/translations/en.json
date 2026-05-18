@@ -117,7 +117,6 @@
     "issues": {
 		"pin_failed": {
 			"title": "PIN failed for {device_name}",
-			"description": "The authorization PIN for {device_name} failed.",
 			"fix_flow": {
 				"step": {
 					"confirm": {
@@ -281,11 +280,11 @@
           "name": "Create a User Message",
           "description": "Creates a user message that is displayed in the Homematic IP app. See the eQ-3 API documentation for details.",
           "fields": {
-            "messageCategory": {
+            "message_category": {
               "name": "Message Category",
               "description": "Select the category of the user message."
             },
-            "userMessageId": {
+            "user_message_id": {
               "name": "User Message ID",
               "description": "Enter a unique identifier for the user message."
             },
@@ -297,7 +296,7 @@
               "name": "Message",
               "description": "The message can be a string or an object with language keys."
             },
-            "behaviorType": {
+            "behavior_type": {
               "name": "Behavior Type",
               "description": "Select how the message can be acknowledged or dismissed in the Homematic IP app."
             }
@@ -307,7 +306,7 @@
             "name": "Delete a User Message",
             "description": "Delete a previously created User Message from the Homematic IP app. See the EQ3 API documentation for details.",
             "fields": {
-                "userMessageId": {
+                "user_message_id": {
                     "name": "User Message ID",
                     "description": "Use the User Message ID of the previously created User Message here."
                 }
@@ -315,6 +314,19 @@
         }
     },
     "entity": {
+        "climate": {
+            "hcu_climate": {
+                "state_attributes": {
+                    "preset_mode": {
+                        "state": {
+                            "boost": "Boost",
+                            "eco": "Eco",
+                            "party": "Party"
+                        }
+                    }
+                }
+            }
+        },
         "button": {
             "hcu_device_identify":{
                 "name": "Identify"

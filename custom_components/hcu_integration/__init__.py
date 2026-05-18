@@ -12,7 +12,7 @@ from typing import Any, cast
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_TOKEN, Platform
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import config_validation as cv, device_registry as dr
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
@@ -47,6 +47,8 @@ from . import event
 _LOGGER = logging.getLogger(__name__)
 
 type HcuData = dict[str, "HcuCoordinator"]
+
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 SERVICE_ENTRIES_KEY = f"{DOMAIN}_service_entries"
 

@@ -196,9 +196,12 @@ class HaEntityBridge:
 
             if feature_type == "switchState":
                 service = "turn_on" if feature.get("on") else "turn_off"
-                await self.hass.services.async_call(
-                    domain, service, {"entity_id": entity_id}, blocking=False
-                )
+                try:
+                    await self.hass.services.async_call(
+                        domain, service, {"entity_id": entity_id}, blocking=True
+                    )
+                except Exception as err:
+                    _LOGGER.error("Service call %s.%s for %s failed: %s", domain, service, entity_id, err)
             elif feature_type == "dimming" and domain == "light":
                 dim_level = feature.get("dimLevel")
                 if dim_level is not None:
@@ -208,10 +211,17 @@ class HaEntityBridge:
                             "light",
                             "turn_on",
                             {"entity_id": entity_id, "brightness": brightness},
-                            blocking=False,
+                            blocking=True,
                         )
                     except (ValueError, TypeError):
                         _LOGGER.warning("Invalid dimLevel value: %s", dim_level)
+                    except Exception as err:
+                        _LOGGER.error("Service call light.turn_on for %s failed: %s", entity_id, err)
+
+        # Send STATUS_EVENT immediately with the actual post-command state,
+        # and update throttle timestamp so the state_changed listener won't double-send.
+        self._last_sent[entity_id] = time.monotonic()
+        await self.send_status_event([entity_id])
 
     # --- Status Event ---
 

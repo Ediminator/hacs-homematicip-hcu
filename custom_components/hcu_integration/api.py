@@ -430,6 +430,7 @@ class HcuApiClient:
 
     async def _send_discover_response(self, message_id: str) -> None:
         """Notify the HCU if there are devices that need to be registered with it."""
+        _LOGGER.debug("DISCOVER_REQUEST received, building response")
         bridge_devices = (
             self._ha_entity_bridge.build_discover_devices()
             if self._ha_entity_bridge

@@ -170,6 +170,17 @@ switch_on_with_time:
           step: 0.1
           unit_of_measurement: "s"
           
+set_cooling_mode:
+  name: Set Cooling Mode
+  description: Activates or deactivates the system-wide cooling mode for all heating groups.
+  fields:
+    cooling:
+      name: Cooling
+      description: Set to true to activate cooling mode, false to deactivate it.
+      required: true
+      selector:
+        boolean:
+
 send_api_command:
   name: Send API Command
   description: Send a simple API command to the HCU. See EQ3's API documentation.

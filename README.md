@@ -689,6 +689,24 @@ Deactivate any active absence mode.
 action: hcu_integration.deactivate_absence_mode
 ```
 
+### `hcu_integration.set_cooling_mode`
+
+Activates or deactivates the system-wide cooling mode for all heating groups.
+
+**Example – activate cooling:**
+```yaml
+action: hcu_integration.set_cooling_mode
+data:
+  cooling: true
+```
+
+**Example – deactivate cooling:**
+```yaml
+action: hcu_integration.set_cooling_mode
+data:
+  cooling: false
+```
+
 ### `hcu_integration.send_api_command`
 
 Send raw api command to hcu.

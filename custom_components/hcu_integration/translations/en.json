@@ -253,6 +253,16 @@
                 }
             }
         },
+        "set_cooling_mode": {
+            "name": "Set Cooling Mode",
+            "description": "Activates or deactivates the system-wide cooling mode for all heating groups.",
+            "fields": {
+                "cooling": {
+                    "name": "Cooling",
+                    "description": "Set to true to activate cooling mode, false to deactivate it."
+                }
+            }
+        },
         "send_api_command": {
             "name": "Send API Command",
             "description": "Send a raw API command to the HCU. Use with caution, as this provides direct access to the API and can cause unintended side effects if used incorrectly. See EQ3's API documentation for details.",

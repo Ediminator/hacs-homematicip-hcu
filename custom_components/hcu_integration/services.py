@@ -261,6 +261,8 @@ async def async_handle_send_api_command(hass: HomeAssistant, call: ServiceCall) 
     except (HcuApiError, ConnectionError) as err:
         _LOGGER.error("Error calling send_api_command for path %s: %s", path, err)
     
+
+
 async def async_handle_set_cooling_mode(hass: HomeAssistant, call: ServiceCall) -> None:
     """Handle the set_cooling_mode service call."""
     cooling = call.data.get(ATTR_COOLING)

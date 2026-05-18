@@ -272,16 +272,18 @@ class HcuApiClient:
             "CONTROL_REQUEST",
             "CONFIG_TEMPLATE_REQUEST",
             "CONFIG_UPDATE_REQUEST",
+            "INCLUSION_EVENT",
         ):
-            if not msg_id:
-                _LOGGER.warning("Received %s without message ID, cannot respond", msg_type)
-                return
-
             _LOGGER.debug("Received %s: %s", msg_type, msg)
 
-            if msg_type == "CONTROL_REQUEST":
+            if msg_type == "INCLUSION_EVENT":
+                asyncio.create_task(self._handle_inclusion_event(msg))
+            elif msg_type == "CONTROL_REQUEST":
                 asyncio.create_task(self._handle_control_request(msg))
             else:
+                if not msg_id:
+                    _LOGGER.warning("Received %s without message ID, cannot respond", msg_type)
+                    return
                 handler_map = {
                     "PLUGIN_STATE_REQUEST": self._send_plugin_ready,
                     "DISCOVER_REQUEST": self._send_discover_response,
@@ -390,6 +392,15 @@ class HcuApiClient:
             f"Request failed after {API_MAX_RETRIES} retries for path {path}"
         ) from last_exception
 
+    async def send_initial_plugin_state(self) -> None:
+        """Proactively announce plugin readiness to the HCU upon connection.
+
+        Per the Connect API spec, the plugin must send PLUGIN_STATE_RESPONSE
+        with READY status on startup. The HCU reacts by sending DISCOVER_REQUEST.
+        """
+        await self._send_plugin_ready(str(uuid4()))
+        _LOGGER.debug("Sent initial PLUGIN_STATE_RESPONSE: READY")
+
     async def _send_plugin_ready(self, message_id: str) -> None:
         """Send plugin readiness status and display name to the HCU."""
         message = {
@@ -402,6 +413,20 @@ class HcuApiClient:
             },
         }
         await self._send_message(message)
+
+    async def _handle_inclusion_event(self, msg: dict[str, Any]) -> None:
+        """Handle INCLUSION_EVENT: respond with status of all included devices."""
+        device_ids = msg.get("body", {}).get("deviceIds", [])
+        _LOGGER.debug("INCLUSION_EVENT for devices: %s", device_ids)
+        if not self._ha_entity_bridge or not device_ids:
+            return
+        entity_ids = [
+            eid for did in device_ids
+            if (eid := self._ha_entity_bridge.device_to_entity_id(did)) is not None
+            and eid in self._ha_entity_bridge.entity_ids
+        ]
+        if entity_ids:
+            await self._ha_entity_bridge.send_status_event(entity_ids)
 
     async def _send_discover_response(self, message_id: str) -> None:
         """Notify the HCU if there are devices that need to be registered with it."""

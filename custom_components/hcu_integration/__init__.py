@@ -403,6 +403,7 @@ class HcuCoordinator(DataUpdateCoordinator[set[str]]):
                 reconnect_delay = WEBSOCKET_RECONNECT_INITIAL_DELAY
 
                 _LOGGER.info("WebSocket connected to HCU")
+                await self.client.send_initial_plugin_state()
                 await self.client.listen()
 
             except (ConnectionError, asyncio.TimeoutError, aiohttp.ClientError) as e:

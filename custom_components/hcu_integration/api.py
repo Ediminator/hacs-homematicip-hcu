@@ -435,6 +435,7 @@ class HcuApiClient:
             if self._ha_entity_bridge
             else []
         )
+        _LOGGER.debug("Sending DISCOVER_RESPONSE with %d device(s): %s", len(bridge_devices), [d["deviceId"] for d in bridge_devices])
         message = {
             "id": message_id,
             "pluginId": self.plugin_id,

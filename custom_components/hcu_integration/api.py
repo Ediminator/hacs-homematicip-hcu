@@ -441,7 +441,7 @@ class HcuApiClient:
             "id": message_id,
             "pluginId": self.plugin_id,
             "type": "DISCOVER_RESPONSE",
-            "body": {"success": "true", "devices": bridge_devices},
+            "body": {"success": True, "devices": bridge_devices},
         }
         await self._send_message(message)
 
@@ -456,7 +456,7 @@ class HcuApiClient:
             "id": message_id,
             "pluginId": self.plugin_id,
             "type": "STATUS_RESPONSE",
-            "body": {"success": "true", "devices": status_devices},
+            "body": {"success": True, "devices": status_devices},
         }
         await self._send_message(message)
     
@@ -475,7 +475,7 @@ class HcuApiClient:
             "pluginId": self.plugin_id,
             "type": "CONTROL_RESPONSE",
             "body": {
-                "success": "true",
+                "success": True,
                 "devices": [
                     {
                         "deviceId": device_id,

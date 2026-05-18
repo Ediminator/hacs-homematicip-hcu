@@ -7,7 +7,7 @@ from typing import Any, Callable, Awaitable
 from uuid import uuid4
 
 from homeassistant.const import (
-    STATE_ON, STATE_OFF, STATE_UNAVAILABLE, STATE_UNKNOWN,
+    STATE_ON, STATE_UNAVAILABLE, STATE_UNKNOWN,
     ATTR_FRIENDLY_NAME,
 )
 from homeassistant.components.light import ATTR_BRIGHTNESS
@@ -17,30 +17,20 @@ _LOGGER = logging.getLogger(__name__)
 
 STATUS_EVENT_THROTTLE_SECONDS = 5.0
 
-SENSOR_CLASS_TO_PROPERTY: dict[str, str] = {
-    "temperature": "ActualTemperature",
-    "humidity": "Humidity",
-    "illuminance": "Illumination",
-    "power": "PowerConsumption",
-    "energy": "EnergyCounter",
-    "co2": "Co2Concentration",
-    "carbon_dioxide": "Co2Concentration",
-    "carbon_monoxide": "COConcentration",
-    "pressure": "AirPressure",
-    "battery": "BatteryLevel",
-    "voltage": "Voltage",
-    "current": "Current",
-    "pm25": "PM2_5",
-    "pm10": "PM10",
-    "moisture": "Humidity",
-    "power_factor": "PowerFactor",
-    "frequency": "Frequency",
-    "apparent_power": "ApparentPower",
-    "reactive_power": "ReactivePower",
-    "gas": "GasVolume",
-    "water": "WaterVolume",
-    "wind_speed": "WindSpeed",
-    "precipitation": "TodayRainCounter",
+# Maps HA sensor device_class → (HCU deviceType, HCU feature type)
+SENSOR_CLASS_TO_DEVICE: dict[str, tuple[str, str]] = {
+    "temperature":    ("CLIMATE_SENSOR",              "actualTemperature"),
+    "humidity":       ("CLIMATE_SENSOR",              "humidity"),
+    "moisture":       ("CLIMATE_SENSOR",              "humidity"),
+    "illuminance":    ("CLIMATE_SENSOR",              "illumination"),
+    "co2":            ("CLIMATE_SENSOR",              "co2"),
+    "carbon_dioxide": ("CLIMATE_SENSOR",              "co2"),
+    "wind_speed":     ("CLIMATE_SENSOR",              "windSpeed"),
+    "precipitation":  ("CLIMATE_SENSOR",              "rainCount"),
+    "power":          ("ENERGY_METER",                "currentPower"),
+    "energy":         ("ENERGY_METER",                "energyCounter"),
+    "pm25":           ("PARTICULATE_MATTER_SENSOR",   "particulateMassTwoPointFive"),
+    "pm10":           ("PARTICULATE_MATTER_SENSOR",   "particulateMassTen"),
 }
 
 HA_ENTITY_PREFIX = "ha."
@@ -67,20 +57,55 @@ class HaEntityBridge:
 
     @staticmethod
     def entity_to_device_id(entity_id: str) -> str:
-        """Convert a HA entity_id to a HCU plugin deviceId."""
         return f"{HA_ENTITY_PREFIX}{entity_id}"
 
     @staticmethod
     def device_to_entity_id(device_id: str) -> str | None:
-        """Convert a HCU plugin deviceId back to a HA entity_id."""
         if device_id.startswith(HA_ENTITY_PREFIX):
             return device_id[len(HA_ENTITY_PREFIX):]
         return None
 
     def is_ha_device(self, device_id: str) -> bool:
-        """Return True if device_id belongs to a managed HA entity."""
         entity_id = self.device_to_entity_id(device_id)
         return entity_id is not None and entity_id in self.entity_ids
+
+    # --- Device info helpers ---
+
+    def _get_device_descriptor(self, entity_id: str, state: State | None) -> dict[str, Any] | None:
+        """Return a Device object (without current feature values) for discovery."""
+        domain = entity_id.split(".")[0]
+        friendly_name = (
+            (state.attributes.get(ATTR_FRIENDLY_NAME) if state else None)
+            or entity_id
+        )
+
+        if domain == "switch":
+            return {
+                "deviceId": self.entity_to_device_id(entity_id),
+                "friendlyName": friendly_name,
+                "deviceType": "SWITCH",
+                "features": [{"type": "switchState"}],
+            }
+        if domain == "light":
+            return {
+                "deviceId": self.entity_to_device_id(entity_id),
+                "friendlyName": friendly_name,
+                "deviceType": "LIGHT",
+                "features": [{"type": "switchState"}, {"type": "dimming"}],
+            }
+        if domain == "sensor":
+            device_class = (state.attributes.get("device_class") if state else None) or ""
+            mapping = SENSOR_CLASS_TO_DEVICE.get(device_class)
+            if not mapping:
+                return None
+            device_type, feature_type = mapping
+            return {
+                "deviceId": self.entity_to_device_id(entity_id),
+                "friendlyName": friendly_name,
+                "deviceType": device_type,
+                "features": [{"type": feature_type}],
+            }
+        return None
 
     # --- Discovery ---
 
@@ -89,39 +114,9 @@ class HaEntityBridge:
         devices = []
         for entity_id in sorted(self.entity_ids):
             state = self.hass.states.get(entity_id)
-            label = (
-                (state.attributes.get(ATTR_FRIENDLY_NAME) if state else None)
-                or entity_id
-            )
-            domain = entity_id.split(".")[0]
-            device_id = self.entity_to_device_id(entity_id)
-
-            if domain == "switch":
-                devices.append({
-                    "deviceId": device_id,
-                    "label": label,
-                    "deviceType": "SWITCH",
-                    "features": ["SWITCHING"],
-                    "groups": [],
-                })
-            elif domain == "light":
-                devices.append({
-                    "deviceId": device_id,
-                    "label": label,
-                    "deviceType": "DIMMER",
-                    "features": ["SWITCHING", "DIMMING"],
-                    "groups": [],
-                })
-            elif domain == "sensor":
-                device_class = (state.attributes.get("device_class") if state else None) or ""
-                prop_type = SENSOR_CLASS_TO_PROPERTY.get(device_class, "ActualTemperature")
-                devices.append({
-                    "deviceId": device_id,
-                    "label": label,
-                    "deviceType": "TEMPERATURE_HUMIDITY_SENSOR",
-                    "features": [prop_type],
-                    "groups": [],
-                })
+            descriptor = self._get_device_descriptor(entity_id, state)
+            if descriptor:
+                devices.append(descriptor)
         return devices
 
     # --- Status ---
@@ -129,7 +124,7 @@ class HaEntityBridge:
     def build_status_devices(
         self, entity_ids: list[str] | None = None
     ) -> list[dict[str, Any]]:
-        """Build device status list for STATUS_RESPONSE or STATUS_EVENT."""
+        """Build full Device objects with current feature values for STATUS_RESPONSE."""
         targets = entity_ids if entity_ids is not None else sorted(self.entity_ids)
         result = []
         for entity_id in targets:
@@ -139,54 +134,50 @@ class HaEntityBridge:
             if state is None:
                 continue
             domain = entity_id.split(".")[0]
-            properties = self._state_to_properties(domain, state)
-            if properties:
-                result.append({
-                    "deviceId": self.entity_to_device_id(entity_id),
-                    "properties": properties,
-                })
+            features = self._state_to_features(domain, state)
+            if features is None:
+                continue
+            descriptor = self._get_device_descriptor(entity_id, state)
+            if not descriptor:
+                continue
+            descriptor["features"] = features
+            result.append(descriptor)
         return result
 
-    def _state_to_properties(
+    def _state_to_features(
         self, domain: str, state: State
-    ) -> list[dict[str, Any]]:
+    ) -> list[dict[str, Any]] | None:
+        """Convert HA state to HCU IFeature objects."""
         if state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
-            return []
-
-        props: list[dict[str, Any]] = []
+            return None
 
         if domain == "switch":
-            props.append({
-                "propertyType": "SwitchState",
-                "value": "true" if state.state == STATE_ON else "false",
-            })
+            return [{"type": "switchState", "on": state.state == STATE_ON}]
 
-        elif domain == "light":
+        if domain == "light":
             is_on = state.state == STATE_ON
-            props.append({
-                "propertyType": "SwitchState",
-                "value": "true" if is_on else "false",
-            })
+            features: list[dict[str, Any]] = [{"type": "switchState", "on": is_on}]
             if is_on:
                 brightness = state.attributes.get(ATTR_BRIGHTNESS)
                 if brightness is not None:
-                    props.append({
-                        "propertyType": "DimLevel",
-                        "value": str(round(brightness / 255, 4)),
-                    })
+                    features.append({"type": "dimming", "dimLevel": round(brightness / 255, 4)})
+            return features
 
-        elif domain == "sensor":
+        if domain == "sensor":
             device_class = state.attributes.get("device_class") or ""
-            prop_type = SENSOR_CLASS_TO_PROPERTY.get(device_class, "ActualTemperature")
+            mapping = SENSOR_CLASS_TO_DEVICE.get(device_class)
+            if not mapping:
+                return None
+            _, feature_type = mapping
             try:
-                props.append({
-                    "propertyType": prop_type,
-                    "value": str(float(state.state)),
-                })
+                value: int | float = float(state.state)
             except (ValueError, TypeError):
-                pass
+                return None
+            if feature_type == "humidity":
+                value = int(round(value))
+            return [{"type": feature_type, feature_type: value}]
 
-        return props
+        return None
 
     # --- Control ---
 
@@ -198,45 +189,57 @@ class HaEntityBridge:
             return
 
         domain = entity_id.split(".")[0]
-        properties: list[dict[str, Any]] = body.get("properties", [])
+        features: list[dict[str, Any]] = body.get("features", [])
 
-        for prop in properties:
-            prop_type = prop.get("propertyType")
-            value = prop.get("value")
+        for feature in features:
+            feature_type = feature.get("type")
 
-            if prop_type == "SwitchState":
-                service = "turn_on" if value == "true" else "turn_off"
+            if feature_type == "switchState":
+                service = "turn_on" if feature.get("on") else "turn_off"
                 await self.hass.services.async_call(
                     domain, service, {"entity_id": entity_id}, blocking=False
                 )
-            elif prop_type == "DimLevel" and domain == "light":
-                try:
-                    brightness = int(float(value) * 255)
-                    await self.hass.services.async_call(
-                        "light",
-                        "turn_on",
-                        {"entity_id": entity_id, "brightness": brightness},
-                        blocking=False,
-                    )
-                except (ValueError, TypeError):
-                    _LOGGER.warning("Invalid DimLevel value: %s", value)
+            elif feature_type == "dimming" and domain == "light":
+                dim_level = feature.get("dimLevel")
+                if dim_level is not None:
+                    try:
+                        brightness = int(float(dim_level) * 255)
+                        await self.hass.services.async_call(
+                            "light",
+                            "turn_on",
+                            {"entity_id": entity_id, "brightness": brightness},
+                            blocking=False,
+                        )
+                    except (ValueError, TypeError):
+                        _LOGGER.warning("Invalid dimLevel value: %s", dim_level)
 
     # --- Status Event ---
 
     async def send_status_event(self, entity_ids: list[str] | None = None) -> None:
-        """Push current HA entity states to the HCU as a STATUS_EVENT."""
-        devices = self.build_status_devices(entity_ids)
-        if not devices:
-            return
-        try:
-            await self._send_message({
-                "id": str(uuid4()),
-                "pluginId": self._plugin_id,
-                "type": "STATUS_EVENT",
-                "body": {"devices": devices},
-            })
-        except ConnectionError:
-            pass
+        """Push current HA entity states to the HCU as STATUS_EVENTs (one per device)."""
+        targets = entity_ids if entity_ids is not None else sorted(self.entity_ids)
+        for entity_id in targets:
+            if entity_id not in self.entity_ids:
+                continue
+            state = self.hass.states.get(entity_id)
+            if state is None:
+                continue
+            domain = entity_id.split(".")[0]
+            features = self._state_to_features(domain, state)
+            if not features:
+                continue
+            try:
+                await self._send_message({
+                    "id": str(uuid4()),
+                    "pluginId": self._plugin_id,
+                    "type": "STATUS_EVENT",
+                    "body": {
+                        "deviceId": self.entity_to_device_id(entity_id),
+                        "features": features,
+                    },
+                })
+            except ConnectionError:
+                pass
 
     # --- State listener ---
 

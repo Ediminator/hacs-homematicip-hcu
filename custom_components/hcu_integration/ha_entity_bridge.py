@@ -228,12 +228,15 @@ class HaEntityBridge:
         devices = self.build_status_devices(entity_ids)
         if not devices:
             return
-        await self._send_message({
-            "id": str(uuid4()),
-            "pluginId": self._plugin_id,
-            "type": "STATUS_EVENT",
-            "body": {"devices": devices},
-        })
+        try:
+            await self._send_message({
+                "id": str(uuid4()),
+                "pluginId": self._plugin_id,
+                "type": "STATUS_EVENT",
+                "body": {"devices": devices},
+            })
+        except ConnectionError:
+            pass
 
     # --- State listener ---
 

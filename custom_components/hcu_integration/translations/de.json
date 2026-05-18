@@ -307,7 +307,7 @@
             "description": "Lösche eine Zuvor erstelle User Message Nachricht aus der Homematic IP App. Siehe API-Dokumentation von EQ3 für Details",
             "fields": {
                 "user_message_id": {
-                    "name": "User Message Id",
+                    "name": "User Message ID",
                     "description": "Verwende hier die User Message ID der zurvor angelegten User Message."
                 }
             }

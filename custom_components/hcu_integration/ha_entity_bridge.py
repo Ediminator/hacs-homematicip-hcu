@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from typing import Any, Callable, Awaitable
 from uuid import uuid4
 
@@ -13,6 +14,8 @@ from homeassistant.components.light import ATTR_BRIGHTNESS
 from homeassistant.core import HomeAssistant, State, callback
 
 _LOGGER = logging.getLogger(__name__)
+
+STATUS_EVENT_THROTTLE_SECONDS = 5.0
 
 SENSOR_CLASS_TO_PROPERTY: dict[str, str] = {
     "temperature": "ActualTemperature",
@@ -30,6 +33,14 @@ SENSOR_CLASS_TO_PROPERTY: dict[str, str] = {
     "pm25": "PM2_5",
     "pm10": "PM10",
     "moisture": "Humidity",
+    "power_factor": "PowerFactor",
+    "frequency": "Frequency",
+    "apparent_power": "ApparentPower",
+    "reactive_power": "ReactivePower",
+    "gas": "GasVolume",
+    "water": "WaterVolume",
+    "wind_speed": "WindSpeed",
+    "precipitation": "TodayRainCounter",
 }
 
 HA_ENTITY_PREFIX = "ha."
@@ -50,6 +61,7 @@ class HaEntityBridge:
         self._send_message = send_message_fn
         self._plugin_id = plugin_id
         self._unsub: Callable | None = None
+        self._last_sent: dict[str, float] = {}
 
     # --- Device ID helpers ---
 
@@ -235,6 +247,10 @@ class HaEntityBridge:
             entity_id = event.data.get("entity_id")
             if entity_id not in self.entity_ids:
                 return
+            now = time.monotonic()
+            if now - self._last_sent.get(entity_id, 0) < STATUS_EVENT_THROTTLE_SECONDS:
+                return
+            self._last_sent[entity_id] = now
             self.hass.async_create_task(
                 self.send_status_event([entity_id]),
                 name=f"HCU status_event {entity_id}",

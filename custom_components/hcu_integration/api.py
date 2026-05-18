@@ -280,6 +280,8 @@ class HcuApiClient:
                 asyncio.create_task(self._handle_inclusion_event(msg))
             elif msg_type == "CONTROL_REQUEST":
                 asyncio.create_task(self._handle_control_request(msg))
+            elif msg_type == "STATUS_REQUEST":
+                asyncio.create_task(self._handle_status_request(msg))
             else:
                 if not msg_id:
                     _LOGGER.warning("Received %s without message ID, cannot respond", msg_type)
@@ -287,7 +289,6 @@ class HcuApiClient:
                 handler_map = {
                     "PLUGIN_STATE_REQUEST": self._send_plugin_ready,
                     "DISCOVER_REQUEST": self._send_discover_response,
-                    "STATUS_REQUEST": self._send_status_response,
                     "CONFIG_TEMPLATE_REQUEST": self._send_config_template_response,
                     "CONFIG_UPDATE_REQUEST": self._send_config_update_response,
                 }
@@ -445,13 +446,24 @@ class HcuApiClient:
         }
         await self._send_message(message)
 
-    async def _send_status_response(self, message_id: str) -> None:
-        """Respond to a STATUS_REQUEST with current HA entity states."""
-        status_devices = (
-            self._ha_entity_bridge.build_status_devices()
-            if self._ha_entity_bridge
-            else []
-        )
+    async def _handle_status_request(self, msg: dict[str, Any]) -> None:
+        """Respond to a STATUS_REQUEST, filtering to the requested deviceIds."""
+        message_id = msg.get("id")
+        requested_device_ids: list[str] = msg.get("body", {}).get("deviceIds", [])
+
+        if self._ha_entity_bridge:
+            if requested_device_ids:
+                entity_ids = [
+                    eid
+                    for did in requested_device_ids
+                    if (eid := self._ha_entity_bridge.device_to_entity_id(did)) is not None
+                ]
+                status_devices = self._ha_entity_bridge.build_status_devices(entity_ids)
+            else:
+                status_devices = self._ha_entity_bridge.build_status_devices()
+        else:
+            status_devices = []
+
         message = {
             "id": message_id,
             "pluginId": self.plugin_id,

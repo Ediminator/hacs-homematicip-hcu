@@ -70,7 +70,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         websocket_port,
     )
 
+    # Set up HA entity bridge BEFORE connecting so the DISCOVER_REQUEST
+    # from the HCU (sent at connection time) already receives the entity list.
+    ha_entities = entry.options.get(CONF_HA_ENTITIES, [])
+    bridge = HaEntityBridge(
+        hass,
+        ha_entities,
+        client._send_message,
+        client.plugin_id,
+    )
+    client.set_ha_entity_bridge(bridge)
+    bridge.start_listening()
+
     coordinator = HcuCoordinator(hass, client, entry)
+    coordinator._ha_bridge = bridge
 
     domain_data = cast(HcuData, hass.data.setdefault(DOMAIN, {}))
     domain_data[entry.entry_id] = coordinator
@@ -87,18 +100,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         coordinator._event_entities[(e._device_id, lookup_key)] = e
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-
-    # Set up HA entity bridge
-    ha_entities = entry.options.get(CONF_HA_ENTITIES, [])
-    bridge = HaEntityBridge(
-        hass,
-        ha_entities,
-        client._send_message,
-        client.plugin_id,
-    )
-    client.set_ha_entity_bridge(bridge)
-    bridge.start_listening()
-    coordinator._ha_bridge = bridge
 
     # Register services (only once for first config entry)
     service_entries: set[str] = hass.data.setdefault(SERVICE_ENTRIES_KEY, set())

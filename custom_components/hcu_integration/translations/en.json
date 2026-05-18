@@ -319,6 +319,8 @@
                 "state_attributes": {
                     "preset_mode": {
                         "state": {
+                            "boost": "Boost",
+                            "eco": "Eco",
                             "party": "Party"
                         }
                     }

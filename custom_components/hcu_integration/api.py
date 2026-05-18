@@ -465,24 +465,31 @@ class HcuApiClient:
         msg_id = msg.get("id")
         body = msg.get("body", {})
         device_id = body.get("deviceId")
+        is_ha_device = bool(
+            self._ha_entity_bridge and device_id and self._ha_entity_bridge.is_ha_device(device_id)
+        )
 
         # Delegate to HA entity bridge if this device belongs to it
-        if self._ha_entity_bridge and device_id and self._ha_entity_bridge.is_ha_device(device_id):
+        if is_ha_device:
             await self._ha_entity_bridge.handle_control_request(body)
 
+        # Send CONTROL_RESPONSE before STATUS_EVENT so HCU acknowledges first.
         response = {
             "id": msg_id,
             "pluginId": self.plugin_id,
             "type": "CONTROL_RESPONSE",
             "body": {
                 "success": True,
-                "devices": [
-                    {
-                        "deviceId": device_id,
-                    }]
+                "devices": [{"deviceId": device_id}],
             },
         }
         await self._send_message(response)
+
+        # Push the actual post-command state to the HCU.
+        if is_ha_device:
+            entity_id = self._ha_entity_bridge.device_to_entity_id(device_id)
+            if entity_id:
+                await self._ha_entity_bridge.send_status_event([entity_id])
     
     async def _send_config_template_response(self, message_id: str) -> None:
         """Respond with plugin configuration template for display on HCUweb.

@@ -191,6 +191,10 @@ class HaEntityBridge:
         domain = entity_id.split(".")[0]
         features: list[dict[str, Any]] = body.get("features", [])
 
+        # Set throttle before the service call so the state_changed listener
+        # doesn't fire a duplicate STATUS_EVENT while we await blocking=True.
+        self._last_sent[entity_id] = time.monotonic()
+
         for feature in features:
             feature_type = feature.get("type")
 
@@ -217,11 +221,6 @@ class HaEntityBridge:
                         _LOGGER.warning("Invalid dimLevel value: %s", dim_level)
                     except Exception as err:
                         _LOGGER.error("Service call light.turn_on for %s failed: %s", entity_id, err)
-
-        # Send STATUS_EVENT immediately with the actual post-command state,
-        # and update throttle timestamp so the state_changed listener won't double-send.
-        self._last_sent[entity_id] = time.monotonic()
-        await self.send_status_event([entity_id])
 
     # --- Status Event ---
 

@@ -200,10 +200,12 @@ class HaEntityBridge:
 
             if feature_type == "switchState":
                 service = "turn_on" if feature.get("on") else "turn_off"
+                _LOGGER.debug("Switching %s → %s", entity_id, "ON" if feature.get("on") else "OFF")
                 try:
                     await self.hass.services.async_call(
                         domain, service, {"entity_id": entity_id}, blocking=True
                     )
+                    _LOGGER.debug("Switched %s successfully", entity_id)
                 except Exception as err:
                     _LOGGER.error("Service call %s.%s for %s failed: %s", domain, service, entity_id, err)
             elif feature_type == "dimming" and domain == "light":
@@ -211,12 +213,14 @@ class HaEntityBridge:
                 if dim_level is not None:
                     try:
                         brightness = int(float(dim_level) * 255)
+                        _LOGGER.debug("Dimming %s → %.1f%% (brightness %d)", entity_id, float(dim_level) * 100, brightness)
                         await self.hass.services.async_call(
                             "light",
                             "turn_on",
                             {"entity_id": entity_id, "brightness": brightness},
                             blocking=True,
                         )
+                        _LOGGER.debug("Dimmed %s successfully", entity_id)
                     except (ValueError, TypeError):
                         _LOGGER.warning("Invalid dimLevel value: %s", dim_level)
                     except Exception as err:

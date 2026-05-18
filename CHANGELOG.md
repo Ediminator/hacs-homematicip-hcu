@@ -39,6 +39,8 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 
 **New PIN logic for all access profile devices.** There is now a Device Code and a Global Code. The Device Code takes priority, with the Global Code as a fallback.
 
+**In this release**, the groundwork has been laid to submit this integration as **HACS default**. The required validation checks have been addressed, bringing the integration in line with the quality standards expected of default integrations.
+
 ---
 ## 1.21.12 - 2026-04-30
 

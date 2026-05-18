@@ -127,14 +127,24 @@ class HaEntityBridge:
 
     # --- Discovery ---
 
+    # Device types the HCU plugin inbox accepts. Read-only sensor types
+    # (ENERGY_METER, CLIMATE_SENSOR, etc.) are rejected by the HCU and
+    # cause the entire DISCOVER_RESPONSE to be silently dropped.
+    _DISCOVERABLE_DEVICE_TYPES = {"SWITCH", "LIGHT"}
+
     def build_discover_devices(self) -> list[dict[str, Any]]:
         """Build the device list for DISCOVER_RESPONSE."""
         devices = []
         for entity_id in sorted(self.entity_ids):
             state = self.hass.states.get(entity_id)
             descriptor = self._get_device_descriptor(entity_id, state)
-            if descriptor:
+            if descriptor and descriptor["deviceType"] in self._DISCOVERABLE_DEVICE_TYPES:
                 devices.append(descriptor)
+            elif descriptor:
+                _LOGGER.debug(
+                    "Excluding %s (%s) from DISCOVER_RESPONSE: deviceType %s not supported by HCU inbox",
+                    entity_id, descriptor["friendlyName"], descriptor["deviceType"],
+                )
         return devices
 
     # --- Status ---

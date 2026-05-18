@@ -122,6 +122,7 @@ SERVICE_ACTIVATE_ECO_MODE = "activate_eco_mode"
 SERVICE_DEACTIVATE_ABSENCE_MODE = "deactivate_absence_mode"
 SERVICE_SWITCH_ON_WITH_TIME = "switch_on_with_time"
 SERVICE_SEND_API_COMMAND = "send_api_command"
+SERVICE_SET_COOLING_MODE = "set_cooling_mode"
 SERVICE_USER_MESSAGE = "create_user_message_request"
 SERVICE_USER_MESSAGE_DELETE = "delete_user_message_request"
 
@@ -139,6 +140,7 @@ ATTR_END_TIME = "end_time"
 ATTR_ON_TIME = "on_time"
 ATTR_PATH = "path"
 ATTR_BODY = "body"
+ATTR_COOLING = "cooling"
 ATTR_USER_MESSAGE_ID = "userMessageId"
 ATTR_USER_MESSAGE_MESSAGE = "message"
 ATTR_USER_MESSAGE_TITLE = "title"
@@ -148,6 +150,7 @@ ATTR_USER_MESSAGE_CATEGORY = "messageCategory"
 # --- API Path Constants ---
 API_PATHS = {
     "ACTIVATE_ABSENCE_PERMANENT": "/hmip/home/heating/activateAbsencePermanent",
+    "SET_COOLING": "/hmip/home/heating/setCooling",
     "ACTIVATE_PARTY_MODE": "/hmip/group/heating/activatePartyMode",
     "ACTIVATE_VACATION": "/hmip/home/heating/activateVacation",
     "DEACTIVATE_ABSENCE": "/hmip/home/heating/deactivateAbsence",

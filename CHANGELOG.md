@@ -2,7 +2,7 @@
 
 All notable changes to the Homematic IP Local (HCU) integration will be documented in this file.
 
-## 2.0.0.beta6 - 2026-05-17
+## 2.0.0.beta7 - 2026-05-x
 
 > [!NOTE]
 > Please take your time with this update. Due to the breaking changes listed below, carefully review all your automations before updating.
@@ -28,6 +28,7 @@ All notable changes to the Homematic IP Local (HCU) integration will be document
 - Added device trigger support, making it easier to use button presses directly as triggers in automations. More in README.md
 - Device Channels that have not been configured in the Homematic IP app are no longer displayed. (#255)
 - Added **"Use Internal On Time"** config switch entity per channel. When enabled, turning on a switch or light channel passes the `onTime` configured in the Homematic IP app for the internal button, causing the device to turn itself off automatically after the set duration. This makes it possible to use the configured on-time via HomeKit as well — useful for example for staircase lighting (e.g. HmIP-DRSI1) or water valves on devices like the (e.g. HmIP-MOD-OC8). The entity is disabled by default and only appears on channels where an `onTime` value is configured. State is persisted across HA restarts.
+- Added **set_cooling_mode** action to simplify enabling and disabling cooling mode in the HCU
 
 ### HmIP-FDC & Lock
 

@@ -28,10 +28,10 @@ SENSOR_CLASS_TO_DEVICE: dict[str, tuple[str, str]] = {
     "carbon_dioxide": ("CLIMATE_SENSOR",              "co2"),
     "wind_speed":     ("CLIMATE_SENSOR",              "windSpeed"),
     "precipitation":  ("CLIMATE_SENSOR",              "rainCount"),
-    "power":          ("ENERGY_METER",                "currentPower"),
-    "energy":         ("ENERGY_METER",                "energyCounter"),
-    "pm25":           ("PARTICULATE_MATTER_SENSOR",   "particulateMassTwoPointFive"),
-    "pm10":           ("PARTICULATE_MATTER_SENSOR",   "particulateMassTen"),
+    "power":          ("CLIMATE_SENSOR",              "currentPower"),
+    "energy":         ("CLIMATE_SENSOR",              "energyCounter"),
+    "pm25":           ("CLIMATE_SENSOR",              "particulateMassTwoPointFive"),
+    "pm10":           ("CLIMATE_SENSOR",              "particulateMassTen"),
 }
 
 HA_ENTITY_PREFIX = "ha."
@@ -130,7 +130,7 @@ class HaEntityBridge:
     # Device types the HCU plugin inbox accepts. Read-only sensor types
     # (ENERGY_METER, CLIMATE_SENSOR, etc.) are rejected by the HCU and
     # cause the entire DISCOVER_RESPONSE to be silently dropped.
-    _DISCOVERABLE_DEVICE_TYPES = {"SWITCH", "LIGHT"}
+    _DISCOVERABLE_DEVICE_TYPES = {"SWITCH", "LIGHT", "CLIMATE_SENSOR"}
 
     def build_discover_devices(self) -> list[dict[str, Any]]:
         """Build the device list for DISCOVER_RESPONSE."""

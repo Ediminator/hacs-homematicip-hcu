@@ -82,6 +82,14 @@ class HaEntityBridge:
             friendly_name = (entry.name or entry.original_name if entry else None) or entity_id
 
         if domain == "switch":
+            vis = (state.attributes.get("switchVisualization") if state else None) or "SWITCH"
+            if vis == "LIGHT":
+                return {
+                    "deviceId": self.entity_to_device_id(entity_id),
+                    "friendlyName": friendly_name,
+                    "deviceType": "LIGHT",
+                    "features": [{"type": "switchState"}, {"type": "dimming"}],
+                }
             return {
                 "deviceId": self.entity_to_device_id(entity_id),
                 "friendlyName": friendly_name,
@@ -162,7 +170,15 @@ class HaEntityBridge:
             return None
 
         if domain == "switch":
-            return [{"type": "switchState", "on": state.state == STATE_ON}]
+            is_on = state.state == STATE_ON
+            if state.attributes.get("switchVisualization") == "LIGHT":
+                features: list[dict[str, Any]] = [{"type": "switchState", "on": is_on}]
+                if is_on:
+                    brightness = state.attributes.get(ATTR_BRIGHTNESS)
+                    if brightness is not None:
+                        features.append({"type": "dimming", "dimLevel": round(brightness / 255, 4)})
+                return features
+            return [{"type": "switchState", "on": is_on}]
 
         if domain == "light":
             is_on = state.state == STATE_ON

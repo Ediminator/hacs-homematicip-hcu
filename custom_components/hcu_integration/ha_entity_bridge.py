@@ -12,6 +12,7 @@ from homeassistant.const import (
 )
 from homeassistant.components.light import ATTR_BRIGHTNESS
 from homeassistant.core import HomeAssistant, State, callback
+from homeassistant.helpers import entity_registry as er
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -74,10 +75,11 @@ class HaEntityBridge:
     def _get_device_descriptor(self, entity_id: str, state: State | None) -> dict[str, Any] | None:
         """Return a Device object (without current feature values) for discovery."""
         domain = entity_id.split(".")[0]
-        friendly_name = (
-            (state.attributes.get(ATTR_FRIENDLY_NAME) if state else None)
-            or entity_id
-        )
+        friendly_name = (state.attributes.get(ATTR_FRIENDLY_NAME) if state else None)
+        if not friendly_name:
+            reg = er.async_get(self.hass)
+            entry = reg.async_get(entity_id)
+            friendly_name = (entry.name or entry.original_name if entry else None) or entity_id
 
         if domain == "switch":
             return {
@@ -94,7 +96,15 @@ class HaEntityBridge:
                 "features": [{"type": "switchState"}, {"type": "dimming"}],
             }
         if domain == "sensor":
-            device_class = (state.attributes.get("device_class") if state else None) or ""
+            device_class = (state.attributes.get("device_class") if state else None)
+            if device_class is None:
+                # State not yet loaded — fall back to entity registry which stores
+                # device_class independently of runtime state.
+                reg = er.async_get(self.hass)
+                entry = reg.async_get(entity_id)
+                if entry:
+                    device_class = entry.device_class or entry.original_device_class
+            device_class = device_class or ""
             mapping = SENSOR_CLASS_TO_DEVICE.get(device_class)
             if not mapping:
                 return None

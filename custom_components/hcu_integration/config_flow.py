@@ -14,7 +14,7 @@ from homeassistant.config_entries import ConfigEntry, ConfigFlow, OptionsFlow
 from homeassistant.const import CONF_HOST, CONF_TOKEN, ATTR_TEMPERATURE
 from homeassistant.core import callback, HomeAssistant
 from homeassistant.data_entry_flow import FlowResult
-from homeassistant.helpers import aiohttp_client, device_registry as dr
+from homeassistant.helpers import aiohttp_client, device_registry as dr, entity_registry as er
 from homeassistant.helpers import selector
 from homeassistant.helpers.selector import (
     BooleanSelector,
@@ -700,6 +700,13 @@ class HcuOptionsFlowHandler(OptionsFlow):
 
         current = self.config_entry.options.get(CONF_HA_ENTITIES, [])
 
+        entity_registry = er.async_get(self.hass)
+        excluded_entities = [
+            entry.entity_id
+            for entry in entity_registry.entities.values()
+            if entry.platform in ("hcu_integration", "homematicip_cloud")
+        ]
+
         return self.async_show_form(
             step_id="ha_entities",
             data_schema=vol.Schema(
@@ -711,6 +718,7 @@ class HcuOptionsFlowHandler(OptionsFlow):
                         selector.EntitySelectorConfig(
                             domain=["switch", "light", "sensor"],
                             multiple=True,
+                            exclude_entities=excluded_entities,
                         )
                     ),
                 }

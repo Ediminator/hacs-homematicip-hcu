@@ -314,6 +314,17 @@
         }
     },
     "entity": {
+        "climate": {
+            "hcu_climate": {
+                "state_attributes": {
+                    "preset_mode": {
+                        "state": {
+                            "party": "Party"
+                        }
+                    }
+                }
+            }
+        },
         "button": {
             "hcu_device_identify":{
                 "name": "Identifizieren"
